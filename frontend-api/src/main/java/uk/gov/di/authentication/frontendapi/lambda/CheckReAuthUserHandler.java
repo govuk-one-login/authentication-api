@@ -12,6 +12,7 @@ import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.exceptions.AccountLockedException;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -27,18 +28,23 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
+import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -51,6 +57,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
     private final AuditService auditService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
@@ -59,7 +66,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            AuthenticationAttemptsService authenticationAttemptsService) {
+            AuthenticationAttemptsService authenticationAttemptsService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 CheckReauthUserRequest.class,
                 configurationService,
@@ -69,6 +77,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationService);
         this.auditService = auditService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
@@ -76,6 +85,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.auditService = new AuditService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public CheckReAuthUserHandler(
@@ -84,6 +94,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.auditService = new AuditService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public CheckReAuthUserHandler() {
@@ -272,6 +283,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                             .withAllIncorrectAttemptCounts(incorrectCounts)
                             .withFailureReason(ReauthFailureReasons.INCORRECT_EMAIL)
                             .build());
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            FAILURE_REASON.getValue(),
+                            ReauthFailureReasons.INCORRECT_EMAIL.getValue()));
 
             auditService.submitAuditEvent(
                     AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
@@ -307,13 +325,22 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             LOG.info(
                     "Account is locked due to exceeded counts on count types {}",
                     exceededCountTypes);
+            ReauthFailureReasons failureReason =
+                    getReauthFailureReasonFromCountTypes(exceededCountTypes);
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext,
                     ReauthMetadataBuilder.builder(pairwiseId)
                             .withAllIncorrectAttemptCounts(countTypesToCounts)
-                            .withFailureReason(exceededCountTypes)
+                            .withFailureReason(failureReason)
                             .build());
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            FAILURE_REASON.getValue(),
+                            failureReason == null ? "unknown" : failureReason.getValue()));
 
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);

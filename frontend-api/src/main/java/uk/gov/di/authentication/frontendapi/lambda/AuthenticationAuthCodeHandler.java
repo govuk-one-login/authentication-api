@@ -12,6 +12,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -22,6 +23,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -29,8 +31,10 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.util.Map;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_SUCCESS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
@@ -42,6 +46,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
 
     private final DynamoAuthCodeService dynamoAuthCodeService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public AuthenticationAuthCodeHandler(
             DynamoAuthCodeService dynamoAuthCodeService,
@@ -50,7 +55,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 AuthCodeRequest.class,
                 configurationService,
@@ -60,12 +66,14 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 authenticationService);
         this.dynamoAuthCodeService = dynamoAuthCodeService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public AuthenticationAuthCodeHandler(ConfigurationService configurationService) {
         super(AuthCodeRequest.class, configurationService);
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public AuthenticationAuthCodeHandler(
@@ -73,6 +81,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         super(AuthCodeRequest.class, configurationService, redis);
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public AuthenticationAuthCodeHandler() {
@@ -145,6 +154,9 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 }
                 auditService.submitAuditEvent(
                         AUTH_REAUTH_SUCCESS, auditContext, metadataBuilder.build());
+                cloudwatchMetricsService.incrementCounter(
+                        CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
                 LOG.info("reauthentication successful");
                 sessionService.storeOrUpdateSession(
                         userContext.getSession().setPreservedReauthCountsForAudit(null));

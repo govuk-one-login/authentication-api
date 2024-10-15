@@ -66,15 +66,18 @@ public class ReauthMetadataBuilder {
     }
 
     public ReauthMetadataBuilder withFailureReason(List<CountType> exceededCountTypes) {
+        return withFailureReason(getReauthFailureReasonFromCountTypes(exceededCountTypes));
+    }
+
+    public static ReauthFailureReasons getReauthFailureReasonFromCountTypes(
+            List<CountType> exceededCountTypes) {
         CountType exceededType = exceededCountTypes.get(0);
-        ReauthFailureReasons reauthFailureReason =
-                switch (exceededType) {
-                    case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
-                    case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
-                    case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
-                    default -> null;
-                };
-        return withFailureReason(reauthFailureReason);
+        return switch (exceededType) {
+            case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
+            case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
+            case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
+            default -> null;
+        };
     }
 
     public AuditService.MetadataPair[] build() {

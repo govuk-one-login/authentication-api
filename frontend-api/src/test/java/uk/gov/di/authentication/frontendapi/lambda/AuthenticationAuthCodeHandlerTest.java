@@ -17,6 +17,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -68,6 +70,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.S
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandlerTest.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -90,6 +93,8 @@ class AuthenticationAuthCodeHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private Session session;
     private final AuditService auditService = mock(AuditService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
@@ -120,6 +125,7 @@ class AuthenticationAuthCodeHandlerTest {
         UserProfile userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        when(configurationService.getEnvironment()).thenReturn("test");
         handler =
                 new AuthenticationAuthCodeHandler(
                         dynamoAuthCodeService,
@@ -128,7 +134,8 @@ class AuthenticationAuthCodeHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
     @Test
@@ -230,6 +237,10 @@ class AuthenticationAuthCodeHandlerTest {
         verify(auditService, never())
                 .submitAuditEvent(
                         eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     @Test
@@ -280,6 +291,10 @@ class AuthenticationAuthCodeHandlerTest {
                     };
 
             verify(auditService).submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext, expectedPairs);
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
             verify(sessionService, atLeastOnce())
                     .storeOrUpdateSession(
                             argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAudit())));
@@ -327,6 +342,10 @@ class AuthenticationAuthCodeHandlerTest {
                             AUTH_REAUTH_SUCCESS,
                             auditContext,
                             pair("rpPairwiseId", CALCULATED_PAIRWISE_ID));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
         }
     }
 
@@ -346,6 +365,10 @@ class AuthenticationAuthCodeHandlerTest {
         verify(auditService, never())
                 .submitAuditEvent(
                         eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     @Test

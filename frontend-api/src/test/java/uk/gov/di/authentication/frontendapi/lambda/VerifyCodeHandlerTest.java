@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -86,6 +87,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
@@ -887,6 +890,14 @@ class VerifyCodeHandlerTest {
                             pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
                             pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
                             pair("failure-reason", expectedFailureReason));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    FAILURE_REASON.getValue(),
+                                    expectedFailureReason));
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));

@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -46,14 +47,18 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
+import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.JOURNEY_TYPE;
@@ -208,13 +213,22 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             reauthCounts, configurationService);
             if (!exceedingCounts.isEmpty()) {
                 LOG.info("User has existing reauth block on counts {}", exceedingCounts);
+                ReauthFailureReasons failureReason =
+                        getReauthFailureReasonFromCountTypes(exceedingCounts);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(reauthCounts)
-                                .withFailureReason(exceedingCounts)
+                                .withFailureReason(failureReason)
                                 .build());
+                cloudwatchMetricsService.incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                failureReason == null ? "unknown" : failureReason.getValue()));
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
             }
@@ -383,6 +397,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                                         JourneyType.REAUTHENTICATION))
                                 .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
                                 .build());
+                cloudwatchMetricsService.incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                ReauthFailureReasons.INCORRECT_PASSWORD.getValue()));
             }
 
             if (isJourneyWhereBlockingApplies(isReauthJourney)) {

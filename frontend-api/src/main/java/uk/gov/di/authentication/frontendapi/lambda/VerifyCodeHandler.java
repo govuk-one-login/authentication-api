@@ -8,10 +8,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -51,6 +53,9 @@ import java.util.Optional;
 
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
+import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -319,14 +324,23 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             countsByJourney, configurationService);
 
             if (!countTypesWhereBlocked.isEmpty()) {
+                ReauthFailureReasons failureReason =
+                        getReauthFailureReasonFromCountTypes(countTypesWhereBlocked);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
                         ReauthMetadataBuilder.builder(
                                         maybeRpPairwiseId.orElse(AuditService.UNKNOWN))
                                 .withAllIncorrectAttemptCounts(countsByJourney)
-                                .withFailureReason(countTypesWhereBlocked)
+                                .withFailureReason(failureReason)
                                 .build());
+                cloudwatchMetricsService.incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                failureReason == null ? "unknown" : failureReason.getValue()));
                 LOG.info(
                         "Re-authentication locked due to {} counts exceeded.",
                         countTypesWhereBlocked);

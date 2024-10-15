@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -46,6 +48,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -59,6 +63,8 @@ class CheckReAuthUserHandlerTest {
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String EMAIL_USED_TO_SIGN_IN = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -127,6 +133,7 @@ class CheckReAuthUserHandlerTest {
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
@@ -150,7 +157,8 @@ class CheckReAuthUserHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        authenticationAttemptsService);
+                        authenticationAttemptsService,
+                        cloudwatchMetricsService);
     }
 
     @Test
@@ -234,6 +242,14 @@ class CheckReAuthUserHandlerTest {
                         AuditService.MetadataPair.pair("incorrect_password_attempt_count", 0),
                         AuditService.MetadataPair.pair("incorrect_otp_code_attempt_count", 0),
                         AuditService.MetadataPair.pair("failure-reason", "incorrect_email"));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                "incorrect_email"));
     }
 
     @Test
@@ -265,6 +281,14 @@ class CheckReAuthUserHandlerTest {
                         AuditService.MetadataPair.pair("incorrect_password_attempt_count", 0),
                         AuditService.MetadataPair.pair("incorrect_otp_code_attempt_count", 0),
                         AuditService.MetadataPair.pair("failure-reason", "incorrect_email"));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                "incorrect_email"));
     }
 
     @Test

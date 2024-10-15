@@ -29,6 +29,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -43,6 +44,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -79,6 +81,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
@@ -118,6 +122,8 @@ class StartHandlerTest {
     private final UserContext userContext = mock(UserContext.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final Session session = new Session(SESSION_ID);
     private final ClientSession clientSession = getClientSession();
     private final ClientSession docAppClientSession = getDocAppClientSession();
@@ -136,6 +142,7 @@ class StartHandlerTest {
     @BeforeEach
     void beforeEach() {
         when(configurationService.isIdentityEnabled()).thenReturn(true);
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(new Session("session-id")));
@@ -150,7 +157,8 @@ class StartHandlerTest {
                         startService,
                         authSessionService,
                         configurationService,
-                        authenticationAttemptsService);
+                        authenticationAttemptsService,
+                        cloudwatchMetricsService);
     }
 
     private static Stream<Arguments> cookieConsentGaTrackingIdValues() {
@@ -265,6 +273,10 @@ class StartHandlerTest {
                         AUDIT_CONTEXT,
                         pair("previous_govuk_signin_journey_id", TEST_PREVIOUS_SIGN_IN_JOURNEY_ID),
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     @Test
@@ -339,6 +351,10 @@ class StartHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     @Test
@@ -362,6 +378,10 @@ class StartHandlerTest {
                         eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
                         any(),
                         any(AuditService.MetadataPair[].class));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     private static Stream<Arguments> reauthCountTypesAndExpectedMetadata() {
@@ -436,6 +456,14 @@ class StartHandlerTest {
                         AuditService.MetadataPair.pair(
                                 "incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
                         AuditService.MetadataPair.pair("failure-reason", expectedFailureReason));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                expectedFailureReason));
     }
 
     @Test
