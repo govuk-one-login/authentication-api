@@ -302,6 +302,11 @@ public class DocAppCallbackHandler
                                         "Successful", Boolean.toString(true)));
                 cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
 
+                // TODO: ATO-922: delete once verified that session has no email address in DocApp
+                // journey
+                LOG.info("is session email address null: {}", session.getEmailAddress() == null);
+                //
+
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
                                 clientSessionId, session.getEmailAddress(), clientSession);
