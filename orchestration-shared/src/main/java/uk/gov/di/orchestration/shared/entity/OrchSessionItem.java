@@ -8,9 +8,18 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class OrchSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
+    public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
+
+    public enum AccountState {
+        NEW,
+        EXISTING,
+        EXISTING_DOC_APP_JOURNEY,
+        UNKNOWN
+    }
 
     private String sessionId;
     private long timeToLive;
+    private AccountState isNewAccount;
 
     public OrchSessionItem() {}
 
@@ -40,6 +49,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withTimeToLive(long timeToLive) {
         this.timeToLive = timeToLive;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_NEW_ACCOUNT)
+    public AccountState getIsNewAccount() {
+        return this.isNewAccount;
+    }
+
+    public void setIsNewAccount(AccountState accountState) {
+        this.isNewAccount = accountState;
+    }
+
+    public OrchSessionItem withAccountState(AccountState accountState) {
+        this.isNewAccount = accountState;
         return this;
     }
 }
