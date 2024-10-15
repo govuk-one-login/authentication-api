@@ -140,6 +140,14 @@ public class StartHandler
         if (clientSession.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
+
+        StartRequest startRequest;
+        try {
+            startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+
         try {
             session =
                     startService.validateSession(
@@ -179,7 +187,6 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
-            StartRequest startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
             Optional<String> previousSessionId =
                     Optional.ofNullable(startRequest.previousSessionId());
             authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
@@ -260,7 +267,8 @@ public class StartHandler
             return generateApiGatewayProxyResponse(200, startResponse);
 
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            LOG.error("Unable to serialize start response", e);
+            throw new RuntimeException(e);
         } catch (NoSuchElementException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         } catch (ParseException e) {
