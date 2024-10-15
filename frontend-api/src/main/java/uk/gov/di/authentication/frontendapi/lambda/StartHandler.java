@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -39,6 +41,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -66,6 +69,7 @@ public class StartHandler
     private final AuthSessionService authSessionService;
     private final ConfigurationService configurationService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
@@ -75,7 +79,8 @@ public class StartHandler
             StartService startService,
             AuthSessionService authSessionService,
             ConfigurationService configurationService,
-            AuthenticationAttemptsService authenticationAttemptsService) {
+            AuthenticationAttemptsService authenticationAttemptsService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.clientSessionService = clientSessionService;
         this.sessionService = sessionService;
         this.auditService = auditService;
@@ -83,6 +88,7 @@ public class StartHandler
         this.authSessionService = authSessionService;
         this.configurationService = configurationService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public StartHandler(ConfigurationService configurationService) {
@@ -98,6 +104,7 @@ public class StartHandler
                         sessionService);
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -113,6 +120,7 @@ public class StartHandler
                         sessionService);
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public StartHandler() {
@@ -211,7 +219,7 @@ public class StartHandler
                             txmaAuditHeader);
 
             if (reauthenticate) {
-                emitReauthRequestedEvent(startRequest, auditContext);
+                emitReauthRequestedObservability(startRequest, auditContext);
             }
 
             boolean isBlockedForReauth = false;
@@ -300,7 +308,8 @@ public class StartHandler
         return !blockedCountTypes.isEmpty();
     }
 
-    private void emitReauthRequestedEvent(StartRequest startRequest, AuditContext auditContext) {
+    private void emitReauthRequestedObservability(
+            StartRequest startRequest, AuditContext auditContext) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         var previousSigninJourneyId = startRequest.previousGovUkSigninJourneyId();
         if (!(previousSigninJourneyId == null || previousSigninJourneyId.isEmpty())) {
@@ -314,5 +323,8 @@ public class StartHandler
                 FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
                 auditContext,
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
+        cloudwatchMetricsService.incrementCounter(
+                CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
+                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 }
