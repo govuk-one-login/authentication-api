@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
@@ -27,6 +28,7 @@ import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.
 public class AccountInterventionService {
 
     private static final Logger LOG = LogManager.getLogger(AccountInterventionService.class);
+    private static final Level AIS_FAIL_OPEN = Level.forName("AIS_FAIL_OPEN", 200);
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
     private final AuditService auditService;
@@ -141,12 +143,16 @@ public class AccountInterventionService {
                 configurationService.getAccountInterventionsErrorMetricName(),
                 Map.of("Environment", configurationService.getEnvironment()));
         if (accountInterventionsActionEnabled && acountInterventionsAbortOnError) {
+            LOG.error(
+                    "Problem communicating with Account Intervention Service. Aborting user journey",
+                    e);
             throw new AccountInterventionException(
-                    "Problem communicating with Account Intervention Service", e);
+                    "Problem communicating with Account Intervention Service. Aborting user journey",
+                    e);
         }
-        LOG.error(
-                "Problem communicating with Account Intervention Service. Assuming no intervention. ",
-                e);
+        LOG.atLevel(AIS_FAIL_OPEN)
+                .log(
+                        "Problem communicating with Account Intervention Service. Assuming no intervention");
         return noInterventionResponse();
     }
 
