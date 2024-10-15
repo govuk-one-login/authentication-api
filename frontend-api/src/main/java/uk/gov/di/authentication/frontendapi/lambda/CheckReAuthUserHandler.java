@@ -179,6 +179,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 configurationService.getInternalSectorUri())
                         .getValue();
 
+        LOG.info(
+                "reauth calculated RP pairwise id: {} supplied rpPairwiseId: {}",
+                calculatedPairwiseId,
+                rpPairwiseId);
+
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
             // note here that this retrieval is duplicated a lot here. Currently duplicating so that
             // we don't hit merge conflicts with

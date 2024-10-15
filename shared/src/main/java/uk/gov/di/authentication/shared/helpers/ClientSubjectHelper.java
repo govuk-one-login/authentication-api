@@ -104,6 +104,11 @@ public class ClientSubjectHelper {
             byte[] bytes = md.digest(salt);
 
             var sb = Base64Url.encode(bytes);
+            LOG.info(
+                    "calculatePairwiseIdentifier subjectID {} sectorHost {} pairwiseId {}",
+                    subjectID,
+                    sectorHost,
+                    PAIRWISE_PREFIX + sb);
 
             return PAIRWISE_PREFIX + sb;
         } catch (NoSuchAlgorithmException e) {
