@@ -230,6 +230,12 @@ variable "legacy_account_deletion_topic_arn" {
   default     = null
 }
 
+variable "legacy_account_deletion_topic_key_arn" {
+  type        = string
+  description = "KMS ARN for the key for the account deletion topic owned by Home for use with the manual account deletion lambda."
+  default     = ""
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

@@ -109,11 +109,27 @@ data "aws_iam_policy_document" "legacy_account_deletion_topic" {
   }
 }
 
+data "aws_iam_policy_document" "legacy_account_deletion_key" {
+  statement {
+    sid    = "KMSAccessForAccountDeletionSNS"
+    effect = "Allow"
+    actions = [
+      "kms:GenerateDataKey*",
+      "kms:Decrypt"
+    ]
+    resources = [var.legacy_account_deletion_topic_key_arn]
+  }
+}
+
+data "aws_iam_policy_document" "legacy_account_deletion_access" {
+  source_policy_documents = var.legacy_account_deletion_topic_key_arn == "" ? [data.aws_iam_policy_document.legacy_account_deletion_topic.json] : [data.aws_iam_policy_document.legacy_account_deletion_topic.json, data.aws_iam_policy_document.legacy_account_deletion_key.json]
+}
+
 resource "aws_iam_policy" "legacy_account_deletion_topic" {
   name_prefix = "permit-send-legacy-account-deletion-topic"
   path        = "/${var.environment}/am/"
   description = "Allow the manual account deletion lambda to post to the SNS topic owned by Home"
-  policy      = data.aws_iam_policy_document.legacy_account_deletion_topic.json
+  policy      = data.aws_iam_policy_document.legacy_account_deletion_access.json
 }
 
 resource "aws_sns_topic" "mock_account_deletion_topic" {
