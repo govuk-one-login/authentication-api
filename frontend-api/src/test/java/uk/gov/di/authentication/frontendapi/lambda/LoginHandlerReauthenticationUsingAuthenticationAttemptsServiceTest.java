@@ -26,6 +26,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -69,14 +70,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
@@ -85,6 +87,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
@@ -174,6 +178,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_ALLOWED_RETRIES);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -259,6 +264,15 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             pair("incorrect_otp_code_attempt_count", 0),
                             pair("failure-reason", "incorrect_password"));
 
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    FAILURE_REASON.getValue(),
+                                    "incorrect_password"));
+
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_INVALID_CREDENTIALS,
@@ -272,7 +286,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                     "attemptNoFailedAt",
                                     configurationService.getMaxPasswordRetries()));
 
-            verifyNoInteractions(cloudwatchMetricsService);
+            verify(cloudwatchMetricsService, never())
+                    .incrementAuthenticationSuccess(
+                            any(), any(), any(), any(), anyBoolean(), anyBoolean());
             verify(sessionService, never()).storeOrUpdateSession(any());
         }
     }
@@ -356,6 +372,14 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
                             pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
                             pair("failure-reason", expectedFailureReason));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    FAILURE_REASON.getValue(),
+                                    expectedFailureReason));
         }
     }
 
@@ -399,6 +423,15 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
                             any(AuditContext.class),
                             any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            eq(
+                                    Map.of(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment(),
+                                            FAILURE_REASON.getValue(),
+                                            anyString())));
         }
     }
 
@@ -438,6 +471,15 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
                             any(AuditContext.class),
                             any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            eq(
+                                    Map.of(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment(),
+                                            FAILURE_REASON.getValue(),
+                                            anyString())));
         }
     }
 

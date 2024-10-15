@@ -82,6 +82,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
@@ -455,6 +456,14 @@ class StartHandlerTest {
                         AuditService.MetadataPair.pair(
                                 "incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
                         AuditService.MetadataPair.pair("failure-reason", expectedFailureReason));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                expectedFailureReason));
     }
 
     @Test

@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
@@ -37,11 +38,14 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -297,13 +301,22 @@ public class StartHandler
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                         reauthCountTypesToCounts, configurationService);
         if (!blockedCountTypes.isEmpty() && maybeInternalSubjectId.isPresent()) {
+            ReauthFailureReasons failureReason =
+                    getReauthFailureReasonFromCountTypes(blockedCountTypes);
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext,
                     ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
                             .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
-                            .withFailureReason(blockedCountTypes)
+                            .withFailureReason(failureReason)
                             .build());
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            FAILURE_REASON.getValue(),
+                            failureReason == null ? "unknown" : failureReason.getValue()));
         }
         return !blockedCountTypes.isEmpty();
     }
