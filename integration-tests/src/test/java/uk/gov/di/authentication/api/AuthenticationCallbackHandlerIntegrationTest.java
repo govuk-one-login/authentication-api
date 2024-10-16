@@ -35,6 +35,8 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -46,6 +48,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
@@ -105,6 +108,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     public static final AccountInterventionsStubExtension accountInterventionApiStub =
             new AccountInterventionsStubExtension();
 
+    @RegisterExtension
+    public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
     protected static ConfigurationService configurationService;
 
     private static final String CLIENT_ID = "test-client-id";
@@ -155,6 +161,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertUserInfoStoredAndRedirectedToRp(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -254,6 +261,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     void accountInterventionSetup() throws Json.JsonException {
@@ -279,6 +287,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertUserInfoStoredAndRedirectedToRp(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -300,6 +309,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToBlockedPage(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -321,6 +331,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -342,6 +353,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -362,6 +374,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertUserInfoStoredAndRedirectedToRp(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -384,6 +397,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -407,6 +421,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertUserInfoStoredAndRedirectedToRp(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -430,6 +445,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertUserInfoStoredAndRedirectedToRp(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -489,6 +505,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertUserInfoStoredAndRedirectedToRp(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     void accountInterventionSetupWithIdentity() throws Json.JsonException {
@@ -515,6 +532,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -536,6 +554,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToBlockedPage(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -557,6 +576,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -579,6 +599,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -600,6 +621,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToIpv(response, true);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -626,6 +648,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -652,6 +675,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToIpv(response, true);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
     }
 
     @Test
@@ -776,6 +800,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(userInfoDbEntry.get().getUserInfo(), containsString("new_account"));
     }
 
+    private void assertOrchSessionIsUpdatedWithUserInfoClaims() {
+        Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+        assertEquals(
+                MFAMethodType.AUTH_APP.getValue(), orchSession.get().getVerifiedMfaMethodType());
+    }
+
     private void setupClientReg(boolean identityVerificationSupported) {
         clientStore.registerClient(
                 CLIENT_ID,
@@ -835,6 +866,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 ORCH_TO_AUTH_STATE,
                 SESSION_ID);
         setUpClientSession();
+        orchSessionExtension.addSession(new OrchSessionItem().withSessionId(SESSION_ID));
     }
 
     private Map<String, String> constructQueryStringParameters() {

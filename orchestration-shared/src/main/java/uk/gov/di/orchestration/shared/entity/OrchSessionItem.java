@@ -8,9 +8,11 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class OrchSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
+    public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
 
     private String sessionId;
     private long timeToLive;
+    private String verifiedMfaMethodType;
 
     public OrchSessionItem() {}
 
@@ -40,6 +42,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withTimeToLive(long timeToLive) {
         this.timeToLive = timeToLive;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE)
+    public String getVerifiedMfaMethodType() {
+        return verifiedMfaMethodType;
+    }
+
+    public void setVerifiedMfaMethodType(String verifiedMfaMethodType) {
+        this.verifiedMfaMethodType = verifiedMfaMethodType;
+    }
+
+    public OrchSessionItem withVerifiedMfaMethodType(String verifiedMfaMethodType) {
+        this.verifiedMfaMethodType = verifiedMfaMethodType;
         return this;
     }
 }
