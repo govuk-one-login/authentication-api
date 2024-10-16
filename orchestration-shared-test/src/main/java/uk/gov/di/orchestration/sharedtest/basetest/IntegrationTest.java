@@ -336,15 +336,5 @@ public class IntegrationTest {
         public Optional<String> getIPVCapacity() {
             return Optional.of("1");
         }
-
-        @Override
-        public boolean isBrowserSessionCookieEnabled() {
-            return true;
-        }
-
-        @Override
-        public boolean isSignOutOnBrowserCloseEnabled() {
-            return true;
-        }
     }
 }
