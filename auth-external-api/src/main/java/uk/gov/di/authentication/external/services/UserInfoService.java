@@ -59,6 +59,7 @@ public class UserInfoService {
                         SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
 
         userInfo.setClaim("rp_pairwise_id", rpPairwiseId);
+        userInfo.setClaim("internal_subject_id", internalSubjectId);
         userInfo.setClaim("new_account", accessTokenInfo.getIsNewAccount());
         userInfo.setClaim("password_reset_time", accessTokenInfo.getPasswordResetTime());
 
