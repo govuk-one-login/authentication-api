@@ -290,7 +290,7 @@ class AuthorisationHandlerTest {
                         authFrontend,
                         authorisationService);
         session = new Session(SESSION_ID);
-        orchSession = new OrchSessionItem().withSessionId(SESSION_ID);
+        orchSession = new OrchSessionItem(SESSION_ID);
         when(sessionService.generateSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))

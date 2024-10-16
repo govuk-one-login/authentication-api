@@ -1119,7 +1119,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void withExistingOrchSession(String sessionId) {
-        orchSessionExtension.addSession(new OrchSessionItem().withSessionId(sessionId));
+        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
         assertTrue(orchSessionExtension.getSession(sessionId).isPresent());
     }
 
