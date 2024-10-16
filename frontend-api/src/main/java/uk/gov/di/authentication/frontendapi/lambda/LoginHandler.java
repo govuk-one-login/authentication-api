@@ -308,7 +308,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
 
         authSessionService.updateSession(
-                authSessionItem.withAccountState(AuthSessionItem.AccountState.EXISTING));
+                authSessionItem
+                        .withAccountState(AuthSessionItem.AccountState.EXISTING)
+                        .withInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
 
         var userMfaDetail =
                 getUserMFADetail(

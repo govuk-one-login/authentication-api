@@ -3,12 +3,11 @@ package uk.gov.di.authentication.frontendapi.helpers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 public class SessionHelper {
@@ -18,9 +17,9 @@ public class SessionHelper {
             UserContext userContext,
             AuthenticationService authenticationService,
             ConfigurationService configurationService,
-            SessionService sessionService,
-            Session session) {
+            AuthSessionItem authSession) {
         LOG.info("Calculating internal common subject identifier");
+        var session = userContext.getSession();
         UserProfile userProfile =
                 userContext.getUserProfile().isPresent()
                         ? userContext.getUserProfile().get()
@@ -34,9 +33,7 @@ public class SessionHelper {
                                         authenticationService)
                                 .getValue();
         LOG.info("Setting internal common subject identifier in user session");
-        sessionService.storeOrUpdateSession(
-                userContext
-                        .getSession()
-                        .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
+        session.setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier);
+        authSession.setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier);
     }
 }

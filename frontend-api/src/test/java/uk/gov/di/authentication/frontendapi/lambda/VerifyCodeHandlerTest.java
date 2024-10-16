@@ -558,8 +558,7 @@ class VerifyCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
         verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
-        var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
-        verify(sessionService, times(saveSessionCount)).storeOrUpdateSession(session);
+        verify(sessionService, times(2)).storeOrUpdateSession(session);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
