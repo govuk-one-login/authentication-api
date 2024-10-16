@@ -644,6 +644,16 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
+    void shouldReturnMfaCodeNotValidWhenCodeIsUndefined() {
+        when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.empty());
+
+        APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
+    }
+
+    @Test
     void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
