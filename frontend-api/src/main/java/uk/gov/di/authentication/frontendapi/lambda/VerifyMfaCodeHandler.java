@@ -287,6 +287,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId) {
 
+        var session = userContext.getSession();
+
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
                         .getMfaCodeProcessor(
@@ -298,14 +300,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
         }
 
-        var errorResponseMaybe = mfaCodeProcessor.validateCode();
-
-        if (errorResponseMaybe.filter(ErrorResponse.ERROR_1041::equals).isPresent()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
-        }
-
-        var session = userContext.getSession();
-
         if (JourneyType.PASSWORD_RESET_MFA.equals(codeRequest.getJourneyType())) {
             SessionHelper.updateSessionWithSubject(
                     userContext,
@@ -315,15 +309,58 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     session);
         }
 
-        processCodeSession(
-                errorResponseMaybe,
-                session,
-                input,
-                userContext,
-                subjectId,
-                codeRequest,
-                mfaCodeProcessor,
-                maybeRpPairwiseId);
+        var errorResponseMaybe = mfaCodeProcessor.validateCode();
+
+        if (errorResponseMaybe.isPresent()) {
+            var errorResponse = errorResponseMaybe.get();
+            if (errorResponse.equals(ErrorResponse.ERROR_1041)) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
+            }
+
+            if (errorResponse.equals(ErrorResponse.ERROR_1034)
+                    || errorResponse.equals(ErrorResponse.ERROR_1042)) {
+                blockCodeForSessionAndResetCountIfBlockDoesNotExist(
+                        userContext.getSession().getEmailAddress(),
+                        codeRequest.getMfaMethodType(),
+                        codeRequest.getJourneyType());
+            }
+
+            if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
+                    && configurationService.isAuthenticationAttemptsServiceEnabled()
+                    && subjectId != null) {
+                authenticationAttemptsService.createOrIncrementCount(
+                        subjectId,
+                        NowHelper.nowPlus(
+                                        configurationService.getReauthEnterAuthAppCodeCountTTL(),
+                                        ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_AUTH_APP_CODE);
+            }
+        } else {
+            processSuccessfulCodeSession(
+                    session, input, subjectId, codeRequest, mfaCodeProcessor, maybeRpPairwiseId);
+        }
+
+        var auditableEvent =
+                errorResponseMaybe
+                        .map(this::errorResponseAsFrontendAuditableEvent)
+                        .orElse(AUTH_CODE_VERIFIED);
+
+        var auditContextForCodeProcessing =
+                auditContextFromUserContext(
+                        userContext,
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()));
+
+        var metadataPairs =
+                metadataPairsForEvent(auditableEvent, session.getEmailAddress(), codeRequest);
+
+        auditService.submitAuditEvent(auditableEvent, auditContextForCodeProcessing, metadataPairs);
 
         sessionService.storeOrUpdateSession(session);
 
@@ -385,71 +422,27 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();
     }
 
-    private void processCodeSession(
-            Optional<ErrorResponse> errorResponse,
+    private void processSuccessfulCodeSession(
             Session session,
             APIGatewayProxyRequestEvent input,
-            UserContext userContext,
             String subjectId,
             VerifyMfaCodeRequest codeRequest,
             MfaCodeProcessor mfaCodeProcessor,
             Optional<String> maybeRpPairwiseId) {
-        var emailAddress = session.getEmailAddress();
 
-        var auditableEvent =
-                errorResponse
-                        .map(this::errorResponseAsFrontendAuditableEvent)
-                        .orElse(AUTH_CODE_VERIFIED);
-
-        var auditContext =
-                auditContextFromUserContext(
-                        userContext,
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()));
-
-        var metadataPairs = metadataPairsForEvent(auditableEvent, emailAddress, codeRequest);
-
-        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
-
-        if (errorResponse.isEmpty()) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
-                    && subjectId != null) {
-                preserveReauthCountsForAuditIfJourneyIsReauth(
-                        codeRequest.getJourneyType(), subjectId, session, maybeRpPairwiseId);
-                clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-                maybeRpPairwiseId.ifPresentOrElse(
-                        this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
-                        () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
-            }
-            mfaCodeProcessor.processSuccessfulCodeRequest(
-                    IpAddressHelper.extractIpAddress(input),
-                    extractPersistentIdFromHeaders(input.getHeaders()));
-        }
-
-        if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
-                && configurationService.isAuthenticationAttemptsServiceEnabled()
+        if (configurationService.isAuthenticationAttemptsServiceEnabled()
+                && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                 && subjectId != null) {
-            authenticationAttemptsService.createOrIncrementCount(
-                    subjectId,
-                    NowHelper.nowPlus(
-                                    configurationService.getReauthEnterAuthAppCodeCountTTL(),
-                                    ChronoUnit.SECONDS)
-                            .toInstant()
-                            .getEpochSecond(),
-                    JourneyType.REAUTHENTICATION,
-                    CountType.ENTER_AUTH_APP_CODE);
+            preserveReauthCountsForAuditIfJourneyIsReauth(
+                    codeRequest.getJourneyType(), subjectId, session, maybeRpPairwiseId);
+            clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
+            maybeRpPairwiseId.ifPresentOrElse(
+                    this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
+                    () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }
-
-        if (errorResponse
-                .map(t -> List.of(ErrorResponse.ERROR_1034, ErrorResponse.ERROR_1042).contains(t))
-                .orElse(false)) {
-            blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-                    emailAddress, codeRequest.getMfaMethodType(), codeRequest.getJourneyType());
-        }
+        mfaCodeProcessor.processSuccessfulCodeRequest(
+                IpAddressHelper.extractIpAddress(input),
+                extractPersistentIdFromHeaders(input.getHeaders()));
     }
 
     private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(
@@ -496,9 +489,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private static boolean isInvalidReauthAuthAppAttempt(
-            Optional<ErrorResponse> errorResponse, VerifyMfaCodeRequest codeRequest) {
-        return errorResponse.isPresent()
-                && errorResponse.get() == ErrorResponse.ERROR_1043
+            ErrorResponse errorResponse, VerifyMfaCodeRequest codeRequest) {
+        return errorResponse == ErrorResponse.ERROR_1043
                 && codeRequest.getJourneyType() == JourneyType.REAUTHENTICATION;
     }
 
