@@ -202,7 +202,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     userContext,
                     subjectID,
                     authSession.get(),
-                    auditContext,
                     maybeRpPairwiseId);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
@@ -284,7 +283,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             AuthSessionItem authSession,
-            AuditContext auditContext,
             Optional<String> maybeRpPairwiseId) {
 
         var session = userContext.getSession();
@@ -348,7 +346,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .map(this::errorResponseAsFrontendAuditableEvent)
                         .orElse(AUTH_CODE_VERIFIED);
 
-        var auditContextForCodeProcessing =
+        var auditContext =
                 auditContextFromUserContext(
                         userContext,
                         session.getInternalCommonSubjectIdentifier(),
@@ -360,7 +358,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var metadataPairs =
                 metadataPairsForEvent(auditableEvent, session.getEmailAddress(), codeRequest);
 
-        auditService.submitAuditEvent(auditableEvent, auditContextForCodeProcessing, metadataPairs);
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
         sessionService.storeOrUpdateSession(session);
 
