@@ -656,8 +656,12 @@ public class AuthenticationCallbackHandler
         String verifiedMfaMethodType =
                 userInfo.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class);
+        String rpPairwiseId =
+                userInfo.getClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(), String.class);
         OrchSessionItem updatedOrchSession =
-                orchSession.withVerifiedMfaMethodType(verifiedMfaMethodType);
+                orchSession
+                        .withVerifiedMfaMethodType(verifiedMfaMethodType)
+                        .withRpPairwiseId(rpPairwiseId);
         LOG.info("Updating Orch session with claims from userinfo response");
         orchSessionService.updateSession(updatedOrchSession);
     }

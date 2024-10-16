@@ -13,7 +13,8 @@ public enum AuthUserInfoClaims {
     PHONE_NUMBER("phone_number"),
     PHONE_VERIFIED("phone_number_verified"),
     SALT("salt"),
-    VERIFIED_MFA_METHOD_TYPE("verified_mfa_method_type");
+    VERIFIED_MFA_METHOD_TYPE("verified_mfa_method_type"),
+    RP_PAIRWISE_ID("rp_pairwise_id");
 
     private final String value;
 

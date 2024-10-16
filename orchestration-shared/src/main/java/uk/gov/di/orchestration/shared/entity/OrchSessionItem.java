@@ -9,10 +9,12 @@ public class OrchSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
+    public static final String ATTRIBUTE_RP_PAIRWISE_ID = "RpPairwiseId";
 
     private String sessionId;
     private long timeToLive;
     private String verifiedMfaMethodType;
+    private String rpPairwiseId;
 
     public OrchSessionItem() {}
 
@@ -60,6 +62,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withVerifiedMfaMethodType(String verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RP_PAIRWISE_ID)
+    public String getRpPairwiseId() {
+        return rpPairwiseId;
+    }
+
+    public void setRpPairwiseId(String rpPairwiseId) {
+        this.rpPairwiseId = rpPairwiseId;
+    }
+
+    public OrchSessionItem withRpPairwiseId(String rpPairwiseId) {
+        this.rpPairwiseId = rpPairwiseId;
         return this;
     }
 }
