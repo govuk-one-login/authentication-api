@@ -42,10 +42,6 @@ contra_state_bucket = "digital-identity-dev-tfstate"
 
 orch_account_id = "058264132019"
 
-oidc_origin_domain_enabled  = true
-oidc_cloudfront_dns_enabled = true
-enforce_cloudfront          = true
-
 orch_trustmark_enabled               = true
 orch_openid_configuration_enabled    = true
 orch_jwks_enabled                    = true
