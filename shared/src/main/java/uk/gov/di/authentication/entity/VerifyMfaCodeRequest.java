@@ -8,8 +8,6 @@ import uk.gov.di.authentication.shared.validation.Required;
 
 public class VerifyMfaCodeRequest extends CodeRequest {
 
-    public VerifyMfaCodeRequest() {}
-
     public VerifyMfaCodeRequest(MFAMethodType mfaMethodType, String code, JourneyType journeyType) {
         this(mfaMethodType, code, journeyType, null);
     }
