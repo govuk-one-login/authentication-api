@@ -196,3 +196,9 @@ variable "auth_new_frontend_account_id" {
   description = "Account id of the auth new frontend"
   default     = ""
 }
+
+variable "skip_canary" {
+  description = "Flag to skip canary if [skip canary] or [canary skip], or [no canary] string is included in git merge commit message"
+  type        = bool
+  default     = false
+}

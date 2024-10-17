@@ -79,3 +79,17 @@ module "check_reauth_user" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_check_reauth_user" {
+  count                = local.deploy_reauth_user_count
+  source               = "../modules/codedeploy"
+  endpoint_name        = "check-reauth-user"
+  environment          = var.environment
+  lambda_function_name = module.check_reauth_user[0].lambda_function_name
+  lambda_version       = module.check_reauth_user[0].lambda_version
+  lambda_alias_name    = module.check_reauth_user[0].lambda_alias_name
+  lambda_alias_version = module.check_reauth_user[0].lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

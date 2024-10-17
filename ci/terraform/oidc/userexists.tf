@@ -73,3 +73,16 @@ module "userexists" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_userexists" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "userexists"
+  environment          = var.environment
+  lambda_function_name = module.userexists.lambda_function_name
+  lambda_version       = module.userexists.lambda_version
+  lambda_alias_name    = module.userexists.lambda_alias_name
+  lambda_alias_version = module.userexists.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

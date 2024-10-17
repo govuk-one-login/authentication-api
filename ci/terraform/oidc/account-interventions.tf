@@ -76,3 +76,16 @@ module "account_interventions" {
 
   use_localstack = var.use_localstack
 }
+
+module "codedeploy_account_interventions" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "account-interventions"
+  environment          = var.environment
+  lambda_function_name = module.account_interventions[0].lambda_function_name
+  lambda_version       = module.account_interventions[0].lambda_version
+  lambda_alias_name    = module.account_interventions[0].lambda_alias_name
+  lambda_alias_version = module.account_interventions[0].lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

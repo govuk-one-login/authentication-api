@@ -91,3 +91,16 @@ module "ipv-callback" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_ipv_callback" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "ipv-callback"
+  environment          = var.environment
+  lambda_function_name = module.ipv-callback.lambda_function_name
+  lambda_version       = module.ipv-callback.lambda_version
+  lambda_alias_name    = module.ipv-callback.lambda_alias_name
+  lambda_alias_version = module.ipv-callback.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

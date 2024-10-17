@@ -78,3 +78,16 @@ module "reset-password-request" {
     aws_sqs_queue.email_queue,
   ]
 }
+
+module "codedeploy_reset_password_request" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "reset-password-request"
+  environment          = var.environment
+  lambda_function_name = module.reset-password-request.lambda_function_name
+  lambda_version       = module.reset-password-request.lambda_version
+  lambda_alias_name    = module.reset-password-request.lambda_alias_name
+  lambda_alias_version = module.reset-password-request.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}
