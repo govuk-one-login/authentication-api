@@ -1,0 +1,72 @@
+# Please read guidance on confluence before use
+# (https://govukverify.atlassian.net/wiki/spaces/LO/pages/4606132332/Manually+Testing+Account+Management+API).
+# Populate these values before use. Only do manual testing in lower environments (sandpit, authdev1, authdev2).
+@base-url =
+@bearer-token =
+
+### Post to /authenticate
+POST {{base-url}}/authenticate
+Authorization:Bearer {{bearer-token}}
+
+{
+"email": "your.email@digital.cabinet-office.gov.uk",
+"password": "currentPassword123!"
+}
+
+### Post to /send-otp-notification
+# You must make a successful request to this endpoint to receive an otp to put into requests for /update-email
+# and /update-phone-number.
+# notificationType must be "VERIFY_EMAIL" or "VERIFY_PHONE_NUMBER", depending desired type of OTP and subsequent
+# endpoint you want to make a request to.
+# The email or phoneNumber field must be populated with a new value if looking to update email or phone number.
+POST {{base-url}}/send-otp-notification
+Authorization:Bearer {{bearer-token}}
+
+{
+"notificationType": "{ VERIFY_PHONE_NUMBER or VERIFY_EMAIL }",
+"email": "your.email@digital.cabinet-office.gov.uk",
+"phoneNumber": "07xxxxxxxxx"
+}
+
+### Post to /update-email
+# REQUIRES CLIENT REGISTRY CHANGE - CHANGE BACK AFTER USE
+POST {{base-url}}/update-email
+Authorization:Bearer {{bearer-token}}
+
+{
+"existingEmailAddress": "your.email@digital.cabinet-office.gov.uk",
+"replacementEmailAddress": "new_email_registered.with_notify@digital.cabinet-office.gov.uk",
+"otp": "111111"
+}
+
+### Post to /delete-account
+# REQUIRES CLIENT REGISTRY CHANGE - CHANGE BACK AFTER USE
+POST {{base-url}}/delete-account
+Authorization:Bearer {{bearer-token}}
+
+{
+"email": "your.email@digital.cabinet-office.gov.uk"
+}
+
+### Post to /update-password
+# REQUIRES CLIENT REGISTRY CHANGE - CHANGE BACK AFTER USE
+POST {{base-url}}/update-password
+Authorization:Bearer {{bearer-token}}
+
+{
+"email": "your.email@digital.cabinet-office.gov.uk",
+"newPassword": "newPassword123!"
+}
+
+### Post to /update-phone-number
+# REQUIRES CLIENT REGISTRY CHANGE - CHANGE BACK AFTER USE
+# After updating a phone number, when receiving an OTP going through a sign in journey immediately after, the check
+# your phone screen will display the old phone number digits. This does not happen in the real service.
+POST {{base-url}}/update-phone-number
+Authorization:Bearer {{bearer-token}}
+
+{
+"email": "your.email@digital.cabinet-office.gov.uk",
+"phoneNumber": "{ new phone number }",
+"otp": "111111"
+}
