@@ -11,6 +11,9 @@ import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -21,6 +24,8 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+
+import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
@@ -38,11 +43,15 @@ public class AuthenticateHandler
     private final AuthenticationService authenticationService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
+    private final ConfigurationService configurationService;
 
     public AuthenticateHandler(
-            AuthenticationService authenticationService, AuditService auditService) {
+            AuthenticationService authenticationService,
+            AuditService auditService,
+            ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
         this.auditService = auditService;
+        this.configurationService = configurationService;
     }
 
     public AuthenticateHandler() {
@@ -50,6 +59,7 @@ public class AuthenticateHandler
     }
 
     public AuthenticateHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.authenticationService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
@@ -73,7 +83,7 @@ public class AuthenticateHandler
         var auditContext =
                 new AuditContext(
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                         sessionId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -86,12 +96,19 @@ public class AuthenticateHandler
             AuthenticateRequest loginRequest =
                     objectMapper.readValue(input.getBody(), AuthenticateRequest.class);
             auditContext = auditContext.withEmail(loginRequest.getEmail());
-            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
-            if (!userHasAccount) {
+            Optional<UserProfile> userProfile =
+                    authenticationService.getUserProfileByEmailMaybe(loginRequest.getEmail());
+            if (userProfile.isEmpty()) {
                 auditService.submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile.get(),
+                            configurationService.getInternalSectorUri(),
+                            authenticationService);
+            auditContext = auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue());
             boolean hasValidCredentials =
                     authenticationService.login(
                             loginRequest.getEmail(), loginRequest.getPassword());
