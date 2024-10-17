@@ -11,7 +11,8 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 public class FetchJwksHandler implements RequestHandler<Map<String, String>, String> {
@@ -43,7 +44,7 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Str
                 throw new IllegalArgumentException(
                         "FetchJwksHandler invoked with invalid argument(s)");
             }
-            JWK jwk = jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId);
+            JWK jwk = jwksService.retrieveJwkFromURLWithKeyId(new URI(url).toURL(), keyId);
             return jwk.toJSONString();
         } catch (KeySourceException e) {
             String errorMsg =
@@ -56,6 +57,10 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Str
             return errorResponse;
         } catch (IllegalArgumentException e) {
             String errorMsg = "Failed to fetch JWKS: url and/or keyId parameter not present";
+            LOG.error(errorMsg, e);
+            return errorResponse;
+        } catch (URISyntaxException e) {
+            String errorMsg = "string could not be parsed as a URI reference";
             LOG.error(errorMsg, e);
             return errorResponse;
         }
