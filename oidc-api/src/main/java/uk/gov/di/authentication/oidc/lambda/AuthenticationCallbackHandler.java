@@ -369,8 +369,14 @@ public class AuthenticationCallbackHandler
 
                 // TODO-922: temporary logs for deploying to dev
                 LOG.info(
-                        "is email attached to auth-external-api userinfo response: {}",
-                        userInfo.getEmailAddress() != null);
+                        "email from auth-external-api userinfo response: {}",
+                        userInfo.getEmailAddress());
+                LOG.info(
+                        "rp_pairwise_id from auth-external-api userinfo response: {}",
+                        userInfo.getClaim("rp_pairwise_id"));
+                LOG.info(
+                        "internal_subject_id from auth-external-api userinfo response: {}",
+                        userInfo.getClaim("internal_subject_id"));
                 //
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
