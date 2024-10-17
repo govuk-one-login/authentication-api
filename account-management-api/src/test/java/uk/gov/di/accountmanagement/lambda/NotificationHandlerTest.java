@@ -30,12 +30,14 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_U
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 
-public class NotificationHandlerTest {
+class NotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CONTACT_US_LINK_ROUTE = "contact-gov-uk-one-login";
+    private static final String NOTIFY_EXCEPTION =
+            "uk.gov.service.notify.NotificationClientException: Error sending with Notify using NotificationType: ";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -50,7 +52,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessVerifyEmailMessageFromSQSQueue()
+    void shouldSuccessfullyProcessVerifyEmailMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -70,7 +72,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessVerifyPhoneMessageFromSQSQueue()
+    void shouldSuccessfullyProcessVerifyPhoneMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -89,7 +91,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessUpdateEmailMessageFromSQSQueue()
+    void shouldSuccessfullyProcessUpdateEmailMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -108,7 +110,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessUpdatePasswordMessageFromSQSQueue()
+    void shouldSuccessfullyProcessUpdatePasswordMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -127,7 +129,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessUpdatePhoneNumberMessageFromSQSQueue()
+    void shouldSuccessfullyProcessUpdatePhoneNumberMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -146,7 +148,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldSuccessfullyProcessDeleteAccountMessageFromSQSQueue()
+    void shouldSuccessfullyProcessDeleteAccountMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -164,7 +166,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    public void shouldThrowExceptionIfUnableToProcessMessageFromQueue() {
+    void shouldThrowExceptionIfUnableToProcessMessageFromQueue() {
         SQSEvent sqsEvent = generateSQSEvent("");
 
         RuntimeException exception =
@@ -174,11 +176,12 @@ public class NotificationHandlerTest {
                         "Expected to throw exception");
 
         assertEquals(
-                "Error when mapping message from queue to a NotifyRequest", exception.getMessage());
+                "uk.gov.service.notify.NotificationClientException: Error when mapping message from queue to a NotifyRequest",
+                exception.getMessage());
     }
 
     @Test
-    public void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
+    void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -202,13 +205,11 @@ public class NotificationHandlerTest {
                         () -> handler.handleRequest(sqsEvent, context),
                         "Expected to throw exception");
 
-        assertEquals(
-                "Error sending with Notify using NotificationType: VERIFY_EMAIL",
-                exception.getMessage());
+        assertEquals(NOTIFY_EXCEPTION + VERIFY_EMAIL, exception.getMessage());
     }
 
     @Test
-    public void shouldThrowExceptionIfNotifyIsUnableToSendText()
+    void shouldThrowExceptionIfNotifyIsUnableToSendText()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
@@ -229,9 +230,7 @@ public class NotificationHandlerTest {
                         () -> handler.handleRequest(sqsEvent, context),
                         "Expected to throw exception");
 
-        assertEquals(
-                "Error sending with Notify using NotificationType: VERIFY_PHONE_NUMBER",
-                exception.getMessage());
+        assertEquals(NOTIFY_EXCEPTION + VERIFY_PHONE_NUMBER, exception.getMessage());
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {
