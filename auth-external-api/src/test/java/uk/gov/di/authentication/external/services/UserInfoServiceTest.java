@@ -82,7 +82,6 @@ public class UserInfoServiceTest {
             String expectedLegacySubjectId,
             String expectedPublicSubjectId,
             String expectedLocalAccountId,
-            String expectedEmailAddress,
             Boolean expectedEmailVerified,
             String expectedPhoneNumber,
             Boolean expectedPhoneNumberVerified,
@@ -92,11 +91,11 @@ public class UserInfoServiceTest {
         assertEquals(TEST_INTERNAL_PAIRWISE_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
         assertEquals(TEST_IS_NEW_ACCOUNT, actual.getClaim("new_account"));
+        assertEquals(TEST_EMAIL, actual.getEmailAddress());
 
         assertEquals(expectedLegacySubjectId, actual.getClaim("legacy_subject_id"));
         assertEquals(expectedPublicSubjectId, actual.getClaim("public_subject_id"));
         assertEquals(expectedLocalAccountId, actual.getClaim("local_account_id"));
-        assertEquals(expectedEmailAddress, actual.getEmailAddress());
         assertEquals(expectedEmailVerified, actual.getEmailVerified());
         assertEquals(expectedPhoneNumber, actual.getPhoneNumber());
         assertEquals(expectedPhoneNumberVerified, actual.getPhoneNumberVerified());
@@ -114,7 +113,6 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         null,
-                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -122,7 +120,6 @@ public class UserInfoServiceTest {
                         TEST_LEGACY_SUBJECT_ID,
                         null,
                         null,
-                        TEST_EMAIL,
                         TEST_EMAIL_VERIFIED,
                         null,
                         null,
@@ -141,7 +138,6 @@ public class UserInfoServiceTest {
                         TEST_LEGACY_SUBJECT_ID,
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
-                        TEST_EMAIL,
                         TEST_EMAIL_VERIFIED,
                         TEST_PHONE,
                         TEST_PHONE_VERIFIED,
