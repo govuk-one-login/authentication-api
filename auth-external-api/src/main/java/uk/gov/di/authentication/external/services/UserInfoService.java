@@ -93,6 +93,9 @@ public class UserInfoService {
         userInfo.setClaim(
                 AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                 authSession.getVerifiedMfaMethodType());
+        userInfo.setClaim(
+                AuthUserInfoClaims.INTERNAL_COMMON_SUBJECT_IDENTIFIER.getValue(),
+                authSession.getInternalCommonSubjectIdentifier());
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {

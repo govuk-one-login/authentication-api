@@ -51,6 +51,8 @@ public class UserInfoServiceTest {
     private static final boolean TEST_PHONE_VERIFIED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
+    private static final String TEST_MFA_TYPE = "mfa-type";
+    private static final String TEST_INTERNAL_SUBJECT_IDEINTIFIER = "internal-subject-id";
     private static final UserProfile TEST_USER_PROFILE =
             new UserProfile()
                     .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
@@ -73,6 +75,9 @@ public class UserInfoServiceTest {
                 .thenReturn(TEST_USER_PROFILE);
         when(authenticationService.getOrGenerateSalt(TEST_USER_PROFILE)).thenCallRealMethod();
         when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
+
+        authSession.setVerifiedMfaMethodType(TEST_MFA_TYPE);
+        authSession.setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_IDEINTIFIER);
     }
 
     @ParameterizedTest
@@ -102,6 +107,10 @@ public class UserInfoServiceTest {
         assertEquals(expectedPhoneNumberVerified, actual.getPhoneNumberVerified());
         assertEquals(expectedSalt, actual.getClaim("salt"));
         assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
+        assertEquals(TEST_MFA_TYPE, actual.getClaim("verified_mfa_method_type"));
+        assertEquals(
+                TEST_INTERNAL_SUBJECT_IDEINTIFIER,
+                actual.getClaim("internal_common_subject_identifier"));
     }
 
     private static Stream<Arguments> provideTestData() {

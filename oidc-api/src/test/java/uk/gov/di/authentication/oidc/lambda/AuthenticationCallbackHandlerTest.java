@@ -95,6 +95,8 @@ class AuthenticationCallbackHandlerTest {
     private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
+            "internal-common-subject-identifier";
     private static final State RP_STATE = new State();
     private static final Nonce RP_NONCE = new Nonce();
     private static final ClientSession clientSession =
@@ -143,6 +145,10 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
                 .thenReturn(MFAMethodType.AUTH_APP.getValue());
+        when(USER_INFO.getClaim(
+                        AuthUserInfoClaims.INTERNAL_COMMON_SUBJECT_IDENTIFIER.getValue(),
+                        String.class))
+                .thenReturn(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
     }
 
     @BeforeEach
@@ -400,8 +406,11 @@ class AuthenticationCallbackHandlerTest {
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
         assertThat(
-                MFAMethodType.AUTH_APP.getValue(),
-                equalTo(orchSessionCaptor.getAllValues().get(0).getVerifiedMfaMethodType()));
+                orchSessionCaptor.getAllValues().get(0).getVerifiedMfaMethodType(),
+                equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(
+                orchSessionCaptor.getAllValues().get(0).getInternalCommonSubjectIdentifier(),
+                equalTo(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER));
     }
 
     @Nested
