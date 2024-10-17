@@ -10,26 +10,6 @@ on:
         description: "The AWS region to use"
         type: string
         required: true
-      aws_role:
-        description: "ARN of the AWS role to assume"
-        type: string
-        required: true
-      source_bucket:
-        description: "The S3 bucket where the unsigned artifact is stored"
-        type: string
-        required: true
-      destination_bucket:
-        description: "The S3 bucket where the signed artifact will be stored"
-        type: string
-        required: true
-      signing_profile:
-        description: "The AWS Signer profile to use for signing the artifact"
-        type: string
-        required: true
-      lookup_table:
-        description: "The DynamoDB table to use for looking up previous artifacts"
-        type: string
-        required: true
 
       # The following are optional
       java_version:
@@ -40,6 +20,23 @@ on:
         description: "The Java distribution to use"
         type: string
         default: "corretto"
+
+    secrets:
+      aws_role:
+        description: "ARN of the AWS role to assume"
+        required: true
+      source_bucket:
+        description: "The S3 bucket where the unsigned artifact is stored"
+        required: true
+      destination_bucket:
+        description: "The S3 bucket where the signed artifact will be stored"
+        required: true
+      signing_profile:
+        description: "The AWS Signer profile to use for signing the artifact"
+        required: true
+      lookup_table:
+        description: "The DynamoDB table to use for looking up previous artifacts"
+        required: true
 
 jobs:
   build:
@@ -62,7 +59,7 @@ jobs:
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
-          role-to-assume: ${{ inputs.aws_role }}
+          role-to-assume: ${{ secrets.aws_role }}
           aws-region: ${{ inputs.aws_region }}
 
       - name: Set up JDK 17
@@ -93,7 +90,7 @@ jobs:
         id: query_dynamodb
         run: |
           PREVIOUS_SIGNED="$(aws dynamodb get-item \
-            --table-name ${{ inputs.lookup_table }} \
+            --table-name ${{ secrets.lookup_table }} \
             --key '{"module_name": {"S": "${{ inputs.module_name }}"}, "artifact_hash": {"S": "${{ steps.build.outputs.sha }}"}}')"
 
           if [ -n "${PREVIOUS_SIGNED}" ]; then
@@ -115,12 +112,12 @@ jobs:
         if: env.ARTIFACT_HAS_CHANGED == 'false'
         run: |
           if ! aws s3api head-object \
-            --bucket ${{ inputs.destination_bucket }} \
+            --bucket ${{ secrets.destination_bucket }} \
             --key ${{ env.SIGNED_OBJECT_KEY }}
           then
             echo "Previous artifact no longer exists in S3 bucket, reuploading and resigning artifact. Deleting record from DynamoDB table..."
             aws dynamodb delete-item \
-              --table-name ${{ inputs.lookup_table }} \
+              --table-name ${{ secrets.lookup_table }} \
               --key '{"module_name": {"S": "${{ inputs.module_name }}"}, "artifact_hash": {"S": "${{ steps.build.outputs.sha }}"}}'
             echo 'ARTIFACT_HAS_CHANGED=true' >> "$GITHUB_ENV"
             echo "::warning title=${{ inputs.module_name }}::${{ inputs.module_name }} module has changed, using the new artifact"
@@ -134,7 +131,7 @@ jobs:
         working-directory: ${{ inputs.module_name }}/build/distributions
         run: |
           VERSION="$(aws s3api put-object \
-            --bucket ${{ inputs.source_bucket }} \
+            --bucket ${{ secrets.source_bucket }} \
             --key ${{ inputs.module_name }}/${{ github.sha }}.zip \
             --body ${{ inputs.module_name }}.zip \
             --metadata commitsha=${{ github.sha }} \
@@ -148,9 +145,9 @@ jobs:
         if: env.ARTIFACT_HAS_CHANGED == 'true'
         run: |
           JOB_ID="$(aws signer start-signing-job \
-            --profile-name "${{ inputs.signing_profile }}" \
-            --source "s3={bucketName=${{ inputs.source_bucket }},key=${{ inputs.module_name }}/${{ github.sha }}.zip,version=${{ steps.upload_unsigned_artifact.outputs.version }}}" \
-            --destination "s3={bucketName=${{ inputs.destination_bucket }},prefix=signed-${{ inputs.module_name }}-${{ github.sha }}-}" \
+            --profile-name "${{ secrets.signing_profile }}" \
+            --source "s3={bucketName=${{ secrets.source_bucket }},key=${{ inputs.module_name }}/${{ github.sha }}.zip,version=${{ steps.upload_unsigned_artifact.outputs.version }}}" \
+            --destination "s3={bucketName=${{ secrets.destination_bucket }},prefix=signed-${{ inputs.module_name }}-${{ github.sha }}-}" \
             --query "jobId" --output=text)"
 
           echo "Waiting for signing job ${JOB_ID} to complete..."
@@ -165,7 +162,7 @@ jobs:
         if: env.ARTIFACT_HAS_CHANGED == 'true'
         run: |
           aws dynamodb put-item \
-            --table-name "${{ inputs.lookup_table }}" \
+            --table-name "${{ secrets.lookup_table }}" \
             --item '{"module_name":{"S":"${{ inputs.module_name }}"},"artifact_hash":{"S":"${{ steps.build.outputs.sha }}"},"signed_object_key":{"S":"${{ env.SIGNED_OBJECT_KEY }}"},"commit_sha":{"S":"${{ github.sha }}"}}'
 
       - name: Prepare GHA artifacts
@@ -177,7 +174,7 @@ jobs:
           echo -n "${{ env.ARTIFACT_COMMIT_SHA }}" >> "${artifact_dir}/${{ inputs.module_name }}_commitsha.txt"
 
           aws s3api get-object \
-            --bucket ${{ inputs.destination_bucket }} \
+            --bucket ${{ secrets.destination_bucket }} \
             --key ${{ env.SIGNED_OBJECT_KEY }} \
             "${artifact_dir}/${{ inputs.module_name }}.zip"
 
