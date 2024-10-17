@@ -168,7 +168,7 @@ subprojects {
 
         lambda "software.amazon.awssdk:lambda:${dependencyVersions.aws_sdk_v2_version}"
 
-        govuk_notify "uk.gov.service.notify:notifications-java-client:5.2.0-RELEASE"
+        govuk_notify "uk.gov.service.notify:notifications-java-client:5.2.1-RELEASE"
 
         gson "com.google.code.gson:gson:${dependencyVersions.gson}"
 
