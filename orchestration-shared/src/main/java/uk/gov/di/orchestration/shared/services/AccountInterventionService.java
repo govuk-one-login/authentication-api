@@ -139,7 +139,11 @@ public class AccountInterventionService {
     private AccountIntervention handleException(Exception e) {
         cloudwatchMetricsService.incrementCounter(
                 configurationService.getAccountInterventionsErrorMetricName(),
-                Map.of("Environment", configurationService.getEnvironment()));
+                Map.of(
+                        "Environment",
+                        configurationService.getEnvironment(),
+                        "AbortOnError",
+                        String.valueOf(acountInterventionsAbortOnError)));
         if (accountInterventionsActionEnabled && acountInterventionsAbortOnError) {
             String errorMessage =
                     "Problem communicating with Account Intervention Service. Aborting user journey.";
