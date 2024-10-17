@@ -1876,6 +1876,61 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+
+  AuthenticationCallbackAisErrorFailOpenMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-ais-error-fail-open
+      FilterPattern: '{$.AISException = 1 && $.AbortOnError = "false"}'
+      LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-ais-error-fail-open-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthenticationCallbackAisErrorFailOpenAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Assuming no intervention and continuing with user journey. ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-authentication-callback-ais-error-fail-open-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-ais-error-fail-open-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  AuthenticationCallbackAisErrorAbortMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-ais-error-abort
+      FilterPattern: '{$.AISException = 1 && $.AbortOnError = "true"}'
+      LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-ais-error-abort-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthenticationCallbackAisErrorAbortAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Aborting user journey - P1 alarm. ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-authentication-callback-ais-error-abort-p1-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-ais-error-abort-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
   #endregion
 
   #region Jwks Lambda

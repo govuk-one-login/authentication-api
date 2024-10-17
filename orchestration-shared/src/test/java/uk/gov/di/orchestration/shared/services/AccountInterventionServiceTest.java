@@ -245,7 +245,8 @@ class AccountInterventionServiceTest {
                 () -> accountInterventionService.getAccountIntervention(internalPairwiseSubjectId));
 
         verify(cloudwatchMetricsService)
-                .incrementCounter("AISException", Map.of("Environment", ENVIRONMENT));
+                .incrementCounter(
+                        "AISException", Map.of("Environment", ENVIRONMENT, "AbortOnError", "true"));
     }
 
     @Test

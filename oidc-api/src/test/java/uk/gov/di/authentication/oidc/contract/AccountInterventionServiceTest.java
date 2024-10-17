@@ -328,7 +328,8 @@ class AccountInterventionServiceTest {
                                 accountInterventionService.getAccountIntervention(
                                         INTERNAL_PAIRWISE_SUBJECT_ID, auditContext));
         assertEquals(
-                "Problem communicating with Account Intervention Service", exception.getMessage());
+                "Problem communicating with Account Intervention Service. Aborting user journey.",
+                exception.getMessage());
     }
 
     @Test
