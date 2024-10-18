@@ -115,6 +115,9 @@ public class UserInfoService {
 
         // TODO-922: temporary logs for checking all is working as expected
         LOG.info("is email attached to userinfo table: {}", tmpUserInfo.getEmailAddress() != null);
+        LOG.info(
+                "is internalSubjectId attached to userinfo table: {}",
+                tmpUserInfo.getSubject() != null);
         //
         if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
             userInfo.setEmailAddress(tmpUserInfo.getEmailAddress());

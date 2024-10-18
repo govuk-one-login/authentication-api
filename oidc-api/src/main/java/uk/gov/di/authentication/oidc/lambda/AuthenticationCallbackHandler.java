@@ -356,6 +356,9 @@ public class AuthenticationCallbackHandler
                 LOG.info(
                         "is email attached to auth-external-api userinfo response: {}",
                         userInfo.getEmailAddress() != null);
+                LOG.info(
+                        "is internalSubjectId attached to auth-external-api userinfo response: {}",
+                        userInfo.getSubject() != null);
                 //
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
