@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -188,6 +189,8 @@ class IPVCallbackHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+
+    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
 
     private final ClientSession clientSession =
             new ClientSession(
@@ -595,6 +598,19 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
+    void shouldRedirectToFrontendErrorPageWhenOrchSessionIsNotFound() {
+        var request = new APIGatewayProxyRequestEvent();
+        request.setQueryStringParameters(Collections.emptyMap());
+        request.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
+
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
     void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() {
         usingValidSession();
         usingValidClientSession();
@@ -911,6 +927,7 @@ class IPVCallbackHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
     private void usingValidClientSession() {

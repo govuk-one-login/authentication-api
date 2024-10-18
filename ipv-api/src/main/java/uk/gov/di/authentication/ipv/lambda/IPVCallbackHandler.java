@@ -27,6 +27,7 @@ import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
@@ -223,6 +224,13 @@ public class IPVCallbackHandler
                             .getSession(sessionCookiesIds.getSessionId())
                             .orElseThrow(
                                     () -> new IPVCallbackNoSessionException("Session not found"));
+            OrchSessionItem orchSession =
+                    orchSessionService
+                            .getSession(sessionCookiesIds.getSessionId())
+                            .orElseThrow(
+                                    () ->
+                                            new IPVCallbackNoSessionException(
+                                                    "Orchestration session not found in DynamoDB"));
 
             attachSessionIdToLogs(session);
             var persistentId =
@@ -357,6 +365,10 @@ public class IPVCallbackHandler
             var vtrList = clientSession.getVtrList();
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
+            LOG.info("orchSession: {}", orchSession);
+            LOG.info(
+                    "orchSession.getVerifiedMfaMethodType(): {}",
+                    orchSession.getVerifiedMfaMethodType());
             if (userIdentityError.isPresent()) {
                 AccountIntervention intervention =
                         segmentedFunctionCall(
@@ -369,7 +381,6 @@ public class IPVCallbackHandler
                     return logoutService.handleAccountInterventionLogout(
                             session, input, clientId, intervention);
                 }
-
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
                 if (returnCodePresentInIPVResponse(returnCode)) {
                     if (rpRequestedReturnCode(clientRegistry, authRequest)) {
