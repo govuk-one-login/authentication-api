@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 
 import static java.lang.String.valueOf;
@@ -265,8 +266,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         cloudwatchMetricsService.incrementCounter(
                 "AuthAisResult",
                 Map.of(
-                        "Environment",
-                        configurationService.getEnvironment(),
                         "blocked",
                         valueOf(response.blocked()),
                         "suspended",
@@ -281,7 +280,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             UnsuccessfulAccountInterventionsResponseException e) {
         cloudwatchMetricsService.incrementCounter(
                 "Auth" + configurationService.getAccountInterventionsErrorMetricName(),
-                Map.of("Environment", configurationService.getEnvironment()));
+                Collections.emptyMap());
         LOG.error(
                 "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
                 e.getHttpCode(),
@@ -291,8 +290,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             try {
                 LOG.error("Swallowing error and returning default account interventions response");
                 cloudwatchMetricsService.incrementCounter(
-                        "AuthAisErrorIgnored",
-                        Map.of("Environment", configurationService.getEnvironment()));
+                        "AuthAisErrorIgnored", Collections.emptyMap());
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
             } catch (JsonException ex) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
