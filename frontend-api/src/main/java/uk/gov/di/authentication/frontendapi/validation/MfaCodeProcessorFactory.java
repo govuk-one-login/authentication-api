@@ -36,14 +36,14 @@ public class MfaCodeProcessorFactory {
 
     public Optional<MfaCodeProcessor> getMfaCodeProcessor(
             MFAMethodType mfaMethodType, CodeRequest codeRequest, UserContext userContext) {
-        switch (mfaMethodType) {
-            case AUTH_APP:
+        return switch (mfaMethodType) {
+            case AUTH_APP -> {
                 int codeMaxRetries =
                         List.of(JourneyType.REGISTRATION, JourneyType.ACCOUNT_RECOVERY)
                                         .contains(codeRequest.getJourneyType())
                                 ? configurationService.getIncreasedCodeMaxRetries()
                                 : configurationService.getCodeMaxRetries();
-                return Optional.of(
+                yield Optional.of(
                         new AuthAppCodeProcessor(
                                 userContext,
                                 codeStorageService,
@@ -53,18 +53,17 @@ public class MfaCodeProcessorFactory {
                                 codeRequest,
                                 auditService,
                                 accountModifiersService));
-            case SMS:
-                return Optional.of(
-                        new PhoneNumberCodeProcessor(
-                                codeStorageService,
-                                userContext,
-                                configurationService,
-                                codeRequest,
-                                authenticationService,
-                                auditService,
-                                accountModifiersService));
-            default:
-                return Optional.empty();
-        }
+            }
+            case SMS -> Optional.of(
+                    new PhoneNumberCodeProcessor(
+                            codeStorageService,
+                            userContext,
+                            configurationService,
+                            codeRequest,
+                            authenticationService,
+                            auditService,
+                            accountModifiersService));
+            default -> Optional.empty();
+        };
     }
 }
