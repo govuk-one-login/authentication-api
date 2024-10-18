@@ -41,6 +41,7 @@ public class CloudwatchMetricsService {
                     var dimensionsSet = new DimensionSet();
 
                     dimensions.forEach(dimensionsSet::addDimension);
+                    dimensionsSet.addDimension("Environment", configurationService.getEnvironment());
 
                     metrics.setNamespace("Authentication");
                     metrics.putDimensions(dimensionsSet);
