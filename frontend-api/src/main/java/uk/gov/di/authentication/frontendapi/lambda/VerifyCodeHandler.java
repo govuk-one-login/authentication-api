@@ -237,8 +237,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         userContext,
                         authenticationService,
                         configurationService,
-                        sessionService,
-                        session);
+                        authSession.get());
             }
 
             processSuccessfulCodeRequest(
