@@ -113,6 +113,9 @@ public class UserInfoService {
                     "Unable to get user info for Subject", BearerTokenError.INVALID_TOKEN);
         }
 
+        // TODO-922: temporary logs for checking all is working as expected
+        LOG.info("is email attached to userinfo table: {}", tmpUserInfo.getEmailAddress() != null);
+        //
         if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
             userInfo.setEmailAddress(tmpUserInfo.getEmailAddress());
             userInfo.setEmailVerified(tmpUserInfo.getEmailVerified());
