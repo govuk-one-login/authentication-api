@@ -225,6 +225,7 @@ public class AuthCodeHandler
             var dimensions =
                     authCodeResponseService.getDimensions(
                             session,
+                            orchSession,
                             clientSession,
                             clientID.getValue(),
                             isTestJourney,

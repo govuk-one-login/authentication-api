@@ -222,6 +222,7 @@ class AuthCodeHandlerTest {
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
                             eq(session),
+                            eq(orchSession),
                             eq(clientSession),
                             eq(CLIENT_ID.getValue()),
                             anyBoolean(),
@@ -367,6 +368,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(session),
+                        eq(orchSession),
                         eq(clientSession),
                         eq(CLIENT_ID.getValue()),
                         anyBoolean(),

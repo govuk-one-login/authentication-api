@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
@@ -41,6 +42,7 @@ public class AuthCodeResponseGenerationService {
 
     public Map<String, String> getDimensions(
             Session session,
+            OrchSessionItem orchSession,
             ClientSession clientSession,
             String clientSessionId,
             boolean isTestJourney,
@@ -61,8 +63,8 @@ public class AuthCodeResponseGenerationService {
                                 "ClientName",
                                 clientSession.getClientName()));
 
-        if (Objects.nonNull(session.getVerifiedMfaMethodType())) {
-            dimensions.put("MfaMethod", session.getVerifiedMfaMethodType().getValue());
+        if (Objects.nonNull(orchSession.getVerifiedMfaMethodType())) {
+            dimensions.put("MfaMethod", orchSession.getVerifiedMfaMethodType());
         } else {
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
