@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -71,6 +72,7 @@ import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -119,6 +121,7 @@ class IPVCallbackHandlerTest {
     private final IPVAuthorisationService responseService = mock(IPVAuthorisationService.class);
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -186,6 +189,8 @@ class IPVCallbackHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+
+    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
 
     private final ClientSession clientSession =
             new ClientSession(
@@ -260,6 +265,7 @@ class IPVCallbackHandlerTest {
                         responseService,
                         ipvTokenService,
                         sessionService,
+                        orchSessionService,
                         dynamoService,
                         clientSessionService,
                         dynamoClientService,
@@ -371,7 +377,8 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                        any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 REDIRECT_URI, null, null, null, null, null, null));
@@ -443,7 +450,8 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                        any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));
@@ -585,6 +593,19 @@ class IPVCallbackHandlerTest {
         request.setHeaders(Map.of(COOKIE, buildCookieString()));
 
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
+
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldRedirectToFrontendErrorPageWhenOrchSessionIsNotFound() {
+        var request = new APIGatewayProxyRequestEvent();
+        request.setQueryStringParameters(Collections.emptyMap());
+        request.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
 
         var response = handler.handleRequest(request, context);
         assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
@@ -908,6 +929,7 @@ class IPVCallbackHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
     private void usingValidClientSession() {

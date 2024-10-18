@@ -22,6 +22,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
@@ -37,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -57,6 +59,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
@@ -67,6 +70,7 @@ public class AuthCodeHandler
     private static final Logger LOG = LogManager.getLogger(AuthCodeHandler.class);
 
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
@@ -79,6 +83,7 @@ public class AuthCodeHandler
 
     public AuthCodeHandler(
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
@@ -89,6 +94,7 @@ public class AuthCodeHandler
             DynamoService dynamoService,
             DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
@@ -102,6 +108,7 @@ public class AuthCodeHandler
 
     public AuthCodeHandler(ConfigurationService configurationService) {
         sessionService = new SessionService(configurationService);
+        orchSessionService = new OrchSessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -118,6 +125,7 @@ public class AuthCodeHandler
     public AuthCodeHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         sessionService = new SessionService(configurationService, redis);
+        orchSessionService = new OrchSessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -147,20 +155,30 @@ public class AuthCodeHandler
     public APIGatewayProxyResponseEvent authCodeRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         Session session;
+        OrchSessionItem orchSession;
         String clientSessionId;
         try {
             session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
+            orchSession =
+                    orchSessionService
+                            .getSessionFromRequestHeaders(input.getHeaders())
+                            .orElse(null);
             clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
                             CLIENT_SESSION_ID_HEADER,
                             configurationService.getHeadersCaseInsensitive());
-            validateSessions(session, clientSessionId);
+            validateSessions(session, orchSession, clientSessionId);
         } catch (ProcessAuthRequestException e) {
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         }
 
+        LOG.info(
+                "AuthCode orchSession.getVerifiedMfaMethodType(): {}",
+                orchSession.getVerifiedMfaMethodType());
+
         attachSessionIdToLogs(session);
+        attachOrchSessionIdToLogs(orchSession.getSessionId());
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
@@ -211,6 +229,7 @@ public class AuthCodeHandler
             var dimensions =
                     authCodeResponseService.getDimensions(
                             session,
+                            orchSession,
                             clientSession,
                             clientID.getValue(),
                             isTestJourney,
@@ -280,9 +299,13 @@ public class AuthCodeHandler
         }
     }
 
-    private void validateSessions(Session session, String clientSessionId)
+    private void validateSessions(
+            Session session, OrchSessionItem orchSession, String clientSessionId)
             throws ProcessAuthRequestException {
         if (Objects.isNull(session)) {
+            throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1000);
+        }
+        if (Objects.isNull(orchSession)) {
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1000);
         }
         if (Objects.isNull(clientSessionId)) {

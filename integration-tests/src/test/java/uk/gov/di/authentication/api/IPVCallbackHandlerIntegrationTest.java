@@ -28,6 +28,8 @@ import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
@@ -37,6 +39,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
@@ -74,6 +77,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
+    @RegisterExtension
+    public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
                     ipvStub,
@@ -89,6 +95,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final Subject INTERNAL_SUBJECT = new Subject();
+    private static final String SESSION_ID = "some-session-id";
     public static final String CLIENT_NAME = "test-client-name";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     public static final State RP_STATE = new State();
@@ -100,11 +107,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         handler = new IPVCallbackHandler(configurationService, redisConnectionService);
         txmaAuditQueue.clear();
         spotQueue.clear();
+        setupOrchSession();
     }
 
     @Test
     void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws Json.JsonException {
-        var sessionId = "some-session-id";
         var sectorId = "test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
         var authRequestBuilder =
@@ -115,11 +122,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce())
                         .state(RP_STATE);
-        redis.createSession(sessionId);
+        redis.createSession(SESSION_ID);
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
-        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
+        redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
         setUpDynamo();
         var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
 
@@ -130,7 +137,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 "Cookie",
                                 format(
                                         "gs=%s.%s;di-persistent-session-id=%s",
-                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                                        SESSION_ID, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
                         new HashMap<>(
                                 Map.of(
                                         "state",
@@ -166,7 +173,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 sectorId,
                                 pairwiseIdentifier,
                                 new LogIds(
-                                        sessionId,
+                                        SESSION_ID,
                                         PERSISTENT_SESSION_ID,
                                         "request-i",
                                         CLIENT_ID,
@@ -333,7 +340,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
             ipvStub.initWithInvalidLoCAndReturnCode();
         }
 
-        var sessionId = "some-session-id";
         var scope = new Scope(OIDCScopeValue.OPENID);
         var oidcValidClaimsRequest =
                 new OIDCClaimsRequest()
@@ -348,11 +354,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .nonce(new Nonce())
                         .state(RP_STATE)
                         .claims(oidcValidClaimsRequest);
-        redis.createSession(sessionId);
+        redis.createSession(SESSION_ID);
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
-        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
+        redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
         setUpDynamo();
         var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
         var pairwiseIdentifier =
@@ -364,7 +370,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 "Cookie",
                                 format(
                                         "gs=%s.%s;di-persistent-session-id=%s",
-                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                                        SESSION_ID, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
                         new HashMap<>(
                                 Map.of(
                                         "state",
@@ -420,7 +426,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
             throws Json.JsonException {
         ipvStub.initWithInvalidLoCAndReturnCode();
 
-        var sessionId = "some-session-id";
         var scope = new Scope(OIDCScopeValue.OPENID);
         var oidcValidClaimsRequest =
                 new OIDCClaimsRequest()
@@ -436,11 +441,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .state(RP_STATE)
                         .claims(oidcValidClaimsRequest);
 
-        redis.createSession(sessionId);
+        redis.createSession(SESSION_ID);
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
-        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
+        redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
         setUpDynamo();
         var response =
                 makeRequest(
@@ -449,7 +454,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 "Cookie",
                                 format(
                                         "gs=%s.%s;di-persistent-session-id=%s",
-                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                                        SESSION_ID, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
                         new HashMap<>(
                                 Map.of(
                                         "state",
@@ -528,6 +533,12 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 "https://test.com",
                 "pairwise",
                 List.of("https://vocab.account.gov.uk/v1/returnCode"));
+    }
+
+    private void setupOrchSession() {
+        orchSessionExtension.addSession(
+                new OrchSessionItem(SESSION_ID)
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {

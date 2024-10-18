@@ -1,6 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -12,11 +11,13 @@ import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -78,7 +79,7 @@ class OrchSessionServiceTest {
                                         String.format("gs=%s.456;", SESSION_ID))));
 
         assertTrue(sessionFromSessionCookie.isPresent());
-        Assertions.assertEquals(SESSION_ID, sessionFromSessionCookie.get().getSessionId());
+        assertEquals(SESSION_ID, sessionFromSessionCookie.get().getSessionId());
     }
 
     @Test
@@ -103,6 +104,44 @@ class OrchSessionServiceTest {
                                         String.format("gs=%s.456;", SESSION_ID))));
 
         assertFalse(session.isPresent());
+    }
+
+    @Test
+    void shouldRetrieveSessionUsingRequestHeaders() {
+        withValidSession();
+
+        var session =
+                orchSessionService.getSessionFromRequestHeaders(Map.of("Session-Id", SESSION_ID));
+
+        assertTrue(session.isPresent());
+        assertEquals(SESSION_ID, session.get().getSessionId());
+    }
+
+    @Test
+    void shouldNotRetrieveSessionForLowerCaseHeaderName() {
+        withValidSession();
+
+        var session =
+                orchSessionService.getSessionFromRequestHeaders(Map.of("session-id", SESSION_ID));
+        assertTrue(session.isEmpty());
+    }
+
+    @Test
+    void shouldNotRetrieveSessionWithNoHeaders() {
+        var session = orchSessionService.getSessionFromRequestHeaders(Collections.emptyMap());
+        assertTrue(session.isEmpty());
+    }
+
+    @Test
+    void shouldNotRetrieveSessionWithNullHeaders() {
+        var session = orchSessionService.getSessionFromRequestHeaders(null);
+        assertTrue(session.isEmpty());
+    }
+
+    @Test
+    void shouldNotRetrieveSessionWithMissingHeader() {
+        var session = orchSessionService.getSessionFromRequestHeaders(Map.of("Something", "Else"));
+        assertTrue(session.isEmpty());
     }
 
     private OrchSessionItem withValidSession() {
