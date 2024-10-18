@@ -13,10 +13,16 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+
 public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
 
     private static final Logger LOG = LogManager.getLogger(OrchSessionService.class);
 
+    private final ConfigurationService configurationService;
     private final CookieHelper cookieHelper;
 
     private final long timeToLive;
@@ -25,6 +31,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         super(OrchSessionItem.class, "Orch-Session", configurationService, true);
         this.timeToLive = configurationService.getSessionExpiry();
         this.cookieHelper = new CookieHelper();
+        this.configurationService = configurationService;
     }
 
     public OrchSessionService(
@@ -34,6 +41,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
         this.cookieHelper = new CookieHelper();
+        this.configurationService = configurationService;
     }
 
     public void addSession(OrchSessionItem orchSession) {
@@ -129,6 +137,25 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
             logAndThrowOrchSessionException(
                     "Error updating Orch session item", sessionItem.getSessionId(), e);
         }
+    }
+
+    public Optional<OrchSessionItem> getSessionFromRequestHeaders(Map<String, String> headers) {
+        if (!headersContainValidHeader(
+                headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
+            LOG.warn("Session-Id header is missing from request headers");
+            return Optional.empty();
+        }
+        String sessionId =
+                getHeaderValueFromHeaders(
+                        headers,
+                        SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        if (sessionId == null) {
+            LOG.warn("Session-Id header value is null");
+            return Optional.empty();
+        }
+
+        return sanitiseBase64(sessionId).flatMap(id -> getSession(sessionId));
     }
 
     private void logAndThrowOrchSessionException(String message, String sessionId, Exception e) {

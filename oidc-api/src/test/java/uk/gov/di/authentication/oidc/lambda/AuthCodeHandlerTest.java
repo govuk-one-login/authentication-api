@@ -447,6 +447,22 @@ class AuthCodeHandlerTest {
     }
 
     @Test
+    void shouldGenerateErrorResponseWhenOrchSessionIsNotFound() {
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+
+        APIGatewayProxyResponseEvent response = generateApiRequest();
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
     void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
             throws ClientNotFoundException, JOSEException {
         session.setEmailAddress(EMAIL);
@@ -545,6 +561,8 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID));
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchSession));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -577,6 +595,8 @@ class AuthCodeHandlerTest {
             Map<String, List<String>> authRequestParams, CredentialTrustLevel requestedLevel) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchSession));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
