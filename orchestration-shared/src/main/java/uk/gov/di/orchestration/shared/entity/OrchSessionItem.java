@@ -9,10 +9,13 @@ public class OrchSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
+    public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
+            "InternalCommonSubjectIdentifier";
 
     private String sessionId;
     private long timeToLive;
     private String verifiedMfaMethodType;
+    private String internalCommonSubjectIdentifier;
 
     public OrchSessionItem() {}
 
@@ -60,6 +63,21 @@ public class OrchSessionItem {
 
     public OrchSessionItem withVerifiedMfaMethodType(String verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
+    public String getInternalCommonSubjectIdentifier() {
+        return internalCommonSubjectIdentifier;
+    }
+
+    public void setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
+        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
+    }
+
+    public OrchSessionItem withInternalCommonSubjectIdentifier(
+            String internalCommonSubjectIdentifier) {
+        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
         return this;
     }
 }
