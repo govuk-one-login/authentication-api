@@ -89,8 +89,22 @@ variable "logging_endpoint_arns" {
 
 variable "stub_rp_clients" {
   default     = []
-  type        = list(object({ client_name : string, sector_identifier_uri : string, callback_urls : list(string), logout_urls : list(string), test_client : string, scopes : list(string), client_type : string, identity_verification_supported : string, one_login_service : bool, service_type : string }))
+  type        = list(object({ client_name : string, at_client : bool, sector_identifier_uri : string, callback_urls : list(string), logout_urls : list(string), test_client : string, scopes : list(string), client_type : string, identity_verification_supported : string, one_login_service : bool, service_type : string }))
   description = "The details of RP clients to provision in the Client table"
+  validation {
+    condition     = length(var.stub_rp_clients) > 0
+    error_message = "At least one RP client must be defined"
+  }
+  validation {
+    condition     = length([for client in var.stub_rp_clients : client if client.at_client == true]) == 1
+    error_message = "Exactly one RP client must be marked as the acceptance test client, with `at_client = true`"
+  }
+}
+
+variable "orch_stub_deployed" {
+  type        = bool
+  default     = true
+  description = "Whether the orchestration stub has been deployed"
 }
 
 variable "aws_region" {

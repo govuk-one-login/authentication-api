@@ -1,6 +1,7 @@
 stub_rp_clients = [
   {
     client_name           = "relying-party-stub-build"
+    at_client             = false # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://rp-build.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
@@ -25,6 +26,7 @@ stub_rp_clients = [
   },
   {
     client_name           = "relying-party-stub-build-app"
+    at_client             = false # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://doc-app-rp-build.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
@@ -46,6 +48,7 @@ stub_rp_clients = [
   },
   {
     client_name           = "relying-party-stub-build-acceptance-test"
+    at_client             = true # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://acceptance-test-rp-build.build.stubs.account.gov.uk"
     callback_urls = [
       "https://acceptance-test-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
@@ -70,6 +73,7 @@ stub_rp_clients = [
   },
   {
     client_name           = "relying-party-micro-stub-build-acceptance-test"
+    at_client             = false # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://acceptance-test-rp-micro-stub-build.build.stubs.account.gov.uk"
     callback_urls = [
       "http://localhost:3031/callback",
@@ -95,6 +99,7 @@ stub_rp_clients = [
   {
     # New client for Secure pipeline Migration
     client_name           = "relying-party-stub-build-sp"
+    at_client             = false # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://rp-build-sp.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-build-sp.build.stubs.account.gov.uk/oidc/authorization-code/callback",

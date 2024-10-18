@@ -1,6 +1,7 @@
 stub_rp_clients = [
   {
     client_name           = "relying-party-stub-dev"
+    at_client             = true # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
@@ -25,6 +26,7 @@ stub_rp_clients = [
   },
   {
     client_name           = "relying-party-stub-dev-app"
+    at_client             = false # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://doc-app-rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",

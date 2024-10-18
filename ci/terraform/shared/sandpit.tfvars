@@ -6,9 +6,11 @@ password_pepper     = "fake-pepper"
 enable_api_gateway_execution_request_tracing = true
 di_tools_signing_profile_version_arn         = "arn:aws:signer:eu-west-2:706615647326:/signing-profiles/di_auth_lambda_signing_20220214175605677200000001/ZPqg7ZUgCP"
 
+orch_stub_deployed = false
 stub_rp_clients = [
   {
     client_name           = "relying-party-stub-sandpit"
+    at_client             = true
     sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
@@ -30,6 +32,7 @@ stub_rp_clients = [
   },
   {
     client_name           = "relying-party-stub-sandpit-app"
+    at_client             = false
     sector_identifier_uri = "https://doc-app-rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
