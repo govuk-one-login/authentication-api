@@ -139,13 +139,19 @@ public class AccountInterventionService {
     private AccountIntervention handleException(Exception e) {
         cloudwatchMetricsService.incrementCounter(
                 configurationService.getAccountInterventionsErrorMetricName(),
-                Map.of("Environment", configurationService.getEnvironment()));
+                Map.of(
+                        "Environment",
+                        configurationService.getEnvironment(),
+                        "AbortOnError",
+                        String.valueOf(acountInterventionsAbortOnError)));
         if (accountInterventionsActionEnabled && acountInterventionsAbortOnError) {
-            throw new AccountInterventionException(
-                    "Problem communicating with Account Intervention Service", e);
+            String errorMessage =
+                    "Problem communicating with Account Intervention Service. Aborting user journey.";
+            LOG.error(errorMessage, e);
+            throw new AccountInterventionException(errorMessage, e);
         }
-        LOG.error(
-                "Problem communicating with Account Intervention Service. Assuming no intervention. ",
+        LOG.warn(
+                "Problem communicating with Account Intervention Service. Assuming no intervention and continuing with user journey.",
                 e);
         return noInterventionResponse();
     }
