@@ -64,6 +64,7 @@ public class AuthCodeResponseGenerationService {
                                 clientSession.getClientName()));
 
         if (Objects.nonNull(orchSession.getVerifiedMfaMethodType())) {
+            LOG.info("Setting verifiedMfaMethodType from orch session to dimension.");
             dimensions.put("MfaMethod", orchSession.getVerifiedMfaMethodType());
         } else {
             LOG.info(

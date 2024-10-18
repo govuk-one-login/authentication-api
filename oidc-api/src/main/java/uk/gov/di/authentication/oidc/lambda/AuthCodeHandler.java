@@ -173,6 +173,10 @@ public class AuthCodeHandler
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         }
 
+        LOG.info(
+                "AuthCode orchSession.getVerifiedMfaMethodType(): {}",
+                orchSession.getVerifiedMfaMethodType());
+
         attachSessionIdToLogs(session);
         attachOrchSessionIdToLogs(orchSession.getSessionId());
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
