@@ -354,11 +354,17 @@ public class AuthenticationCallbackHandler
 
                 // TODO-922: temporary logs for checking all is working as expected
                 LOG.info(
-                        "is email attached to auth-external-api userinfo response: {}",
-                        userInfo.getEmailAddress() != null);
+                        "email attached to auth-external-api userinfo response: {}",
+                        userInfo.getEmailAddress());
                 LOG.info(
-                        "is internalSubjectId attached to auth-external-api userinfo response: {}",
-                        userInfo.getSubject() != null);
+                        "subject attached to auth-external-api userinfo response: {}",
+                        userInfo.getSubject());
+                LOG.info(
+                        "internalPairwiseId attached to auth-external-api userinfo response: {}",
+                        userInfo.getClaim("internal_pairwise_id"));
+                LOG.info(
+                        "internalSubjectId attached to auth-external-api userinfo response: {}",
+                        userInfo.getClaim("internal_subject_id"));
                 //
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");

@@ -42,6 +42,9 @@ public class UserInfoService {
                         authenticationService);
 
         var userInfo = new UserInfo(internalPairwiseId);
+        // qq just to see
+        userInfo.setClaim("internal_pairwise_id", internalPairwiseId);
+        //
         addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
         addClaimsFromSession(authSession, userInfo);
         addClaimsFromUserProfile(userProfile, userInfo);
@@ -59,6 +62,10 @@ public class UserInfoService {
                         accessTokenInfo.getSectorIdentifier(),
                         SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
 
+        // qq adding this only to check that userinfo.subject() and
+        // userinfo.getClaim("internal_subject_id") are the same
+        userInfo.setClaim("internal_subject_id", internalSubjectId);
+        //
         userInfo.setClaim("rp_pairwise_id", rpPairwiseId);
         userInfo.setClaim("new_account", accessTokenInfo.getIsNewAccount());
         userInfo.setClaim("password_reset_time", accessTokenInfo.getPasswordResetTime());
