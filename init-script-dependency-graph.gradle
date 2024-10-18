@@ -1,0 +1,22 @@
+//
+// Init script to create a simple text file list of all dependencies in all projects.  This list is what is sent to
+// GitHub and scanned for vulnerabilities and possible updates by dependabot.  Running this script can help resolve
+// why we are getting a security alert.
+//
+//  ./gradlew -I init-dependency-graph.gradle --dependency-verification=off --no-configuration-cache --no-configure-on-demand :ForceDependencyResolutionPlugin_resolveAllDependencies
+//
+// Use the dependencyInsight plugin to determine the source of a dependency:
+//
+//  ./gradlew :my-subproject:dependencyInsight --configuration compileClasspath --dependency <artifact>
+//
+initscript {
+    repositories {
+        maven {
+            url = uri("https://plugins.gradle.org/m2/")
+        }
+    }
+    dependencies {
+        classpath("org.gradle:github-dependency-graph-gradle-plugin:+")
+    }
+}
+apply plugin: org.gradle.dependencygraph.simple.SimpleDependencyGraphPlugin
