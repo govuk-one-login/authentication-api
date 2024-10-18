@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -53,6 +54,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -116,6 +118,7 @@ class AuthCodeHandlerTest {
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
 
     private static final String SESSION_ID = IdGenerator.generate();
@@ -136,6 +139,7 @@ class AuthCodeHandlerTest {
     private AuthCodeHandler handler;
 
     private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
+    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -160,6 +164,7 @@ class AuthCodeHandlerTest {
         handler =
                 new AuthCodeHandler(
                         sessionService,
+                        orchSessionService,
                         authCodeResponseService,
                         authorisationCodeService,
                         orchestrationAuthorizationService,

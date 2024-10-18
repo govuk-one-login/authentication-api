@@ -67,6 +67,7 @@ public class AuthCodeHandler
     private static final Logger LOG = LogManager.getLogger(AuthCodeHandler.class);
 
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
@@ -79,6 +80,7 @@ public class AuthCodeHandler
 
     public AuthCodeHandler(
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
@@ -89,6 +91,7 @@ public class AuthCodeHandler
             DynamoService dynamoService,
             DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
@@ -102,6 +105,7 @@ public class AuthCodeHandler
 
     public AuthCodeHandler(ConfigurationService configurationService) {
         sessionService = new SessionService(configurationService);
+        orchSessionService = new OrchSessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -118,6 +122,7 @@ public class AuthCodeHandler
     public AuthCodeHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         sessionService = new SessionService(configurationService, redis);
+        orchSessionService = new OrchSessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
