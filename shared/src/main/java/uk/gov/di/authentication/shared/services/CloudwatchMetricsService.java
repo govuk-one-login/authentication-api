@@ -5,12 +5,12 @@ import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
+import java.util.Collections;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IS_TEST;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_REQUIRED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
@@ -41,7 +41,8 @@ public class CloudwatchMetricsService {
                     var dimensionsSet = new DimensionSet();
 
                     dimensions.forEach(dimensionsSet::addDimension);
-                    dimensionsSet.addDimension("Environment", configurationService.getEnvironment());
+                    dimensionsSet.addDimension(
+                            "Environment", configurationService.getEnvironment());
 
                     metrics.setNamespace("Authentication");
                     metrics.putDimensions(dimensionsSet);
@@ -66,8 +67,6 @@ public class CloudwatchMetricsService {
                 Map.of(
                         ACCOUNT.getValue(),
                         accountState.name(),
-                        ENVIRONMENT.getValue(),
-                        configurationService.getEnvironment(),
                         CLIENT.getValue(),
                         clientId,
                         IS_TEST.getValue(),
@@ -81,37 +80,20 @@ public class CloudwatchMetricsService {
         if (AuthSessionItem.AccountState.NEW.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
+                    Map.of(CLIENT.getValue(), clientId, CLIENT_NAME.getValue(), clientName));
         }
         if (AuthSessionItem.AccountState.EXISTING.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
+                    Map.of(CLIENT.getValue(), clientId, CLIENT_NAME.getValue(), clientName));
         }
     }
 
     public void logEmailCheckDuration(long duration) {
-        this.putEmbeddedValue(
-                EMAIL_CHECK_DURATION.getValue(),
-                duration,
-                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+        this.putEmbeddedValue(EMAIL_CHECK_DURATION.getValue(), duration, Collections.emptyMap());
     }
 
     public void incrementMfaResetHandoffCount() {
-        incrementCounter(
-                MFA_RESET_HANDOFF.getValue(),
-                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+        incrementCounter(MFA_RESET_HANDOFF.getValue(), Collections.emptyMap());
     }
 }

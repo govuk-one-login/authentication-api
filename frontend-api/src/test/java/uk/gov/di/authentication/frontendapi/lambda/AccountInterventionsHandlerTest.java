@@ -51,6 +51,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -188,9 +189,9 @@ class AccountInterventionsHandlerTest {
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
         verify(cloudwatchMetricsService)
-                .incrementCounter("AuthAISException", Map.of("Environment", "test-environment"));
+                .incrementCounter("AuthAISException", Collections.emptyMap());
         verify(cloudwatchMetricsService)
-                .incrementCounter("AuthAisErrorIgnored", Map.of("Environment", "test-environment"));
+                .incrementCounter("AuthAisErrorIgnored", Collections.emptyMap());
     }
 
     @Test
@@ -433,7 +434,6 @@ class AccountInterventionsHandlerTest {
                 result.getBody());
         var expectedMetricDimensions =
                 Map.ofEntries(
-                        Map.entry("Environment", TEST_ENVIRONMENT),
                         Map.entry("blocked", String.valueOf(blocked)),
                         Map.entry("suspended", String.valueOf(suspended)),
                         Map.entry("reproveIdentity", String.valueOf(reproveIdentity)),

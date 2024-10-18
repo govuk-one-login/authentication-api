@@ -14,6 +14,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -49,7 +50,6 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
     @Override
     public Void handleRequest(TICFCRIRequest input, Context context) {
         LOG.debug("received request to TICF CRI Handler");
-        var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
             var response = sendRequest(input);
             var statusCode = String.valueOf(response.statusCode());
@@ -59,8 +59,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                             statusCode, response.body());
             LOG.info(logMessage);
             cloudwatchMetricsService.incrementCounter(
-                    "TicfCriResponseReceived",
-                    Map.ofEntries(environmentForMetrics, Map.entry("StatusCode", statusCode)));
+                    "TicfCriResponseReceived", Map.ofEntries(Map.entry("StatusCode", statusCode)));
         } catch (HttpTimeoutException e) {
             var errorDescription =
                     format(
@@ -86,8 +85,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
         } else {
             LOG.warn(errorDescription);
         }
-        cloudwatchMetricsService.incrementCounter(
-                metric, Map.of("Environment", configurationService.getEnvironment()));
+        cloudwatchMetricsService.incrementCounter(metric, Collections.emptyMap());
     }
 
     private HttpResponse<String> sendRequest(TICFCRIRequest ticfcriRequest)

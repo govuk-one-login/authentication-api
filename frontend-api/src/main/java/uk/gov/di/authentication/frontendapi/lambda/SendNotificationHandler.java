@@ -354,11 +354,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 METRICS.putEmbeddedValue(
                         "SendingSms",
                         1,
-                        Map.of(
-                                "Environment",
-                                configurationService.getEnvironment(),
-                                "Country",
-                                PhoneNumberHelper.getCountry(destination)));
+                        Map.of("Country", PhoneNumberHelper.getCountry(destination)));
             }
 
             var notifyRequest =

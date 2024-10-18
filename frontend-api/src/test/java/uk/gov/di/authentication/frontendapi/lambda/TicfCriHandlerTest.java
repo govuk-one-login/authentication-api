@@ -23,6 +23,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -51,8 +52,6 @@ class TicfCriHandlerTest {
     private static final String JOURNEY_ID = "journey-id";
     private static final List<String> VECTORS_OF_TRUST = List.of("Cl");
     private AutoCloseable mocks;
-    private static final Map<String, String> METRICS_CONTEXT =
-            Map.of("Environment", "test-environment");
 
     @BeforeEach
     void setUp() {
@@ -113,9 +112,7 @@ class TicfCriHandlerTest {
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "TicfCriResponseReceived",
-                        Map.ofEntries(
-                                Map.entry("Environment", "test-environment"),
-                                Map.entry("StatusCode", statusCode.toString())));
+                        Map.ofEntries(Map.entry("StatusCode", statusCode.toString())));
     }
 
     @ParameterizedTest
@@ -129,7 +126,7 @@ class TicfCriHandlerTest {
                         COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID, USER_IS_AUTHENTICATED),
                 context);
 
-        verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);
+        verify(cloudwatchMetricsService).incrementCounter(metricName, Collections.emptyMap());
     }
 
     private static List<Arguments> exceptions() {

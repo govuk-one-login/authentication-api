@@ -14,8 +14,8 @@ import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.ACCESS_TOKEN_SERVICE_CONSISTENT_READ_QUERY_ATTEMPT;
@@ -144,8 +144,7 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
 
     void incrementCloudwatchCounter(String metricName) {
         try {
-            cloudwatchMetricsService.incrementCounter(
-                    metricName, Map.of("Environment", configurationService.getEnvironment()));
+            cloudwatchMetricsService.incrementCounter(metricName, Collections.emptyMap());
         } catch (Exception e) {
             LOG.warn("Unable to increment access token service cloudwatch counter", e);
         }
