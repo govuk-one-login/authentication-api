@@ -365,9 +365,6 @@ public class IPVCallbackHandler
             var vtrList = clientSession.getVtrList();
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
-            LOG.info(
-                    "IPVCallback orchSession.getVerifiedMfaMethodType(): {}",
-                    orchSession.getVerifiedMfaMethodType());
             if (userIdentityError.isPresent()) {
                 AccountIntervention intervention =
                         segmentedFunctionCall(
