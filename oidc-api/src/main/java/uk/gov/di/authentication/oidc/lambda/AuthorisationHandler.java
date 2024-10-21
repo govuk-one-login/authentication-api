@@ -766,6 +766,8 @@ public class AuthorisationHandler
         var claimsSetRequest =
                 constructAdditionalAuthenticationClaims(client, authenticationRequest);
         claimsSetRequest.ifPresent(t -> claimsBuilder.claim("claim", t.toJSONString()));
+        LOG.info("current_credential_strength: {}", session.getCurrentCredentialStrength());
+        LOG.info(claimsBuilder.build());
         var encryptedJWT =
                 orchestrationAuthorizationService.getSignedAndEncryptedJWT(claimsBuilder.build());
 
