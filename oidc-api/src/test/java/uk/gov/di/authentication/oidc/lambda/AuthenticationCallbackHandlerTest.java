@@ -137,7 +137,8 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(USER_INFO.getSubject()).thenReturn(INTERNAL_PAIRWISE_ID);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
-        when(USER_INFO.getClaim("rp_pairwise_id")).thenReturn(RP_PAIRWISE_ID.getValue());
+        when(USER_INFO.getClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(), String.class))
+                .thenReturn(RP_PAIRWISE_ID.getValue());
         when(USER_INFO.getPhoneNumber()).thenReturn("1234");
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
@@ -402,6 +403,7 @@ class AuthenticationCallbackHandlerTest {
                 MFAMethodType.AUTH_APP.getValue(),
                 equalTo(orchSessionCaptor.getValue().getVerifiedMfaMethodType()));
         assertEquals(TEST_EMAIL_ADDRESS, orchSessionCaptor.getValue().getEmailAddress());
+        assertEquals(RP_PAIRWISE_ID.getValue(), orchSessionCaptor.getValue().getRpPairwiseId());
     }
 
     @Nested
