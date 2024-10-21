@@ -112,6 +112,7 @@ class AuthenticationCallbackHandlerTest {
     private static final TokenResponse SUCCESSFUL_TOKEN_RESPONSE =
             new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
     private static final TokenResponse UNSUCCESSFUL_TOKEN_RESPONSE = mock(TokenResponse.class);
+    private static final UserInfo UNSUCCESSFUL_USERINFO_RESPONSE = mock(UserInfo.class);
     private static final String TEST_ERROR_MESSAGE = "test-error-message";
     private static final UserInfo USER_INFO = mock(UserInfo.class);
     private AuthenticationCallbackHandler handler;
@@ -187,13 +188,11 @@ class AuthenticationCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
         usingValidClient();
+        withSuccessfulTokenResponse();
+        withSuccessfulUserInfoResponse();
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
         var response = handler.handleRequest(event, null);
 
@@ -340,10 +339,10 @@ class AuthenticationCallbackHandlerTest {
     void shouldRedirectToFrontendErrorPageIfTokenRequestIsUnsuccessful() {
         usingValidSession();
         usingValidClientSession();
+        withUnsuccessfulTokenResponse();
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
 
         var response = handler.handleRequest(event, null);
 
@@ -366,9 +365,8 @@ class AuthenticationCallbackHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
+        withSuccessfulTokenResponse();
+        withUnsuccessfulUserInfoResponse();
 
         var response = handler.handleRequest(event, null);
 
@@ -392,8 +390,8 @@ class AuthenticationCallbackHandlerTest {
         usingValidClient();
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+        withSuccessfulTokenResponse();
+        withSuccessfulUserInfoResponse();
 
         handler.handleRequest(event, null);
 
@@ -411,9 +409,8 @@ class AuthenticationCallbackHandlerTest {
         @BeforeEach
         void setup() throws UnsuccessfulCredentialResponseException {
             mockedIdentityHelper = mockStatic(IdentityHelper.class);
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                    .thenReturn(USER_INFO);
+            withSuccessfulTokenResponse();
+            withSuccessfulUserInfoResponse();
             when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
             usingValidSession();
@@ -771,5 +768,22 @@ class AuthenticationCallbackHandlerTest {
         assertEquals(expectedUserInfoRequest.getURI(), userInfoRequest.getValue().getURI());
         assertEquals(
                 expectedUserInfoRequest.getHeaderMap(), userInfoRequest.getValue().getHeaderMap());
+    }
+
+    private void withSuccessfulUserInfoResponse() throws UnsuccessfulCredentialResponseException {
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+    }
+
+    private void withUnsuccessfulUserInfoResponse() throws UnsuccessfulCredentialResponseException {
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
+    }
+
+    private void withSuccessfulTokenResponse() {
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+    }
+
+    private void withUnsuccessfulTokenResponse() {
+        when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
     }
 }
