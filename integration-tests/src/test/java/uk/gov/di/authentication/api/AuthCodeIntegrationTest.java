@@ -16,15 +16,18 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -48,6 +51,10 @@ import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.as
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+
+    @RegisterExtension
+    public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
@@ -58,17 +65,19 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Nonce NONCE = new Nonce();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    private String sessionID;
 
     @BeforeEach
-    void setup() {
+    void setup() throws Json.JsonException {
         handler = new AuthCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
+        sessionID = redis.createSession();
+        setupOrchSession();
     }
 
     @Test
     void shouldReturn200WithSuccessfulAuthResponse() throws Json.JsonException {
         var clientSessionId = "some-client-session-id";
-        var sessionID = redis.createSession();
         redis.addEmailToSession(sessionID, EMAIL);
         redis.setVerifiedMfaMethodType(sessionID, MFAMethodType.AUTH_APP);
         redis.addAuthRequestToSession(
@@ -98,7 +107,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn200WithSuccessfulAuthResponseForDocAppJourney()
             throws Json.JsonException, JOSEException {
         var clientSessionId = "some-client-session-id";
-        var sessionID = redis.createSession();
         Map<String, List<String>> authRequestParams = generateDocAppAuthRequest().toParameters();
         var clientSession =
                 new ClientSession(
@@ -178,5 +186,11 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public");
+    }
+
+    private void setupOrchSession() {
+        orchSessionExtension.addSession(
+                new OrchSessionItem(sessionID)
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
     }
 }

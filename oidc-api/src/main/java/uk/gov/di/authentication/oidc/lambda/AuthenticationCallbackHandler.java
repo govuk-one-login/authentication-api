@@ -385,7 +385,9 @@ public class AuthenticationCallbackHandler
                                 isTestJourney,
                                 docAppJourney,
                                 clientSession,
-                                userSession);
+                                userInfo.getClaim(
+                                        AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
+                                        String.class));
 
                 user =
                         user.withUserId(userInfo.getSubject().getValue())
@@ -545,7 +547,7 @@ public class AuthenticationCallbackHandler
             boolean isTestJourney,
             boolean docAppJourney,
             ClientSession clientSession,
-            Session userSession) {
+            String verifiedMfaMethodType) {
         Map<String, String> dimensions =
                 new HashMap<>(
                         Map.of(
@@ -562,8 +564,8 @@ public class AuthenticationCallbackHandler
                                 "ClientName",
                                 clientSession.getClientName()));
 
-        if (Objects.nonNull(userSession.getVerifiedMfaMethodType())) {
-            dimensions.put("MfaMethod", userSession.getVerifiedMfaMethodType().getValue());
+        if (Objects.nonNull(verifiedMfaMethodType)) {
+            dimensions.put("MfaMethod", verifiedMfaMethodType);
         } else {
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");

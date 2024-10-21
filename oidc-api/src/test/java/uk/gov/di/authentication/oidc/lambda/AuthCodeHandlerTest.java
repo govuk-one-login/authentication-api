@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -53,6 +54,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -116,6 +118,7 @@ class AuthCodeHandlerTest {
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
 
     private static final String SESSION_ID = IdGenerator.generate();
@@ -136,6 +139,7 @@ class AuthCodeHandlerTest {
     private AuthCodeHandler handler;
 
     private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
+    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -160,6 +164,7 @@ class AuthCodeHandlerTest {
         handler =
                 new AuthCodeHandler(
                         sessionService,
+                        orchSessionService,
                         authCodeResponseService,
                         authorisationCodeService,
                         orchestrationAuthorizationService,
@@ -217,6 +222,7 @@ class AuthCodeHandlerTest {
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
                             eq(session),
+                            eq(orchSession),
                             eq(clientSession),
                             eq(CLIENT_ID.getValue()),
                             anyBoolean(),
@@ -362,6 +368,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(session),
+                        eq(orchSession),
                         eq(clientSession),
                         eq(CLIENT_ID.getValue()),
                         anyBoolean(),
@@ -433,6 +440,22 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenSessionIsNotFound() {
+        APIGatewayProxyResponseEvent response = generateApiRequest();
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldGenerateErrorResponseWhenOrchSessionIsNotFound() {
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
         assertThat(response, hasStatus(400));
@@ -540,6 +563,8 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID));
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchSession));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -572,6 +597,8 @@ class AuthCodeHandlerTest {
             Map<String, List<String>> authRequestParams, CredentialTrustLevel requestedLevel) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchSession));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);

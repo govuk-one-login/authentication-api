@@ -19,6 +19,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -186,6 +187,7 @@ public class IPVCallbackHelper {
             String clientSessionId,
             UserProfile userProfile,
             Session session,
+            OrchSessionItem orchSession,
             ClientSession clientSession,
             Subject rpPairwiseSubject,
             String internalPairwiseSubjectId,
@@ -212,7 +214,7 @@ public class IPVCallbackHelper {
 
         var dimensions =
                 authCodeResponseService.getDimensions(
-                        session, clientSession, clientSessionId, false, false);
+                        session, orchSession, clientSession, clientSessionId, false, false);
 
         var subjectId = authCodeResponseService.getSubjectId(session);
 

@@ -27,6 +27,7 @@ import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
@@ -48,6 +49,7 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -79,6 +81,7 @@ public class IPVCallbackHandler
     private final IPVAuthorisationService ipvAuthorisationService;
     private final IPVTokenService ipvTokenService;
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
@@ -100,6 +103,7 @@ public class IPVCallbackHandler
             IPVAuthorisationService responseService,
             IPVTokenService ipvTokenService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             DynamoService dynamoService,
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
@@ -114,6 +118,7 @@ public class IPVCallbackHandler
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
         this.dynamoClientService = dynamoClientService;
@@ -136,6 +141,7 @@ public class IPVCallbackHandler
                         kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
@@ -161,6 +167,7 @@ public class IPVCallbackHandler
                 new IPVAuthorisationService(configurationService, redis, kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService, redis);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.dynamoClientService = new DynamoClientService(configurationService);
@@ -217,6 +224,13 @@ public class IPVCallbackHandler
                             .getSession(sessionCookiesIds.getSessionId())
                             .orElseThrow(
                                     () -> new IPVCallbackNoSessionException("Session not found"));
+            OrchSessionItem orchSession =
+                    orchSessionService
+                            .getSession(sessionCookiesIds.getSessionId())
+                            .orElseThrow(
+                                    () ->
+                                            new IPVCallbackNoSessionException(
+                                                    "Orchestration session not found in DynamoDB"));
 
             attachSessionIdToLogs(session);
             var persistentId =
@@ -351,6 +365,9 @@ public class IPVCallbackHandler
             var vtrList = clientSession.getVtrList();
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
+            LOG.info(
+                    "IPVCallback orchSession.getVerifiedMfaMethodType(): {}",
+                    orchSession.getVerifiedMfaMethodType());
             if (userIdentityError.isPresent()) {
                 AccountIntervention intervention =
                         segmentedFunctionCall(
@@ -363,7 +380,6 @@ public class IPVCallbackHandler
                     return logoutService.handleAccountInterventionLogout(
                             session, input, clientId, intervention);
                 }
-
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
                 if (returnCodePresentInIPVResponse(returnCode)) {
                     if (rpRequestedReturnCode(clientRegistry, authRequest)) {
@@ -374,6 +390,7 @@ public class IPVCallbackHandler
                                         clientSessionId,
                                         userProfile,
                                         session,
+                                        orchSession,
                                         clientSession,
                                         rpPairwiseSubject,
                                         internalPairwiseSubjectId,
