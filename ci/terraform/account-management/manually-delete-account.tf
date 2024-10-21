@@ -68,6 +68,18 @@ resource "aws_cloudwatch_log_group" "manually_delete_account_lambda_log_group" {
   ]
 }
 
+resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "manually_delete_account-log-subscription-${count.index}"
+  log_group_name  = aws_cloudwatch_log_group.manually_delete_account_lambda_log_group.name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
+
 data "aws_iam_policy_document" "permit_send_email_queue_policy_document" {
   statement {
     sid    = "SendSQS"
