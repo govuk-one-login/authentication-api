@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSnsClient;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -11,6 +12,9 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class ManuallyDeleteAccountHandler implements RequestHandler<String, String> {
     private final AuthenticationService authenticationService;
@@ -56,6 +60,8 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
 
     @Override
     public String handleRequest(String userEmail, Context context) {
+        ThreadContext.clearMap();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         var userProfile =
                 authenticationService
                         .getUserProfileByEmailMaybe(userEmail)
