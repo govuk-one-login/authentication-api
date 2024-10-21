@@ -665,8 +665,13 @@ public class AuthenticationCallbackHandler
                 userInfo.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class);
         OrchSessionItem updatedOrchSession =
-                orchSession.withVerifiedMfaMethodType(verifiedMfaMethodType);
+                orchSession
+                        .withVerifiedMfaMethodType(verifiedMfaMethodType)
+                        .withEmailAddress(userInfo.getEmailAddress());
         LOG.info("Updating Orch session with claims from userinfo response");
+        // TODO-922: temporary logs for checking all is working as expected
+        LOG.info("is email attached to orch session: {}", orchSession.getEmailAddress() != null);
+        //
         orchSessionService.updateSession(updatedOrchSession);
     }
 }
