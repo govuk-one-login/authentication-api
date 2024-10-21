@@ -44,7 +44,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.eq;
@@ -112,7 +111,6 @@ class AuthenticationCallbackHandlerTest {
     private static final TokenResponse SUCCESSFUL_TOKEN_RESPONSE =
             new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
     private static final TokenResponse UNSUCCESSFUL_TOKEN_RESPONSE = mock(TokenResponse.class);
-    private static final UserInfo UNSUCCESSFUL_USERINFO_RESPONSE = mock(UserInfo.class);
     private static final String TEST_ERROR_MESSAGE = "test-error-message";
     private static final UserInfo USER_INFO = mock(UserInfo.class);
     private AuthenticationCallbackHandler handler;
@@ -203,13 +201,12 @@ class AuthenticationCallbackHandlerTest {
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
         verifyUserInfoRequest();
 
-        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
-        assertThat(
-                Session.AccountState.NEW,
-                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
-        assertTrue(sessionSaveCaptor.getAllValues().get(1).isAuthenticated());
-
+        verify(sessionService)
+                .storeOrUpdateSession(
+                        argThat(
+                                (s ->
+                                        s.isAuthenticated()
+                                                && s.isNewAccount() == Session.AccountState.NEW)));
         verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
         verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
         verify(cloudwatchMetricsService)

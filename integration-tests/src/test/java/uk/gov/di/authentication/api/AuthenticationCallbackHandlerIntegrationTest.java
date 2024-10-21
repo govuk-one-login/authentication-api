@@ -152,7 +152,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldStoreUserInfoAndRedirectToRpWhenSuccessfullyProcessedCallbackResponse() {
+    void shouldStoreUserInfoAndRedirectToRpWhenSuccessfullyProcessedCallbackResponse()
+            throws Json.JsonException {
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -162,6 +163,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertTrue(redis.getSession(SESSION_ID).isAuthenticated());
     }
 
     @Test
@@ -262,6 +264,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertRedirectToIpv(response, false);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertTrue(redis.getSession(SESSION_ID).isAuthenticated());
     }
 
     void accountInterventionSetup() throws Json.JsonException {
