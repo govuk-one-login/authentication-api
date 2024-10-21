@@ -759,7 +759,7 @@ public class AuthorisationHandler
                         .claim("authenticated", session.isAuthenticated())
                         .claim(
                                 "current_credential_strength",
-                                session.getCurrentCredentialStrength());
+                                session.getCurrentCredentialStrength()).serializeNullClaims(true);
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
 
