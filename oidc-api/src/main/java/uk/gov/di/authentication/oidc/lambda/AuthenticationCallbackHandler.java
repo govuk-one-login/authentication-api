@@ -376,7 +376,8 @@ public class AuthenticationCallbackHandler
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
                 AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
 
-                sessionService.storeOrUpdateSession(userSession.setNewAccount(accountState));
+                sessionService.storeOrUpdateSession(
+                        userSession.setNewAccount(accountState).setAuthenticated(true));
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
@@ -494,8 +495,6 @@ public class AuthenticationCallbackHandler
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
-
-                sessionService.storeOrUpdateSession(userSession.setAuthenticated(true));
 
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
