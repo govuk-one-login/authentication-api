@@ -90,7 +90,8 @@ class AuthenticationCallbackHandlerTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
+    private static final Subject INTERNAL_PAIRWISE_ID = new Subject();
+    private static final Subject RP_PAIRWISE_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
     private static final State RP_STATE = new State();
@@ -134,9 +135,9 @@ class AuthenticationCallbackHandlerTest {
         when(UNSUCCESSFUL_TOKEN_RESPONSE.toErrorResponse())
                 .thenReturn(new TokenErrorResponse(new ErrorObject("1", TEST_ERROR_MESSAGE)));
         when(USER_INFO.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-        when(USER_INFO.getSubject()).thenReturn(PAIRWISE_SUBJECT_ID);
+        when(USER_INFO.getSubject()).thenReturn(INTERNAL_PAIRWISE_ID);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
-        when(USER_INFO.getClaim("rp_client_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
+        when(USER_INFO.getClaim("rp_pairwise_id")).thenReturn(RP_PAIRWISE_ID.getValue());
         when(USER_INFO.getPhoneNumber()).thenReturn("1234");
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
@@ -235,7 +236,7 @@ class AuthenticationCallbackHandlerTest {
                                         .withPersistentSessionId(PERSISTENT_SESSION_ID)
                                         .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                         .withIpAddress("123.123.123.123")
-                                        .withUserId(PAIRWISE_SUBJECT_ID.getValue())
+                                        .withUserId(INTERNAL_PAIRWISE_ID.getValue())
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
                         eq(pair("new_account", true)),
@@ -250,12 +251,12 @@ class AuthenticationCallbackHandlerTest {
                                         .withPersistentSessionId(PERSISTENT_SESSION_ID)
                                         .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                         .withIpAddress("123.123.123.123")
-                                        .withUserId(PAIRWISE_SUBJECT_ID.getValue())
+                                        .withUserId(INTERNAL_PAIRWISE_ID.getValue())
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
                         eq(pair("internalSubjectId", AuditService.UNKNOWN)),
                         eq(pair("isNewAccount", true)),
-                        eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
+                        eq(pair("rpPairwiseId", RP_PAIRWISE_ID.getValue())),
                         eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())),
                         eq(pair("nonce", RP_NONCE.getValue())));
     }
