@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -60,7 +61,11 @@ class ManualAccountDeletionServiceTest {
 
         // then
         verify(accountDeletionService)
-                .removeAccount(Optional.empty(), USER_PROFILE, Optional.empty());
+                .removeAccount(
+                        Optional.empty(),
+                        USER_PROFILE,
+                        Optional.empty(),
+                        AccountDeletionReason.SUPPORT_INITIATED);
     }
 
     @Test
@@ -116,7 +121,7 @@ class ManualAccountDeletionServiceTest {
         // given
         doThrow(new Json.JsonException("error"))
                 .when(accountDeletionService)
-                .removeAccount(any(), any(), any());
+                .removeAccount(any(), any(), any(), any());
 
         // then
         assertThrows(RuntimeException.class, () -> underTest.manuallyDeleteAccount(USER_PROFILE));

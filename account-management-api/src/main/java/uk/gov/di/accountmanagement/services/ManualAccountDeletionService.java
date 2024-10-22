@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.entity.LegacyAccountDeletionMessage;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -41,7 +42,11 @@ public class ManualAccountDeletionService {
                         userProfile.getLegacySubjectID(),
                         getCommonSubjectId(userProfile));
         try {
-            accountDeletionService.removeAccount(Optional.empty(), userProfile, Optional.empty());
+            accountDeletionService.removeAccount(
+                    Optional.empty(),
+                    userProfile,
+                    Optional.empty(),
+                    AccountDeletionReason.SUPPORT_INITIATED);
             var deletedAccountPayload =
                     SerializationService.getInstance()
                             .writeValueAsString(legacyAccountDeletionMessage);

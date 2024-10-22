@@ -5,9 +5,12 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -37,6 +40,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class AccountDeletionServiceTest {
@@ -89,7 +93,11 @@ class AccountDeletionServiceTest {
         when(userProfile.getEmail()).thenReturn(expectedEmail);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         // when
-        underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
+        underTest.removeAccount(
+                Optional.of(input),
+                userProfile,
+                Optional.empty(),
+                AccountDeletionReason.USER_INITIATED);
         // then
         verify(dynamoDeleteService).deleteAccount(eq(expectedEmail), any());
     }
@@ -105,7 +113,12 @@ class AccountDeletionServiceTest {
         // then
         assertThrows(
                 expectedException.getClass(),
-                () -> underTest.removeAccount(Optional.of(input), userProfile, Optional.empty()));
+                () ->
+                        underTest.removeAccount(
+                                Optional.of(input),
+                                userProfile,
+                                Optional.empty(),
+                                AccountDeletionReason.USER_INITIATED));
     }
 
     @Test
@@ -116,7 +129,11 @@ class AccountDeletionServiceTest {
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
 
         // when
-        underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
+        underTest.removeAccount(
+                Optional.of(input),
+                userProfile,
+                Optional.empty(),
+                AccountDeletionReason.USER_INITIATED);
 
         // then
         var captor = ArgumentCaptor.forClass(String.class);
@@ -137,14 +154,20 @@ class AccountDeletionServiceTest {
 
         // then
         assertDoesNotThrow(
-                () -> underTest.removeAccount(Optional.of(input), userProfile, Optional.empty()));
+                () ->
+                        underTest.removeAccount(
+                                Optional.of(input),
+                                userProfile,
+                                Optional.empty(),
+                                AccountDeletionReason.USER_INITIATED));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Failed to send account deletion email")));
     }
 
-    @Test
-    void removeAccountAudits() throws Json.JsonException {
+    @EnumSource()
+    @ParameterizedTest
+    void removeAccountAudits(AccountDeletionReason reason) throws Json.JsonException {
         // given
         var expectedEmail = "test@example.com";
         var expectedPhoneNumber = "+44123456789";
@@ -166,7 +189,7 @@ class AccountDeletionServiceTest {
                 .thenReturn(TEST_IP_ADDRESS);
 
         // when
-        underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
+        underTest.removeAccount(Optional.of(input), userProfile, Optional.empty(), reason);
 
         // then
         verify(auditService)
@@ -187,7 +210,8 @@ class AccountDeletionServiceTest {
                                                         auditContext.ipAddress(), TEST_IP_ADDRESS)
                                                 && Objects.equals(
                                                         auditContext.persistentSessionId(),
-                                                        TEST_PERSISTENT_SESSION_ID)));
+                                                        TEST_PERSISTENT_SESSION_ID)),
+                        eq(pair("account_deletion_reason", reason)));
     }
 
     @Test
@@ -198,7 +222,12 @@ class AccountDeletionServiceTest {
         doThrow(new RuntimeException()).when(auditService).submitAuditEvent(any(), any());
         // then
         assertDoesNotThrow(
-                () -> underTest.removeAccount(Optional.of(input), userProfile, Optional.empty()));
+                () ->
+                        underTest.removeAccount(
+                                Optional.of(input),
+                                userProfile,
+                                Optional.empty(),
+                                AccountDeletionReason.USER_INITIATED));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Failed to audit account deletion")));

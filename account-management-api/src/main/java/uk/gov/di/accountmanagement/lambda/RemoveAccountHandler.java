@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
@@ -120,7 +121,8 @@ public class RemoveAccountHandler
             accountDeletionService.removeAccount(
                     Optional.of(input),
                     userProfile,
-                    AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                    AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                    AccountDeletionReason.USER_INITIATED);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {

@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.services;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.audit.AuditContext;
@@ -25,6 +26,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AccountDeletionService {
     private static final Logger LOG = LogManager.getLogger(AccountDeletionService.class);
@@ -52,7 +54,8 @@ public class AccountDeletionService {
     public void removeAccount(
             Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
-            Optional<String> txmaAuditEncoded)
+            Optional<String> txmaAuditEncoded,
+            AccountDeletionReason reason)
             throws Json.JsonException {
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
@@ -119,7 +122,8 @@ public class AccountDeletionService {
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
                             txmaAuditEncoded);
-            auditService.submitAuditEvent(AUTH_DELETE_ACCOUNT, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_DELETE_ACCOUNT, auditContext, pair("account_deletion_reason", reason));
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

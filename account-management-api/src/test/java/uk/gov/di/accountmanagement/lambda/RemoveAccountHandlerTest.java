@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
@@ -89,7 +90,10 @@ class RemoveAccountHandlerTest {
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
                 .removeAccount(
-                        Optional.of(event), userProfile, Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                        Optional.of(event),
+                        userProfile,
+                        Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                        AccountDeletionReason.USER_INITIATED);
     }
 
     @Test
@@ -107,7 +111,11 @@ class RemoveAccountHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
-                .removeAccount(Optional.of(event), userProfile, Optional.empty());
+                .removeAccount(
+                        Optional.of(event),
+                        userProfile,
+                        Optional.empty(),
+                        AccountDeletionReason.USER_INITIATED);
     }
 
     @Test
