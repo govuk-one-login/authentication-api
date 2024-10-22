@@ -80,7 +80,7 @@ class AuthSessionServiceTest {
         AuthSessionItem savedItem = captor.getValue();
 
         assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertTrue(savedItem.getTimeToLive() > Instant.now().getEpochSecond());
+        assertTrue(savedItem.getTtl() > Instant.now().getEpochSecond());
     }
 
     @Test
@@ -94,7 +94,7 @@ class AuthSessionServiceTest {
         AuthSessionItem savedItem = captor.getValue();
 
         assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertTrue(savedItem.getTimeToLive() > Instant.now().getEpochSecond());
+        assertTrue(savedItem.getTtl() > Instant.now().getEpochSecond());
     }
 
     @Test
@@ -108,7 +108,7 @@ class AuthSessionServiceTest {
         AuthSessionItem updatedItem = captor.getValue();
 
         assertThat(updatedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertTrue(updatedItem.getTimeToLive() > Instant.now().getEpochSecond());
+        assertTrue(updatedItem.getTtl() > Instant.now().getEpochSecond());
         verify(table).deleteItem(existingSession);
     }
 
@@ -163,17 +163,14 @@ class AuthSessionServiceTest {
 
     private AuthSessionItem withValidSession() {
         AuthSessionItem existingSession =
-                new AuthSessionItem().withSessionId(SESSION_ID).withTimeToLive(VALID_TTL);
+                new AuthSessionItem().withSessionId(SESSION_ID).withTtl(VALID_TTL);
         when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
         return existingSession;
     }
 
     private void withExpiredSession() {
         when(table.getItem(SESSION_ID_PARTITION_KEY))
-                .thenReturn(
-                        new AuthSessionItem()
-                                .withSessionId(SESSION_ID)
-                                .withTimeToLive(EXPIRED_TTL));
+                .thenReturn(new AuthSessionItem().withSessionId(SESSION_ID).withTtl(EXPIRED_TTL));
     }
 
     private void withNoSession() {

@@ -21,7 +21,7 @@ public class AuthSessionItem {
 
     private String sessionId;
     private String verifiedMfaMethodType;
-    private long timeToLive;
+    private long ttl;
     private AccountState isNewAccount;
 
     public AuthSessionItem() {}
@@ -56,16 +56,16 @@ public class AuthSessionItem {
     }
 
     @DynamoDbAttribute("ttl")
-    public long getTimeToLive() {
-        return timeToLive;
+    public long getTtl() {
+        return ttl;
     }
 
-    public void setTimeToLive(long timeToLive) {
-        this.timeToLive = timeToLive;
+    public void setTtl(long ttl) {
+        this.ttl = ttl;
     }
 
-    public AuthSessionItem withTimeToLive(long timeToLive) {
-        this.timeToLive = timeToLive;
+    public AuthSessionItem withTtl(long ttl) {
+        this.ttl = ttl;
         return this;
     }
 

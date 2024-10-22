@@ -50,7 +50,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 AuthSessionItem newItem =
                         oldItem.get()
                                 .withSessionId(newSessionId)
-                                .withTimeToLive(
+                                .withTtl(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
                                                 .getEpochSecond());
@@ -65,7 +65,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                         new AuthSessionItem()
                                 .withSessionId(newSessionId)
                                 .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                .withTimeToLive(
+                                .withTtl(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
                                                 .getEpochSecond());
@@ -91,8 +91,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
 
         Optional<AuthSessionItem> validAuthSession =
-                authSession.filter(
-                        s -> s.getTimeToLive() > NowHelper.now().toInstant().getEpochSecond());
+                authSession.filter(s -> s.getTtl() > NowHelper.now().toInstant().getEpochSecond());
         if (validAuthSession.isEmpty()) {
             LOG.info("Auth session item with expired TTL found. Session ID: {}", sessionId);
         }
