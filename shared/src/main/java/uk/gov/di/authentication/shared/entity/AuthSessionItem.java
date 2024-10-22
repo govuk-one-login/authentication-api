@@ -8,6 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class AuthSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
+    public static final String ATTRIBUTE_TIME_TO_LIVE = "TimeToLive";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
 
     public enum AccountState {
@@ -20,6 +21,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
 
     private String sessionId;
+    private long timeToLive;
     private String verifiedMfaMethodType;
     private long ttl;
     private AccountState isNewAccount;
@@ -38,6 +40,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withSessionId(String sessionId) {
         this.sessionId = sessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_TIME_TO_LIVE)
+    public long getTimeToLive() {
+        return timeToLive;
+    }
+
+    public void setTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
+    }
+
+    public AuthSessionItem withTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
         return this;
     }
 
