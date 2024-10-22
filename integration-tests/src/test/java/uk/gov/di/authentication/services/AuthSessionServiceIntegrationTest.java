@@ -3,18 +3,24 @@ package uk.gov.di.authentication.services;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
 class AuthSessionServiceIntegrationTest {
     private static final String SESSION_ID = "test-session-id";
     private static final String PREVIOUS_SESSION_ID = "test-previous-session-id";
+
+    private final long timeToLive = 3600L;
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -27,6 +33,10 @@ class AuthSessionServiceIntegrationTest {
 
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+        assertThat(retrievedSession.get().getTtl(), equalTo(0L));
+        assertThat(
+                retrievedSession.get().getTimeToLive(),
+                greaterThan(NowHelper.now().toInstant().getEpochSecond()));
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(AuthSessionItem.AccountState.UNKNOWN));
@@ -44,6 +54,10 @@ class AuthSessionServiceIntegrationTest {
         assertThat(retrievedPreviousSession.isPresent(), equalTo(false));
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+        assertThat(retrievedSession.get().getTtl(), equalTo(0L));
+        assertThat(
+                retrievedSession.get().getTimeToLive(),
+                greaterThan(NowHelper.now().toInstant().getEpochSecond()));
     }
 
     @Test
@@ -57,6 +71,10 @@ class AuthSessionServiceIntegrationTest {
         assertThat(retrievedPreviousSession.isPresent(), equalTo(false));
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+        assertThat(retrievedSession.get().getTtl(), equalTo(0L));
+        assertThat(
+                retrievedSession.get().getTimeToLive(),
+                greaterThan(NowHelper.now().toInstant().getEpochSecond()));
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(AuthSessionItem.AccountState.UNKNOWN));
@@ -90,6 +108,10 @@ class AuthSessionServiceIntegrationTest {
         assertThat(retrievedPreviousSession.isPresent(), equalTo(false));
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+        assertThat(retrievedSession.get().getTtl(), equalTo(0L));
+        assertThat(
+                retrievedSession.get().getTimeToLive(),
+                greaterThan(NowHelper.now().toInstant().getEpochSecond()));
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(AuthSessionItem.AccountState.EXISTING));
@@ -104,6 +126,21 @@ class AuthSessionServiceIntegrationTest {
                 authSessionExtension.getSessionFromRequestHeaders(headersWithSessionId);
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+    }
+
+    @Test
+    void shouldFilterOnTimeToLiveWhenTtlIsNonZero() {
+        withSession();
+        var expiry = NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
+        AuthSessionItem sessionWithTtl =
+                new AuthSessionItem().withSessionId(SESSION_ID).withTtl(expiry);
+        authSessionExtension.updateSession(sessionWithTtl);
+
+        var session = authSessionExtension.getSession(SESSION_ID);
+
+        assertTrue(session.isPresent());
+        assertThat(session.get().getTtl(), equalTo(expiry));
+        assertThat(session.get().getTimeToLive(), equalTo(0L));
     }
 
     private void withSession() {

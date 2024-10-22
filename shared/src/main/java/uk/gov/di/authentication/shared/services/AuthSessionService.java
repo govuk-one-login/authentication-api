@@ -50,7 +50,8 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 AuthSessionItem newItem =
                         oldItem.get()
                                 .withSessionId(newSessionId)
-                                .withTtl(
+                                .withTtl(0L)
+                                .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
                                                 .getEpochSecond());
@@ -65,7 +66,8 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                         new AuthSessionItem()
                                 .withSessionId(newSessionId)
                                 .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                .withTtl(
+                                .withTtl(0L)
+                                .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
                                                 .getEpochSecond());
@@ -90,8 +92,16 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             return authSession;
         }
 
-        Optional<AuthSessionItem> validAuthSession =
-                authSession.filter(s -> s.getTtl() > NowHelper.now().toInstant().getEpochSecond());
+        Optional<AuthSessionItem> validAuthSession;
+        if (authSession.get().getTtl() != 0L) {
+            validAuthSession =
+                    authSession.filter(
+                            s -> s.getTtl() > NowHelper.now().toInstant().getEpochSecond());
+        } else {
+            validAuthSession =
+                    authSession.filter(
+                            s -> s.getTimeToLive() > NowHelper.now().toInstant().getEpochSecond());
+        }
         if (validAuthSession.isEmpty()) {
             LOG.info("Auth session item with expired TTL found. Session ID: {}", sessionId);
         }
