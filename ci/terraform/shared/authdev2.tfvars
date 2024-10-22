@@ -6,9 +6,11 @@ password_pepper     = "fake-pepper"
 enable_api_gateway_execution_request_tracing = true
 di_tools_signing_profile_version_arn         = "arn:aws:signer:eu-west-2:706615647326:/signing-profiles/di_auth_lambda_signing_20220214175605677200000001/ZPqg7ZUgCP"
 
+orch_stub_deployed = false
 stub_rp_clients = [
   {
     client_name           = "di-auth-stub-relying-party-authdev2"
+    at_client             = true # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
     sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
@@ -24,6 +26,32 @@ stub_rp_clients = [
       "email",
       "phone",
       "wallet-subject-id",
+    ]
+    one_login_service = false
+    service_type      = "MANDATORY"
+  },
+  {
+    // this client may or may not work. It's needed for the SSM parameter generation though, so this could be classed as a dummy entry.
+    client_name           = "relying-party-stub-authdev2-app"
+    at_client             = false # This client is the one used for acceptance tests. there should be exactly one of these marked as true.
+    sector_identifier_uri = "https://doc-app-rp-dev.build.stubs.account.gov.uk"
+    callback_urls = [
+      "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "http://localhost:8080/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://doc-app-rp-dev.build.stubs.account.gov.uk/signed-out",
+      "http://localhost:8080/signed-out",
+    ]
+    test_client                     = "1"
+    identity_verification_supported = "1"
+    client_type                     = "app"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+      "wallet-subject-id",
+      "doc-checking-app"
     ]
     one_login_service = false
     service_type      = "MANDATORY"
