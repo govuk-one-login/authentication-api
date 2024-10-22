@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
 
       - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@05eb603076c1a2f7a57905135ffda74bdae9ca8a # v12.2877.0
+        uses: bridgecrewio/checkov-action@a36096a3a272a684d48058e101498cddb9a1599d # v12.2884.0
         with:
           directory: ci/terraform/${{ matrix.module }}
           soft_fail: true
@@ -53,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@05eb603076c1a2f7a57905135ffda74bdae9ca8a # v12.2877.0
+        uses: bridgecrewio/checkov-action@a36096a3a272a684d48058e101498cddb9a1599d # v12.2884.0
         with:
           file: template.yaml
           framework: cloudformation
