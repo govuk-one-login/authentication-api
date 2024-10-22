@@ -756,7 +756,10 @@ public class AuthorisationHandler
                         .claim("reauthenticate", reauthSub)
                         .claim("previous_govuk_signin_journey_id", reauthSid)
                         .claim("channel", client.getChannel())
-                        .claim("authenticated", session.isAuthenticated());
+                        .claim("authenticated", session.isAuthenticated())
+                        .claim(
+                                "current_credential_strength",
+                                session.getCurrentCredentialStrength());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
 

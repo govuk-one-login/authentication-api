@@ -432,7 +432,7 @@ class AuthorisationHandlerTest {
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
         void shouldPassAuthenticatedClaimToAuthFromSession(boolean isAuthenticated) {
-            withExistingSessionAuthenticatedValue(isAuthenticated);
+            withExistingSession(new Session(NEW_SESSION_ID).setAuthenticated(isAuthenticated));
 
             var requestParams =
                     buildRequestParams(
@@ -445,8 +445,8 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualChannelClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(isAuthenticated, actualChannelClaim);
+            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(isAuthenticated, actualAuthenticatedClaim);
         }
 
         @Test
@@ -464,8 +464,51 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualChannelClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(false, actualChannelClaim);
+            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(false, actualAuthenticatedClaim);
+        }
+
+        @Test
+        void shouldPassCurrentCredentialStrengthClaimToAuthFromSession() {
+            var currentCredentialStrength = CredentialTrustLevel.MEDIUM_LEVEL;
+            withExistingSession(
+                    new Session(NEW_SESSION_ID)
+                            .setCurrentCredentialStrength(currentCredentialStrength));
+
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
+            var actualCurrentCredentialStrengthClaim =
+                    captor.getValue().getClaim("current_credential_strength");
+            assertEquals(currentCredentialStrength, actualCurrentCredentialStrengthClaim);
+        }
+
+        @Test
+        void shouldPassNullCurrentCredentialStrengthClaimIfNewSession() {
+            withNoSession();
+
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
+            var actualCurrentCredentialStrengthClaim =
+                    captor.getValue().getClaim("current_credential_strength");
+            assertEquals(null, actualCurrentCredentialStrengthClaim);
         }
 
         @ParameterizedTest
@@ -2450,13 +2493,6 @@ class AuthorisationHandlerTest {
         when(orchSessionService.getSessionFromSessionCookie(any()))
                 .thenReturn(Optional.of(orchSession));
         when(orchSessionService.addOrUpdateSessionId(any(), any())).thenReturn(orchSession);
-    }
-
-    private void withExistingSessionAuthenticatedValue(Boolean isAuthenticated) {
-        when(sessionService.getSessionFromSessionCookie(any()))
-                .thenReturn(
-                        Optional.of(
-                                new Session("a-new-session-id").setAuthenticated(isAuthenticated)));
     }
 
     private void withNoSession() {
