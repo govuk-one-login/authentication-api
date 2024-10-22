@@ -6,6 +6,12 @@ updates:
       interval: daily
       time: "03:00"
     open-pull-requests-limit: 100
+    groups:
+      gradle-security-updates:
+        applies-to: security-updates
+        update-types:
+          - minor
+          - patch
     target-branch: main
     commit-message:
       prefix: BAU
