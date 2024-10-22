@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
+import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -76,6 +77,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+
+    @RegisterExtension
+    protected static final AuthenticationAttemptsStoreExtension authAttemptsExtension =
+            new AuthenticationAttemptsStoreExtension();
 
     @BeforeEach
     void setup() {
