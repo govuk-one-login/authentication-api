@@ -8,6 +8,7 @@ public enum AuthUserInfoClaims {
     LEGACY_SUBJECT_ID("legacy_subject_id"),
     PUBLIC_SUBJECT_ID("public_subject_id"),
     LOCAL_ACCOUNT_ID("local_account_id"),
+    RP_PAIRWISE_ID("rp_pairwise_id"),
     EMAIL("email"),
     EMAIL_VERIFIED("email_verified"),
     PHONE_NUMBER("phone_number"),

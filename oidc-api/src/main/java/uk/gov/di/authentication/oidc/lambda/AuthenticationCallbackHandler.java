@@ -506,7 +506,12 @@ public class AuthenticationCallbackHandler
                 var metadataPairs = new ArrayList<AuditService.MetadataPair>();
                 metadataPairs.add(pair("internalSubjectId", UNKNOWN));
                 metadataPairs.add(pair("isNewAccount", newAccount));
-                metadataPairs.add(pair("rpPairwiseId", userInfo.getClaim("rp_pairwise_id")));
+                metadataPairs.add(
+                        pair(
+                                "rpPairwiseId",
+                                userInfo.getClaim(
+                                        AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(),
+                                        String.class)));
                 metadataPairs.add(pair("authCode", authCode.getValue()));
                 if (authenticationRequest.getNonce() != null) {
                     metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
@@ -664,13 +669,20 @@ public class AuthenticationCallbackHandler
         String verifiedMfaMethodType =
                 userInfo.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class);
+        String rpPairwiseId =
+                userInfo.getClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(), String.class);
+
         OrchSessionItem updatedOrchSession =
                 orchSession
                         .withVerifiedMfaMethodType(verifiedMfaMethodType)
-                        .withEmailAddress(userInfo.getEmailAddress());
+                        .withEmailAddress(userInfo.getEmailAddress())
+                        .withRpPairwiseId(rpPairwiseId);
         LOG.info("Updating Orch session with claims from userinfo response");
         // TODO-922: temporary logs for checking all is working as expected
         LOG.info("is email attached to orch session: {}", orchSession.getEmailAddress() != null);
+        LOG.info(
+                "is rpPairwiseId attached to orch session: {}",
+                orchSession.getRpPairwiseId() != null);
         //
         orchSessionService.updateSession(updatedOrchSession);
     }
