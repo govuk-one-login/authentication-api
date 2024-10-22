@@ -362,9 +362,9 @@ public class AuthenticationCallbackHandler
                                 configurationService.isIdentityEnabled());
 
                 boolean isTestJourney = false;
-                if (nonNull(userInfo.getEmailAddress())) {
+                if (nonNull(orchSession.getEmailAddress())) {
                     isTestJourney =
-                            clientService.isTestJourney(clientId, userInfo.getEmailAddress());
+                            clientService.isTestJourney(clientId, orchSession.getEmailAddress());
                 }
 
                 // TODO-922: temporary logs for checking all is working as expected
@@ -392,8 +392,8 @@ public class AuthenticationCallbackHandler
                 user =
                         user.withUserId(userInfo.getSubject().getValue())
                                 .withEmail(
-                                        Optional.of(userSession)
-                                                .map(Session::getEmailAddress)
+                                        Optional.of(orchSession)
+                                                .map(OrchSessionItem::getEmailAddress)
                                                 .orElse(UNKNOWN))
                                 .withPhone(
                                         Optional.of(userInfo)
@@ -416,9 +416,9 @@ public class AuthenticationCallbackHandler
                                 userSession.getSessionId(),
                                 clientId,
                                 userInfo.getSubject().getValue(),
-                                Objects.isNull(userSession.getEmailAddress())
+                                Objects.isNull(orchSession.getEmailAddress())
                                         ? UNKNOWN
-                                        : userSession.getEmailAddress(),
+                                        : orchSession.getEmailAddress(),
                                 IpAddressHelper.extractIpAddress(input),
                                 Objects.isNull(userInfo.getPhoneNumber())
                                         ? UNKNOWN
@@ -489,7 +489,7 @@ public class AuthenticationCallbackHandler
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
-                                clientSessionId, userSession.getEmailAddress(), clientSession);
+                                clientSessionId, orchSession.getEmailAddress(), clientSession);
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
