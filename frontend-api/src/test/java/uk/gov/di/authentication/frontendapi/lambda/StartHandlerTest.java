@@ -62,6 +62,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -534,6 +535,19 @@ class StartHandlerTest {
         verifyNoInteractions(auditService);
     }
 
+    @Test
+    void shouldThrowRuntimeExceptionWhenUnableToSerializeStartResponse() {
+        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
+        usingValidClientSession();
+        usingValidSession();
+        withFailureToSerializeStartResponse();
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(false));
+        assertThrows(RuntimeException.class, () -> handler.handleRequest(event, context));
+    }
+
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated) {
         return String.format("{\"authenticated\": %s}", authenticated);
     }
@@ -561,6 +575,12 @@ class StartHandlerTest {
 
     private void usingInvalidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
+    }
+
+    private void withFailureToSerializeStartResponse() {
+        var mockedSerializer = mock(SerializationService.getInstance().getClass());
+        when(mockedSerializer.writeValueAsString(any(StartResponse.class)))
+                .thenThrow(new Json.JsonException("Error serializing value as JSON"));
     }
 
     private ClientSession getClientSession() {
