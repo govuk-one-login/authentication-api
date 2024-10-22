@@ -9,5 +9,6 @@ public record StartRequest(
         @Expose @SerializedName("rp-pairwise-id-for-reauth") String rpPairwiseIdForReauth,
         @Expose @SerializedName("previous-govuk-signin-journey-id")
                 String previousGovUkSigninJourneyId,
+        @Expose @SerializedName("authenticated") boolean authenticated,
         @Expose @SerializedName("current-credential-strength")
                 CredentialTrustLevel currentCredentialStrength) {}
