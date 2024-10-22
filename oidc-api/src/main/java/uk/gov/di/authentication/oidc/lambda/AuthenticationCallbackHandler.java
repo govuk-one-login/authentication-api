@@ -371,6 +371,14 @@ public class AuthenticationCallbackHandler
                 LOG.info(
                         "is email attached to auth-external-api userinfo response: {}",
                         userInfo.getEmailAddress() != null);
+                LOG.info(
+                        "is internalCommonSubjectIdentifier defined: {}",
+                        userSession.getInternalCommonSubjectIdentifier() != null);
+                LOG.info(
+                        "is internalCommonSubjectIdentifier the same as internalPairwiseId: {}",
+                        userInfo.getSubject()
+                                .getValue()
+                                .equals(userSession.getInternalCommonSubjectIdentifier()));
                 //
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
