@@ -866,7 +866,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 ORCH_TO_AUTH_STATE,
                 SESSION_ID);
         setUpClientSession();
-        orchSessionExtension.addSession(new OrchSessionItem().withSessionId(SESSION_ID));
+        orchSessionExtension.addSession(new OrchSessionItem(SESSION_ID));
     }
 
     private Map<String, String> constructQueryStringParameters() {

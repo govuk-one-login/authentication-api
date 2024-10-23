@@ -692,7 +692,7 @@ class AuthenticationCallbackHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(Optional.of(new OrchSessionItem().withSessionId(SESSION_ID)));
+                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
     }
 
     private void usingValidClientSession() {

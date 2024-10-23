@@ -31,6 +31,7 @@ public class OrchSessionItem {
 
     public OrchSessionItem(String sessionId) {
         this.sessionId = sessionId;
+        this.isNewAccount = AccountState.UNKNOWN;
     }
 
     @DynamoDbPartitionKey

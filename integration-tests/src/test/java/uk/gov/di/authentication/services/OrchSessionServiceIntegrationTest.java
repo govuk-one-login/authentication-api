@@ -70,8 +70,7 @@ class OrchSessionServiceIntegrationTest {
 
     private void withPreviousExistingAccountSession() {
         orchSessionExtension.addSession(
-                new OrchSessionItem()
-                        .withSessionId(PREVIOUS_SESSION_ID)
+                new OrchSessionItem(PREVIOUS_SESSION_ID)
                         .withAccountState(OrchSessionItem.AccountState.EXISTING));
     }
 }
