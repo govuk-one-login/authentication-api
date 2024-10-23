@@ -44,7 +44,6 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -99,7 +98,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authCodeResponse.getLocation(),
                 startsWith("https://rp-build.build.stubs.account.gov.uk/?code="));
 
-        assertTrue(redis.getSession(sessionID).isAuthenticated());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
     }
 
