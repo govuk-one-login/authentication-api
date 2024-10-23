@@ -244,6 +244,10 @@ public class AuthCodeHandler
                 rpPairwiseId =
                         authCodeResponseService.getRpPairwiseId(
                                 session, clientID, dynamoClientService);
+                var rpPairwiseIdFromOrchSession = orchSession.getRpPairwiseId();
+                // TODO-922: temporary logs. Once verified that these are indeed the same, we can
+                // use the one from orch session
+                LOG.info("is rpPairwiseId same in authCodeResponseService as in orch session");
             }
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
