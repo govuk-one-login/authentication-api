@@ -16,9 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
-
 public class AuthCodeResponseGenerationService {
     private static final Logger LOG = LogManager.getLogger(AuthCodeResponseGenerationService.class);
 
@@ -115,14 +112,5 @@ public class AuthCodeResponseGenerationService {
                         dynamoService,
                         configurationService.getInternalSectorURI())
                 .getValue();
-    }
-
-    public void saveSession(boolean docAppJourney, SessionService sessionService, Session session) {
-        if (docAppJourney) {
-            sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
-        } else {
-            sessionService.storeOrUpdateSession(
-                    session.setAuthenticated(true).setNewAccount(EXISTING));
-        }
     }
 }

@@ -50,6 +50,7 @@ import java.util.Optional;
 import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
@@ -278,7 +279,10 @@ public class AuthCodeHandler
                     clientSession.getClientName(),
                     isTestJourney);
 
-            authCodeResponseService.saveSession(docAppJourney, sessionService, session);
+            if (docAppJourney) {
+                sessionService.storeOrUpdateSession(
+                        session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
+            }
 
             LOG.info("Generating successful auth code response");
             return generateApiGatewayProxyResponse(
