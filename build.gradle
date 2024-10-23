@@ -52,12 +52,6 @@ ext {
     }
 }
 
-repositories {
-    maven {
-        url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
-    }
-}
-
 subprojects {
     buildscript {
         dependencies {
@@ -79,12 +73,6 @@ subprojects {
 
     apply plugin: "com.github.spotbugs"
     apply plugin: "java"
-
-    repositories {
-        maven {
-            url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
-        }
-    }
 
     spotbugs {
         ignoreFailures = false
