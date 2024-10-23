@@ -157,14 +157,23 @@ public class StartHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
+        boolean isUserAuthenticatedWithValidProfile;
         try {
-            session =
-                    startService.validateSession(
-                            session,
-                            getHeaderValueFromHeaders(
-                                    input.getHeaders(),
-                                    CLIENT_SESSION_ID_HEADER,
-                                    configurationService.getHeadersCaseInsensitive()));
+            var isUserProfileEmpty = startService.isUserProfileEmpty(session);
+
+            isUserAuthenticatedWithValidProfile =
+                    startRequest.authenticated() && !isUserProfileEmpty;
+
+            if (startRequest.authenticated() && isUserProfileEmpty) {
+                session =
+                        startService.createNewSessionWithExistingIdAndClientSession(
+                                session,
+                                getHeaderValueFromHeaders(
+                                        input.getHeaders(),
+                                        CLIENT_SESSION_ID_HEADER,
+                                        configurationService.getHeadersCaseInsensitive()));
+            }
+
             var userContext = startService.buildUserContext(session, clientSession.get());
 
             attachLogFieldToLogs(
@@ -247,7 +256,8 @@ public class StartHandler
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),
                             reauthenticate,
-                            isBlockedForReauth);
+                            isBlockedForReauth,
+                            isUserAuthenticatedWithValidProfile);
 
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =

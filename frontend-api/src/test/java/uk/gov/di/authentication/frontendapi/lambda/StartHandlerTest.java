@@ -370,11 +370,61 @@ class StartHandlerTest {
     }
 
     @Test
+    void shouldCreateNewSessionAndConsiderUserNotAuthenticatedWhenUserProfileNotPresent()
+            throws ParseException {
+        withNoUserProfilePresent();
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidSession();
+        usingValidClientSession();
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(true));
+
+        handler.handleRequest(event, context);
+
+        verify(startService)
+                .createNewSessionWithExistingIdAndClientSession(
+                        any(Session.class), eq(CLIENT_SESSION_ID));
+        verify(startService)
+                .buildUserStartInfo(
+                        any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), eq(false));
+    }
+
+    @Test
+    void retainsExistingSessionAndConsidersUserAuthenticatedWhenUserProfilePresent()
+            throws ParseException {
+        withUserProfilePresent();
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidSession();
+        usingValidClientSession();
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(true));
+
+        handler.handleRequest(event, context);
+
+        verify(startService, never())
+                .createNewSessionWithExistingIdAndClientSession(
+                        any(Session.class), eq(CLIENT_SESSION_ID));
+        verify(startService)
+                .buildUserStartInfo(
+                        any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), eq(true));
+    }
+
+    @Test
     void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
-            throws ParseException, Json.JsonException {
+            throws Json.JsonException, ParseException {
+        withUserProfilePresent();
         var isAuthenticated = true;
         usingValidSession();
         usingValidClientSession();
+        var userStartInfo =
+                new UserStartInfo(false, false, isAuthenticated, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -435,6 +485,8 @@ class StartHandlerTest {
             int expectedOtpAttemptCount,
             String expectedFailureReason)
             throws ParseException {
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, true);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn("testSubjectId");
@@ -556,7 +608,9 @@ class StartHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
+        when(startService.createNewSessionWithExistingIdAndClientSession(
+                        session, CLIENT_SESSION_ID))
+                .thenReturn(session);
     }
 
     private void usingInvalidSession() {
@@ -639,8 +693,22 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
-                        eq(userContext), any(), any(), anyBoolean(), anyBoolean(), anyBoolean()))
+                        eq(userContext),
+                        any(),
+                        any(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean()))
                 .thenReturn(userStartInfo);
+    }
+
+    private void withNoUserProfilePresent() {
+        when(startService.isUserProfileEmpty(any(Session.class))).thenReturn(true);
+    }
+
+    private void withUserProfilePresent() {
+        when(startService.isUserProfileEmpty(any(Session.class))).thenReturn(false);
     }
 
     private Map<String, String> headersWithReauthenticate(String reauthenticate) {
