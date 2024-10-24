@@ -53,6 +53,7 @@ ext {
 }
 
 subprojects {
+    task allDeps(type: DependencyReportTask) {}
     buildscript {
         dependencies {
             constraints {
@@ -442,4 +443,36 @@ jacocoTestReport {
         xml.enabled true
     }
     dependsOn "test"
+}
+
+task searchForDependency {
+    group = 'Custom'
+    description = 'Find all projects that have a dependency'
+
+    doLast {
+        def targetGroup = project.hasProperty('targetGroup') ? project.property('targetGroup') : null
+        def targetName = project.hasProperty('targetName') ? project.property('targetName') : null
+
+        println "searching for ${targetGroup}:${targetName}...\n"
+
+        def foundProjects = new LinkedHashSet<String>()
+
+        allprojects {project ->
+            project.configurations.each { config ->
+                if (config.canBeResolved) {
+                    def resolvedDependencies = config.resolvedConfiguration.lenientConfiguration.allModuleDependencies
+
+                    resolvedDependencies.each { dep ->
+                        if (dep.moduleGroup == targetGroup && dep.moduleName == targetName) {
+                            foundProjects.add(project.name + ":" + config.name)
+                        }
+                    }
+                }
+            }
+        }
+
+        foundProjects.each { projectName ->
+            println "${projectName}"
+        }
+    }
 }
