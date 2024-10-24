@@ -149,6 +149,23 @@ resource "aws_sns_topic" "mock_account_deletion_topic" {
   name  = "${var.environment}-mock-account-deletion-topic"
 }
 
+data "aws_iam_policy_document" "invoke_account_deletion_lambda" {
+  statement {
+    sid       = "permitInvokeLambda"
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
+    resources = [aws_lambda_function.manually_delete_account_lambda.arn]
+
+  }
+}
+
+resource "aws_iam_policy" "invoke_account_deletion_lambda" {
+  name_prefix = "manual-account-deletion-user-policy"
+  path        = "/${var.environment}/am/"
+  description = "Policy for use in Control Tower to be attached to the role assumed by support users to perform account deletions"
+  policy      = data.aws_iam_policy_document.invoke_account_deletion_lambda.json
+}
+
 locals {
   mock_topic_arn             = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
   account_deletion_topic_arn = coalesce(var.legacy_account_deletion_topic_arn, local.mock_topic_arn)
