@@ -7,4 +7,5 @@ public record StartRequest(
         @Expose @SerializedName("previous-session-id") String previousSessionId,
         @Expose @SerializedName("rp-pairwise-id-for-reauth") String rpPairwiseIdForReauth,
         @Expose @SerializedName("previous-govuk-signin-journey-id")
-                String previousGovUkSigninJourneyId) {}
+                String previousGovUkSigninJourneyId,
+        @Expose @SerializedName("authenticated") boolean authenticated) {}

@@ -152,14 +152,31 @@ public class StartHandler
         if (clientSession.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
+
+        StartRequest startRequest;
         try {
-            session =
-                    startService.validateSession(
-                            session,
-                            getHeaderValueFromHeaders(
-                                    input.getHeaders(),
-                                    CLIENT_SESSION_ID_HEADER,
-                                    configurationService.getHeadersCaseInsensitive()));
+            startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+
+        boolean isUserAuthenticatedWithValidProfile;
+        try {
+            var isUserProfileEmpty = startService.isUserProfileEmpty(session);
+
+            isUserAuthenticatedWithValidProfile =
+                    startRequest.authenticated() && !isUserProfileEmpty;
+
+            if (startRequest.authenticated() && isUserProfileEmpty) {
+                session =
+                        startService.createNewSessionWithExsistingIdAndClientSession(
+                                session,
+                                getHeaderValueFromHeaders(
+                                        input.getHeaders(),
+                                        CLIENT_SESSION_ID_HEADER,
+                                        configurationService.getHeadersCaseInsensitive()));
+            }
+
             var userContext = startService.buildUserContext(session, clientSession.get());
 
             attachLogFieldToLogs(
@@ -191,7 +208,6 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
-            StartRequest startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
             Optional<String> previousSessionId =
                     Optional.ofNullable(startRequest.previousSessionId());
             authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
@@ -240,7 +256,8 @@ public class StartHandler
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),
                             reauthenticate,
-                            isBlockedForReauth);
+                            isBlockedForReauth,
+                            isUserAuthenticatedWithValidProfile);
 
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =
@@ -272,7 +289,8 @@ public class StartHandler
             return generateApiGatewayProxyResponse(200, startResponse);
 
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            LOG.error("Unable to serialize start response", e);
+            throw new RuntimeException(e);
         } catch (NoSuchElementException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         } catch (ParseException e) {
