@@ -9,6 +9,9 @@ public class AuthSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
+    public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
+    public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
+            "InternalCommonSubjectIdentifier";
 
     public enum AccountState {
         NEW,
@@ -17,12 +20,11 @@ public class AuthSessionItem {
         UNKNOWN
     }
 
-    public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
-
     private String sessionId;
     private String verifiedMfaMethodType;
     private long timeToLive;
     private AccountState isNewAccount;
+    private String internalCommonSubjectIdentifier;
 
     public AuthSessionItem() {}
 
@@ -52,6 +54,21 @@ public class AuthSessionItem {
 
     public AuthSessionItem withVerifiedMfaMethodType(String verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
+    public String getInternalCommonSubjectIdentifier() {
+        return internalCommonSubjectIdentifier;
+    }
+
+    public void setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
+        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
+    }
+
+    public AuthSessionItem withInternalCommonSubjectIdentifier(
+            String internalCommonSubjectIdentifier) {
+        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
         return this;
     }
 

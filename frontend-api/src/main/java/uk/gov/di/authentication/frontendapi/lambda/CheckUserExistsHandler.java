@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -50,10 +51,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
+    private final AuthSessionService authSessionService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -68,6 +71,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authenticationService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
+        this.authSessionService = authSessionService;
     }
 
     public CheckUserExistsHandler() {
@@ -78,6 +82,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public CheckUserExistsHandler(
@@ -85,6 +90,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -150,6 +156,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = new UserMfaDetail();
+            var session = userContext.getSession();
+            var sessionId = session.getSessionId();
+            var maybeAuthSession = authSessionService.getSession(sessionId);
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
@@ -167,8 +176,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 .getValue();
 
                 LOG.info("Setting internal common subject identifier in user session");
-                userContext.getSession().setInternalCommonSubjectIdentifier(internalPairwiseId);
 
+                session.setInternalCommonSubjectIdentifier(internalPairwiseId);
+                maybeAuthSession.ifPresent(
+                        s -> s.setInternalCommonSubjectIdentifier(internalPairwiseId));
                 var isPhoneNumberVerified = userProfile.get().isPhoneNumberVerified();
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
@@ -180,7 +191,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 isPhoneNumberVerified);
                 auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
-                userContext.getSession().setInternalCommonSubjectIdentifier(null);
+                session.setInternalCommonSubjectIdentifier(null);
+                maybeAuthSession.ifPresent(s -> s.setInternalCommonSubjectIdentifier(null));
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
 
@@ -212,7 +224,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation);
-            sessionService.storeOrUpdateSession(userContext.getSession());
+            sessionService.storeOrUpdateSession(session);
+            maybeAuthSession.ifPresent(authSessionService::updateSession);
 
             LOG.info("Successfully processed request");
 
