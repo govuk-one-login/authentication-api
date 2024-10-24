@@ -73,15 +73,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -182,20 +181,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(
                         ClientSubjectHelper.calculatePairwiseIdentifier(
                                 SUBJECT.getValue(), "rp-sector-uri", SALT));
-        doAnswer(
-                        (i) -> {
-                            session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
-                            return null;
-                        })
-                .when(authCodeResponseService)
-                .saveSession(true, sessionService, session);
-        doAnswer(
-                        (i) -> {
-                            session.setAuthenticated(true).setNewAccount(EXISTING);
-                            return null;
-                        })
-                .when(authCodeResponseService)
-                .saveSession(false, sessionService, session);
+        session.setAuthenticated(true).setNewAccount(EXISTING);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -289,9 +275,6 @@ class AuthCodeHandlerTest {
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertTrue(session.isAuthenticated());
-
-        verify(authCodeResponseService, times(1))
-                .saveSession(anyBoolean(), eq(sessionService), eq(session));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -400,9 +383,9 @@ class AuthCodeHandlerTest {
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
-        assertFalse(session.isAuthenticated());
-        verify(authCodeResponseService, times(1))
-                .saveSession(anyBoolean(), eq(sessionService), eq(session));
+        verify(sessionService, times(1))
+                .storeOrUpdateSession(
+                        argThat(session -> session.isNewAccount() == EXISTING_DOC_APP_JOURNEY));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
