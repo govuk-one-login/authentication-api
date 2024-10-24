@@ -16,11 +16,7 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
 
 locals {
   vpc_endpoint_ids = var.orchestration_vpc_endpoint_id == "" ? [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id] : [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id, var.orchestration_vpc_endpoint_id]
-}
-
-resource "aws_api_gateway_rest_api" "interventions_api_stub" {
-  name = "${var.environment}-di-interventions-api-stub"
-  body = jsonencode({
+  openapi_spec = {
     openapi = "3.0.1"
     info = {
       title = "${var.environment}-di-interventions-api-stub"
@@ -46,56 +42,56 @@ resource "aws_api_gateway_rest_api" "interventions_api_stub" {
         }
       }
     }
-  })
-
-  tags = local.default_tags
-  endpoint_configuration {
-    types            = ["PRIVATE"]
-    vpc_endpoint_ids = local.vpc_endpoint_ids
-  }
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
-data "aws_iam_policy_document" "interventions_api_stub_policy" {
-  statement {
-    effect = "Allow"
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-    actions = [
-      "execute-api:Invoke"
-    ]
-    resources = [
-      "${aws_api_gateway_rest_api.interventions_api_stub.execution_arn}/*"
-    ]
-  }
+module "interventions-api-stub_gateway" {
+  source = "../modules/private-api-gateway"
 
-  statement {
-    effect = "Deny"
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-    actions = [
-      "execute-api:Invoke"
-    ]
-    resources = [
-      "${aws_api_gateway_rest_api.interventions_api_stub.execution_arn}/*"
-    ]
-    condition {
-      test     = "StringNotEquals"
-      variable = "aws:SourceVpce"
-      values   = local.vpc_endpoint_ids
-    }
-  }
+  openapi_spec = jsonencode(local.openapi_spec)
+
+  api_gateway_name = "${var.environment}-di-interventions-api-stub"
+  environment      = var.environment
+  tags             = local.default_tags
+
+  enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
+  enable_api_gateway_execution_request_tracing = local.request_tracing_allowed
+  cloudwatch_log_retention                     = var.cloudwatch_log_retention
+  logging_endpoint_arns                        = var.logging_endpoint_arns
+  cloudwatch_encryption_key_arn                = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  access_logging_template                      = local.access_logging_template
+
+  vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
 }
 
-resource "aws_api_gateway_rest_api_policy" "interventions_api_stub_policy" {
-  rest_api_id = aws_api_gateway_rest_api.interventions_api_stub.id
-  policy      = data.aws_iam_policy_document.interventions_api_stub_policy.json
+moved {
+  from = aws_api_gateway_deployment.interventions_api_stub_deployment
+  to   = module.interventions-api-stub_gateway.module.api-gateway.aws_api_gateway_deployment.deployment
+}
+
+moved {
+  from = aws_api_gateway_method_settings.interventions_api_stub_logging_settings[0]
+  to   = module.interventions-api-stub_gateway.module.api-gateway.aws_api_gateway_method_settings.logging_settings[0]
+}
+
+moved {
+  from = aws_api_gateway_rest_api.interventions_api_stub
+  to   = module.interventions-api-stub_gateway.module.api-gateway.aws_api_gateway_rest_api.rest_api
+}
+
+moved {
+  from = aws_api_gateway_rest_api_policy.interventions_api_stub_policy
+  to   = module.interventions-api-stub_gateway.module.api-gateway.aws_api_gateway_rest_api_policy.rest_api_policy
+}
+
+moved {
+  from = aws_api_gateway_stage.interventions_api_stub_stage
+  to   = module.interventions-api-stub_gateway.module.api-gateway.aws_api_gateway_stage.stage
+}
+
+moved {
+  from = aws_cloudwatch_log_group.interventions_api_stub_stage_access_logs
+  to   = module.interventions-api-stub_gateway.module.api-gateway.aws_cloudwatch_log_group.access_logs
 }
 
 resource "aws_lambda_permission" "endpoint_execution_permission" {
@@ -107,79 +103,5 @@ resource "aws_lambda_permission" "endpoint_execution_permission" {
 
   # The "/*/*" portion grants access from any method on any resource
   # within the API Gateway REST API.
-  source_arn = "${aws_api_gateway_rest_api.interventions_api_stub.execution_arn}/*/*"
-}
-
-
-resource "aws_api_gateway_stage" "interventions_api_stub_stage" {
-  deployment_id         = aws_api_gateway_deployment.interventions_api_stub_deployment.id
-  rest_api_id           = aws_api_gateway_rest_api.interventions_api_stub.id
-  stage_name            = var.environment
-  cache_cluster_enabled = false
-  xray_tracing_enabled  = true
-
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.interventions_api_stub_stage_access_logs.arn
-    format          = local.access_logging_template
-  }
-
-  depends_on = [
-    module.account_interventions_stub_role,
-    aws_api_gateway_deployment.interventions_api_stub_deployment
-  ]
-
-  tags = local.default_tags
-}
-
-resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {
-  rest_api_id = aws_api_gateway_rest_api.interventions_api_stub.id
-
-  triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_rest_api.interventions_api_stub.body,
-      local.vpc_endpoint_ids
-    ]))
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-  depends_on = [
-    module.account_interventions_stub_lambda,
-  ]
-}
-
-resource "aws_api_gateway_method_settings" "interventions_api_stub_logging_settings" {
-  count = var.enable_api_gateway_execution_logging ? 1 : 0
-
-  rest_api_id = aws_api_gateway_rest_api.interventions_api_stub.id
-  stage_name  = aws_api_gateway_stage.interventions_api_stub_stage.stage_name
-  method_path = "*/*"
-
-  settings {
-    metrics_enabled    = true
-    data_trace_enabled = local.request_tracing_allowed
-    logging_level      = "INFO"
-    caching_enabled    = false
-  }
-  depends_on = [
-    aws_api_gateway_stage.interventions_api_stub_stage
-  ]
-}
-
-resource "aws_cloudwatch_log_group" "interventions_api_stub_stage_access_logs" {
-  name              = "${var.environment}-auth-interventions-api-stub-access-logs"
-  retention_in_days = var.cloudwatch_log_retention
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "interventions_api_stub_access_log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "${var.environment}-auth-interventions-api-stub-access-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.interventions_api_stub_stage_access_logs.name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
-
-  lifecycle {
-    create_before_destroy = false
-  }
+  source_arn = "${module.interventions-api-stub_gateway.api_gateway_execution_arn}/*/*"
 }
