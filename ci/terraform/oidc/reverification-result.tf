@@ -71,3 +71,16 @@ module "reverification_result" {
     aws_api_gateway_rest_api.di_authentication_frontend_api
   ]
 }
+
+module "codedeploy_reverification_result" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "reverification-result"
+  environment          = var.environment
+  lambda_function_name = module.reverification_result.lambda_function_name
+  lambda_version       = module.reverification_result.lambda_version
+  lambda_alias_name    = module.reverification_result.lambda_alias_name
+  lambda_alias_version = module.reverification_result.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

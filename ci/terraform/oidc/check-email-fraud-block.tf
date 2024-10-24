@@ -76,3 +76,17 @@ module "check_email_fraud_block" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_check_email_fraud_block" {
+  count                = local.deploy_check_email_fraud_block_count
+  source               = "../modules/codedeploy"
+  endpoint_name        = "check-email-fraud-block"
+  environment          = var.environment
+  lambda_function_name = module.check_email_fraud_block[0].lambda_function_name
+  lambda_version       = module.check_email_fraud_block[0].lambda_version
+  lambda_alias_name    = module.check_email_fraud_block[0].lambda_alias_name
+  lambda_alias_version = module.check_email_fraud_block[0].lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

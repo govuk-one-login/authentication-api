@@ -66,3 +66,16 @@ module "delete_account" {
 
   depends_on = [module.account_management_api_remove_account_role]
 }
+
+module "codedeploy_delete_account" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "delete-account"
+  environment          = var.environment
+  lambda_function_name = module.delete_account.lambda_function_name
+  lambda_version       = module.delete_account.lambda_version
+  lambda_alias_name    = module.delete_account.lambda_alias_name
+  lambda_alias_version = module.delete_account.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

@@ -57,3 +57,16 @@ module "delete-synthetics-user" {
     aws_api_gateway_rest_api.di_authentication_test_services_api,
   ]
 }
+
+module "codedeploy_synthetics_user" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "synthetics-user"
+  environment          = var.environment
+  lambda_function_name = module.delete-synthetics-user.lambda_function_name
+  lambda_version       = module.delete-synthetics-user.lambda_version
+  lambda_alias_name    = module.delete-synthetics-user.lambda_alias_name
+  lambda_alias_version = module.delete-synthetics-user.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

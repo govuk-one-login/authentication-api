@@ -84,3 +84,16 @@ module "login" {
 
   use_localstack = var.use_localstack
 }
+
+module "codedeploy_login" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "login"
+  environment          = var.environment
+  lambda_function_name = module.login.lambda_function_name
+  lambda_version       = module.login.lambda_version
+  lambda_alias_name    = module.login.lambda_alias_name
+  lambda_alias_version = module.login.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

@@ -67,6 +67,9 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.endpoint_lambda.arn
   function_version = aws_lambda_function.endpoint_lambda.version
+  lifecycle {
+    ignore_changes = [function_version, routing_config]
+  }
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {

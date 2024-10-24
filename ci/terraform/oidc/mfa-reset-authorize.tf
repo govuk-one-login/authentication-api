@@ -73,3 +73,16 @@ module "mfa_reset_authorize" {
     aws_api_gateway_rest_api.di_authentication_frontend_api
   ]
 }
+
+module "codedeploy_mfa_reset_authorize" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "mfa-reset-authorize"
+  environment          = var.environment
+  lambda_function_name = module.mfa_reset_authorize.lambda_function_name
+  lambda_version       = module.mfa_reset_authorize.lambda_version
+  lambda_alias_name    = module.mfa_reset_authorize.lambda_alias_name
+  lambda_alias_version = module.mfa_reset_authorize.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

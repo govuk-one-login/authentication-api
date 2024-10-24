@@ -77,3 +77,16 @@ module "orch_auth_code" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_orch_auth_code" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "orch-auth-code"
+  environment          = var.environment
+  lambda_function_name = module.orch_auth_code.lambda_function_name
+  lambda_version       = module.orch_auth_code.lambda_version
+  lambda_alias_name    = module.orch_auth_code.lambda_alias_name
+  lambda_alias_version = module.orch_auth_code.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}
