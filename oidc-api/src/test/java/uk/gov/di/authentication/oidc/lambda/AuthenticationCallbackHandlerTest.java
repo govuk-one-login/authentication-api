@@ -404,6 +404,9 @@ class AuthenticationCallbackHandlerTest {
                 equalTo(orchSessionCaptor.getValue().getVerifiedMfaMethodType()));
         assertEquals(TEST_EMAIL_ADDRESS, orchSessionCaptor.getValue().getEmailAddress());
         assertEquals(RP_PAIRWISE_ID.getValue(), orchSessionCaptor.getValue().getRpPairwiseId());
+        assertEquals(
+                INTERNAL_PAIRWISE_ID.getValue(),
+                orchSessionCaptor.getValue().getInternalPairwiseId());
     }
 
     @Nested

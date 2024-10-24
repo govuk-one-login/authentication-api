@@ -11,12 +11,14 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_RP_PAIRWISE_ID = "RpPairwiseId";
+    public static final String ATTRIBUTE_INTERNAL_PAIRWISE_ID = "InternalPairwiseId";
 
     private String sessionId;
     private long timeToLive;
     private String email;
     private String verifiedMfaMethodType;
     private String rpPairwiseId;
+    private String internalPairwiseId;
 
     public OrchSessionItem() {}
 
@@ -92,6 +94,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withRpPairwiseId(String rpPairwiseId) {
         this.rpPairwiseId = rpPairwiseId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_INTERNAL_PAIRWISE_ID)
+    public String getInternalPairwiseId() {
+        return internalPairwiseId;
+    }
+
+    public void setInternalPairwiseId(String internalPairwiseId) {
+        this.internalPairwiseId = internalPairwiseId;
+    }
+
+    public OrchSessionItem withInternalPairwiseId(String internalPairwiseId) {
+        this.internalPairwiseId = internalPairwiseId;
         return this;
     }
 }
