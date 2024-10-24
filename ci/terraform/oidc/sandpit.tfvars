@@ -77,7 +77,3 @@ orch_storage_token_jwk_enabled       = true
 
 orch_account_id                     = "816047645251"
 cmk_for_back_channel_logout_enabled = true
-
-oidc_origin_domain_enabled  = true
-oidc_cloudfront_dns_enabled = true
-enforce_cloudfront          = true

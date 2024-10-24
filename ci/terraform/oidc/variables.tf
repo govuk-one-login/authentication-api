@@ -697,18 +697,6 @@ variable "cmk_for_back_channel_logout_enabled" {
   description = "Feature flag which toggles whether the back channel logout queue is encrypted using CMK"
 }
 
-variable "oidc_origin_domain_enabled" {
-  type        = bool
-  default     = false
-  description = "Feature flag to control the creation of DNS records for the origin.oidc domain"
-}
-
-variable "oidc_cloudfront_dns_enabled" {
-  type        = bool
-  default     = false
-  description = "Feature flag controlling the DNS cutover between API Gateway and Cloudfront for the OIDC API"
-}
-
 variable "oidc_origin_cloaking_header" {
   type        = string
   description = "Secret header to prove the origin request comes via cloudfront. Set using secrets manager and the read secrets script."
@@ -717,12 +705,6 @@ variable "oidc_origin_cloaking_header" {
 variable "previous_oidc_origin_cloaking_header" {
   type        = string
   description = "Used in rotation of the origin cloaking header. Set using secrets manager and the read secrets script."
-}
-
-variable "enforce_cloudfront" {
-  type        = bool
-  default     = false
-  description = "Feature flag to switch the WAF on the OIDC API Gateway to the Origin Cloaking WAF to mandate CloudFront"
 }
 
 variable "authentication_attempts_service_enabled" {
