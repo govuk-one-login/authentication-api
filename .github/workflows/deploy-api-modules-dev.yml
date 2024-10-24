@@ -1,14 +1,5 @@
 name: "DEV: Build and deploy API modules"
 env:
-  AWS_REGION: eu-west-2
-  DEPLOYER_ROLE: arn:aws:iam::706615647326:role/deployers/dev-github-actions-publish-to-s3-for-code-signing
-  SOURCE_BUCKET: di-auth-lambda-source-20220215165054622300000001
-  SIGNING_PROFILE: di_auth_lambda_signing_20220214175605677200000001
-  DESTINATION_BUCKET: di-auth-lambda-signed-20220215165009815000000001
-  GHA_ROLE: arn:aws:iam::653994557586:role/dev-auth-deploy-pipeline-GitHubActionsRole-QrtGginNnjDD
-  ARTIFACT_BUCKET: dev-auth-deploy-pipeline-githubartifactsourcebuck-ssdefc91xjh6
-  ARTIFACT_LOOKUP_TABLE: arn:aws:dynamodb:eu-west-2:706615647326:table/di-auth-non-production-artifact-lookup
-
   JAVA_VERSION: 17
   JAVA_DISTRIBUTION: corretto
 
@@ -19,31 +10,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  set-up:
-    name: Set up environment
-    runs-on: ubuntu-latest
-    outputs:
-      aws_region: ${{ env.AWS_REGION }}
-      deployer_role: ${{ steps.secrets.outputs.DEPLOYER_ROLE }}
-      promotion_role: ${{ steps.secrets.outputs.PROMOTION_ROLE }}
-      source_bucket: ${{ steps.secrets.outputs.SOURCE_BUCKET }}
-      signing_profile: ${{ steps.secrets.outputs.SIGNING_PROFILE }}
-      destination_bucket: ${{ steps.secrets.outputs.DESTINATION_BUCKET }}
-      artifact_bucket: ${{ steps.secrets.outputs.ARTIFACT_BUCKET }}
-      artifact_lookup_table: ${{ steps.secrets.outputs.ARTIFACT_LOOKUP_TABLE  }}
-    steps:
-      - id: secrets
-        run: |
-          {
-            echo "DEPLOYER_ROLE=${{ env.DEPLOYER_ROLE }}"
-            echo "SOURCE_BUCKET=${{ env.SOURCE_BUCKET }}"
-            echo "SIGNING_PROFILE=${{ env.SIGNING_PROFILE }}"
-            echo "DESTINATION_BUCKET=${{ env.DESTINATION_BUCKET }}"
-            echo "PROMOTION_ROLE=${{ env.GHA_ROLE }}"
-            echo "ARTIFACT_BUCKET=${{ env.ARTIFACT_BUCKET }}"
-            echo "ARTIFACT_LOOKUP_TABLE=${{ env.ARTIFACT_LOOKUP_TABLE }}"
-          } >> "$GITHUB_OUTPUT"
-
   pr-data:
     name: Get data for merged PR
     permissions:
@@ -76,7 +42,6 @@ jobs:
   build:
     name: Build modules
     needs:
-      - set-up
       - build-cache
     strategy:
       matrix:
@@ -99,18 +64,18 @@ jobs:
     uses: ./.github/workflows/call_build-single-api-module.yml
     with:
       module_name: ${{ matrix.module }}
-      aws_region: ${{ needs.set-up.outputs.aws_region }}
-      aws_role: ${{ needs.set-up.outputs.deployer_role }}
-      source_bucket: ${{ needs.set-up.outputs.source_bucket }}
-      destination_bucket: ${{ needs.set-up.outputs.destination_bucket }}
-      signing_profile: ${{ needs.set-up.outputs.signing_profile }}
-      lookup_table: ${{ needs.set-up.outputs.artifact_lookup_table }}
+      aws_region: eu-west-2
       java_version: ${{ needs.build-cache.outputs.java_version }}
       java_distribution: ${{ needs.build-cache.outputs.java_distribution }}
+    secrets:
+      aws_role: ${{ secrets.DEV_DEPLOYER_ROLE }}
+      source_bucket: ${{ secrets.DEV_SOURCE_BUCKET }}
+      destination_bucket: ${{ secrets.DEV_DESTINATION_BUCKET }}
+      signing_profile: ${{ secrets.DEV_SIGNING_PROFILE }}
+      lookup_table: ${{ secrets.DEV_ARTIFACT_LOOKUP_TABLE }}
 
   create-promotion-artifact-shared:
     name: Create Shared Promotion Artifact
-    needs: set-up
     permissions:
       id-token: write
       contents: read
@@ -119,7 +84,6 @@ jobs:
   create-promotion-artifacts-simple-modules:
     name: Create Promotion Artifact
     needs:
-      - set-up
       - build
     strategy:
       matrix:
@@ -149,7 +113,6 @@ jobs:
   create-promotion-artifact-oidc:
     name: Create OIDC Promotion artifact
     needs:
-      - set-up
       - build
     permissions:
       id-token: write
@@ -168,7 +131,6 @@ jobs:
     name: Gather and trigger CodePipeline
     needs:
       - pr-data
-      - set-up
       - create-promotion-artifact-shared
       - create-promotion-artifacts-simple-modules
       - create-promotion-artifact-oidc
@@ -183,8 +145,8 @@ jobs:
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
-          role-to-assume: ${{ needs.set-up.outputs.promotion_role }}
-          aws-region: ${{ needs.set-up.outputs.aws_region }}
+          role-to-assume: ${{ secrets.DEV_GHA_ROLE }}
+          aws-region: eu-west-2
 
       - name: Download all promotion artifacts
         id: download_promotion_artifacts
@@ -196,6 +158,8 @@ jobs:
 
       - name: Upload single promotion artifact to S3
         working-directory: promotion-artifacts
+        env:
+          METADATA: ${{ needs.pr-data.outputs.data }}
         run: |
           echo "::group::Zip all promotion artifacts"
           zip -r authentication-api.zip .
@@ -203,10 +167,10 @@ jobs:
 
           echo "::group::Upload final artifact to S3"
           OBJECT_VERSION="$(aws s3api put-object \
-            --bucket ${{ needs.set-up.outputs.artifact_bucket }} \
+            --bucket ${{ secrets.ARTIFACT_BUCKET }} \
             --key authentication-api.zip \
             --body authentication-api.zip \
-            --metadata '${{ toJson(fromJson(needs.pr-data.outputs.data)) }}' \
+            --metadata "${METADATA}" \
             --query VersionId --output text)"
           echo "::endgroup::"
           echo "::notice title=Final artifact uploaded to S3::object: authentication-api.zip, version: $OBJECT_VERSION"
