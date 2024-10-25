@@ -12,6 +12,7 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
+    public static final String ATTRIBUTE_AUTHENTICATED = "Authenticated";
 
     public enum AccountState {
         NEW,
@@ -24,6 +25,7 @@ public class OrchSessionItem {
     private String previousSessionId;
     private long timeToLive;
     private String verifiedMfaMethodType;
+    private boolean isAuthenticated;
     private AccountState isNewAccount;
     private String internalCommonSubjectId;
 
@@ -116,6 +118,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withInternalCommonSubjectId(String internalCommonSubjectId) {
         this.internalCommonSubjectId = internalCommonSubjectId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_AUTHENTICATED)
+    public boolean getAuthenticated() {
+        return isAuthenticated;
+    }
+
+    public void setAuthenticated(boolean authenticated) {
+        this.isAuthenticated = authenticated;
+    }
+
+    public OrchSessionItem withAuthenticated(boolean authenticated) {
+        this.isAuthenticated = authenticated;
         return this;
     }
 }
