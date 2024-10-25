@@ -45,6 +45,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String INTERNAL_SECTOR_ID_HOST = "test.account.gov.uk";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
+    private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
     private static final String TEST_PASSWORD = "password-1";
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_SESSION_ID = UUID.randomUUID().toString();
@@ -118,11 +119,11 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(
                 userInfoResponse.getClaim(OIDCScopeValue.EMAIL.getValue()),
                 equalTo(TEST_EMAIL_ADDRESS));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
 
         assertNull(userInfoResponse.getClaim("legacy_subject_id"));
         assertNull(userInfoResponse.getClaim("public_subject_id"));
         assertNull(userInfoResponse.getClaim("local_account_id"));
-        assertNull(userInfoResponse.getPhoneNumber());
         assertNull(userInfoResponse.getPhoneNumberVerified());
         assertNull(userInfoResponse.getClaim("salt"));
         assertThat(

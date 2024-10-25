@@ -75,9 +75,6 @@ public class UserInfoService {
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL_VERIFIED.getValue())) {
             userInfo.setEmailVerified(userProfile.isEmailVerified());
         }
-        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_NUMBER.getValue())) {
-            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
-        }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_VERIFIED.getValue())) {
             userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
         }
@@ -95,6 +92,7 @@ public class UserInfoService {
 
     private void addClaimsFromUserProfile(UserProfile userProfile, UserInfo userInfo) {
         userInfo.setEmailAddress(userProfile.getEmail());
+        userInfo.setPhoneNumber(userProfile.getPhoneNumber());
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {

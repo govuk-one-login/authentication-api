@@ -83,7 +83,6 @@ public class UserInfoServiceTest {
             String expectedPublicSubjectId,
             String expectedLocalAccountId,
             Boolean expectedEmailVerified,
-            String expectedPhoneNumber,
             Boolean expectedPhoneNumberVerified,
             String expectedSalt) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
@@ -92,12 +91,12 @@ public class UserInfoServiceTest {
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
         assertEquals(TEST_IS_NEW_ACCOUNT, actual.getClaim("new_account"));
         assertEquals(TEST_EMAIL, actual.getEmailAddress());
+        assertEquals(TEST_PHONE, actual.getPhoneNumber());
 
         assertEquals(expectedLegacySubjectId, actual.getClaim("legacy_subject_id"));
         assertEquals(expectedPublicSubjectId, actual.getClaim("public_subject_id"));
         assertEquals(expectedLocalAccountId, actual.getClaim("local_account_id"));
         assertEquals(expectedEmailVerified, actual.getEmailVerified());
-        assertEquals(expectedPhoneNumber, actual.getPhoneNumber());
         assertEquals(expectedPhoneNumberVerified, actual.getPhoneNumberVerified());
         assertEquals(expectedSalt, actual.getClaim("salt"));
         assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
@@ -112,7 +111,6 @@ public class UserInfoServiceTest {
                         TEST_SUBJECT.getValue(),
                         null,
                         null,
-                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -121,7 +119,6 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         TEST_EMAIL_VERIFIED,
-                        null,
                         null,
                         null),
                 Arguments.of(
@@ -139,7 +136,6 @@ public class UserInfoServiceTest {
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
                         TEST_EMAIL_VERIFIED,
-                        TEST_PHONE,
                         TEST_PHONE_VERIFIED,
                         bytesToBase64(TEST_SALT)));
     }
