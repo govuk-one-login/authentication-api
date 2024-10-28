@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
@@ -25,6 +26,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -38,6 +40,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.valueOf;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -54,6 +57,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Gson gson;
     private final LambdaInvokerService lambdaInvoker;
+    private final AuthSessionService authSessionService;
 
     private final NowClock clock;
 
@@ -90,12 +94,14 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.clock = new NowClock(Clock.systemUTC());
         this.lambdaInvoker = new LambdaInvokerService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
         gson = new Gson();
     }
 
     protected AccountInterventionsHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -116,6 +122,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.clock = clock;
         this.lambdaInvoker = lambdaInvoker;
+        this.authSessionService = authSessionService;
 
         gson = new Gson();
     }
@@ -127,6 +134,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         super(AccountInterventionsRequest.class, configurationService, redis);
 
         this.lambdaInvoker = lambdaInvokerService;
+        this.authSessionService = new AuthSessionService(configurationService);
 
         accountInterventionsService = new AccountInterventionsService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -183,8 +191,15 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
             logAisResponse(accountInterventionsInboundResponse);
 
+            var sessionId = userContext.getSession().getSessionId();
+            var authSession = authSessionService.getSession(sessionId);
+
             submitAuditEvents(
-                    accountInterventionsInboundResponse, input, userContext, persistentSessionID);
+                    accountInterventionsInboundResponse,
+                    input,
+                    userContext,
+                    persistentSessionID,
+                    authSession.map(AuthSessionItem::getInternalCommonSubjectId));
 
             if (configurationService.isInvokeTicfCRILambdaEnabled()
                     && request.authenticated() != null) {
@@ -312,7 +327,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             AccountInterventionsInboundResponse accountInterventionsInboundResponse,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            String persistentSessionID) {
+            String persistentSessionID,
+            Optional<String> internalCommonSubjectIdentifier) {
         State requiredInterventionsState = accountInterventionsInboundResponse.state();
 
         FrontendAuditableEvent auditEvent =
@@ -321,7 +337,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        internalCommonSubjectIdentifier.orElse(AuditService.UNKNOWN),
                         userContext.getSession().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         userContext
