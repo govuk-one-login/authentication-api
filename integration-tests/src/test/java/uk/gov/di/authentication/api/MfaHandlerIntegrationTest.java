@@ -31,6 +31,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
     private static final String USER_PASSWORD = "Password123!";
     private static final String USER_PHONE_NUMBER = "+447712345432";
+    private static final String INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
     private String SESSION_ID;
 
     @BeforeEach
@@ -39,8 +40,10 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
         String subjectId = "new-subject";
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
+        authSessionStore.addSession(Optional.empty(), SESSION_ID);
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
         userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
+        saveAuthSession(SESSION_ID);
     }
 
     @Test
@@ -104,6 +107,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenReauthenticating()
             throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        saveAuthSession(authenticatedSessionId);
 
         var response =
                 makeRequest(
@@ -125,6 +129,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn400WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
             throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        saveAuthSession(authenticatedSessionId);
 
         aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 
@@ -154,6 +159,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        saveAuthSession(authenticatedSessionId);
 
         var response =
                 makeRequest(
@@ -166,5 +172,12 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(0));
+    }
+
+    private void saveAuthSession(String sessionId) {
+        authSessionStore.addSession(Optional.empty(), sessionId);
+        var authSession = authSessionStore.getSession(sessionId);
+        authSessionStore.updateSession(
+                authSession.orElseThrow().withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID));
     }
 }

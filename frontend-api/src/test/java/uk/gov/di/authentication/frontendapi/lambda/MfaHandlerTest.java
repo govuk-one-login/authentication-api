@@ -21,6 +21,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -35,6 +36,7 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -99,6 +101,7 @@ class MfaHandlerTest {
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -123,10 +126,11 @@ class MfaHandlerTest {
                     DI_PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
-    private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(expectedCommonSubject);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -164,6 +168,7 @@ class MfaHandlerTest {
                 new MfaHandler(
                         configurationService,
                         sessionService,
+                        authSessionService,
                         codeGeneratorService,
                         codeStorageService,
                         clientSessionService,
@@ -172,6 +177,7 @@ class MfaHandlerTest {
                         auditService,
                         sqsClient);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
+        when(authSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(authSession));
     }
 
     @Test
