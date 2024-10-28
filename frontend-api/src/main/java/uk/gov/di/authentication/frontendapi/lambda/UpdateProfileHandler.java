@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -42,10 +44,12 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     private static final Logger LOG = LogManager.getLogger(UpdateProfileHandler.class);
 
     private final AuditService auditService;
+    private final AuthSessionService authSessionService;
 
     protected UpdateProfileHandler(
             AuthenticationService authenticationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ConfigurationService configurationService,
             AuditService auditService,
@@ -58,6 +62,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 clientService,
                 authenticationService);
         this.auditService = auditService;
+        this.authSessionService = authSessionService;
     }
 
     public UpdateProfileHandler() {
@@ -67,12 +72,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     public UpdateProfileHandler(ConfigurationService configurationService) {
         super(UpdateProfileRequest.class, configurationService);
         auditService = new AuditService(configurationService);
+        authSessionService = new AuthSessionService(configurationService);
     }
 
     public UpdateProfileHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         super(UpdateProfileRequest.class, configurationService, redis);
         auditService = new AuditService(configurationService);
+        authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -103,6 +110,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UserContext userContext) {
 
         Session session = userContext.getSession();
+        var authSession = authSessionService.getSession(session.getSessionId());
+        var internalCommonSubjectId =
+                authSession.map(AuthSessionItem::getInternalCommonSubjectId).orElseThrow();
 
         String persistentSessionId =
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
@@ -130,7 +140,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        session.getInternalCommonSubjectIdentifier(),
+                        internalCommonSubjectId,
                         session.getEmailAddress(),
                         ipAddress,
                         auditablePhoneNumber,
