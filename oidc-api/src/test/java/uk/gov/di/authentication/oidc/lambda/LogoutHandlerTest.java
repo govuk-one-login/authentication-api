@@ -19,6 +19,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
@@ -56,6 +57,8 @@ class LogoutHandlerTest {
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
+    private final AuthenticationUserInfoStorageService userInfoStorageService =
+            mock(AuthenticationUserInfoStorageService.class);
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
@@ -95,7 +98,11 @@ class LogoutHandlerTest {
     void setUp() throws JOSEException {
         handler =
                 new LogoutHandler(
-                        sessionService, dynamoClientService, tokenValidationService, logoutService);
+                        sessionService,
+                        dynamoClientService,
+                        tokenValidationService,
+                        logoutService,
+                        userInfoStorageService);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =

@@ -318,6 +318,8 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
+                            // qq need email here, so need to add userInfo and orchSession to IPV
+                            // Callback Handler
                             session, input, clientId, intervention);
                 }
 

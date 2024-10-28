@@ -511,7 +511,11 @@ class LogoutServiceTest {
     void successfullyLogsOutAndGeneratesRedirectResponseForeReauthenticationFailure() {
         var response =
                 logoutService.handleReauthenticationFailureLogout(
-                        session, event, CLIENT_ID, REAUTH_FAILURE_URI);
+                        session,
+                        // email
+                        event,
+                        CLIENT_ID,
+                        REAUTH_FAILURE_URI);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());

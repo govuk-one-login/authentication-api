@@ -300,6 +300,10 @@ public class AuthenticationCallbackHandler
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
                             authenticationRequest, input, user, userSession);
+            // qq I think here, want to verify that userSession.getEmailAddress() is null.
+            // supposedly, email is used to do backchannel logouts, but I don't understand how it
+            // could have
+            // the email attached at this point. Test in dev tomorrow morning
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
@@ -633,6 +637,7 @@ public class AuthenticationCallbackHandler
         if (exception.getLogoutRequired()) {
             return logoutService.handleReauthenticationFailureLogout(
                     session,
+                    //     email,
                     input,
                     authenticationRequest.getClientID().getValue(),
                     errorResponseUri);

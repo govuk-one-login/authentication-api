@@ -213,6 +213,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             throws Json.JsonException {
         var logoutResult =
                 logoutService.handleAccountInterventionLogout(
+                        // qq need email here, so this handler needs userInfo and orchSession access
                         userContext.getSession(), input, client.getClientID(), intervention);
         var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
         return generateApiGatewayProxyResponse(

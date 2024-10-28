@@ -10,11 +10,13 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.LogoutRequest;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -34,9 +36,11 @@ public class LogoutHandler
     private static final Logger LOG = LogManager.getLogger(LogoutHandler.class);
 
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
     private final TokenValidationService tokenValidationService;
     private final CookieHelper cookieHelper;
+    private final AuthenticationUserInfoStorageService userInfoStorageService;
 
     private final LogoutService logoutService;
 
@@ -46,6 +50,7 @@ public class LogoutHandler
 
     public LogoutHandler(ConfigurationService configurationService) {
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -55,10 +60,13 @@ public class LogoutHandler
                         configurationService);
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
+        this.userInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
     }
 
     public LogoutHandler(ConfigurationService configurationService, RedisConnectionService redis) {
         this.sessionService = new SessionService(configurationService, redis);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -68,18 +76,24 @@ public class LogoutHandler
                         configurationService);
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
+        this.userInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
     }
 
     public LogoutHandler(
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
             TokenValidationService tokenValidationService,
-            LogoutService logoutService) {
+            LogoutService logoutService,
+            AuthenticationUserInfoStorageService userInfoStorageService) {
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
         this.tokenValidationService = tokenValidationService;
         this.cookieHelper = new CookieHelper();
         this.logoutService = logoutService;
+        this.userInfoStorageService = userInfoStorageService;
     }
 
     @Override
@@ -96,7 +110,12 @@ public class LogoutHandler
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, input);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        userInfoStorageService,
+                        input);
 
         if (logoutRequest.session().isPresent()) {
             Session session = logoutRequest.session().get();
@@ -105,6 +124,7 @@ public class LogoutHandler
 
         return logoutService.handleLogout(
                 logoutRequest.session(),
+                logoutRequest.email(),
                 logoutRequest.errorObject(),
                 logoutRequest.postLogoutRedirectUri(),
                 logoutRequest.state(),

@@ -95,7 +95,7 @@ public class LogoutService {
                 302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
 
-    private void destroySessions(Session session) {
+    private void destroySessions(Session session, String emailAddress) {
         for (String clientSessionId : session.getClientSessions()) {
             clientSessionService
                     .getClientSession(clientSessionId)
@@ -108,7 +108,7 @@ public class LogoutService {
                             clientRegistry ->
                                     backChannelLogoutService.sendLogoutMessage(
                                             clientRegistry,
-                                            session.getEmailAddress(),
+                                            emailAddress,
                                             configurationService.getInternalSectorURI()));
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);
@@ -119,6 +119,7 @@ public class LogoutService {
 
     public APIGatewayProxyResponseEvent handleLogout(
             Optional<Session> session,
+            Optional<String> email,
             Optional<ErrorObject> errorObject,
             Optional<URI> redirectURI,
             Optional<String> state,
@@ -128,8 +129,11 @@ public class LogoutService {
 
         session.ifPresent(
                 s -> {
-                    destroySessions(s);
-                    cloudwatchMetricsService.incrementLogout(clientId);
+                    email.ifPresent(
+                            e -> {
+                                destroySessions(s, e);
+                                cloudwatchMetricsService.incrementLogout(clientId);
+                            });
                 });
 
         URI logoutUri;
@@ -160,11 +164,13 @@ public class LogoutService {
 
     public APIGatewayProxyResponseEvent handleReauthenticationFailureLogout(
             Session session,
+            // String email,
             APIGatewayProxyRequestEvent input,
             String clientId,
             URI errorRedirectUri) {
         var auditUser = createAuditUser(input, session);
-        destroySessions(session);
+        var email = "test";
+        destroySessions(session, email);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId));
         return generateLogoutResponse(
                 errorRedirectUri,
@@ -176,13 +182,16 @@ public class LogoutService {
 
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
             Session session,
+            // String email,
             APIGatewayProxyRequestEvent input,
             String clientId,
             AccountIntervention intervention) {
 
         var auditUser = createAuditUser(input, session);
 
-        destroySessions(session);
+        var email = "test";
+
+        destroySessions(session, email);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
 
         URI redirectURI;
