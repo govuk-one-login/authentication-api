@@ -11,6 +11,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -85,10 +87,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private final CodeStorageService codeStorageService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AuditService auditService;
+    private final AuthSessionService authSessionService;
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -111,6 +115,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.codeStorageService = codeStorageService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
+        this.authSessionService = authSessionService;
     }
 
     public SendNotificationHandler() {
@@ -134,6 +139,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public SendNotificationHandler(
@@ -154,6 +160,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -170,10 +177,16 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+
+        var maybeAuthSession =
+                authSessionService.getSession(userContext.getSession().getSessionId());
+
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        maybeAuthSession
+                                .map(AuthSessionItem::getInternalCommonSubjectIdentifier)
+                                .orElse(AuditService.UNKNOWN),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
