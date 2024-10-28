@@ -41,6 +41,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -51,7 +52,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -193,13 +193,12 @@ class SignUpHandlerTest {
 
         verify(authSessionService)
                 .updateSession(
-                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.NEW));
-        verify(sessionService, atLeastOnce())
-                .storeOrUpdateSession(
                         argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+                                s ->
+                                        s.getIsNewAccount() == AuthSessionItem.AccountState.NEW
+                                                && Objects.equals(
+                                                        s.getInternalCommonSubjectIdentifier(),
+                                                        expectedCommonSubject)));
     }
 
     @Test
