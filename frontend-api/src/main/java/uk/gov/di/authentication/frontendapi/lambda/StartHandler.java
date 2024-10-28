@@ -188,12 +188,16 @@ public class StartHandler
 
             Optional<String> maybeInternalSubjectId =
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
-            Optional<String> maybeInternalCommonSubjectIdentifier =
-                    Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
             StartRequest startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
             Optional<String> previousSessionId =
                     Optional.ofNullable(startRequest.previousSessionId());
+            var maybeInternalCommonSubjectIdentifier =
+                    previousSessionId.flatMap(
+                            prevId ->
+                                    authSessionService
+                                            .getSession(prevId)
+                                            .map(s -> s.getInternalCommonSubjectIdentifier()));
             authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
 
             var clientSessionId =
