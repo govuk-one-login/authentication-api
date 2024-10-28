@@ -11,6 +11,8 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_RP_PAIRWISE_ID = "RpPairwiseId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
+    public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
+            "InternalCommonSubjectIdentifier";
 
     public enum AccountState {
         NEW,
@@ -24,6 +26,7 @@ public class OrchSessionItem {
     private String verifiedMfaMethodType;
     private String rpPairwiseId;
     private AccountState isNewAccount;
+    private String internalCommonSubjectIdentifier;
 
     public OrchSessionItem() {}
 
@@ -100,6 +103,21 @@ public class OrchSessionItem {
 
     public OrchSessionItem withAccountState(AccountState accountState) {
         this.isNewAccount = accountState;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
+    public String getInternalCommonSubjectIdentifier() {
+        return internalCommonSubjectIdentifier;
+    }
+
+    public void setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
+        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
+    }
+
+    public OrchSessionItem withInternalCommonSubjectIdentifier(
+            String internalCommonSubjectIdentifier) {
+        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
         return this;
     }
 }

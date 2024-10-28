@@ -90,7 +90,10 @@ class AuthenticationCallbackHandlerTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final Subject INTERNAL_PAIRWISE_ID = new Subject();
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
+            "internal-common-subject-identifier";
+    private static final Subject INTERNAL_PAIRWISE_ID =
+            new Subject(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
     private static final Subject RP_PAIRWISE_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
@@ -143,6 +146,10 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
                 .thenReturn(MFAMethodType.AUTH_APP.getValue());
+        when(USER_INFO.getClaim(
+                        AuthUserInfoClaims.INTERNAL_COMMON_SUBJECT_IDENTIFIER.getValue(),
+                        String.class))
+                .thenReturn(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
     }
 
     @BeforeEach
@@ -399,10 +406,13 @@ class AuthenticationCallbackHandlerTest {
 
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
-        assertThat(
+        assertEquals(
                 MFAMethodType.AUTH_APP.getValue(),
-                equalTo(orchSessionCaptor.getValue().getVerifiedMfaMethodType()));
+                orchSessionCaptor.getValue().getVerifiedMfaMethodType());
         assertEquals(RP_PAIRWISE_ID.getValue(), orchSessionCaptor.getValue().getRpPairwiseId());
+        assertEquals(
+                TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                orchSessionCaptor.getValue().getInternalCommonSubjectIdentifier());
     }
 
     @Nested
