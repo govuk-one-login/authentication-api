@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -22,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -58,10 +60,12 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
+    private final AuthSessionService authSessionService;
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -80,6 +84,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.authSessionService = authSessionService;
     }
 
     public ResetPasswordRequestHandler() {
@@ -96,6 +101,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public ResetPasswordRequestHandler(
@@ -109,6 +115,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -197,10 +204,15 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         LOG.info("passwordResetType: {}", passwordResetTypePair);
 
+        var maybeAuthSession =
+                authSessionService.getSession(userContext.getSession().getSessionId());
+
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        maybeAuthSession
+                                .map(AuthSessionItem::getInternalCommonSubjectIdentifier)
+                                .orElse(AuditService.UNKNOWN),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
