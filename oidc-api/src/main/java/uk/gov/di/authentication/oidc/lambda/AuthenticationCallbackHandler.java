@@ -675,11 +675,9 @@ public class AuthenticationCallbackHandler
         OrchSessionItem updatedOrchSession =
                 orchSession
                         .withVerifiedMfaMethodType(verifiedMfaMethodType)
-                        .withEmailAddress(userInfo.getEmailAddress())
                         .withRpPairwiseId(rpPairwiseId);
         LOG.info("Updating Orch session with claims from userinfo response");
         // TODO-922: temporary logs for checking all is working as expected
-        LOG.info("is email attached to orch session: {}", orchSession.getEmailAddress() != null);
         LOG.info(
                 "is rpPairwiseId attached to orch session: {}",
                 orchSession.getRpPairwiseId() != null);

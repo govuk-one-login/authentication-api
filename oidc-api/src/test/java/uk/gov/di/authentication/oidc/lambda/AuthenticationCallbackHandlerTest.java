@@ -402,7 +402,6 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 MFAMethodType.AUTH_APP.getValue(),
                 equalTo(orchSessionCaptor.getValue().getVerifiedMfaMethodType()));
-        assertEquals(TEST_EMAIL_ADDRESS, orchSessionCaptor.getValue().getEmailAddress());
         assertEquals(RP_PAIRWISE_ID.getValue(), orchSessionCaptor.getValue().getRpPairwiseId());
     }
 
