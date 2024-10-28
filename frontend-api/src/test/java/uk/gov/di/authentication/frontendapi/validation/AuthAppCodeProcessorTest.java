@@ -202,7 +202,8 @@ class AuthAppCodeProcessorTest {
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verify(mockDynamoService, never())
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
@@ -225,7 +226,8 @@ class AuthAppCodeProcessorTest {
                         JourneyType.ACCOUNT_RECOVERY,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
         verify(mockDynamoService)
@@ -246,7 +248,8 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
@@ -264,7 +267,8 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService, never())
@@ -275,7 +279,6 @@ class AuthAppCodeProcessorTest {
     private void setUpSuccessfulCodeRequest(CodeRequest codeRequest) {
         when(mockSession.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(mockSession.getSessionId()).thenReturn(SESSION_ID);
-        when(mockSession.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockUserContext.getClientId()).thenReturn(CLIENT_ID);
