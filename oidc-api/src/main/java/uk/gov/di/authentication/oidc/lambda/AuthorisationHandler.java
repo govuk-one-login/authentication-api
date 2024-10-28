@@ -883,6 +883,7 @@ public class AuthorisationHandler
             // Email required for ID journeys for use in Face-to-Face flows
             claimsSet.add(AuthUserInfoClaims.EMAIL);
             claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
+            claimsSet.add(AuthUserInfoClaims.PHONE_NUMBER);
         }
         if (amScopePresent) {
             LOG.info("am scope is present. Adding the public_subject_id claim");
