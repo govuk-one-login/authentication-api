@@ -26,6 +26,7 @@ import uk.gov.di.authentication.frontendapi.entity.Intervention;
 import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -101,6 +103,7 @@ class AccountInterventionsHandlerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -113,11 +116,11 @@ class AccountInterventionsHandlerTest {
     private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
 
     private static final ClientSession clientSession = getClientSession();
-    private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(EMAIL)
-                    .setSessionId(SESSION_ID)
-                    .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -156,11 +159,13 @@ class AccountInterventionsHandlerTest {
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
         when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
+        when(authSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(authSession));
 
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
                         sessionService,
+                        authSessionService,
                         clientSessionService,
                         clientService,
                         authenticationService,
