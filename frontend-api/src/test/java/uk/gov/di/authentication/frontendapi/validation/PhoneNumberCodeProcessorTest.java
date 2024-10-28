@@ -256,7 +256,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verify(authenticationService)
                 .updatePhoneNumberAndAccountVerifiedStatus(
@@ -284,7 +285,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verify(authenticationService)
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
@@ -306,7 +308,8 @@ class PhoneNumberCodeProcessorTest {
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, JourneyType.SIGN_IN),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verifyNoInteractions(authenticationService);
         verifyNoInteractions(auditService);
@@ -324,7 +327,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verify(sqsClient)
                 .send(
@@ -351,7 +355,8 @@ class PhoneNumberCodeProcessorTest {
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verifyNoInteractions(sqsClient);
     }
@@ -367,7 +372,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verifyNoInteractions(sqsClient);
     }
@@ -384,7 +390,8 @@ class PhoneNumberCodeProcessorTest {
         when(clientRegistry.isSmokeTest()).thenReturn(true);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_SUB_ID);
 
         verifyNoInteractions(sqsClient);
     }
@@ -393,7 +400,6 @@ class PhoneNumberCodeProcessorTest {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
         when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(session.getSessionId()).thenReturn(SESSION_ID);
-        when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);

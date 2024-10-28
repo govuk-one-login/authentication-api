@@ -29,8 +29,8 @@ public class SessionHelper {
                         ? userContext.getUserProfile().get()
                         : authenticationService.getUserProfileByEmail(session.getEmailAddress());
         var internalCommonSubjectIdentifier =
-                session.getInternalCommonSubjectIdentifier() != null
-                        ? session.getInternalCommonSubjectIdentifier()
+                authSession.getInternalCommonSubjectIdentifier() != null
+                        ? authSession.getInternalCommonSubjectIdentifier()
                         : ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                         userProfile,
                                         configurationService.getInternalSectorUri(),

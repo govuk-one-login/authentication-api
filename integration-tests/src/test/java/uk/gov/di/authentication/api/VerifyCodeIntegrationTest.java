@@ -34,6 +34,7 @@ import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -42,6 +43,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
@@ -425,8 +427,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        Session session = redis.getSession(sessionId);
-        assertThat(session.getInternalCommonSubjectIdentifier(), notNullValue());
+        assertTrue(
+                Objects.nonNull(
+                        authSessionExtension
+                                .getSession(sessionId)
+                                .orElseThrow()
+                                .getInternalCommonSubjectIdentifier()));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
