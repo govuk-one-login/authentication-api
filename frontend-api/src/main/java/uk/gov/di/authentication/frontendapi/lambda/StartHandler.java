@@ -202,11 +202,16 @@ public class StartHandler
 
             Optional<String> maybeInternalSubjectId =
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
-            Optional<String> maybeInternalCommonSubjectIdentifier =
-                    Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
             Optional<String> previousSessionId =
                     Optional.ofNullable(startRequest.previousSessionId());
+
+            var maybeInternalCommonSubjectIdentifier =
+                    previousSessionId.flatMap(
+                            prevId ->
+                                    authSessionService
+                                            .getSession(prevId)
+                                            .map(AuthSessionItem::getInternalCommonSubjectId));
             CredentialTrustLevel currentCredentialStrength =
                     startRequest.currentCredentialStrength();
             authSessionService.addOrUpdateSessionId(
