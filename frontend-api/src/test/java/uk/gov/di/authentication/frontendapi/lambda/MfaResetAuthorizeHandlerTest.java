@@ -13,9 +13,11 @@ import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.MfaResetIPVAuthorizationService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -60,8 +62,13 @@ class MfaResetAuthorizeHandlerTest {
     private static final ClientService clientService = mock(ClientService.class);
     private static final Context context = mock(Context.class);
     private static final SessionService sessionService = mock(SessionService.class);
+    private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
     private static final Session session = mock(Session.class);
+    private static final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectIdentifier(COMMON_SUBJECT_ID);
     private static final AuditContext testAuditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
@@ -82,10 +89,10 @@ class MfaResetAuthorizeHandlerTest {
     static void globalSetup() {
         when(userContext.getSession()).thenReturn(new Session(SESSION_ID));
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(session.getInternalCommonSubjectIdentifier()).thenReturn(COMMON_SUBJECT_ID);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(session.getSessionId()).thenReturn(SESSION_ID);
+        when(authSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(authSession));
     }
 
     @BeforeEach
@@ -94,6 +101,7 @@ class MfaResetAuthorizeHandlerTest {
                 new MfaResetAuthorizeHandler(
                         configurationService,
                         sessionService,
+                        authSessionService,
                         clientSessionService,
                         clientService,
                         authenticationService,
