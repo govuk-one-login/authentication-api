@@ -84,9 +84,7 @@ class AuthenticationCallbackHandlerTest {
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
     private static final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setVerifiedMfaMethodType(MFAMethodType.EMAIL);
+            new Session(SESSION_ID).setVerifiedMfaMethodType(MFAMethodType.EMAIL);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
