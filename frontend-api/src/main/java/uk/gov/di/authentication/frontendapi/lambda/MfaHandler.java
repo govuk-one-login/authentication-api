@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -63,10 +65,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
+    private final AuthSessionService authSessionService;
 
     public MfaHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             ClientSessionService clientSessionService,
@@ -85,6 +89,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.sqsClient = sqsClient;
+        this.authSessionService = authSessionService;
     }
 
     public MfaHandler(
@@ -100,6 +105,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public MfaHandler() {
@@ -112,6 +118,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -140,10 +147,16 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             ? request.getJourneyType()
                             : JourneyType.SIGN_IN;
 
+            var sessionId = userContext.getSession().getSessionId();
+            var authSession = authSessionService.getSession(sessionId);
+            var internalCommonSubjectId =
+                    authSession
+                            .map(AuthSessionItem::getInternalCommonSubjectIdentifier)
+                            .orElseThrow();
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            internalCommonSubjectId,
                             email,
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
