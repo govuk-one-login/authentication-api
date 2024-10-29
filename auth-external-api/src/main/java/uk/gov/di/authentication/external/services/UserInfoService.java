@@ -44,7 +44,6 @@ public class UserInfoService {
         var userInfo = new UserInfo(internalPairwiseId);
         addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
         addClaimsFromSession(authSession, userInfo);
-        addClaimsFromUserProfile(userProfile, userInfo);
         return userInfo;
     }
 
@@ -83,6 +82,9 @@ public class UserInfoService {
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue())) {
             userInfo.setClaim("local_account_id", userProfile.getSubjectID());
         }
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL.getValue())) {
+            userInfo.setEmailAddress(userProfile.getEmail());
+        }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL_VERIFIED.getValue())) {
             userInfo.setEmailVerified(userProfile.isEmailVerified());
         }
@@ -102,10 +104,6 @@ public class UserInfoService {
         userInfo.setClaim(
                 AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                 authSession.getVerifiedMfaMethodType());
-    }
-
-    private void addClaimsFromUserProfile(UserProfile userProfile, UserInfo userInfo) {
-        userInfo.setEmailAddress(userProfile.getEmail());
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {
