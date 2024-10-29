@@ -43,7 +43,7 @@ public class UserInfoService {
 
         var userInfo = new UserInfo(internalPairwiseId);
         addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
-        addClaimsFromSession(authSession, userInfo);
+        addClaimsFromSession(accessTokenInfo, authSession, userInfo);
         return userInfo;
     }
 
@@ -100,10 +100,15 @@ public class UserInfoService {
         }
     }
 
-    private void addClaimsFromSession(AuthSessionItem authSession, UserInfo userInfo) {
-        userInfo.setClaim(
-                AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
-                authSession.getVerifiedMfaMethodType());
+    private void addClaimsFromSession(
+            AccessTokenStore accessTokenInfo, AuthSessionItem authSession, UserInfo userInfo) {
+        if (accessTokenInfo
+                .getClaims()
+                .contains(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
+                    authSession.getVerifiedMfaMethodType());
+        }
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {
