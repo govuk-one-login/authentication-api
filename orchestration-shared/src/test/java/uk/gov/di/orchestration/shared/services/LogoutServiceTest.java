@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -62,6 +63,7 @@ class LogoutServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -102,6 +104,7 @@ class LogoutServiceTest {
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
     private static Session session;
+    private static OrchSessionItem orchSession;
 
     private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
     private static final URI REAUTH_FAILURE_URI =
@@ -147,6 +150,7 @@ class LogoutServiceTest {
                 new LogoutService(
                         configurationService,
                         sessionService,
+                        orchSessionService,
                         dynamoClientService,
                         clientSessionService,
                         auditService,
@@ -167,8 +171,12 @@ class LogoutServiceTest {
                 new Session(SESSION_ID)
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        orchSession =
+                new OrchSessionItem(SESSION_ID)
+                        .withInternalCommonSubjectIdentifier(SUBJECT.getValue());
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID);
         when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
     @AfterEach

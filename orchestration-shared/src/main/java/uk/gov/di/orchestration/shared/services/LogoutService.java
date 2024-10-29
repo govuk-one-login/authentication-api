@@ -9,6 +9,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.LogoutReason;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -37,12 +38,14 @@ public class LogoutService {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final BackChannelLogoutService backChannelLogoutService;
     private final AuthFrontend authFrontend;
+    private final OrchSessionService orchSessionService;
     private static final String STATE_PARAMETER_KEY = "state";
     private static final String LOGOUT_REASON = "logoutReason";
 
     public LogoutService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -54,6 +57,7 @@ public class LogoutService {
     public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
@@ -65,6 +69,7 @@ public class LogoutService {
     public LogoutService(
             ConfigurationService configurationService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
             ClientSessionService clientSessionService,
             AuditService auditService,
@@ -73,6 +78,7 @@ public class LogoutService {
             AuthFrontend authFrontend) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
@@ -163,7 +169,8 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             URI errorRedirectUri) {
-        var auditUser = createAuditUser(input, session);
+        var orchSession = orchSessionService.getSession(session.getSessionId());
+        var auditUser = createAuditUser(input, session, orchSession);
         destroySessions(session);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId));
         return generateLogoutResponse(
@@ -179,8 +186,8 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             AccountIntervention intervention) {
-
-        var auditUser = createAuditUser(input, session);
+        var orchSession = orchSessionService.getSession(session.getSessionId());
+        var auditUser = createAuditUser(input, session, orchSession);
 
         destroySessions(session);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
@@ -225,13 +232,19 @@ public class LogoutService {
         return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
     }
 
-    private TxmaAuditUser createAuditUser(APIGatewayProxyRequestEvent input, Session session) {
+    private TxmaAuditUser createAuditUser(
+            APIGatewayProxyRequestEvent input,
+            Session session,
+            Optional<OrchSessionItem> orchSession) {
         return TxmaAuditUser.user()
                 .withIpAddress(extractIpAddress(input))
                 .withPersistentSessionId(extractPersistentIdFromCookieHeader(input.getHeaders()))
                 .withSessionId(session.getSessionId())
                 .withGovukSigninJourneyId(
                         extractClientSessionIdFromCookieHeaders(input.getHeaders()).orElse(null))
-                .withUserId(session.getInternalCommonSubjectIdentifier());
+                .withUserId(
+                        orchSession
+                                .map(OrchSessionItem::getInternalCommonSubjectIdentifier)
+                                .orElse(null));
     }
 }

@@ -17,11 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
@@ -52,6 +54,7 @@ class LogoutHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
@@ -74,6 +77,7 @@ class LogoutHandlerTest {
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
     private uk.gov.di.orchestration.shared.entity.Session session;
+    private OrchSessionItem orchSession;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutHandler.class);
@@ -95,7 +99,11 @@ class LogoutHandlerTest {
     void setUp() throws JOSEException {
         handler =
                 new LogoutHandler(
-                        sessionService, dynamoClientService, tokenValidationService, logoutService);
+                        sessionService,
+                        orchSessionService,
+                        dynamoClientService,
+                        tokenValidationService,
+                        logoutService);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
@@ -114,14 +122,20 @@ class LogoutHandlerTest {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
-    }
-
-    @Test
-    void shouldDestroySessionAndLogoutWhenSessionIsAvailable() {
         session =
                 generateSession()
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        orchSession =
+                new OrchSessionItem()
+                        .withSessionId(session.getSessionId())
+                        .withInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        when(orchSessionService.getSession(session.getSessionId()))
+                .thenReturn(Optional.of(orchSession));
+    }
+
+    @Test
+    void shouldDestroySessionAndLogoutWhenSessionIsAvailable() {
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -183,10 +197,6 @@ class LogoutHandlerTest {
 
     @Test
     void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
