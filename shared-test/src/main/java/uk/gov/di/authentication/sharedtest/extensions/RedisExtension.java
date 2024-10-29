@@ -159,15 +159,6 @@ public class RedisExtension
                 3600);
     }
 
-    public void addInternalCommonSubjectIdToSession(
-            String sessionId, String internalCommonSubjectId) throws Json.JsonException {
-        var session =
-                objectMapper
-                        .readValue(redis.getValue(sessionId), Session.class)
-                        .setInternalCommonSubjectIdentifier(internalCommonSubjectId);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-    }
-
     public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setEmailAddress(emailAddress);

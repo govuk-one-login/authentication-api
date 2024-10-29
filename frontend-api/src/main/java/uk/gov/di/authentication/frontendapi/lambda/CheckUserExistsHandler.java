@@ -156,8 +156,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = new UserMfaDetail();
-            var session = userContext.getSession();
-            var sessionId = session.getSessionId();
+            var sessionId = userContext.getSession().getSessionId();
             var maybeAuthSession = authSessionService.getSession(sessionId);
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
@@ -177,7 +176,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
                 LOG.info("Setting internal common subject identifier in user session");
 
-                session.setInternalCommonSubjectIdentifier(internalPairwiseId);
                 maybeAuthSession.ifPresent(
                         s -> s.setInternalCommonSubjectIdentifier(internalPairwiseId));
                 var isPhoneNumberVerified = userProfile.get().isPhoneNumberVerified();
@@ -191,7 +189,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 isPhoneNumberVerified);
                 auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
-                session.setInternalCommonSubjectIdentifier(null);
                 maybeAuthSession.ifPresent(s -> s.setInternalCommonSubjectIdentifier(null));
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
@@ -224,7 +221,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation);
-            sessionService.storeOrUpdateSession(session);
             maybeAuthSession.ifPresent(authSessionService::updateSession);
 
             LOG.info("Successfully processed request");

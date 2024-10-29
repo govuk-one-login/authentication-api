@@ -312,7 +312,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             SessionHelper.updateSessionWithSubject(
                     userContext,
                     authSession,
-                    sessionService,
                     authSessionService,
                     authenticationService,
                     configurationService);

@@ -236,7 +236,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 SessionHelper.updateSessionWithSubject(
                         userContext,
                         authSessionOptional.get(),
-                        sessionService,
                         authSessionService,
                         authenticationService,
                         configurationService);

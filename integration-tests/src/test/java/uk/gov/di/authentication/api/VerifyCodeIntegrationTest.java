@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -42,7 +41,6 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
@@ -354,7 +352,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+        addInternalCommonSubjectIdToAuthSession(internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
@@ -385,7 +383,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+        addInternalCommonSubjectIdToAuthSession(internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
@@ -447,7 +445,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+        addInternalCommonSubjectIdToAuthSession(internalCommonSubjectId);
         setUpTestWithSignUp(sessionId, withScope());
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
 
@@ -506,5 +504,11 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
         return scope;
+    }
+
+    private void addInternalCommonSubjectIdToAuthSession(String internalCommonSubjectId) {
+        var authSession = authSessionExtension.getSession(sessionId).orElseThrow();
+        authSession.setInternalCommonSubjectIdentifier(internalCommonSubjectId);
+        authSessionExtension.updateSession(authSession);
     }
 }

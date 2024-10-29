@@ -17,9 +17,7 @@ class SessionTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
     private final Session session =
-            new Session(IdGenerator.generate())
-                    .setEmailAddress("joe.bloggs@test.com")
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+            new Session(IdGenerator.generate()).setEmailAddress("joe.bloggs@test.com");
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(Session.class);

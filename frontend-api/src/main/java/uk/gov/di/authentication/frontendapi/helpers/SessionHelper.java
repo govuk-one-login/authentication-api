@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 public class SessionHelper {
@@ -18,7 +17,6 @@ public class SessionHelper {
     public static void updateSessionWithSubject(
             UserContext userContext,
             AuthSessionItem authSession,
-            SessionService sessionService,
             AuthSessionService authSessionService,
             AuthenticationService authenticationService,
             ConfigurationService configurationService) {
@@ -37,8 +35,6 @@ public class SessionHelper {
                                         authenticationService)
                                 .getValue();
         LOG.info("Setting internal common subject identifier in user session");
-        session.setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier);
-        sessionService.storeOrUpdateSession(session);
         authSession.setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier);
         authSessionService.updateSession(authSession);
     }

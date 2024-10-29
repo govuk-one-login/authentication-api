@@ -19,6 +19,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -96,6 +97,7 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = mock(Session.class);
+    private final AuthSessionItem authSession = mock(AuthSessionItem.class);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
@@ -132,6 +134,7 @@ class CheckUserExistsHandlerTest {
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(session.getSessionId()).thenReturn(SESSION_ID);
+        when(authSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(authSession));
 
         handler =
                 new CheckUserExistsHandler(
@@ -181,7 +184,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
-            verify(session).setInternalCommonSubjectIdentifier(getExpectedInternalPairwiseId());
+            verify(authSession).setInternalCommonSubjectIdentifier(getExpectedInternalPairwiseId());
         }
 
         @Test
@@ -299,7 +302,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
-        verify(session).setInternalCommonSubjectIdentifier(null);
+        verify(authSession).setInternalCommonSubjectIdentifier(null);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,

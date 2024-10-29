@@ -315,8 +315,8 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        session.setInternalCommonSubjectIdentifier(null);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+        authSession.setInternalCommonSubjectIdentifier(null);
 
         var result =
                 makeCallWithCode(
