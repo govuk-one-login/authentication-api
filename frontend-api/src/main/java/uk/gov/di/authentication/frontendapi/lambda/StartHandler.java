@@ -16,10 +16,7 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -194,7 +191,10 @@ public class StartHandler
             StartRequest startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
             Optional<String> previousSessionId =
                     Optional.ofNullable(startRequest.previousSessionId());
-            authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
+            CredentialTrustLevel currentCredentialStrength =
+                    startRequest.currentCredentialStrength();
+            authSessionService.addOrUpdateSessionId(
+                    previousSessionId, session.getSessionId(), currentCredentialStrength);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
