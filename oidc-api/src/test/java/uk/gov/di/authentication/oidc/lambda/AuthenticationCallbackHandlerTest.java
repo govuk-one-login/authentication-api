@@ -786,6 +786,7 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 any(),
+                                any(),
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
@@ -831,6 +832,7 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 any(),
+                                any(),
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
@@ -866,6 +868,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(initiateIPVAuthorisationService)
                         .sendRequestToIPV(
+                                any(),
                                 any(),
                                 any(),
                                 any(),
