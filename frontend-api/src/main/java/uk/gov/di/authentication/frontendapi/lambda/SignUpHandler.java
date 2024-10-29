@@ -177,14 +177,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             LOG.info("Setting internal common subject identifier in user session");
             sessionService.storeOrUpdateSession(
-                    userContext
-                            .getSession()
-                            .setEmailAddress(request.getEmail())
-                            .setInternalCommonSubjectIdentifier(
-                                    internalCommonSubjectIdentifier.getValue()));
+                    userContext.getSession().setEmailAddress(request.getEmail()));
 
             authSessionService.updateSession(
-                    authSessionItem.withAccountState(AuthSessionItem.AccountState.NEW));
+                    authSessionItem
+                            .withAccountState(AuthSessionItem.AccountState.NEW)
+                            .withInternalCommonSubjectIdentifier(
+                                    internalCommonSubjectIdentifier.getValue()));
             LOG.info("Successfully processed request");
             return generateApiGatewayProxyResponse(200, "");
         } else {

@@ -110,7 +110,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     }
 
     @Override
-    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+    public void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, String internalCommonSubjectId) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
                 dynamoService.setAuthAppAndAccountVerified(
@@ -121,6 +122,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
+                        internalCommonSubjectId,
                         false);
                 break;
             case ACCOUNT_RECOVERY:
@@ -132,11 +134,13 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
+                        internalCommonSubjectId,
                         true);
                 break;
             case SIGN_IN:
             case PASSWORD_RESET_MFA:
-                clearAccountRecoveryBlockIfPresent(AUTH_APP, ipAddress, persistentSessionId);
+                clearAccountRecoveryBlockIfPresent(
+                        AUTH_APP, ipAddress, persistentSessionId, internalCommonSubjectId);
         }
     }
 

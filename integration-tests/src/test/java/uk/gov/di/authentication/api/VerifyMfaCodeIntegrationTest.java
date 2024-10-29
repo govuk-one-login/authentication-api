@@ -108,7 +108,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         this.sessionId = redis.createSession();
         authSessionExtension.addSession(Optional.empty(), this.sessionId);
-        redis.addInternalCommonSubjectIdToSession(this.sessionId, internalCommonSubjectId);
+        addInternalCommonSubjectIdToAuthSession(internalCommonSubjectId);
+
         setUpTest(sessionId, withScope());
     }
 
@@ -1019,5 +1020,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.setAccountVerified(EMAIL_ADDRESS);
             userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
         }
+    }
+
+    private void addInternalCommonSubjectIdToAuthSession(String internalCommonSubjectId) {
+        var authSession = authSessionExtension.getSession(sessionId).orElseThrow();
+        authSession.setInternalCommonSubjectIdentifier(internalCommonSubjectId);
+        authSessionExtension.updateSession(authSession);
     }
 }

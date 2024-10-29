@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -116,6 +118,7 @@ class SendNotificationHandlerTest {
     private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
     private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -136,10 +139,12 @@ class SendNotificationHandlerTest {
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
 
-    private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -157,6 +162,7 @@ class SendNotificationHandlerTest {
             new SendNotificationHandler(
                     configurationService,
                     sessionService,
+                    authSessionService,
                     clientSessionService,
                     clientService,
                     authenticationService,
@@ -199,6 +205,7 @@ class SendNotificationHandlerTest {
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
+        when(authSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(authSession));
     }
 
     private static Stream<Arguments> notificationTypeAndJourneyTypeArgs() {

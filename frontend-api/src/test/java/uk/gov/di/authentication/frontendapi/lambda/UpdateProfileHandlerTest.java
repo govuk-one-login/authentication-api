@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -26,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -84,6 +86,7 @@ class UpdateProfileHandlerTest {
     private UpdateProfileHandler handler;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
@@ -92,10 +95,11 @@ class UpdateProfileHandlerTest {
 
     private final String TERMS_AND_CONDITIONS_VERSION =
             configurationService.getTermsAndConditionsVersion();
-    private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final AuditContext auditContextWithAllUserInfo =
             new AuditContext(
@@ -146,10 +150,12 @@ class UpdateProfileHandlerTest {
                 new UpdateProfileHandler(
                         authenticationService,
                         sessionService,
+                        authSessionService,
                         clientSessionService,
                         configurationService,
                         auditService,
                         clientService);
+        when(authSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(authSession));
     }
 
     @Test
