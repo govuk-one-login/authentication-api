@@ -167,10 +167,7 @@ class LogoutServiceTest {
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
         rpPairwiseId = Optional.of(idToken.getJWTClaimsSet().getSubject());
 
-        session =
-                new Session(SESSION_ID)
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = new Session(SESSION_ID).setEmailAddress(EMAIL);
         orchSession =
                 new OrchSessionItem(SESSION_ID)
                         .withInternalCommonSubjectIdentifier(SUBJECT.getValue());

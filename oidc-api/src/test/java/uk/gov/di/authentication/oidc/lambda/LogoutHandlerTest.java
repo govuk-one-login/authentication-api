@@ -122,10 +122,7 @@ class LogoutHandlerTest {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         orchSession =
                 new OrchSessionItem()
                         .withSessionId(session.getSessionId())

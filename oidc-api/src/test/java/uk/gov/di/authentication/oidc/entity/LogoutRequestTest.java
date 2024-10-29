@@ -102,10 +102,7 @@ class LogoutRequestTest {
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
                         "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         orchSession =
                 new OrchSessionItem()
                         .withSessionId(session.getSessionId())
