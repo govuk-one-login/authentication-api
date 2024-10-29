@@ -8,7 +8,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class OrchSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
-    public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_RP_PAIRWISE_ID = "RpPairwiseId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
@@ -22,7 +21,6 @@ public class OrchSessionItem {
 
     private String sessionId;
     private long timeToLive;
-    private String email;
     private String verifiedMfaMethodType;
     private String rpPairwiseId;
     private AccountState isNewAccount;
@@ -60,20 +58,6 @@ public class OrchSessionItem {
 
     public OrchSessionItem withTimeToLive(long timeToLive) {
         this.timeToLive = timeToLive;
-        return this;
-    }
-
-    @DynamoDbAttribute(ATTRIBUTE_EMAIL)
-    public String getEmailAddress() {
-        return email;
-    }
-
-    public void setEmailAddress(String email) {
-        this.email = email;
-    }
-
-    public OrchSessionItem withEmailAddress(String email) {
-        this.email = email;
         return this;
     }
 
