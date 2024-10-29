@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
+import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 
 import java.net.URI;
 import java.time.Clock;
@@ -654,16 +655,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrDefault("MFA_RESET_CALLBACK_URI", "");
     }
 
-    public String getIPVAuthEncryptionPublicKey() { //
-        var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
-        try {
-            var request =
-                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
-            return getSsmClient().getParameter(request).parameter().value();
-        } catch (ParameterNotFoundException e) {
-            LOG.error("No parameter exists with name: {}", paramName);
-            throw new RuntimeException(e);
+    public String getIPVAuthEncryptionPublicKey() throws MissingEnvVariableException {
+        String key = System.getenv("IPV_AUTHORIZATION_PUBLIC_KEY");
+        if (key == null || key.isEmpty()) {
+            throw new MissingEnvVariableException("IPV_AUTHORIZATION_PUBLIC_KEY");
         }
+        return key;
     }
 
     public URI getIPVAuthorisationURI() {

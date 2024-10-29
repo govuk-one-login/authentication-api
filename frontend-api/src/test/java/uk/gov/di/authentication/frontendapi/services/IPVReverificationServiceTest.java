@@ -24,12 +24,15 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.approvaltests.JsonApprovals;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -52,6 +55,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -106,6 +110,7 @@ class IPVReverificationServiceTest {
                     redisConnectionService);
     private SignedJWT testSignedJwt;
     private EncryptedJWT testEncryptedJwt;
+    MockedStatic<IdGenerator> mockIdGen;
 
     @BeforeEach
     void testSetup() throws URISyntaxException, ParseException, JOSEException {
@@ -132,8 +137,13 @@ class IPVReverificationServiceTest {
         testEncryptedJwt = constructTestEncryptedJWT(testSignedJwt);
         when(jwtService.signJWT(any(), any(), any())).thenReturn(testSignedJwt);
         when(jwtService.encryptJWT(any(), any())).thenReturn(testEncryptedJwt);
-        MockedStatic<IdGenerator> mockIdGen = Mockito.mockStatic(IdGenerator.class);
+        mockIdGen = Mockito.mockStatic(IdGenerator.class);
         mockIdGen.when(IdGenerator::generate).thenReturn(TEST_UUID);
+    }
+
+    @AfterEach
+    void tearDown() {
+        mockIdGen.close();
     }
 
     @Test
@@ -179,6 +189,23 @@ class IPVReverificationServiceTest {
             assertEquals(expectedUri, redirectUri);
             assertClaims(redirectUri);
         }
+    }
+
+    @Test
+    void shouldThrowIPVReverificationServiceExceptionWhenPublicKeyNotFound() {
+        when(configurationService.getIPVAuthEncryptionPublicKey())
+                .thenThrow(new MissingEnvVariableException("IPV_AUTHORIZATION_PUBLIC_KEY"));
+
+        var exception =
+                assertThrows(
+                        IPVReverificationServiceException.class,
+                        () ->
+                                ipvReverificationService.buildIpvReverificationRedirectUri(
+                                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION));
+
+        assertEquals(
+                "Missing required environment variable: IPV_AUTHORIZATION_PUBLIC_KEY",
+                exception.getMessage());
     }
 
     private JWTClaimsSet constructTestClaimSet() {
