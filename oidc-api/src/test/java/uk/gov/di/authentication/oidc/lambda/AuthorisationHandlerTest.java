@@ -373,7 +373,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldPassTheCorrectClaimsToAuth()
+        void shouldPassTheCorrectClaimsToAuthForLowLevelTrustJourneys()
                 throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
             var orchClientId = "orchestration-client-id";
             when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
@@ -381,8 +381,7 @@ class AuthorisationHandlerTest {
                     .thenReturn(TEST_ENCRYPTED_JWT);
 
             var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+                    buildRequestParams(Map.of("scope", "openid email", "vtr", "[\"Cl\"]"));
             var event = withRequestEvent(requestParams);
             event.setRequestContext(
                     new ProxyRequestContext()
@@ -405,7 +404,46 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number_verified\":null,\"phone_number\":null,\"email\":null}}");
+                            "{\"userinfo\":{\"email_verified\":null,\"email\":null}}");
+            var actualClaimSetRequest =
+                    ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
+            assertEquals(
+                    expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
+        }
+
+        @Test
+        void shouldPassTheCorrectClaimsToAuthForHighLevelTrustJourneys()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
+            var orchClientId = "orchestration-client-id";
+            when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
+            when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
+                    .thenReturn(TEST_ENCRYPTED_JWT);
+
+            var requestParams =
+                    buildRequestParams(Map.of("scope", "openid", "vtr", "[\"Cl.Cm.P2\"]"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
+            verify(orchestrationAuthorizationService)
+                    .storeState(eq(session.getSessionId()), any(State.class));
+            assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
+            assertThat(
+                    splitQuery(locationHeader).get("request"),
+                    equalTo(TEST_ENCRYPTED_JWT.serialize()));
+            assertThat(splitQuery(locationHeader).get("client_id"), equalTo(orchClientId));
+            assertThat(
+                    splitQuery(locationHeader).get("response_type"),
+                    equalTo(ResponseType.CODE.toString()));
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
+            var expectedClaimSetRequest =
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
