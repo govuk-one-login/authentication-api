@@ -14,6 +14,7 @@ import uk.gov.di.authentication.ipv.entity.IdentityProgressResponse;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.lambda.BaseOrchestrationFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -22,6 +23,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
 
@@ -39,6 +41,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
+    private final OrchSessionService orchSessionService;
 
     private static final Logger LOG = LogManager.getLogger(IdentityProgressFrontendHandler.class);
 
@@ -49,6 +52,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public IdentityProgressFrontendHandler() {
@@ -61,6 +65,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService userInfoStorageService,
             ClientSessionService clientSessionService) {
         super(configurationService, sessionService, clientSessionService);
@@ -68,6 +73,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.userInfoStorageService = userInfoStorageService;
+        this.orchSessionService = orchSessionService;
     }
 
     @Override
@@ -83,8 +89,14 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             OrchestrationUserSession userSession) {
         LOG.info("IdentityProgress request received");
         try {
-            var internalCommonSubjectIdentifier =
-                    userSession.getSession().getInternalCommonSubjectIdentifier();
+            var orchSessionOptional = orchSessionService.getSessionFromRequestHeaders(input.getHeaders());
+            if (orchSessionOptional.isEmpty()) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
+
+            var orchSession = orchSessionOptional.get();
+            var internalCommonSubjectIdentifier = orchSession.getInternalCommonSubjectId();
+
 
             AuthenticationRequest authenticationRequest;
             try {
