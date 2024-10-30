@@ -379,6 +379,10 @@ public class AuthenticationCallbackHandler
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
                 AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
+                OrchSessionItem.AccountState orchAccountState =
+                        newAccount
+                                ? OrchSessionItem.AccountState.NEW
+                                : OrchSessionItem.AccountState.EXISTING;
 
                 boolean setAuthenticatedFlagForIPV =
                         configurationService.isAuthenticatedFlagForIpvEnabled();
@@ -389,7 +393,7 @@ public class AuthenticationCallbackHandler
                 } else {
                     sessionService.storeOrUpdateSession(userSession.setNewAccount(accountState));
                 }
-
+                orchSessionService.updateSession(orchSession.withAccountState(orchAccountState));
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(

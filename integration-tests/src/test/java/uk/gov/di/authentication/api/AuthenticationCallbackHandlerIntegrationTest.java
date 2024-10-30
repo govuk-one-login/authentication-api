@@ -805,6 +805,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertTrue(orchSession.isPresent());
         assertEquals(
                 MFAMethodType.AUTH_APP.getValue(), orchSession.get().getVerifiedMfaMethodType());
+        assertThat(OrchSessionItem.AccountState.NEW, equalTo(orchSession.get().getIsNewAccount()));
     }
 
     private void setupClientReg(boolean identityVerificationSupported) {
