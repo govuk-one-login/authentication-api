@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.GsonBuilder;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
@@ -30,14 +29,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -56,16 +51,14 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MfaResetIPVAuthorizationServiceTest {
     private static final JWSAlgorithm TEST_SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -103,10 +96,6 @@ class MfaResetIPVAuthorizationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
-    private final AuditService auditService = mock(AuditService.class);
-    private final AuditContext auditContext = mock(AuditContext.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
     private final JWTClaimsSet testJwtClaims = constructTestClaimSet();
     private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService =
             new MfaResetIPVAuthorizationService(
@@ -114,9 +103,7 @@ class MfaResetIPVAuthorizationServiceTest {
                     nowClock,
                     jwtService,
                     tokenService,
-                    redisConnectionService,
-                    auditService,
-                    cloudwatchMetricsService);
+                    redisConnectionService);
     private SignedJWT testSignedJwt;
     private EncryptedJWT testEncryptedJwt;
 
@@ -159,14 +146,9 @@ class MfaResetIPVAuthorizationServiceTest {
                             when(mock.getValue()).thenReturn(TEST_STATE_VALUE);
                         })) {
 
-            APIGatewayProxyResponseEvent ipvRedirectResponse =
-                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION, auditContext);
-
-            var redirectURI =
-                    objectMapper
-                            .readValue(ipvRedirectResponse.getBody(), MfaResetResponse.class)
-                            .authorizeUrl();
+            String redirectUri =
+                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION);
 
             RSAPublicKey expectedPublicKey =
                     new RSAKey.Builder(
@@ -186,21 +168,16 @@ class MfaResetIPVAuthorizationServiceTest {
                             TEST_SESSION_EXPIRY);
             verify(tokenService).generateStorageTokenForMfaReset(TEST_SUBJECT);
 
-            assertThat(ipvRedirectResponse, hasStatus(200));
-            assertThat(
-                    ipvRedirectResponse,
-                    hasBody(
-                            objectMapper.writeValueAsString(
-                                    new MfaResetResponse(
-                                            TEST_IPV_AUTHORIZE_URI
-                                                    + "?response_type=code"
-                                                    + "&request="
-                                                    + testEncryptedJwt.serialize()
-                                                    + "&client_id="
-                                                    + TEST_IPV_AUTH_CLIENT_ID))));
-            assertClaims(redirectURI);
-            verify(auditService)
-                    .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
+            var expectedUri =
+                    TEST_IPV_AUTHORIZE_URI
+                            + "?response_type=code"
+                            + "&request="
+                            + testEncryptedJwt.serialize()
+                            + "&client_id="
+                            + TEST_IPV_AUTH_CLIENT_ID;
+
+            assertEquals(expectedUri, redirectUri);
+            assertClaims(redirectUri);
         }
     }
 

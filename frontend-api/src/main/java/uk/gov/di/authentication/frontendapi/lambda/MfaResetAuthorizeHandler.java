@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
+import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.frontendapi.services.MfaResetIPVAuthorizationService;
@@ -29,8 +30,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Optional;
-
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -40,6 +40,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOG = LogManager.getLogger(MfaResetAuthorizeHandler.class);
     private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService;
+    private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public MfaResetAuthorizeHandler(
             ConfigurationService configurationService,
@@ -47,7 +49,9 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService) {
+            MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService,
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 MfaResetRequest.class,
                 configurationService,
@@ -56,6 +60,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                 clientService,
                 authenticationService);
         this.mfaResetIPVAuthorizationService = mfaResetIPVAuthorizationService;
+        this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public MfaResetAuthorizeHandler(ConfigurationService configurationService) {
@@ -67,14 +73,11 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         TokenService tokenService =
                 new TokenService(
                         configurationService, redisConnectionService, kmsConnectionService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.mfaResetIPVAuthorizationService =
                 new MfaResetIPVAuthorizationService(
-                        configurationService,
-                        jwtService,
-                        tokenService,
-                        redisConnectionService,
-                        new AuditService(configurationService),
-                        new CloudwatchMetricsService(configurationService));
+                        configurationService, jwtService, tokenService, redisConnectionService);
     }
 
     public MfaResetAuthorizeHandler() {
@@ -100,22 +103,26 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
             AuditContext auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                    AuditContext.auditContextFromUserContext(
+                            userContext,
                             AuditService.UNKNOWN,
                             request.email(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             Subject internalCommonSubjectId =
                     new Subject(userSession.getInternalCommonSubjectIdentifier());
 
-            return mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                    internalCommonSubjectId, clientSessionId, userSession, auditContext);
+            var ipvAuthorisationRequestURI =
+                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+                            internalCommonSubjectId, clientSessionId, userSession);
+
+            auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
+            cloudwatchMetricsService.incrementMfaResetHandoffCount();
+
+            return generateApiGatewayProxyResponse(
+                    200, new MfaResetResponse(ipvAuthorisationRequestURI));
         } catch (JwtServiceException e) {
             LOG.error("Error in JWT service", e);
             return generateApiGatewayProxyResponse(500, ERROR_1060.getMessage());

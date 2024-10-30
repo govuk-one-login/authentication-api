@@ -14,11 +14,11 @@ import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.MfaResetIPVAuthorizationService;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -28,14 +28,11 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -62,6 +59,9 @@ class MfaResetAuthorizeHandlerTest {
     private static final SessionService sessionService = mock(SessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
     private static final Session session = mock(Session.class);
+    private static final AuditService auditService = mock(AuditService.class);
+    private static final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private static final AuditContext testAuditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
@@ -97,72 +97,38 @@ class MfaResetAuthorizeHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        mfaResetIPVAuthorizationService);
+                        mfaResetIPVAuthorizationService,
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
     @Test
-    void returnsA200WithRedirectUriInBody() throws Json.JsonException {
-        final String TEST_REDIRECT_URI = "https://some.uri.gov.uk/authorize";
+    void returnsA200WithRedirectUriInBody() {
+        final String TEST_REDIRECT_URI = "https://some.uri.gov.uk/authorize?request=x.y.z";
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                        any(Subject.class),
-                        anyString(),
-                        any(Session.class),
-                        any(AuditContext.class)))
-                .thenReturn(ApiGatewayProxyRequestHelper.apiResponseEvent(200, expectedBody, null));
+        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
+                .thenReturn(TEST_REDIRECT_URI);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
-        verify(mfaResetIPVAuthorizationService)
-                .buildMfaResetIpvRedirectRequest(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext);
+        verify(auditService)
+                .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, testAuditContext);
+        verify(cloudwatchMetricsService).incrementMfaResetHandoffCount();
+
         assertThat(response, hasStatus(200));
         assertThat(response, hasBody(expectedBody));
-        assertNull(response.getHeaders());
     }
 
     @Test
-    void throwsWhenThereIsAParseException() throws Json.JsonException {
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                        any(Subject.class),
-                        anyString(),
-                        any(Session.class),
-                        any(AuditContext.class)))
-                .thenThrow(new Json.JsonException("SomeError"));
-
-        assertThrows(
-                RuntimeException.class, () -> handler.handleRequest(TEST_INVOKE_EVENT, context));
-
-        verify(mfaResetIPVAuthorizationService)
-                .buildMfaResetIpvRedirectRequest(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext);
-    }
-
-    @Test
-    void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException()
-            throws Json.JsonException {
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                        any(Subject.class),
-                        anyString(),
-                        any(Session.class),
-                        any(AuditContext.class)))
+    void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
+        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenThrow(new JwtServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
-        verify(mfaResetIPVAuthorizationService)
-                .buildMfaResetIpvRedirectRequest(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext);
         assertThat(response, hasStatus(500));
         assertThat(response, hasBody(ERROR_1060.getMessage()));
     }
