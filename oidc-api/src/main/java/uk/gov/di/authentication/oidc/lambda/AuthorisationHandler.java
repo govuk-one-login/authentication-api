@@ -876,12 +876,14 @@ public class AuthorisationHandler
         var emailScopePresent = requestedScopesContain(OIDCScopeValue.EMAIL, authenticationRequest);
 
         var claimsSet = new HashSet<AuthUserInfoClaims>();
+        claimsSet.add(AuthUserInfoClaims.EMAIL);
+        claimsSet.add(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE);
         if (identityRequired) {
-            LOG.info("Identity is required. Adding the local_account_id and salt claims");
+            LOG.info(
+                    "Identity is required. Adding the local_account_id, salt, email_verified and phone_number claims");
             claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
             claimsSet.add(AuthUserInfoClaims.SALT);
             // Email required for ID journeys for use in Face-to-Face flows
-            claimsSet.add(AuthUserInfoClaims.EMAIL);
             claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
             claimsSet.add(AuthUserInfoClaims.PHONE_NUMBER);
         }
@@ -900,8 +902,7 @@ public class AuthorisationHandler
             claimsSet.add(AuthUserInfoClaims.PHONE_VERIFIED);
         }
         if (emailScopePresent) {
-            LOG.info("email scope is present. Adding the email and email_verified claim");
-            claimsSet.add(AuthUserInfoClaims.EMAIL);
+            LOG.info("email scope is present. Adding the email_verified claim");
             claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
         }
 

@@ -368,7 +368,7 @@ class AuthorisationHandlerTest {
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             assertEquals(
-                    "{\"userinfo\":{\"email_verified\":null,\"email\":null}}",
+                    "{\"userinfo\":{\"email_verified\":null,\"verified_mfa_method_type\":null,\"email\":null}}",
                     captor.getValue().getClaim("claim"));
         }
 
@@ -381,7 +381,7 @@ class AuthorisationHandlerTest {
                     .thenReturn(TEST_ENCRYPTED_JWT);
 
             var requestParams =
-                    buildRequestParams(Map.of("scope", "openid email", "vtr", "[\"Cl\"]"));
+                    buildRequestParams(Map.of("scope", "openid phone", "vtr", "[\"Cl\"]"));
             var event = withRequestEvent(requestParams);
             event.setRequestContext(
                     new ProxyRequestContext()
@@ -404,7 +404,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"email_verified\":null,\"email\":null}}");
+                            "{\"userinfo\":{\"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -443,7 +443,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null}}");
+                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -1623,7 +1623,8 @@ class AuthorisationHandlerTest {
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
-            var expectedClaim = "{\"userinfo\":{\"public_subject_id\":null}}";
+            var expectedClaim =
+                    "{\"userinfo\":{\"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null}}";
             var actualClaim = argument.getValue().getStringClaim("claim");
             assertThat(actualClaim, is(equalTo(expectedClaim)));
         }
@@ -1642,7 +1643,8 @@ class AuthorisationHandlerTest {
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
-            var expectedClaim = "{\"userinfo\":{\"legacy_subject_id\":null}}";
+            var expectedClaim =
+                    "{\"userinfo\":{\"legacy_subject_id\":null,\"verified_mfa_method_type\":null,\"email\":null}}";
             var actualClaim = argument.getValue().getStringClaim("claim");
             assertThat(actualClaim, is(equalTo(expectedClaim)));
         }

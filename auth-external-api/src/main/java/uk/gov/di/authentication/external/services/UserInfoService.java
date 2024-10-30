@@ -63,6 +63,17 @@ public class UserInfoService {
         userInfo.setClaim("new_account", accessTokenInfo.getIsNewAccount());
         userInfo.setClaim("password_reset_time", accessTokenInfo.getPasswordResetTime());
 
+        // TODO: ATO-1129: delete temporary logs
+        LOG.info(
+                "is email a requested claim: {}",
+                accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL.getValue()));
+        LOG.info(
+                "is verified_mfa a requested claim: {}",
+                accessTokenInfo
+                        .getClaims()
+                        .contains(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue()));
+        //
+
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue())) {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
         }
