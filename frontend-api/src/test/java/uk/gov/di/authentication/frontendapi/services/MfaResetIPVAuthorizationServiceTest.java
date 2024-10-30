@@ -29,12 +29,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -59,7 +57,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
@@ -100,8 +97,6 @@ class MfaResetIPVAuthorizationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
-    private final AuditService auditService = mock(AuditService.class);
-    private final AuditContext auditContext = mock(AuditContext.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final JWTClaimsSet testJwtClaims = constructTestClaimSet();
@@ -112,7 +107,6 @@ class MfaResetIPVAuthorizationServiceTest {
                     jwtService,
                     tokenService,
                     redisConnectionService,
-                    auditService,
                     cloudwatchMetricsService);
     private SignedJWT testSignedJwt;
     private EncryptedJWT testEncryptedJwt;
@@ -158,7 +152,7 @@ class MfaResetIPVAuthorizationServiceTest {
 
             String redirectUri =
                     mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
-                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION, auditContext);
+                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION);
 
             RSAPublicKey expectedPublicKey =
                     new RSAKey.Builder(
@@ -188,8 +182,6 @@ class MfaResetIPVAuthorizationServiceTest {
 
             assertEquals(expectedUri, redirectUri);
             assertClaims(redirectUri);
-            verify(auditService)
-                    .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
         }
     }
 

@@ -29,7 +29,9 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -56,6 +58,7 @@ class MfaResetAuthorizeHandlerTest {
     private static final SessionService sessionService = mock(SessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
     private static final Session session = mock(Session.class);
+    private static final AuditService auditService = mock(AuditService.class);
     private static final AuditContext testAuditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
@@ -91,7 +94,8 @@ class MfaResetAuthorizeHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        mfaResetIPVAuthorizationService);
+                        mfaResetIPVAuthorizationService,
+                        auditService);
     }
 
     @Test
@@ -100,13 +104,13 @@ class MfaResetAuthorizeHandlerTest {
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
         when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext))
+                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenReturn(TEST_REDIRECT_URI);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
+
+        verify(auditService)
+                .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, testAuditContext);
 
         assertThat(response, hasStatus(200));
         assertThat(response, hasBody(expectedBody));
@@ -115,10 +119,7 @@ class MfaResetAuthorizeHandlerTest {
     @Test
     void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
         when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext))
+                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenThrow(new JwtServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);

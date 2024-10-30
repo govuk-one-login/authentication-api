@@ -17,13 +17,11 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -36,8 +34,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
-
 public class MfaResetIPVAuthorizationService {
     private static final Logger LOG = LogManager.getLogger(MfaResetIPVAuthorizationService.class);
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -49,7 +45,6 @@ public class MfaResetIPVAuthorizationService {
     private final TokenService tokenService;
     private final RedisConnectionService redisConnectionService;
     private final Json objectMapper = SerializationService.getInstance();
-    private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public MfaResetIPVAuthorizationService(
@@ -57,7 +52,6 @@ public class MfaResetIPVAuthorizationService {
             JwtService jwtService,
             TokenService tokenService,
             RedisConnectionService redisConnectionService,
-            AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService) {
         this(
                 configurationService,
@@ -65,7 +59,6 @@ public class MfaResetIPVAuthorizationService {
                 jwtService,
                 tokenService,
                 redisConnectionService,
-                auditService,
                 cloudwatchMetricsService);
     }
 
@@ -75,20 +68,17 @@ public class MfaResetIPVAuthorizationService {
             JwtService jwtService,
             TokenService tokenService,
             RedisConnectionService redisConnectionService,
-            AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.nowClock = nowClock;
         this.jwtService = jwtService;
         this.tokenService = tokenService;
         this.redisConnectionService = redisConnectionService;
-        this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public String buildMfaResetIpvRedirectUri(
-            Subject subject, String clientSessionId, Session session, AuditContext auditContext)
-            throws JwtServiceException {
+            Subject subject, String clientSessionId, Session session) throws JwtServiceException {
         State state = new State();
         ClaimsSetRequest claims = buildMfaResetClaimsRequest(subject);
         EncryptedJWT requestJWT =
@@ -105,7 +95,6 @@ public class MfaResetIPVAuthorizationService {
         String ipvAuthorisationRequestURI = ipvAuthorisationRequest.toURI().toString();
 
         storeState(session.getSessionId(), state);
-        auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
         cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
         LOG.info("MFA reset JAR created, redirect URI {}", ipvAuthorisationRequestURI);

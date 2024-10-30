@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -40,13 +41,16 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
     private static final Logger LOG = LogManager.getLogger(MfaResetAuthorizeHandler.class);
     private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService;
 
+    private final AuditService auditService;
+
     public MfaResetAuthorizeHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService) {
+            MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService,
+            AuditService auditService) {
         super(
                 MfaResetRequest.class,
                 configurationService,
@@ -55,6 +59,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                 clientService,
                 authenticationService);
         this.mfaResetIPVAuthorizationService = mfaResetIPVAuthorizationService;
+        this.auditService = auditService;
     }
 
     public MfaResetAuthorizeHandler(ConfigurationService configurationService) {
@@ -66,13 +71,13 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         TokenService tokenService =
                 new TokenService(
                         configurationService, redisConnectionService, kmsConnectionService);
+        this.auditService = new AuditService(configurationService);
         this.mfaResetIPVAuthorizationService =
                 new MfaResetIPVAuthorizationService(
                         configurationService,
                         jwtService,
                         tokenService,
                         redisConnectionService,
-                        new AuditService(configurationService),
                         new CloudwatchMetricsService(configurationService));
     }
 
@@ -112,7 +117,9 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
             var ipvAuthorisationRequestURI =
                     mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
-                            internalCommonSubjectId, clientSessionId, userSession, auditContext);
+                            internalCommonSubjectId, clientSessionId, userSession);
+
+            auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
 
             return generateApiGatewayProxyResponse(
                     200, new MfaResetResponse(ipvAuthorisationRequestURI));
