@@ -371,6 +371,10 @@ public class AuthenticationCallbackHandler
                 LOG.info(
                         "is email attached to auth-external-api userinfo response: {}",
                         userInfo.getEmailAddress() != null);
+                LOG.info(
+                        "is verified_mfa_method_type attached to auth-external-api userinfo response: {}",
+                        userInfo.getClaim(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())
+                                != null);
                 //
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
