@@ -110,7 +110,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1611,7 +1610,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAddPublicSubjectIdClaimIfAmScopePresent() throws ParseException {
+        void shouldAddPublicSubjectIdClaimIfAmScopePresent()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
             Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid am"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
@@ -1624,13 +1624,15 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
             var expectedClaim =
-                    "{\"userinfo\":{\"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null}}";
-            var actualClaim = argument.getValue().getStringClaim("claim");
-            assertThat(actualClaim, is(equalTo(expectedClaim)));
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null}}");
+            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
+            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
 
         @Test
-        void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent() throws ParseException {
+        void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("scope", "openid govuk-account"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
@@ -1644,9 +1646,10 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
             var expectedClaim =
-                    "{\"userinfo\":{\"legacy_subject_id\":null,\"verified_mfa_method_type\":null,\"email\":null}}";
-            var actualClaim = argument.getValue().getStringClaim("claim");
-            assertThat(actualClaim, is(equalTo(expectedClaim)));
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"legacy_subject_id\":null,\"verified_mfa_method_type\":null,\"email\":null}}");
+            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
+            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
 
         private static Stream<Prompt.Type> prompts() {
