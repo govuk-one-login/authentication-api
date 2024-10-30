@@ -29,8 +29,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Optional;
-
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -100,16 +98,13 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
             AuditContext auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                    AuditContext.auditContextFromUserContext(
+                            userContext,
                             AuditService.UNKNOWN,
                             request.email(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             Subject internalCommonSubjectId =
                     new Subject(userSession.getInternalCommonSubjectIdentifier());
