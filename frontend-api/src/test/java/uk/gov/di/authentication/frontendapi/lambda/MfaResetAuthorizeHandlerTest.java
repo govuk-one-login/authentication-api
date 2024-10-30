@@ -30,11 +30,8 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
@@ -106,20 +103,14 @@ class MfaResetAuthorizeHandlerTest {
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
         when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                        any(Subject.class),
-                        anyString(),
-                        any(Session.class),
-                        any(AuditContext.class)))
+                        new Subject(COMMON_SUBJECT_ID),
+                        CLIENT_SESSION_ID,
+                        session,
+                        testAuditContext))
                 .thenReturn(ApiGatewayProxyRequestHelper.apiResponseEvent(200, expectedBody, null));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
-        verify(mfaResetIPVAuthorizationService)
-                .buildMfaResetIpvRedirectRequest(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext);
         assertThat(response, hasStatus(200));
         assertThat(response, hasBody(expectedBody));
         assertNull(response.getHeaders());
@@ -128,41 +119,28 @@ class MfaResetAuthorizeHandlerTest {
     @Test
     void throwsWhenThereIsAParseException() throws Json.JsonException {
         when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                        any(Subject.class),
-                        anyString(),
-                        any(Session.class),
-                        any(AuditContext.class)))
+                        new Subject(COMMON_SUBJECT_ID),
+                        CLIENT_SESSION_ID,
+                        session,
+                        testAuditContext))
                 .thenThrow(new Json.JsonException("SomeError"));
 
         assertThrows(
                 RuntimeException.class, () -> handler.handleRequest(TEST_INVOKE_EVENT, context));
-
-        verify(mfaResetIPVAuthorizationService)
-                .buildMfaResetIpvRedirectRequest(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext);
     }
 
     @Test
     void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException()
             throws Json.JsonException {
         when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                        any(Subject.class),
-                        anyString(),
-                        any(Session.class),
-                        any(AuditContext.class)))
+                        new Subject(COMMON_SUBJECT_ID),
+                        CLIENT_SESSION_ID,
+                        session,
+                        testAuditContext))
                 .thenThrow(new JwtServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
-        verify(mfaResetIPVAuthorizationService)
-                .buildMfaResetIpvRedirectRequest(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext);
         assertThat(response, hasStatus(500));
         assertThat(response, hasBody(ERROR_1060.getMessage()));
     }
