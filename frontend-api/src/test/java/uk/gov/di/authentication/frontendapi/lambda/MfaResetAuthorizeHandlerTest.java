@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -59,6 +60,8 @@ class MfaResetAuthorizeHandlerTest {
     private static final UserContext userContext = mock(UserContext.class);
     private static final Session session = mock(Session.class);
     private static final AuditService auditService = mock(AuditService.class);
+    private static final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private static final AuditContext testAuditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
@@ -95,7 +98,8 @@ class MfaResetAuthorizeHandlerTest {
                         clientService,
                         authenticationService,
                         mfaResetIPVAuthorizationService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
     @Test
@@ -111,6 +115,7 @@ class MfaResetAuthorizeHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, testAuditContext);
+        verify(cloudwatchMetricsService).incrementMfaResetHandoffCount();
 
         assertThat(response, hasStatus(200));
         assertThat(response, hasBody(expectedBody));

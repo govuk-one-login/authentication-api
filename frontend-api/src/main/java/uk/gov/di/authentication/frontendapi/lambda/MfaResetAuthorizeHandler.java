@@ -40,8 +40,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOG = LogManager.getLogger(MfaResetAuthorizeHandler.class);
     private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService;
-
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public MfaResetAuthorizeHandler(
             ConfigurationService configurationService,
@@ -50,7 +50,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             ClientService clientService,
             AuthenticationService authenticationService,
             MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 MfaResetRequest.class,
                 configurationService,
@@ -60,6 +61,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                 authenticationService);
         this.mfaResetIPVAuthorizationService = mfaResetIPVAuthorizationService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public MfaResetAuthorizeHandler(ConfigurationService configurationService) {
@@ -72,13 +74,10 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                 new TokenService(
                         configurationService, redisConnectionService, kmsConnectionService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.mfaResetIPVAuthorizationService =
                 new MfaResetIPVAuthorizationService(
-                        configurationService,
-                        jwtService,
-                        tokenService,
-                        redisConnectionService,
-                        new CloudwatchMetricsService(configurationService));
+                        configurationService, jwtService, tokenService, redisConnectionService);
     }
 
     public MfaResetAuthorizeHandler() {
@@ -120,6 +119,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                             internalCommonSubjectId, clientSessionId, userSession);
 
             auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
+            cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
             return generateApiGatewayProxyResponse(
                     200, new MfaResetResponse(ipvAuthorisationRequestURI));

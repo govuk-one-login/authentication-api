@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -45,21 +44,18 @@ public class MfaResetIPVAuthorizationService {
     private final TokenService tokenService;
     private final RedisConnectionService redisConnectionService;
     private final Json objectMapper = SerializationService.getInstance();
-    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public MfaResetIPVAuthorizationService(
             ConfigurationService configurationService,
             JwtService jwtService,
             TokenService tokenService,
-            RedisConnectionService redisConnectionService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            RedisConnectionService redisConnectionService) {
         this(
                 configurationService,
                 new NowClock(Clock.systemUTC()),
                 jwtService,
                 tokenService,
-                redisConnectionService,
-                cloudwatchMetricsService);
+                redisConnectionService);
     }
 
     public MfaResetIPVAuthorizationService(
@@ -67,14 +63,12 @@ public class MfaResetIPVAuthorizationService {
             NowClock nowClock,
             JwtService jwtService,
             TokenService tokenService,
-            RedisConnectionService redisConnectionService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.nowClock = nowClock;
         this.jwtService = jwtService;
         this.tokenService = tokenService;
         this.redisConnectionService = redisConnectionService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public String buildMfaResetIpvRedirectUri(
@@ -95,7 +89,6 @@ public class MfaResetIPVAuthorizationService {
         String ipvAuthorisationRequestURI = ipvAuthorisationRequest.toURI().toString();
 
         storeState(session.getSessionId(), state);
-        cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
         LOG.info("MFA reset JAR created, redirect URI {}", ipvAuthorisationRequestURI);
 

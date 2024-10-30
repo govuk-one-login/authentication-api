@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -97,8 +96,6 @@ class MfaResetIPVAuthorizationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
     private final JWTClaimsSet testJwtClaims = constructTestClaimSet();
     private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService =
             new MfaResetIPVAuthorizationService(
@@ -106,8 +103,7 @@ class MfaResetIPVAuthorizationServiceTest {
                     nowClock,
                     jwtService,
                     tokenService,
-                    redisConnectionService,
-                    cloudwatchMetricsService);
+                    redisConnectionService);
     private SignedJWT testSignedJwt;
     private EncryptedJWT testEncryptedJwt;
 
