@@ -9,6 +9,7 @@ public class AuthSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
+    public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "currentCredentialStrength";
 
     public enum AccountState {
         NEW,
@@ -23,6 +24,7 @@ public class AuthSessionItem {
     private String verifiedMfaMethodType;
     private long timeToLive;
     private AccountState isNewAccount;
+    private CredentialTrustLevel currentCredentialStrength;
 
     public AuthSessionItem() {}
 
@@ -80,6 +82,21 @@ public class AuthSessionItem {
 
     public AuthSessionItem withAccountState(AccountState accountState) {
         this.isNewAccount = accountState;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH)
+    public CredentialTrustLevel getCurrentCredentialStrength() {
+        return this.currentCredentialStrength;
+    }
+
+    public void setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
+        this.currentCredentialStrength = currentCredentialStrength;
+    }
+
+    public AuthSessionItem withCurrentCredentialStrength(
+            CredentialTrustLevel currentCredentialStrength) {
+        this.currentCredentialStrength = currentCredentialStrength;
         return this;
     }
 }
