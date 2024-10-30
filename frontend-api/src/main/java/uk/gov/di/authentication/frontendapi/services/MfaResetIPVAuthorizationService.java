@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
@@ -19,7 +18,6 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -39,7 +37,6 @@ import java.util.Date;
 import java.util.List;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class MfaResetIPVAuthorizationService {
     private static final Logger LOG = LogManager.getLogger(MfaResetIPVAuthorizationService.class);
@@ -89,9 +86,9 @@ public class MfaResetIPVAuthorizationService {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
-    public APIGatewayProxyResponseEvent buildMfaResetIpvRedirectRequest(
+    public String buildMfaResetIpvRedirectUri(
             Subject subject, String clientSessionId, Session session, AuditContext auditContext)
-            throws Json.JsonException, JwtServiceException {
+            throws JwtServiceException {
         State state = new State();
         ClaimsSetRequest claims = buildMfaResetClaimsRequest(subject);
         EncryptedJWT requestJWT =
@@ -113,8 +110,7 @@ public class MfaResetIPVAuthorizationService {
 
         LOG.info("MFA reset JAR created, redirect URI {}", ipvAuthorisationRequestURI);
 
-        return generateApiGatewayProxyResponse(
-                200, new MfaResetResponse(ipvAuthorisationRequestURI));
+        return ipvAuthorisationRequestURI;
     }
 
     private EncryptedJWT constructMfaResetAuthorizationJWT(

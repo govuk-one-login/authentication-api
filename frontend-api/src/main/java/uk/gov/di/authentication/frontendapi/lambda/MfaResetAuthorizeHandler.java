@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
+import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.frontendapi.services.MfaResetIPVAuthorizationService;
@@ -109,8 +110,12 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             Subject internalCommonSubjectId =
                     new Subject(userSession.getInternalCommonSubjectIdentifier());
 
-            return mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                    internalCommonSubjectId, clientSessionId, userSession, auditContext);
+            var ipvAuthorisationRequestURI =
+                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+                            internalCommonSubjectId, clientSessionId, userSession, auditContext);
+
+            return generateApiGatewayProxyResponse(
+                    200, new MfaResetResponse(ipvAuthorisationRequestURI));
         } catch (JwtServiceException e) {
             LOG.error("Error in JWT service", e);
             return generateApiGatewayProxyResponse(500, ERROR_1060.getMessage());

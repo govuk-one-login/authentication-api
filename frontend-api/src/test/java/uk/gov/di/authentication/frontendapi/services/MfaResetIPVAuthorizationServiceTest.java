@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.GsonBuilder;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
@@ -31,7 +30,6 @@ import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -56,6 +54,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -64,8 +63,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MfaResetIPVAuthorizationServiceTest {
     private static final JWSAlgorithm TEST_SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -159,14 +156,9 @@ class MfaResetIPVAuthorizationServiceTest {
                             when(mock.getValue()).thenReturn(TEST_STATE_VALUE);
                         })) {
 
-            APIGatewayProxyResponseEvent ipvRedirectResponse =
-                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
+            String redirectUri =
+                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
                             TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION, auditContext);
-
-            var redirectURI =
-                    objectMapper
-                            .readValue(ipvRedirectResponse.getBody(), MfaResetResponse.class)
-                            .authorizeUrl();
 
             RSAPublicKey expectedPublicKey =
                     new RSAKey.Builder(
@@ -186,19 +178,16 @@ class MfaResetIPVAuthorizationServiceTest {
                             TEST_SESSION_EXPIRY);
             verify(tokenService).generateStorageTokenForMfaReset(TEST_SUBJECT);
 
-            assertThat(ipvRedirectResponse, hasStatus(200));
-            assertThat(
-                    ipvRedirectResponse,
-                    hasBody(
-                            objectMapper.writeValueAsString(
-                                    new MfaResetResponse(
-                                            TEST_IPV_AUTHORIZE_URI
-                                                    + "?response_type=code"
-                                                    + "&request="
-                                                    + testEncryptedJwt.serialize()
-                                                    + "&client_id="
-                                                    + TEST_IPV_AUTH_CLIENT_ID))));
-            assertClaims(redirectURI);
+            var expectedUri =
+                    TEST_IPV_AUTHORIZE_URI
+                            + "?response_type=code"
+                            + "&request="
+                            + testEncryptedJwt.serialize()
+                            + "&client_id="
+                            + TEST_IPV_AUTH_CLIENT_ID;
+
+            assertEquals(expectedUri, redirectUri);
+            assertClaims(redirectUri);
             verify(auditService)
                     .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
         }

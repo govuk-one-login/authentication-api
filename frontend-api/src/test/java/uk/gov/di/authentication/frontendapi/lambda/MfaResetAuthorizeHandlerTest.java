@@ -14,7 +14,6 @@ import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.MfaResetIPVAuthorizationService;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -28,8 +27,6 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -98,41 +95,26 @@ class MfaResetAuthorizeHandlerTest {
     }
 
     @Test
-    void returnsA200WithRedirectUriInBody() throws Json.JsonException {
-        final String TEST_REDIRECT_URI = "https://some.uri.gov.uk/authorize";
+    void returnsA200WithRedirectUriInBody() {
+        final String TEST_REDIRECT_URI = "https://some.uri.gov.uk/authorize?request=x.y.z";
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
+        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
                         new Subject(COMMON_SUBJECT_ID),
                         CLIENT_SESSION_ID,
                         session,
                         testAuditContext))
-                .thenReturn(ApiGatewayProxyRequestHelper.apiResponseEvent(200, expectedBody, null));
+                .thenReturn(TEST_REDIRECT_URI);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
         assertThat(response, hasStatus(200));
         assertThat(response, hasBody(expectedBody));
-        assertNull(response.getHeaders());
     }
 
     @Test
-    void throwsWhenThereIsAParseException() throws Json.JsonException {
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
-                        new Subject(COMMON_SUBJECT_ID),
-                        CLIENT_SESSION_ID,
-                        session,
-                        testAuditContext))
-                .thenThrow(new Json.JsonException("SomeError"));
-
-        assertThrows(
-                RuntimeException.class, () -> handler.handleRequest(TEST_INVOKE_EVENT, context));
-    }
-
-    @Test
-    void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException()
-            throws Json.JsonException {
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectRequest(
+    void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
+        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
                         new Subject(COMMON_SUBJECT_ID),
                         CLIENT_SESSION_ID,
                         session,
