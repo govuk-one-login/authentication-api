@@ -296,6 +296,12 @@ variable "dlq_alarm_threshold" {
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
 }
 
+variable "email-notification-dlq-threshold" {
+  default     = 30
+  type        = number
+  description = "The number of messages on the email notification DLQ before a Cloudwatch alarm is generated"
+}
+
 variable "waf_alarm_blocked_reqeuest_threshold" {
   default     = 1000
   type        = number
