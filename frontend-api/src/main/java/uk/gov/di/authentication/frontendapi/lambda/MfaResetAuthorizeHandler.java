@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -123,12 +122,9 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
             return generateApiGatewayProxyResponse(
                     200, new MfaResetResponse(ipvReverificationRequestURI));
-        } catch (JwtServiceException e) {
-            LOG.error("Error in JWT service", e);
+        } catch (Json.JsonException | RuntimeException e) {
+            LOG.error("Error building the IPV reverification request.", e);
             return generateApiGatewayProxyResponse(500, ERROR_1060.getMessage());
-        } catch (Json.JsonException e) {
-            LOG.error("Error serialising MFA reset response", e);
-            throw new RuntimeException(e);
         }
     }
 }

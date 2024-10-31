@@ -48,7 +48,7 @@ class MfaResetAuthorizeHandlerTest {
     private static final SerializationService objectMapper = SerializationService.getInstance();
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
-    private final IPVReverificationService IPVReverificationService =
+    private final IPVReverificationService ipvReverificationService =
             mock(IPVReverificationService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
@@ -97,7 +97,7 @@ class MfaResetAuthorizeHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        IPVReverificationService,
+                        ipvReverificationService,
                         auditService,
                         cloudwatchMetricsService);
     }
@@ -107,7 +107,7 @@ class MfaResetAuthorizeHandlerTest {
         final String TEST_REDIRECT_URI = "https://some.uri.gov.uk/authorize?request=x.y.z";
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
-        when(IPVReverificationService.buildIpvReverificationRedirectUri(
+        when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenReturn(TEST_REDIRECT_URI);
 
@@ -123,7 +123,7 @@ class MfaResetAuthorizeHandlerTest {
 
     @Test
     void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
-        when(IPVReverificationService.buildIpvReverificationRedirectUri(
+        when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenThrow(new JwtServiceException("SomeError"));
 
