@@ -89,7 +89,7 @@ Mappings:
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-dev
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
-      docAppEncryptionKeyId: KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs
+      docAppEncryptionKeyId: dcmaw-cri-stubs-build-INqHBvMYWmNodklvbpTCgf1DS10Fv5ic4_8LdoBNjAw
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
@@ -120,7 +120,7 @@ Mappings:
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-build
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
-      docAppEncryptionKeyId: KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs
+      docAppEncryptionKeyId: dcmaw-cri-stubs-build-INqHBvMYWmNodklvbpTCgf1DS10Fv5ic4_8LdoBNjAw
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
