@@ -43,7 +43,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -187,13 +186,11 @@ class AuthenticationCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
         usingValidClient();
+        withSuccessfulTokenResponse();
+        withSuccessfulUserInfoResponse();
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
         var response = handler.handleRequest(event, null);
 
@@ -204,13 +201,12 @@ class AuthenticationCallbackHandlerTest {
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
         verifyUserInfoRequest();
 
-        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
-        assertThat(
-                Session.AccountState.NEW,
-                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
-        assertTrue(sessionSaveCaptor.getAllValues().get(1).isAuthenticated());
-
+        verify(sessionService)
+                .storeOrUpdateSession(
+                        argThat(
+                                (s ->
+                                        s.isAuthenticated()
+                                                && s.isNewAccount() == Session.AccountState.NEW)));
         verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
         verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
         verify(cloudwatchMetricsService)
@@ -340,10 +336,10 @@ class AuthenticationCallbackHandlerTest {
     void shouldRedirectToFrontendErrorPageIfTokenRequestIsUnsuccessful() {
         usingValidSession();
         usingValidClientSession();
+        withUnsuccessfulTokenResponse();
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
 
         var response = handler.handleRequest(event, null);
 
@@ -366,9 +362,8 @@ class AuthenticationCallbackHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
+        withSuccessfulTokenResponse();
+        withUnsuccessfulUserInfoResponse();
 
         var response = handler.handleRequest(event, null);
 
@@ -392,8 +387,8 @@ class AuthenticationCallbackHandlerTest {
         usingValidClient();
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+        withSuccessfulTokenResponse();
+        withSuccessfulUserInfoResponse();
 
         handler.handleRequest(event, null);
 
@@ -412,9 +407,8 @@ class AuthenticationCallbackHandlerTest {
         @BeforeEach
         void setup() throws UnsuccessfulCredentialResponseException {
             mockedIdentityHelper = mockStatic(IdentityHelper.class);
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                    .thenReturn(USER_INFO);
+            withSuccessfulTokenResponse();
+            withSuccessfulUserInfoResponse();
             when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
             usingValidSession();
@@ -772,5 +766,22 @@ class AuthenticationCallbackHandlerTest {
         assertEquals(expectedUserInfoRequest.getURI(), userInfoRequest.getValue().getURI());
         assertEquals(
                 expectedUserInfoRequest.getHeaderMap(), userInfoRequest.getValue().getHeaderMap());
+    }
+
+    private void withSuccessfulUserInfoResponse() throws UnsuccessfulCredentialResponseException {
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+    }
+
+    private void withUnsuccessfulUserInfoResponse() throws UnsuccessfulCredentialResponseException {
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
+    }
+
+    private void withSuccessfulTokenResponse() {
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+    }
+
+    private void withUnsuccessfulTokenResponse() {
+        when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
     }
 }
