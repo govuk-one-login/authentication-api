@@ -12,7 +12,7 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
-import uk.gov.di.authentication.frontendapi.services.MfaResetIPVAuthorizationService;
+import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -48,8 +48,8 @@ class MfaResetAuthorizeHandlerTest {
     private static final SerializationService objectMapper = SerializationService.getInstance();
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
-    private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService =
-            mock(MfaResetIPVAuthorizationService.class);
+    private final IPVReverificationService IPVReverificationService =
+            mock(IPVReverificationService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
     private static final ClientSessionService clientSessionService =
@@ -97,7 +97,7 @@ class MfaResetAuthorizeHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        mfaResetIPVAuthorizationService,
+                        IPVReverificationService,
                         auditService,
                         cloudwatchMetricsService);
     }
@@ -107,7 +107,7 @@ class MfaResetAuthorizeHandlerTest {
         final String TEST_REDIRECT_URI = "https://some.uri.gov.uk/authorize?request=x.y.z";
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+        when(IPVReverificationService.buildIpvReverificationRedirectUri(
                         new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenReturn(TEST_REDIRECT_URI);
 
@@ -123,7 +123,7 @@ class MfaResetAuthorizeHandlerTest {
 
     @Test
     void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
-        when(mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+        when(IPVReverificationService.buildIpvReverificationRedirectUri(
                         new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenThrow(new JwtServiceException("SomeError"));
 
