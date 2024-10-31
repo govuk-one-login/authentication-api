@@ -1921,7 +1921,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Aborting user journey - P1 alarm. ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Aborting user journey - P1 alarm. ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/l/cp/7Z2cm5rQ"
       AlarmName: !Sub ${Environment}-authentication-callback-ais-error-abort-p1-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
