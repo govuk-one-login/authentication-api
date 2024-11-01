@@ -414,6 +414,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
+    public boolean isAuthenticatedFlagForIpvEnabled() {
+        return getFlagOrFalse("SET_AUTHENTICATED_FLAG_FOR_IPV");
+    }
+
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =
