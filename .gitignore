@@ -25,6 +25,7 @@ logs/
 # Approval Tests
 *.received.txt
 *.received.json
+**/.approval_tests_temp
 
 # Contract Tests
 /*/src/test/pact/
