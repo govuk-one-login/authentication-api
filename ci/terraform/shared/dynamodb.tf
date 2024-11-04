@@ -1,3 +1,7 @@
+locals {
+  deploy_unmigrated_users_index = var.environment != "production" || var.environment != "integration" ? ["1"] : []
+}
+
 resource "aws_dynamodb_table" "user_credentials_table" {
   name         = "${var.environment}-user-credentials"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
@@ -23,6 +27,14 @@ resource "aws_dynamodb_table" "user_credentials_table" {
     type = "N"
   }
 
+  dynamic "attribute" {
+    for_each = local.deploy_unmigrated_users_index
+    content {
+      name = "MigratedPassword"
+      type = "S"
+    }
+  }
+
   global_secondary_index {
     name            = "SubjectIDIndex"
     hash_key        = "SubjectID"
@@ -41,7 +53,7 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   dynamic "global_secondary_index" {
-    for_each = var.environment != "production" || var.environment != "integration" ? ["1"] : []
+    for_each = local.deploy_unmigrated_users_index
     content {
       name            = "UnmigratedGovukAccountUsers"
       hash_key        = "SubjectID"
