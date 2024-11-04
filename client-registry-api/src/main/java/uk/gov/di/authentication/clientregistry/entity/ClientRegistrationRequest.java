@@ -96,6 +96,10 @@ public class ClientRegistrationRequest {
     @Expose
     private String channel;
 
+    @SerializedName("max_age_enabled")
+    @Expose
+    private boolean maxAgeEnabled;
+
     public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
@@ -115,7 +119,8 @@ public class ClientRegistrationRequest {
             List<String> claims,
             String clientType,
             String idTokenSigningAlgorithm,
-            String channel) {
+            String channel,
+            boolean maxAgeEnabled) {
         this(
                 clientName,
                 redirectUris,
@@ -134,7 +139,8 @@ public class ClientRegistrationRequest {
                 clientType,
                 idTokenSigningAlgorithm,
                 null,
-                channel);
+                channel,
+                maxAgeEnabled);
     }
 
     public ClientRegistrationRequest(
@@ -155,7 +161,8 @@ public class ClientRegistrationRequest {
             String clientType,
             String idTokenSigningAlgorithm,
             List<String> clientLoCs,
-            String channel) {
+            String channel,
+            boolean maxAgeEnabled) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -186,6 +193,7 @@ public class ClientRegistrationRequest {
             this.clientLoCs = clientLoCs;
         }
         this.channel = channel;
+        this.maxAgeEnabled = maxAgeEnabled;
     }
 
     public String getClientName() {
@@ -262,5 +270,9 @@ public class ClientRegistrationRequest {
 
     public String getChannel() {
         return channel;
+    }
+
+    public boolean isMaxAgeEnabled() {
+        return maxAgeEnabled;
     }
 }
