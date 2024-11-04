@@ -90,7 +90,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final Subject INTERNAL_PAIRWISE_ID = new Subject();
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
     private static final Subject RP_PAIRWISE_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
@@ -135,7 +135,7 @@ class AuthenticationCallbackHandlerTest {
         when(UNSUCCESSFUL_TOKEN_RESPONSE.toErrorResponse())
                 .thenReturn(new TokenErrorResponse(new ErrorObject("1", TEST_ERROR_MESSAGE)));
         when(USER_INFO.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-        when(USER_INFO.getSubject()).thenReturn(INTERNAL_PAIRWISE_ID);
+        when(USER_INFO.getSubject()).thenReturn(new Subject(TEST_INTERNAL_COMMON_SUBJECT_ID));
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(), String.class))
                 .thenReturn(RP_PAIRWISE_ID.getValue());
@@ -237,7 +237,7 @@ class AuthenticationCallbackHandlerTest {
                                         .withPersistentSessionId(PERSISTENT_SESSION_ID)
                                         .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                         .withIpAddress("123.123.123.123")
-                                        .withUserId(INTERNAL_PAIRWISE_ID.getValue())
+                                        .withUserId(TEST_INTERNAL_COMMON_SUBJECT_ID)
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
                         eq(pair("new_account", true)),
@@ -252,7 +252,7 @@ class AuthenticationCallbackHandlerTest {
                                         .withPersistentSessionId(PERSISTENT_SESSION_ID)
                                         .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                         .withIpAddress("123.123.123.123")
-                                        .withUserId(INTERNAL_PAIRWISE_ID.getValue())
+                                        .withUserId(TEST_INTERNAL_COMMON_SUBJECT_ID)
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
                         eq(pair("internalSubjectId", AuditService.UNKNOWN)),
@@ -399,10 +399,13 @@ class AuthenticationCallbackHandlerTest {
 
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
-        assertThat(
+        assertEquals(
                 MFAMethodType.AUTH_APP.getValue(),
-                equalTo(orchSessionCaptor.getValue().getVerifiedMfaMethodType()));
+                orchSessionCaptor.getValue().getVerifiedMfaMethodType());
         assertEquals(RP_PAIRWISE_ID.getValue(), orchSessionCaptor.getValue().getRpPairwiseId());
+        assertEquals(
+                TEST_INTERNAL_COMMON_SUBJECT_ID,
+                orchSessionCaptor.getValue().getInternalCommonSubjectId());
     }
 
     @Nested

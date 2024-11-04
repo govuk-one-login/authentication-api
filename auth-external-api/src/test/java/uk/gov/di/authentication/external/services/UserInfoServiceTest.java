@@ -38,7 +38,7 @@ public class UserInfoServiceTest {
                     SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
     private static final String TEST_INTERNAL_SECTOR_URI = "https://test-internal-sector-uri";
     private static final String TEST_INTERNAL_SECTOR_HOST = "test-internal-sector-uri";
-    private static final String TEST_INTERNAL_PAIRWISE_ID =
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT.getValue(),
                     TEST_INTERNAL_SECTOR_HOST,
@@ -88,7 +88,7 @@ public class UserInfoServiceTest {
             String expectedSalt) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
 
-        assertEquals(TEST_INTERNAL_PAIRWISE_ID, actual.getSubject().getValue());
+        assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
         assertEquals(TEST_IS_NEW_ACCOUNT, actual.getClaim("new_account"));
         assertEquals(TEST_EMAIL, actual.getEmailAddress());
