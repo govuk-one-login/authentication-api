@@ -40,6 +40,18 @@ resource "aws_dynamodb_table" "user_credentials_table" {
     write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
+  dynamic "global_secondary_index" {
+    for_each = var.environment != "production" || var.environment != "integration" ? ["1"] : []
+    content {
+      name            = "UnmigratedGovukAccountUsers"
+      hash_key        = "SubjectID"
+      range_key       = "MigratedPassword"
+      projection_type = "KEYS_ONLY"
+      read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+      write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+    }
+  }
+
   server_side_encryption {
     enabled = true
   }
