@@ -413,7 +413,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .setVerifiedMfaMethodType(codeRequest.getMfaMethodType()));
 
         authSessionService.updateSession(
-                authSession.withVerifiedMfaMethodType(codeRequest.getMfaMethodType().getValue()));
+                authSession
+                        .withVerifiedMfaMethodType(codeRequest.getMfaMethodType().getValue())
+                        .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
 
         var clientId = userContext.getClientId();
 
