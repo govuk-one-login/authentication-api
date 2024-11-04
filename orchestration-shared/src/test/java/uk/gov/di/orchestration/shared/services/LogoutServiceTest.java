@@ -62,6 +62,7 @@ class LogoutServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -147,6 +148,7 @@ class LogoutServiceTest {
                 new LogoutService(
                         configurationService,
                         sessionService,
+                        orchSessionService,
                         dynamoClientService,
                         clientSessionService,
                         auditService,
