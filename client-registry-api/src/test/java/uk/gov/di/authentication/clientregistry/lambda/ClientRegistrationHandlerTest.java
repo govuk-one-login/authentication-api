@@ -132,7 +132,8 @@ class ClientRegistrationHandlerTest {
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                         "ES256",
                         emptyList(),
-                        Channel.WEB.getValue());
+                        Channel.WEB.getValue(),
+                        false);
     }
 
     @Test
@@ -172,7 +173,8 @@ class ClientRegistrationHandlerTest {
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                         "ES256",
                         emptyList(),
-                        Channel.WEB.getValue());
+                        Channel.WEB.getValue(),
+                        false);
     }
 
     @Test
@@ -212,7 +214,8 @@ class ClientRegistrationHandlerTest {
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                         "ES256",
                         emptyList(),
-                        Channel.WEB.getValue());
+                        Channel.WEB.getValue(),
+                        false);
     }
 
     @Test

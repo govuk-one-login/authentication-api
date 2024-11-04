@@ -33,7 +33,8 @@ public interface ClientService {
             String tokenAuthMethod,
             String idTokenSigningAlgorithm,
             List<String> clientLoCs,
-            String channel);
+            String channel,
+            boolean maxAgeEnabled);
 
     Optional<ClientRegistry> getClient(String clientId);
 
