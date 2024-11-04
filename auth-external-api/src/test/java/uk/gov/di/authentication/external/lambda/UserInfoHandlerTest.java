@@ -13,10 +13,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
@@ -88,6 +85,8 @@ class UserInfoHandlerTest {
         TEST_SUBJECT_USER_INFO.setPhoneNumber("0123456789");
         TEST_SUBJECT_USER_INFO.setClaim(
                 "verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
+        TEST_SUBJECT_USER_INFO.setClaim(
+                "current_credential_strength", CredentialTrustLevel.MEDIUM_LEVEL);
         when(accessTokenStore.getSubjectID()).thenReturn("testSubjectId");
     }
 
