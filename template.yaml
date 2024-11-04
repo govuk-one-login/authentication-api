@@ -1503,6 +1503,8 @@ Resources:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref BackChannelLogoutQueueWritePolicy
+        - !Ref OrchSessionTableReadAccessPolicy
+        - !Ref OrchSessionTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
