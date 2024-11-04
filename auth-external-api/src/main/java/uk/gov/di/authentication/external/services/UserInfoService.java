@@ -115,6 +115,13 @@ public class UserInfoService {
                     AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                     authSession.getVerifiedMfaMethodType());
         }
+        if (accessTokenInfo
+                .getClaims()
+                .contains(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
+                    authSession.getCurrentCredentialStrength());
+        }
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {
