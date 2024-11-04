@@ -233,13 +233,13 @@ public class AuthCodeHandler
 
             var subjectId = AuditService.UNKNOWN;
             var rpPairwiseId = AuditService.UNKNOWN;
-            String internalCommonPairwiseSubjectId;
+            String internalCommonSubjectSubjectId;
             if (docAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
-                internalCommonPairwiseSubjectId = clientSession.getDocAppSubjectId().getValue();
+                internalCommonSubjectSubjectId = clientSession.getDocAppSubjectId().getValue();
             } else {
                 authCodeResponseService.processVectorOfTrust(clientSession, dimensions);
-                internalCommonPairwiseSubjectId = session.getInternalCommonSubjectIdentifier();
+                internalCommonSubjectSubjectId = orchSession.getInternalCommonSubjectIdentifier();
                 subjectId = authCodeResponseService.getSubjectId(session);
                 rpPairwiseId =
                         authCodeResponseService.getRpPairwiseId(
@@ -261,7 +261,7 @@ public class AuthCodeHandler
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
                             .withSessionId(session.getSessionId())
-                            .withUserId(internalCommonPairwiseSubjectId)
+                            .withUserId(internalCommonSubjectSubjectId)
                             .withEmail(
                                     Optional.ofNullable(session.getEmailAddress())
                                             .orElse(AuditService.UNKNOWN))
