@@ -161,7 +161,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                 null,
                 emptyList(),
-                Channel.WEB.getValue());
+                Channel.WEB.getValue(),
+                false);
     }
 
     public void registerClient(
@@ -202,7 +203,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                 null,
                 clientLoCs,
-                Channel.WEB.getValue());
+                Channel.WEB.getValue(),
+                false);
     }
 
     public void registerClient(
@@ -244,7 +246,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientAuthMethod,
                 isTokenSigningAlgorithm,
                 emptyList(),
-                Channel.WEB.getValue());
+                Channel.WEB.getValue(),
+                false);
     }
 
     public void registerClient(
@@ -284,7 +287,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                 isTokenSigningAlgorithm,
                 emptyList(),
-                Channel.WEB.getValue());
+                Channel.WEB.getValue(),
+                false);
     }
 
     public boolean clientExists(String clientID) {

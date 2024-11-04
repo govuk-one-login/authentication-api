@@ -83,6 +83,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private String channel;
 
+    @SerializedName("max_age_enabled")
+    @Expose
+    private boolean maxAgeEnabled;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -159,6 +163,10 @@ public class UpdateClientConfigRequest {
 
     public String getChannel() {
         return channel;
+    }
+
+    public boolean getMaxAgeEnabled() {
+        return maxAgeEnabled;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -254,6 +262,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setChannel(String channel) {
         this.channel = channel;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setMaxAgeEnabled(boolean maxAgeEnabled) {
+        this.maxAgeEnabled = maxAgeEnabled;
         return this;
     }
 }
