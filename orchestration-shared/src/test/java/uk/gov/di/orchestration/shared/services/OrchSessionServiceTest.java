@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class OrchSessionServiceTest {
@@ -65,6 +66,18 @@ class OrchSessionServiceTest {
         assertThrows(
                 OrchSessionException.class,
                 () -> orchSessionService.updateSession(sessionToBeUpdated));
+    }
+
+    @Test
+    void deleteSessionThrowsOrchSessionExceptionWhenDeleteFails() {
+        var orchSession = withValidSession();
+        withFailedDelete(orchSession);
+
+        var exception =
+                assertThrows(
+                        OrchSessionException.class,
+                        () -> orchSessionService.deleteSession(SESSION_ID));
+        assertEquals("Error deleting orch session item", exception.getMessage());
     }
 
     @Test
@@ -144,6 +157,13 @@ class OrchSessionServiceTest {
         assertTrue(session.isEmpty());
     }
 
+    @Test
+    void shouldDeleteSessionFromDatabase() {
+        var existingSession = withValidSession();
+        orchSessionService.deleteSession(SESSION_ID);
+        verify(table).deleteItem(existingSession);
+    }
+
     private OrchSessionItem withValidSession() {
         OrchSessionItem existingSession = new OrchSessionItem(SESSION_ID).withTimeToLive(VALID_TTL);
         when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
@@ -153,6 +173,12 @@ class OrchSessionServiceTest {
     private void withExpiredSession() {
         when(table.getItem(SESSION_ID_PARTITION_KEY))
                 .thenReturn(new OrchSessionItem(SESSION_ID).withTimeToLive(EXPIRED_TTL));
+    }
+
+    private void withFailedDelete(OrchSessionItem orchSession) {
+        doThrow(DynamoDbException.builder().message("Failed to delete item").build())
+                .when(table)
+                .deleteItem(orchSession);
     }
 
     private void withFailedUpdate() {

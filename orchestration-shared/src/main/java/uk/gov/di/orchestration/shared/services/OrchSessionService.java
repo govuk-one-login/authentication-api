@@ -158,6 +158,14 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         return sanitiseBase64(sessionId).flatMap(id -> getSession(sessionId));
     }
 
+    public void deleteSession(String sessionId) {
+        try {
+            delete(sessionId);
+        } catch (Exception e) {
+            logAndThrowOrchSessionException("Error deleting orch session item", sessionId, e);
+        }
+    }
+
     private void logAndThrowOrchSessionException(String message, String sessionId, Exception e) {
         LOG.error("{}. Session ID: {}. Error message: {}", message, sessionId, e.getMessage());
         throw new OrchSessionException(message);
