@@ -12,7 +12,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   dimensions = {
     QueueName = aws_sqs_queue.email_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/4164649233/BAU+Daytime+Support+Hygiene+and+Optimisation+Rota#SUP-7%3A-Resolve-DLQ-messages"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
 
