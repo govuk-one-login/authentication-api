@@ -14,6 +14,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -61,6 +62,9 @@ class UserInfoHandlerTest {
     private final Session testSession = new Session(sessionId);
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(sessionId);
     private final SerializationService objectMapper = SerializationService.getInstance();
+    private final String testVerifiedMfaMethodType = MFAMethodType.AUTH_APP.getValue();
+    private final CredentialTrustLevel testCurrentCredentialStrength =
+            CredentialTrustLevel.MEDIUM_LEVEL;
 
     @BeforeEach
     public void setUp() {
@@ -86,8 +90,9 @@ class UserInfoHandlerTest {
 
         TEST_SUBJECT_USER_INFO.setEmailAddress("test@test.com");
         TEST_SUBJECT_USER_INFO.setPhoneNumber("0123456789");
+        TEST_SUBJECT_USER_INFO.setClaim("verified_mfa_method_type", testVerifiedMfaMethodType);
         TEST_SUBJECT_USER_INFO.setClaim(
-                "verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
+                "current_credential_strength", testCurrentCredentialStrength);
         when(accessTokenStore.getSubjectID()).thenReturn("testSubjectId");
     }
 
@@ -112,6 +117,7 @@ class UserInfoHandlerTest {
         assertTrue(
                 response.getBody()
                         .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
+        assertClaimsInResponse(response.getBody());
 
         verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
         verify(auditService)
@@ -149,6 +155,7 @@ class UserInfoHandlerTest {
         assertTrue(
                 response.getBody()
                         .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
+        assertClaimsInResponse(response.getBody());
 
         verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
         verify(authSessionService)
@@ -372,5 +379,17 @@ class UserInfoHandlerTest {
     private void withNoAuthSession() {
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.empty());
+    }
+
+    private void assertClaimsInResponse(String responseBody) {
+        assertTrue(
+                responseBody.contains(
+                        String.format(
+                                "\"verified_mfa_method_type\":\"%s\"", testVerifiedMfaMethodType)));
+        assertTrue(
+                responseBody.contains(
+                        String.format(
+                                "\"current_credential_strength\":\"%s\"",
+                                testCurrentCredentialStrength)));
     }
 }

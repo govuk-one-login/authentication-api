@@ -11,8 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
+import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -126,6 +128,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getPhoneNumberVerified());
         assertNull(userInfoResponse.getClaim("salt"));
         assertNull(userInfoResponse.getClaim("verified_mfa_method_type"));
+        assertNull(userInfoResponse.getClaim("current_credential_strength"));
 
         assertThat(
                 authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),
@@ -158,6 +161,40 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(
                 authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),
                 equalTo(AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
+    void shouldReturnClaimsIfRequestedInTheToken() throws ParseException {
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
+        addTokenToDynamoAndCreateAssociatedUser(
+                accessTokenAsString,
+                List.of(
+                        OIDCScopeValue.EMAIL.getValue(),
+                        AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
+                        AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()),
+                true);
+        withAuthSessionNewAccount();
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        var userInfoResponse = UserInfo.parse(response.getBody());
+        assertThat(
+                userInfoResponse.getClaim(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue()),
+                equalTo("AUTH_APP"));
+        assertThat(
+                userInfoResponse.getClaim(
+                        AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()),
+                equalTo("MEDIUM_LEVEL"));
     }
 
     @Test
@@ -294,6 +331,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         .getSession(TEST_SESSION_ID)
                         .get()
                         .withAccountState(AuthSessionItem.AccountState.NEW)
-                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                        .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
     }
 }
