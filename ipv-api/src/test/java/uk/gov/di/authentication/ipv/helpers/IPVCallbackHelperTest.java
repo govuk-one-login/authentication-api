@@ -95,9 +95,9 @@ class IPVCallbackHelperTest {
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final Subject SUBJECT = new Subject("subject-id");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final String INTERNAL_PAIRWISE_ID = "internal-pairwise-id";
-    private static final String INTERNAL_PAIRWISE_ID_WITH_INTERVENTION =
-            "internal-pairwise-id-with-intervention";
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID_WITH_INTERVENTION =
+            "internal-common-subject-id-with-intervention";
     private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2 =
             List.of(
                     VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
@@ -157,12 +157,13 @@ class IPVCallbackHelperTest {
                         sessionService,
                         sqsClient,
                         oidcAPI);
-        when(accountInterventionService.getAccountIntervention(INTERNAL_PAIRWISE_ID, auditContext))
+        when(accountInterventionService.getAccountIntervention(
+                        TEST_INTERNAL_COMMON_SUBJECT_ID, auditContext))
                 .thenReturn(
                         new AccountIntervention(
                                 new AccountInterventionState(false, false, false, false)));
         when(accountInterventionService.getAccountIntervention(
-                        INTERNAL_PAIRWISE_ID_WITH_INTERVENTION, auditContext))
+                        TEST_INTERNAL_COMMON_SUBJECT_ID_WITH_INTERVENTION, auditContext))
                 .thenReturn(
                         new AccountIntervention(
                                 new AccountInterventionState(false, true, false, false)));

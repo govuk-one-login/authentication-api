@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AccountInterventionsDbServiceIntegrationTest {
 
-    private static final String INTERNAL_PAIRWISE_ID = "test-pairwise-id";
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
 
     @RegisterExtension
     protected static final AccountInterventionsStubStoreExtension dbExtension =
@@ -24,10 +24,11 @@ class AccountInterventionsDbServiceIntegrationTest {
 
     @Test
     void shouldReturnAccountInterventionsStoreWhereItExists() {
-        dbExtension.addAccountInterventions(INTERNAL_PAIRWISE_ID, true, true, true, true);
+        dbExtension.addAccountInterventions(
+                TEST_INTERNAL_COMMON_SUBJECT_ID, true, true, true, true);
         Optional<AccountInterventionsStore> accountInterventionsStore;
         accountInterventionsStore =
-                dynamoAuthCodeService.getAccountInterventions(INTERNAL_PAIRWISE_ID);
+                dynamoAuthCodeService.getAccountInterventions(TEST_INTERNAL_COMMON_SUBJECT_ID);
 
         assertTrue(accountInterventionsStore.isPresent());
         assertTrue(accountInterventionsStore.get().isBlocked());
@@ -40,7 +41,7 @@ class AccountInterventionsDbServiceIntegrationTest {
     void shouldReturnNoneWhereThePairwiseIdDoesNotExist() {
         dbExtension.addAccountInterventions("anotherPairwiseId", true, true, true, true);
         var accountInterventionsStore =
-                dynamoAuthCodeService.getAccountInterventions(INTERNAL_PAIRWISE_ID);
+                dynamoAuthCodeService.getAccountInterventions(TEST_INTERNAL_COMMON_SUBJECT_ID);
 
         assertTrue(accountInterventionsStore.isEmpty());
     }
