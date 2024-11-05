@@ -43,6 +43,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -187,6 +188,7 @@ class AuthenticationCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
         usingValidClient();
+        withAuthenticatedFlagForIPV(false);
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
@@ -204,12 +206,7 @@ class AuthenticationCallbackHandlerTest {
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
         verifyUserInfoRequest();
 
-        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
-        assertThat(
-                Session.AccountState.NEW,
-                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
-        assertTrue(sessionSaveCaptor.getAllValues().get(1).isAuthenticated());
+        assertSessionUpdatedAuthJourney(false);
 
         verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
         verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
@@ -260,6 +257,26 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("rpPairwiseId", RP_PAIRWISE_ID.getValue())),
                         eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())),
                         eq(pair("nonce", RP_NONCE.getValue())));
+    }
+
+    @Test
+    void shouldStillSaveSameSessionValuesWhenSetAuthenticatedFlagForIPVEnabled()
+            throws UnsuccessfulCredentialResponseException {
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        withAuthenticatedFlagForIPV(true);
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        handler.handleRequest(event, null);
+
+        assertSessionUpdatedAuthJourney(true);
     }
 
     @Test
@@ -406,6 +423,84 @@ class AuthenticationCallbackHandlerTest {
         assertEquals(
                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                 orchSessionCaptor.getValue().getInternalCommonSubjectId());
+    }
+
+    @Nested
+    class SetAuthenticatedForIpvFeatureFlag {
+        private static MockedStatic<IdentityHelper> mockedIdentityHelper;
+
+        @BeforeEach
+        void setup() throws UnsuccessfulCredentialResponseException {
+            mockedIdentityHelper = mockStatic(IdentityHelper.class);
+
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
+            when(configurationService.isAccountInterventionServiceActionEnabled())
+                    .thenReturn(false);
+            session.setAuthenticated(false);
+        }
+
+        @AfterEach
+        void afterEach() {
+            mockedIdentityHelper.close();
+        }
+
+        @Test
+        void shouldSetAuthenticatedWhenFlagEnabledForIpvJourney()
+                throws UnsuccessfulCredentialResponseException {
+            withAuthenticatedFlagForIPV(true);
+            usingValidSession();
+            usingValidClientSession();
+            usingValidClient();
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            identityJourney();
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            handler.handleRequest(event, null);
+
+            var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
+            verify(sessionService, times(1)).storeOrUpdateSession(sessionSaveCaptor.capture());
+            assertTrue(sessionSaveCaptor.getValue().isAuthenticated());
+            verify(initiateIPVAuthorisationService)
+                    .sendRequestToIPV(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldNotSetAuthenticatedForIpvJourneyWhenFlagIsFalse()
+                throws UnsuccessfulCredentialResponseException {
+            withAuthenticatedFlagForIPV(false);
+            usingValidSession();
+            usingValidClientSession();
+            usingValidClient();
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            identityJourney();
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            handler.handleRequest(event, null);
+
+            var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
+            verify(sessionService, times(1)).storeOrUpdateSession(sessionSaveCaptor.capture());
+            assertFalse(sessionSaveCaptor.getAllValues().get(0).isAuthenticated());
+            verify(initiateIPVAuthorisationService)
+                    .sendRequestToIPV(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+        }
+
+        private void identityJourney() {
+            when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
+                    .thenReturn(true);
+        }
     }
 
     @Nested
@@ -775,5 +870,26 @@ class AuthenticationCallbackHandlerTest {
         assertEquals(expectedUserInfoRequest.getURI(), userInfoRequest.getValue().getURI());
         assertEquals(
                 expectedUserInfoRequest.getHeaderMap(), userInfoRequest.getValue().getHeaderMap());
+    }
+
+    private void assertSessionUpdatedAuthJourney(boolean setAuthenticatedFlagForIPV) {
+        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
+        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
+        assertThat(
+                sessionSaveCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
+                equalTo(CredentialTrustLevel.LOW_LEVEL));
+        assertThat(
+                Session.AccountState.NEW,
+                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
+        if (setAuthenticatedFlagForIPV) {
+            assertTrue(sessionSaveCaptor.getAllValues().get(0).isAuthenticated());
+        } else {
+            assertTrue(sessionSaveCaptor.getAllValues().get(1).isAuthenticated());
+        }
+    }
+
+    private void withAuthenticatedFlagForIPV(boolean setAuthenticatedFlagForIPV) {
+        when(configurationService.isAuthenticatedFlagForIpvEnabled())
+                .thenReturn(setAuthenticatedFlagForIPV);
     }
 }
