@@ -379,11 +379,19 @@ public class AuthenticationCallbackHandler
 
                 Boolean newAccount =
                         userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
-                AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
-                OrchSessionItem.AccountState orchAccountState =
-                        newAccount
-                                ? OrchSessionItem.AccountState.NEW
-                                : OrchSessionItem.AccountState.EXISTING;
+                AccountState accountState;
+                OrchSessionItem.AccountState orchAccountState;
+
+                if (newAccount == null) {
+                    accountState = AccountState.UNKNOWN;
+                    orchAccountState = OrchSessionItem.AccountState.UNKNOWN;
+                } else {
+                    accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
+                    orchAccountState =
+                            newAccount
+                                    ? OrchSessionItem.AccountState.NEW
+                                    : OrchSessionItem.AccountState.EXISTING;
+                }
 
                 boolean setAuthenticatedFlagForIPV =
                         configurationService.isAuthenticatedFlagForIpvEnabled();
