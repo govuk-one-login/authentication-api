@@ -14,7 +14,8 @@ public enum AuthUserInfoClaims {
     PHONE_NUMBER("phone_number"),
     PHONE_VERIFIED("phone_number_verified"),
     SALT("salt"),
-    VERIFIED_MFA_METHOD_TYPE("verified_mfa_method_type");
+    VERIFIED_MFA_METHOD_TYPE("verified_mfa_method_type"),
+    CURRENT_CREDENTIAL_STRENGTH("current_credential_strength");
 
     private final String value;
 
