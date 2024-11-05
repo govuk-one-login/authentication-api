@@ -67,3 +67,5 @@ orch_frontend_api_gateway_integration_enabled = false
 orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-redirect"
 
 authorize_protected_subnet_enabled = true
+
+oidc_cloudfront_enabled = false

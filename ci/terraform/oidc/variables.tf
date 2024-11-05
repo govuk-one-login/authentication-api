@@ -719,6 +719,12 @@ variable "call_ticf_cri" {
   description = "Feature flag to switch on invoking TICF CRI lambda."
 }
 
+variable "oidc_cloudfront_enabled" {
+  type        = bool
+  default     = true
+  description = "Feature flag to disable cloudfront in envirometns that don't support it (authdev1 / authdev2)."
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
