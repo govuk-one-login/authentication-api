@@ -43,8 +43,7 @@ public class UserInfoService {
 
         var userInfo = new UserInfo(internalPairwiseId);
         addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
-        addClaimsFromSession(authSession, userInfo);
-        addClaimsFromUserProfile(userProfile, userInfo);
+        addClaimsFromSession(accessTokenInfo, authSession, userInfo);
         return userInfo;
     }
 
@@ -83,6 +82,9 @@ public class UserInfoService {
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue())) {
             userInfo.setClaim("local_account_id", userProfile.getSubjectID());
         }
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL.getValue())) {
+            userInfo.setEmailAddress(userProfile.getEmail());
+        }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL_VERIFIED.getValue())) {
             userInfo.setEmailVerified(userProfile.isEmailVerified());
         }
@@ -98,14 +100,15 @@ public class UserInfoService {
         }
     }
 
-    private void addClaimsFromSession(AuthSessionItem authSession, UserInfo userInfo) {
-        userInfo.setClaim(
-                AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
-                authSession.getVerifiedMfaMethodType());
-    }
-
-    private void addClaimsFromUserProfile(UserProfile userProfile, UserInfo userInfo) {
-        userInfo.setEmailAddress(userProfile.getEmail());
+    private void addClaimsFromSession(
+            AccessTokenStore accessTokenInfo, AuthSessionItem authSession, UserInfo userInfo) {
+        if (accessTokenInfo
+                .getClaims()
+                .contains(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
+                    authSession.getVerifiedMfaMethodType());
+        }
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {

@@ -125,9 +125,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getPhoneNumber());
         assertNull(userInfoResponse.getPhoneNumberVerified());
         assertNull(userInfoResponse.getClaim("salt"));
-        assertThat(
-                userInfoResponse.getClaim("verified_mfa_method_type"),
-                equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertNull(userInfoResponse.getClaim("verified_mfa_method_type"));
 
         assertThat(
                 authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),

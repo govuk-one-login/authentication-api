@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -49,6 +50,7 @@ public class UserInfoServiceTest {
     private static final boolean TEST_EMAIL_VERIFIED = true;
     private static final String TEST_PHONE = "test-phone";
     private static final boolean TEST_PHONE_VERIFIED = true;
+    private static final String TEST_VERIFIED_MFA_METHOD_TYPE = MFAMethodType.EMAIL.getValue();
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
     private static final UserProfile TEST_USER_PROFILE =
@@ -61,7 +63,8 @@ public class UserInfoServiceTest {
                     .withPhoneNumber(TEST_PHONE)
                     .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
                     .withSalt(TEST_SALT);
-    private static final AuthSessionItem authSession = new AuthSessionItem();
+    private static final AuthSessionItem authSession =
+            new AuthSessionItem().withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE);
 
     @BeforeEach
     public void setUp() {
@@ -82,24 +85,27 @@ public class UserInfoServiceTest {
             String expectedLegacySubjectId,
             String expectedPublicSubjectId,
             String expectedLocalAccountId,
+            String expectedEmailAddress,
             Boolean expectedEmailVerified,
             String expectedPhoneNumber,
             Boolean expectedPhoneNumberVerified,
-            String expectedSalt) {
+            String expectedSalt,
+            String expectedVerifiedMfaMethod) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
         assertEquals(TEST_IS_NEW_ACCOUNT, actual.getClaim("new_account"));
-        assertEquals(TEST_EMAIL, actual.getEmailAddress());
 
         assertEquals(expectedLegacySubjectId, actual.getClaim("legacy_subject_id"));
         assertEquals(expectedPublicSubjectId, actual.getClaim("public_subject_id"));
         assertEquals(expectedLocalAccountId, actual.getClaim("local_account_id"));
+        assertEquals(expectedEmailAddress, actual.getEmailAddress());
         assertEquals(expectedEmailVerified, actual.getEmailVerified());
         assertEquals(expectedPhoneNumber, actual.getPhoneNumber());
         assertEquals(expectedPhoneNumberVerified, actual.getPhoneNumberVerified());
         assertEquals(expectedSalt, actual.getClaim("salt"));
+        assertEquals(expectedVerifiedMfaMethod, actual.getClaim("verified_mfa_method_type"));
         assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
     }
 
@@ -113,6 +119,8 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         null,
+                        null,
+                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -120,7 +128,9 @@ public class UserInfoServiceTest {
                         TEST_LEGACY_SUBJECT_ID,
                         null,
                         null,
+                        TEST_EMAIL,
                         TEST_EMAIL_VERIFIED,
+                        null,
                         null,
                         null,
                         null),
@@ -134,14 +144,17 @@ public class UserInfoServiceTest {
                                         "email_verified",
                                         "phone_number",
                                         "phone_number_verified",
-                                        "salt")),
+                                        "salt",
+                                        "verified_mfa_method_type")),
                         TEST_LEGACY_SUBJECT_ID,
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
+                        TEST_EMAIL,
                         TEST_EMAIL_VERIFIED,
                         TEST_PHONE,
                         TEST_PHONE_VERIFIED,
-                        bytesToBase64(TEST_SALT)));
+                        bytesToBase64(TEST_SALT),
+                        TEST_VERIFIED_MFA_METHOD_TYPE));
     }
 
     private static AccessTokenStore getMockAccessTokenStore(List<String> claims) {
