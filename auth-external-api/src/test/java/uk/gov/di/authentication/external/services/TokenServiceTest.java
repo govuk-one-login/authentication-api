@@ -41,7 +41,7 @@ class TokenServiceTest {
 
         assertNotNull(httpResponse);
         assertEquals(400, httpResponse.getStatusCode());
-        assertTrue(httpResponse.getContent().contains("invalid_request"));
-        assertTrue(httpResponse.getContent().contains("Invalid request parameters"));
+        assertTrue(httpResponse.getBody().contains("invalid_request"));
+        assertTrue(httpResponse.getBody().contains("Invalid request parameters"));
     }
 }

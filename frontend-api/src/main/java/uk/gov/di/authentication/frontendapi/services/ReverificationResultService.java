@@ -77,6 +77,8 @@ public class ReverificationResultService {
                 codeGrant,
                 null,
                 null,
+                null,
+                null,
                 Map.of(
                         "client_id",
                         singletonList(configurationService.getIPVAuthorisationClientId())));
@@ -96,7 +98,7 @@ public class ReverificationResultService {
                     HTTPResponse response = tokenResponse.toHTTPResponse();
                     LOG.warn(
                             "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
-                            response.getStatusCode(), count, response.getContent());
+                            response.getStatusCode(), count, response.getBody());
                 }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
@@ -124,14 +126,14 @@ public class ReverificationResultService {
                 if (!response.indicatesSuccess()) {
                     LOG.warn(
                             "Unsuccessful %s response from IPV reverification endpoint on attempt %d: %s ",
-                            response.getStatusCode(), count, response.getContent());
+                            response.getStatusCode(), count, response.getBody());
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
                 throw new UnsuccessfulReverificationResponseException(
                         String.format(
                                 "Error %s when attempting to call IPV reverification endpoint: %s",
-                                response.getStatusCode(), response.getContent()));
+                                response.getStatusCode(), response.getBody()));
             }
             LOG.info("Received successful reverification response");
             return response;

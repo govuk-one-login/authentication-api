@@ -172,7 +172,7 @@ public class IpvUserIdentityTest {
     private UserInfo getUserInfoFromSuccessfulUserIdentityHttpResponse() throws ParseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(
+        userInfoHTTPResponse.setBody(
                 "{"
                         + " \""
                         + SUB_FIELD

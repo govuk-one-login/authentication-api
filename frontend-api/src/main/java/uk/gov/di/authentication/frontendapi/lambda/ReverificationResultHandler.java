@@ -118,7 +118,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             LOG.info("Successful IPV ReverificationResult");
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED, auditContext);
-            return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
+            return generateApiGatewayProxyResponse(200, reverificationResult.getBody());
         } catch (UnsuccessfulReverificationResponseException e) {
             LOG.error("Error getting reverification result", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1059);

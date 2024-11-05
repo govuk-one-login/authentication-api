@@ -83,7 +83,7 @@ class ReverificationResultHandlerTest {
         void shouldReturn200AndIPVResponseOnValidRequest()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContent(
+            userInfo.setBody(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
@@ -93,14 +93,14 @@ class ReverificationResultHandlerTest {
             var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
 
             assertThat(result, hasStatus(200));
-            assertThat(result, hasBody(userInfo.getContent()));
+            assertThat(result, hasBody(userInfo.getBody()));
         }
 
         @Test
         void shouldSubmitSuccessfulTokenReceivedAuditEvent()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContent(
+            userInfo.setBody(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
@@ -117,7 +117,7 @@ class ReverificationResultHandlerTest {
         void shouldSubmitSuccessfulReverificationInfoAuditEvent()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContent(
+            userInfo.setBody(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
@@ -195,7 +195,7 @@ class ReverificationResultHandlerTest {
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return TokenResponse.parse(tokenHTTPResponse);
     }
@@ -209,7 +209,7 @@ class ReverificationResultHandlerTest {
 
         var tokenHTTPResponse = new HTTPResponse(400);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return TokenErrorResponse.parse(tokenHTTPResponse);
     }
