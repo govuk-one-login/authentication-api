@@ -59,7 +59,8 @@ public class UserInfoService {
                         SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
 
         userInfo.setClaim("rp_pairwise_id", rpPairwiseId);
-        userInfo.setClaim("new_account", accessTokenInfo.getIsNewAccount());
+        userInfo.setClaim(
+                AuthUserInfoClaims.NEW_ACCOUNT.getValue(), accessTokenInfo.getIsNewAccount());
         userInfo.setClaim("password_reset_time", accessTokenInfo.getPasswordResetTime());
 
         // TODO: ATO-1129: delete temporary logs

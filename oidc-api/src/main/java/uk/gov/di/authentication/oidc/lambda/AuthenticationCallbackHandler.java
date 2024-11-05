@@ -377,7 +377,8 @@ public class AuthenticationCallbackHandler
                                 != null);
                 //
 
-                Boolean newAccount = userInfo.getBooleanClaim("new_account");
+                Boolean newAccount =
+                        userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
                 AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
                 OrchSessionItem.AccountState orchAccountState =
                         newAccount
