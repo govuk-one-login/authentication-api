@@ -2689,6 +2689,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
+        - !Ref OrchSessionTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3295,6 +3296,7 @@ Resources:
         - !Ref SpotRequestQueueWritePolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
+        - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
