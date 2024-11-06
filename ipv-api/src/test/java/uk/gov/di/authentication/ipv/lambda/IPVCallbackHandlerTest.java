@@ -27,11 +27,13 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
@@ -377,8 +379,18 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any()))
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        anyBoolean()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 REDIRECT_URI, null, null, null, null, null, null));
@@ -399,6 +411,90 @@ class IPVCallbackHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertEquals(expectedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
+    }
+
+    @Nested
+    class SetIsNewAccountInOrchSessionFeatureFlag {
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldCallHelperWithFeatureFlag(boolean isFlagEnabled)
+                throws UnsuccessfulCredentialResponseException,
+                        IpvCallbackException,
+                        UserNotFoundException {
+            withSetIsNewAccountInOrchSession(isFlagEnabled);
+            usingValidSession();
+            var claimsSetRequest =
+                    new ClaimsSetRequest()
+                            .add(ValidClaims.ADDRESS.getValue())
+                            .add(ValidClaims.PASSPORT.getValue())
+                            .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
+
+            var oidcValidClaimsRequestWithoutReturnCode =
+                    new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create(REDIRECT_URI.toString()),
+                                    OAuth2Error.ACCESS_DENIED,
+                                    RP_STATE,
+                                    null)
+                            .toURI();
+
+            var userIdentityUserInfo =
+                    new UserInfo(
+                            new JSONObject(
+                                    Map.of(
+                                            "sub",
+                                            "sub-val",
+                                            "vot",
+                                            "P0",
+                                            "vtm",
+                                            OIDC_BASE_URL + "/trustmark",
+                                            "https://vocab.account.gov.uk/v1/returnCode",
+                                            List.of(Map.of("code", "A")))));
+            when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
+                    .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
+            when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            eq(isFlagEnabled)))
+                    .thenReturn(
+                            new AuthenticationSuccessResponse(
+                                    REDIRECT_URI, null, null, null, null, null, null));
+            var clientSession =
+                    new ClientSession(
+                            generateAuthRequest(oidcValidClaimsRequestWithoutReturnCode)
+                                    .toParameters(),
+                            null,
+                            List.of(
+                                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                            CLIENT_NAME);
+            when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                    .thenReturn(Optional.of(clientSession));
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    userIdentityUserInfo, generateClientRegistryNoClaims()));
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    expectedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
+        }
+
+        void withSetIsNewAccountInOrchSession(boolean isFlagEnabled) {
+            when(configService.isSetNewAccountInOrchSessionEnabled()).thenReturn(isFlagEnabled);
+        }
     }
 
     @Test
@@ -450,8 +546,18 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any()))
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        anyBoolean()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));
