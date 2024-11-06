@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -67,6 +68,7 @@ public class IPVCallbackHelper {
     private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
     private final OidcAPI oidcAPI;
+    private final OrchSessionService orchSessionService;
 
     public IPVCallbackHelper(ConfigurationService configurationService) {
         this.auditService = new AuditService(configurationService);
@@ -85,6 +87,7 @@ public class IPVCallbackHelper {
         this.authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
         this.oidcAPI = new OidcAPI(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public IPVCallbackHelper(
@@ -107,6 +110,7 @@ public class IPVCallbackHelper {
         this.authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
         this.oidcAPI = new OidcAPI(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public IPVCallbackHelper(
@@ -120,7 +124,8 @@ public class IPVCallbackHelper {
             SerializationService objectMapper,
             SessionService sessionService,
             AwsSqsClient sqsClient,
-            OidcAPI oidcApi) {
+            OidcAPI oidcApi,
+            OrchSessionService orchSessionService) {
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
@@ -132,6 +137,7 @@ public class IPVCallbackHelper {
         this.sessionService = sessionService;
         this.sqsClient = sqsClient;
         this.oidcAPI = oidcApi;
+        this.orchSessionService = orchSessionService;
     }
 
     public APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
@@ -193,7 +199,8 @@ public class IPVCallbackHelper {
             String internalPairwiseSubjectId,
             UserInfo userIdentityUserInfo,
             String ipAddress,
-            String persistentSessionId)
+            String persistentSessionId,
+            boolean isSetIsNewAccountOrchSessionEnabled)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
@@ -252,7 +259,12 @@ public class IPVCallbackHelper {
                 clientSession.getClientName(),
                 isTestJourney);
 
-        authCodeResponseService.saveSession(false, sessionService, session);
+        if (isSetIsNewAccountOrchSessionEnabled) {
+            authCodeResponseService.saveSession(
+                    false, sessionService, session, orchSessionService, orchSession);
+        } else {
+            authCodeResponseService.saveSession(false, sessionService, session);
+        }
 
         return authenticationResponse;
     }
