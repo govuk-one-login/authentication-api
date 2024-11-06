@@ -375,6 +375,10 @@ public class AuthenticationCallbackHandler
                         "is verified_mfa_method_type attached to auth-external-api userinfo response: {}",
                         userInfo.getClaim(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())
                                 != null);
+                LOG.info(
+                        "is current_credential_strength attached to auth-external-api userinfo response: {}",
+                        userInfo.getClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())
+                                != null);
                 //
 
                 Boolean newAccount =
