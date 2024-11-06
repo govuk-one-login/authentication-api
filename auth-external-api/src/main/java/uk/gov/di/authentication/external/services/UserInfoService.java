@@ -71,6 +71,11 @@ public class UserInfoService {
                 accessTokenInfo
                         .getClaims()
                         .contains(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue()));
+        LOG.info(
+                "is current_credential_strength a requested claim: {}",
+                accessTokenInfo
+                        .getClaims()
+                        .contains(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()));
         //
 
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue())) {

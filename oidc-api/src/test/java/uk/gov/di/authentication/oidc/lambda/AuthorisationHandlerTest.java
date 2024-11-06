@@ -339,7 +339,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBody() {
+        void shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBody()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
             var orchClientId = "orchestration-client-id";
             when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
             when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
@@ -366,9 +367,13 @@ class AuthorisationHandlerTest {
                     equalTo(ResponseType.CODE.toString()));
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
+            var expectedClaimSetRequest =
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"email_verified\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null}}");
+            var actualClaimSetRequest =
+                    ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
-                    "{\"userinfo\":{\"email_verified\":null,\"verified_mfa_method_type\":null,\"email\":null}}",
-                    captor.getValue().getClaim("claim"));
+                    expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
         }
 
         @Test
@@ -403,7 +408,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null}}");
+                            "{\"userinfo\":{\"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -442,7 +447,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null}}");
+                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -1625,7 +1630,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null}}");
+                            "{\"userinfo\":{\"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
@@ -1647,7 +1652,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"legacy_subject_id\":null,\"verified_mfa_method_type\":null,\"email\":null}}");
+                            "{\"userinfo\":{\"legacy_subject_id\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
