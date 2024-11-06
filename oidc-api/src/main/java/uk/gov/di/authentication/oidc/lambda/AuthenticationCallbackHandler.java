@@ -405,8 +405,8 @@ public class AuthenticationCallbackHandler
                 user =
                         user.withUserId(userInfo.getSubject().getValue())
                                 .withEmail(
-                                        Optional.of(userSession)
-                                                .map(Session::getEmailAddress)
+                                        Optional.of(userInfo)
+                                                .map(UserInfo::getEmailAddress)
                                                 .orElse(UNKNOWN))
                                 .withPhone(
                                         Optional.of(userInfo)
@@ -429,9 +429,9 @@ public class AuthenticationCallbackHandler
                                 userSession.getSessionId(),
                                 clientId,
                                 userInfo.getSubject().getValue(),
-                                Objects.isNull(userSession.getEmailAddress())
+                                Objects.isNull(userInfo.getEmailAddress())
                                         ? UNKNOWN
-                                        : userSession.getEmailAddress(),
+                                        : userInfo.getEmailAddress(),
                                 IpAddressHelper.extractIpAddress(input),
                                 Objects.isNull(userInfo.getPhoneNumber())
                                         ? UNKNOWN
@@ -502,7 +502,7 @@ public class AuthenticationCallbackHandler
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
-                                clientSessionId, userSession.getEmailAddress(), clientSession);
+                                clientSessionId, userInfo.getEmailAddress(), clientSession);
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
