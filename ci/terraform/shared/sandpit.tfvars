@@ -36,9 +36,11 @@ stub_rp_clients = [
     sector_identifier_uri = "https://doc-app-rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/signed-out",
+      "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "1"
     client_type                     = "app"
