@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -162,6 +163,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertOrchSessionIsUpdatedWithAuthTime();
     }
 
     @Test
@@ -808,6 +810,15 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(OrchSessionItem.AccountState.NEW, equalTo(orchSession.get().getIsNewAccount()));
     }
 
+    private void assertOrchSessionIsUpdatedWithAuthTime() {
+        Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+        var session = orchSession.get();
+        long secondNow = NowHelper.now().toInstant().getEpochSecond();
+        assertTrue(session.getAuthTime() > secondNow - 5L);
+        assertTrue(session.getAuthTime() < secondNow + 5L);
+    }
+
     private void setupClientReg(boolean identityVerificationSupported) {
         clientStore.registerClient(
                 CLIENT_ID,
@@ -1000,6 +1011,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Override
         public boolean abortOnAccountInterventionsErrorResponse() {
             return this.abortOnAisErrorResponse;
+        }
+
+        @Override
+        public boolean isAuthenticatedFlagForIpvEnabled() {
+            return true;
         }
     }
 

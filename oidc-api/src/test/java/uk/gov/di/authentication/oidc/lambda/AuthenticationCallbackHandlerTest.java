@@ -31,6 +31,7 @@ import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.*;
 
 import java.net.URI;
@@ -501,6 +502,27 @@ class AuthenticationCallbackHandlerTest {
             when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
                     .thenReturn(true);
         }
+    }
+
+    @Test
+    void shouldSetAuthTimeInOrchSession() throws UnsuccessfulCredentialResponseException {
+        withAuthenticatedFlagForIPV(true);
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+
+        handler.handleRequest(event, null);
+
+        var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
+        verify(orchSessionService, times(2)).updateSession(captor.capture());
+        long secondNow = NowHelper.now().toInstant().getEpochSecond();
+        assertTrue(captor.getAllValues().get(0).getAuthTime() > secondNow - 5L);
+        assertTrue(captor.getAllValues().get(0).getAuthTime() < secondNow + 5L);
     }
 
     @Nested

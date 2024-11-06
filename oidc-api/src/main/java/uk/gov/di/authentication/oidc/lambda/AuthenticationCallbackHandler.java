@@ -47,6 +47,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -399,6 +400,8 @@ public class AuthenticationCallbackHandler
                 if (setAuthenticatedFlagForIPV) {
                     sessionService.storeOrUpdateSession(
                             userSession.setNewAccount(accountState).setAuthenticated(true));
+                    orchSessionService.updateSession(
+                            orchSession.withAuthTime(NowHelper.now().toInstant().getEpochSecond()));
                 } else {
                     sessionService.storeOrUpdateSession(userSession.setNewAccount(accountState));
                 }
