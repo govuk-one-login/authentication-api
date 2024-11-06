@@ -188,14 +188,15 @@ class AuthCodeHandlerTest {
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(true, sessionService, session);
+                .saveSession(true, sessionService, session, orchSessionService, orchSession);
         doAnswer(
                         (i) -> {
                             session.setAuthenticated(true).setNewAccount(EXISTING);
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(false, sessionService, session);
+                .saveSession(false, sessionService, session, orchSessionService, orchSession);
+        when(configurationService.isSetNewAccountInOrchSessionEnabled()).thenReturn(true);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -291,7 +292,12 @@ class AuthCodeHandlerTest {
         assertTrue(session.isAuthenticated());
 
         verify(authCodeResponseService, times(1))
-                .saveSession(anyBoolean(), eq(sessionService), eq(session));
+                .saveSession(
+                        anyBoolean(),
+                        eq(sessionService),
+                        eq(session),
+                        eq(orchSessionService),
+                        eq(orchSession));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -402,7 +408,12 @@ class AuthCodeHandlerTest {
         assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(session.isAuthenticated());
         verify(authCodeResponseService, times(1))
-                .saveSession(anyBoolean(), eq(sessionService), eq(session));
+                .saveSession(
+                        anyBoolean(),
+                        eq(sessionService),
+                        eq(session),
+                        any(OrchSessionService.class),
+                        any(OrchSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -571,6 +582,134 @@ class AuthCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1018));
 
         verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldUpdateOrchSessionWhenFlagEnabled() throws JOSEException, ClientNotFoundException {
+        when(configurationService.isSetNewAccountInOrchSessionEnabled()).thenReturn(true);
+
+        var authorizationCode = new AuthorizationCode();
+        var authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+
+        session.setNewAccount(AccountState.UNKNOWN);
+        orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
+        var authSuccessResponse =
+                new AuthenticationSuccessResponse(
+                        authRequest.getRedirectionURI(),
+                        authorizationCode,
+                        null,
+                        null,
+                        authRequest.getState(),
+                        null,
+                        authRequest.getResponseMode());
+
+        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        CLIENT_SESSION_ID, null, clientSession))
+                .thenReturn(authorizationCode);
+        when(authCodeResponseService.getDimensions(
+                        eq(session),
+                        eq(orchSession),
+                        eq(clientSession),
+                        eq(CLIENT_ID.getValue()),
+                        anyBoolean(),
+                        eq(true)))
+                .thenReturn(
+                        Map.of(
+                                "Account",
+                                "UNKNOWN",
+                                "Environment",
+                                "unit-test",
+                                "Client",
+                                CLIENT_ID.getValue(),
+                                "IsTest",
+                                "false",
+                                "IsDocApp",
+                                Boolean.toString(true),
+                                "ClientName",
+                                CLIENT_NAME));
+        when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authSuccessResponse);
+
+        var response = generateApiRequest();
+
+        assertThat(response, hasStatus(200));
+        verify(authCodeResponseService, times(1))
+                .saveSession(
+                        anyBoolean(),
+                        eq(sessionService),
+                        eq(session),
+                        any(OrchSessionService.class),
+                        any(OrchSessionItem.class));
+    }
+
+    @Test
+    void shouldNotUpdateOrchSessionWhenFlagDisabled()
+            throws JOSEException, ClientNotFoundException {
+        when(configurationService.isSetNewAccountInOrchSessionEnabled()).thenReturn(false);
+
+        var authorizationCode = new AuthorizationCode();
+        var authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+
+        session.setNewAccount(AccountState.UNKNOWN);
+        orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
+        var authSuccessResponse =
+                new AuthenticationSuccessResponse(
+                        authRequest.getRedirectionURI(),
+                        authorizationCode,
+                        null,
+                        null,
+                        authRequest.getState(),
+                        null,
+                        authRequest.getResponseMode());
+
+        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        CLIENT_SESSION_ID, null, clientSession))
+                .thenReturn(authorizationCode);
+        when(authCodeResponseService.getDimensions(
+                        eq(session),
+                        eq(orchSession),
+                        eq(clientSession),
+                        eq(CLIENT_ID.getValue()),
+                        anyBoolean(),
+                        eq(true)))
+                .thenReturn(
+                        Map.of(
+                                "Account",
+                                "UNKNOWN",
+                                "Environment",
+                                "unit-test",
+                                "Client",
+                                CLIENT_ID.getValue(),
+                                "IsTest",
+                                "false",
+                                "IsDocApp",
+                                Boolean.toString(true),
+                                "ClientName",
+                                CLIENT_NAME));
+        when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authSuccessResponse);
+
+        var response = generateApiRequest();
+
+        assertThat(response, hasStatus(200));
+        verify(authCodeResponseService, times(1))
+                .saveSession(anyBoolean(), eq(sessionService), eq(session));
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(

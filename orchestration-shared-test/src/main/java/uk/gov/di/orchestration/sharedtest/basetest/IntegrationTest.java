@@ -336,5 +336,11 @@ public class IntegrationTest {
         public Optional<String> getIPVCapacity() {
             return Optional.of("1");
         }
+
+        @Override
+        public boolean isSetNewAccountInOrchSessionEnabled() {
+
+            return true;
+        }
     }
 }
