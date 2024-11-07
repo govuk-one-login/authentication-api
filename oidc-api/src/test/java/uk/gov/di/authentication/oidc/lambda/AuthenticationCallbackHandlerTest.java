@@ -85,8 +85,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String PERSISTENT_SESSION_ID =
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
-    private static final Session session =
-            new Session(SESSION_ID).setVerifiedMfaMethodType(MFAMethodType.EMAIL);
+    private static Session session;
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -147,6 +146,11 @@ class AuthenticationCallbackHandlerTest {
 
     @BeforeEach
     void setUp() {
+        session =
+                new Session(SESSION_ID)
+                        .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
+                        .setAuthenticated(false);
+        when(configurationService.isAuthenticatedFlagForIpvEnabled()).thenReturn(true);
         reset(initiateIPVAuthorisationService);
         reset(logoutService);
         reset(authorizationService);
@@ -187,7 +191,6 @@ class AuthenticationCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
         usingValidClient();
-        withAuthenticatedFlagForIPV(false);
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
@@ -264,7 +267,6 @@ class AuthenticationCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
         usingValidClient();
-        withAuthenticatedFlagForIPV(true);
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
@@ -451,7 +453,6 @@ class AuthenticationCallbackHandlerTest {
         @Test
         void shouldSetAuthenticatedWhenFlagEnabledForIpvJourney()
                 throws UnsuccessfulCredentialResponseException {
-            withAuthenticatedFlagForIPV(true);
             usingValidSession();
             usingValidClientSession();
             usingValidClient();
@@ -476,7 +477,7 @@ class AuthenticationCallbackHandlerTest {
         @Test
         void shouldNotSetAuthenticatedForIpvJourneyWhenFlagIsFalse()
                 throws UnsuccessfulCredentialResponseException {
-            withAuthenticatedFlagForIPV(false);
+            when(configurationService.isAuthenticatedFlagForIpvEnabled()).thenReturn(false);
             usingValidSession();
             usingValidClientSession();
             usingValidClient();
@@ -908,10 +909,5 @@ class AuthenticationCallbackHandlerTest {
         } else {
             assertTrue(sessionSaveCaptor.getAllValues().get(1).isAuthenticated());
         }
-    }
-
-    private void withAuthenticatedFlagForIPV(boolean setAuthenticatedFlagForIPV) {
-        when(configurationService.isAuthenticatedFlagForIpvEnabled())
-                .thenReturn(setAuthenticatedFlagForIPV);
     }
 }
