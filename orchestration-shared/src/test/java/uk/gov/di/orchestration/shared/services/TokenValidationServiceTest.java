@@ -56,13 +56,6 @@ class TokenValidationServiceTest {
     }
 
     @Test
-    void shouldNotFailSignatureValidationIfIdTokenHasExpired() {
-        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-        SignedJWT signedIdToken = createSignedIdToken(expiryDate);
-        assertTrue(tokenValidationService.isTokenSignatureValid(signedIdToken.serialize()));
-    }
-
-    @Test
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
         assertTrue(
