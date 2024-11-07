@@ -40,6 +40,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final String ID_TOKEN_SIGNING_ALGORITHM = JWSAlgorithm.ES256.getName();
     private static final List<String> CLIENT_LOCS = List.of();
     private static final String CHANNEL = Channel.WEB.getValue();
+    private static final boolean MAX_AGE_ENABLED = false;
 
     private DynamoClientService clientService;
 
@@ -91,6 +92,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 TOKEN_AUTH_METHOD,
                 ID_TOKEN_SIGNING_ALGORITHM,
                 CLIENT_LOCS,
-                CHANNEL);
+                CHANNEL,
+                MAX_AGE_ENABLED);
     }
 }

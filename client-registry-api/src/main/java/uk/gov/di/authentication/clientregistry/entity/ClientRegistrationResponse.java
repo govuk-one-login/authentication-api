@@ -101,6 +101,11 @@ public class ClientRegistrationResponse {
     @Required
     private String channel;
 
+    @SerializedName("max_age_enabled")
+    @Expose
+    @Required
+    private boolean maxAgeEnabled;
+
     public ClientRegistrationResponse(
             String clientName,
             String clientId,
@@ -119,7 +124,8 @@ public class ClientRegistrationResponse {
             String sectorIdentifierUri,
             String clientType,
             String idTokenSigningAlgorithm,
-            String channel) {
+            String channel,
+            boolean maxAgeEnabled) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -138,6 +144,7 @@ public class ClientRegistrationResponse {
         this.clientType = clientType;
         this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
         this.channel = channel;
+        this.maxAgeEnabled = maxAgeEnabled;
     }
 
     public ClientRegistrationResponse() {}
@@ -222,5 +229,9 @@ public class ClientRegistrationResponse {
 
     public String getIdTokenSigningAlgorithm() {
         return idTokenSigningAlgorithm;
+    }
+
+    public boolean isMaxAgeEnabled() {
+        return maxAgeEnabled;
     }
 }

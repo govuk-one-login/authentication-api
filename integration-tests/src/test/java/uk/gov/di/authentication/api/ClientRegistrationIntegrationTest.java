@@ -89,7 +89,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         claims,
                         ClientType.WEB.getValue(),
                         JWSAlgorithm.ES256.getName(),
-                        Channel.WEB.getValue());
+                        Channel.WEB.getValue(),
+                        false);
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 

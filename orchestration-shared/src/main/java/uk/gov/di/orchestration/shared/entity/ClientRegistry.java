@@ -43,12 +43,12 @@ public class ClientRegistry {
     private String idTokenSigningAlgorithm = "ES256";
     private boolean smokeTest = false;
     private List<String> clientLoCs = new ArrayList<>();
+    private boolean permitMissingNonce = false;
     private String channel;
+    private boolean maxAgeEnabled = false;
 
     private static final Set<String> RS256_MAPPINGS =
             Set.of(JWSAlgorithm.RS256.getName(), "RSA256");
-
-    private boolean permitMissingNonce = false;
 
     public ClientRegistry() {}
 
@@ -484,6 +484,20 @@ public class ClientRegistry {
 
     public ClientRegistry withChannel(String channel) {
         this.channel = channel;
+        return this;
+    }
+
+    @DynamoDbAttribute("MaxAgeEnabled")
+    public boolean getMaxAgeEnabled() {
+        return maxAgeEnabled;
+    }
+
+    public void setMaxAgeEnabled(boolean maxAgeEnabled) {
+        this.maxAgeEnabled = maxAgeEnabled;
+    }
+
+    public ClientRegistry withMaxAgeEnabled(boolean maxAgeEnabled) {
+        this.maxAgeEnabled = maxAgeEnabled;
         return this;
     }
 }
