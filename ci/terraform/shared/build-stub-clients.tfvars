@@ -31,10 +31,12 @@ stub_rp_clients = [
     callback_urls = [
       "https://doc-app-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
       "http://localhost:8080/oidc/authorization-code/callback",
+      "https://rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://doc-app-rp-build.build.stubs.account.gov.uk/signed-out",
       "http://localhost:8080/signed-out",
+      "https://rp-build.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "1"
     identity_verification_supported = "1"
@@ -53,10 +55,12 @@ stub_rp_clients = [
     callback_urls = [
       "https://acceptance-test-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
       "http://localhost:8080/oidc/authorization-code/callback",
+      "https://rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://acceptance-test-rp-build.build.stubs.account.gov.uk/signed-out",
       "http://localhost:8080/signed-out",
+      "https://rp-build.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "1"
     identity_verification_supported = "1"
@@ -104,10 +108,12 @@ stub_rp_clients = [
     callback_urls = [
       "https://rp-build-sp.build.stubs.account.gov.uk/oidc/authorization-code/callback",
       "http://localhost:8080/oidc/authorization-code/callback",
+      "https://rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://rp-build-sp.build.stubs.account.gov.uk/signed-out",
       "http://localhost:8080/signed-out",
+      "https://rp-build.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "0"
     identity_verification_supported = "1"
