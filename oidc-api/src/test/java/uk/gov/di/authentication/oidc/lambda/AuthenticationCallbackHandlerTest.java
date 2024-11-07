@@ -417,7 +417,6 @@ class AuthenticationCallbackHandlerTest {
         assertEquals(
                 MFAMethodType.AUTH_APP.getValue(),
                 orchSessionCaptor.getValue().getVerifiedMfaMethodType());
-        assertEquals(RP_PAIRWISE_ID.getValue(), orchSessionCaptor.getValue().getRpPairwiseId());
         assertEquals(
                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                 orchSessionCaptor.getValue().getInternalCommonSubjectId());

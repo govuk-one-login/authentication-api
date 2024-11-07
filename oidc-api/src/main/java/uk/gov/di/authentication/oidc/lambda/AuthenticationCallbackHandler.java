@@ -686,21 +686,15 @@ public class AuthenticationCallbackHandler
         String verifiedMfaMethodType =
                 userInfo.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class);
-        String rpPairwiseId =
-                userInfo.getClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(), String.class);
         String internalCommonSubjectId = userInfo.getSubject().getValue();
 
         OrchSessionItem updatedOrchSession =
                 orchSession
                         .withVerifiedMfaMethodType(verifiedMfaMethodType)
-                        .withRpPairwiseId(rpPairwiseId)
                         .withInternalCommonSubjectId(internalCommonSubjectId);
 
         LOG.info("Updating Orch session with claims from userinfo response");
         // TODO-922: temporary logs for checking all is working as expected
-        LOG.info(
-                "is rpPairwiseId attached to orch session: {}",
-                orchSession.getRpPairwiseId() != null);
         LOG.info(
                 "is internalCommonSubjectId attached to orch session: {}",
                 orchSession.getInternalCommonSubjectId() != null);
