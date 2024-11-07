@@ -147,12 +147,12 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                     LocalDateTime.now(ZoneId.of("UTC")).toString()));
 
             LOG.info("Calculating internal common subject identifier");
-            var internalCommonSubjectIdentifier =
+            var internalCommonSubjectId =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             user.getUserProfile(),
                             configurationService.getInternalSectorUri(),
                             authenticationService);
-            auditContext = auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue());
+            auditContext = auditContext.withSubjectId(internalCommonSubjectId.getValue());
 
             LOG.info("Calculating RP pairwise identifier");
             var rpPairwiseId =
@@ -181,10 +181,12 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             .getSession()
                             .setEmailAddress(request.getEmail())
                             .setInternalCommonSubjectIdentifier(
-                                    internalCommonSubjectIdentifier.getValue()));
+                                    internalCommonSubjectId.getValue()));
 
             authSessionService.updateSession(
-                    authSessionItem.withAccountState(AuthSessionItem.AccountState.NEW));
+                    authSessionItem
+                            .withAccountState(AuthSessionItem.AccountState.NEW)
+                            .withInternalCommonSubjectId(internalCommonSubjectId.getValue()));
             LOG.info("Successfully processed request");
             return generateApiGatewayProxyResponse(200, "");
         } else {

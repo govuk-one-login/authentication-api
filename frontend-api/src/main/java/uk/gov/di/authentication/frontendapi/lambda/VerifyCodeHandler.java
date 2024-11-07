@@ -235,10 +235,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
                 SessionHelper.updateSessionWithSubject(
                         userContext,
-                        authenticationService,
-                        configurationService,
+                        authSession.get(),
                         sessionService,
-                        session);
+                        authSessionService,
+                        authenticationService,
+                        configurationService);
             }
 
             processSuccessfulCodeRequest(
