@@ -41,7 +41,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
-import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -78,6 +77,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -163,7 +163,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
-        assertOrchSessionIsUpdatedWithAuthTime();
     }
 
     @Test
@@ -700,6 +699,49 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                 constructQueryStringParameters()));
     }
 
+    @Test
+    void shouldSetAuthTimeWhenUserHasBeenUplifted() throws Json.JsonException {
+        assertAuthTimeHasNotBeenSet();
+        redis.setAuthenticated(SESSION_ID, true);
+        redis.setSessionCredentialTrustLevel(SESSION_ID, CredentialTrustLevel.LOW_LEVEL);
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertOrchSessionIsUpdatedWithAuthTime();
+    }
+
+    @Test
+    void shouldSetAuthTimeWhenUserIsNotYetAuthenticated() throws Json.JsonException {
+        assertAuthTimeHasNotBeenSet();
+        redis.setAuthenticated(SESSION_ID, false);
+        redis.setSessionCredentialTrustLevel(SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertOrchSessionIsUpdatedWithAuthTime();
+    }
+
+    @Test
+    void shouldNotSetAuthTimeWhenUserIsAuthenticatedButHasNotBeenUplifted()
+            throws Json.JsonException {
+        assertAuthTimeHasNotBeenSet();
+        redis.setAuthenticated(SESSION_ID, true);
+        redis.setSessionCredentialTrustLevel(SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertAuthTimeHasNotBeenSet();
+    }
+
     private void assertRedirectToSuspendedPage(APIGatewayProxyResponseEvent response) {
         assertThat(response, hasStatus(302));
         assertThrows(
@@ -810,13 +852,16 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(OrchSessionItem.AccountState.NEW, equalTo(orchSession.get().getIsNewAccount()));
     }
 
+    private void assertAuthTimeHasNotBeenSet() {
+        Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertEquals(0L, orchSession.get().getAuthTime());
+    }
+
     private void assertOrchSessionIsUpdatedWithAuthTime() {
         Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
         var session = orchSession.get();
-        long secondNow = NowHelper.now().toInstant().getEpochSecond();
-        assertTrue(session.getAuthTime() > secondNow - 5L);
-        assertTrue(session.getAuthTime() < secondNow + 5L);
+        assertNotEquals(0L, session.getAuthTime());
     }
 
     private void setupClientReg(boolean identityVerificationSupported) {

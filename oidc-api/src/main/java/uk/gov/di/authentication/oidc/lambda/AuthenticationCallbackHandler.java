@@ -397,11 +397,21 @@ public class AuthenticationCallbackHandler
                 boolean setAuthenticatedFlagForIPV =
                         configurationService.isAuthenticatedFlagForIpvEnabled();
 
+                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
+                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                long authTime = NowHelper.now().toInstant().getEpochSecond();
                 if (setAuthenticatedFlagForIPV) {
-                    sessionService.storeOrUpdateSession(
-                            userSession.setNewAccount(accountState).setAuthenticated(true));
-                    orchSessionService.updateSession(
-                            orchSession.withAuthTime(NowHelper.now().toInstant().getEpochSecond()));
+                    if (userSession.isAuthenticated()) {
+                        if (lowestRequestedCredentialTrustLevel.compareTo(
+                                        userSession.getCurrentCredentialStrength())
+                                > 0) {
+                            orchSessionService.updateSession(orchSession.withAuthTime(authTime));
+                        }
+                    } else {
+                        sessionService.storeOrUpdateSession(
+                                userSession.setNewAccount(accountState).setAuthenticated(true));
+                        orchSessionService.updateSession(orchSession.withAuthTime(authTime));
+                    }
                 } else {
                     sessionService.storeOrUpdateSession(userSession.setNewAccount(accountState));
                 }
@@ -507,8 +517,6 @@ public class AuthenticationCallbackHandler
                         clientRedirectURI,
                         stateHash);
 
-                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
                 if (isNull(userSession.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
                                         userSession.getCurrentCredentialStrength())
