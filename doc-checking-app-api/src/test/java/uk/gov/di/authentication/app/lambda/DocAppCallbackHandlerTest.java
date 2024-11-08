@@ -25,6 +25,8 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppCriService;
@@ -162,13 +164,18 @@ class DocAppCallbackHandlerTest {
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configService.getIsNewAccountFromOrchSession()).thenReturn(true);
     }
 
-    @Test
-    void shouldRedirectToRPForSuccessfulResponse() throws UnsuccessfulCredentialResponseException {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldRedirectToRPForSuccessfulResponse(boolean isGetIsNewAccountFromOrchSessionEnabled)
+            throws UnsuccessfulCredentialResponseException {
         usingValidRedisSession();
         usingValidClientSession();
         usingValidOrchSession();
+        when(configService.getIsNewAccountFromOrchSession())
+                .thenReturn(isGetIsNewAccountFromOrchSessionEnabled);
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -204,7 +211,11 @@ class DocAppCallbackHandlerTest {
                         CLIENT_ID.getValue(),
                         BASE_AUDIT_USER.withIpAddress("123.123.123.123"),
                         pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", session.isNewAccount()),
+                        pair(
+                                "isNewAccount",
+                                isGetIsNewAccountFromOrchSessionEnabled
+                                        ? orchSession.getIsNewAccount()
+                                        : session.isNewAccount()),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
                         pair("authCode", AUTH_CODE),
                         pair("nonce", NONCE.getValue()));

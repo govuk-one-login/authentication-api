@@ -222,6 +222,9 @@ public class DocAppCallbackHandler
                                     () -> {
                                         throw new DocAppCallbackException("Orch Session not found");
                                     });
+
+            boolean getIsNewAccountFromOrchSession =
+                    configurationService.getIsNewAccountFromOrchSession();
             attachSessionIdToLogs(session);
             var clientSessionId = sessionCookiesIds.getClientSessionId();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
@@ -337,7 +340,12 @@ public class DocAppCallbackHandler
 
                 var metadataPairs = new ArrayList<AuditService.MetadataPair>();
                 metadataPairs.add(pair("internalSubjectId", AuditService.UNKNOWN));
-                metadataPairs.add(pair("isNewAccount", session.isNewAccount()));
+                metadataPairs.add(
+                        pair(
+                                "isNewAccount",
+                                getIsNewAccountFromOrchSession
+                                        ? orchSession.getIsNewAccount()
+                                        : session.isNewAccount()));
                 metadataPairs.add(pair("rpPairwiseId", AuditService.UNKNOWN));
                 metadataPairs.add(pair("authCode", authCode));
                 if (authenticationRequest.getNonce() != null) {
