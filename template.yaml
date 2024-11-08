@@ -200,7 +200,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
       setAuthenticatedFlagForIpv: true
-      setIsNewAccountInOrchSession: false
+      setIsNewAccountInOrchSession: true
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
