@@ -2700,8 +2700,7 @@ Resources:
         - !Ref UserProfileTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
-        - !Ref OrchSessionTableReadAccessPolicy
-        - !Ref OrchSessionTableWriteAccessPolicy
+        - !Ref OrchSessionTableReadAndWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
