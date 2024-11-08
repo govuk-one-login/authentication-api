@@ -503,6 +503,17 @@ public class AuthenticationCallbackHandler
                                 > 0) {
                     userSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
                 }
+                var currentCredentialStrength =
+                        userInfo.getStringClaim(
+                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
+                if (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(
+                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
+                                > 0) {
+                    orchSessionService.updateSession(
+                            orchSession.withCurrentCredentialStrength(
+                                    lowestRequestedCredentialTrustLevel));
+                }
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(

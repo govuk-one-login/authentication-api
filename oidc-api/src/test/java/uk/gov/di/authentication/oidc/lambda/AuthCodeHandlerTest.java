@@ -258,6 +258,7 @@ class AuthCodeHandlerTest {
                 .setNewAccount(AccountState.NEW)
                 .setEmailAddress(EMAIL)
                 .setVerifiedMfaMethodType(mfaMethodType);
+        orchSession.setCurrentCredentialStrength(initialLevel);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -288,6 +289,7 @@ class AuthCodeHandlerTest {
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
+        assertThat(orchSession.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertTrue(session.isAuthenticated());
 
         verify(authCodeResponseService, times(1))
@@ -400,6 +402,7 @@ class AuthCodeHandlerTest {
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
+        assertThat(orchSession.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(session.isAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(anyBoolean(), eq(sessionService), eq(session));
