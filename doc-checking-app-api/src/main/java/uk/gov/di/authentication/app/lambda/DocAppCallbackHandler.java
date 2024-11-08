@@ -214,6 +214,14 @@ public class DocAppCallbackHandler
                                     () -> {
                                         throw new DocAppCallbackException("Session not found");
                                     });
+
+            var orchSession =
+                    orchSessionService
+                            .getSession(sessionCookiesIds.getSessionId())
+                            .orElseThrow(
+                                    () -> {
+                                        throw new DocAppCallbackException("Orch Session not found");
+                                    });
             attachSessionIdToLogs(session);
             var clientSessionId = sessionCookiesIds.getClientSessionId();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);

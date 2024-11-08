@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -123,6 +124,9 @@ class DocAppCallbackHandlerTest {
     private static final Nonce NONCE = new Nonce();
 
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID)
+                    .withAccountState(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY);
 
     private final ClientSession clientSession =
             new ClientSession(generateAuthRequest().toParameters(), null, emptyList(), null);
@@ -162,8 +166,9 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToRPForSuccessfulResponse() throws UnsuccessfulCredentialResponseException {
-        usingValidSession();
+        usingValidRedisSession();
         usingValidClientSession();
+        usingValidOrchSession();
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -232,11 +237,31 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
+    void shouldRedirectToFrontendErrorPageWhenNoOrchSession() {
+        usingValidRedisSession();
+        usingValidClientSession();
+        withNoOrchSession();
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(Collections.emptyMap());
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+        var response = handler.handleRequest(event, context);
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
+
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
     void shouldRedirectToFrontendErrorPageWhenNoDocAppSubjectIdIsPresentInClientSession() {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        usingValidSession();
+        usingValidRedisSession();
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
 
@@ -253,8 +278,9 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToRPWhenAuthnResponseContainsError() {
-        usingValidSession();
+        usingValidRedisSession();
         usingValidClientSession();
+        usingValidOrchSession();
 
         ErrorObject errorObject =
                 new ErrorObject(
@@ -306,8 +332,9 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
-        usingValidSession();
+        usingValidRedisSession();
         usingValidClientSession();
+        usingValidOrchSession();
         var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
         var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
@@ -354,8 +381,9 @@ class DocAppCallbackHandlerTest {
     @Test
     void shouldRedirectToFrontendErrorPageWhenCRIRequestIsNotSuccessful()
             throws UnsuccessfulCredentialResponseException {
-        usingValidSession();
+        usingValidRedisSession();
         usingValidClientSession();
+        usingValidOrchSession();
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -407,7 +435,7 @@ class DocAppCallbackHandlerTest {
     void
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
                     throws NoSessionException {
-        usingValidSession();
+        usingValidRedisSession();
         usingValidClientSession();
         when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
 
@@ -463,7 +491,7 @@ class DocAppCallbackHandlerTest {
     void
             shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
                     throws NoSessionException {
-        usingValidSession();
+        usingValidRedisSession();
         usingValidClientSession();
 
         Map<String, String> queryParameters = new HashMap<>();
@@ -500,8 +528,9 @@ class DocAppCallbackHandlerTest {
     @Test
     void shouldGenerateAuthenticationErrorResponseWhenCRIRequestReturns404()
             throws UnsuccessfulCredentialResponseException {
-        usingValidSession();
+        usingValidRedisSession();
         usingValidClientSession();
+        usingValidOrchSession();
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -563,8 +592,16 @@ class DocAppCallbackHandlerTest {
                 "gs", SESSION_ID, CLIENT_SESSION_ID, 3600, "Secure; HttpOnly;");
     }
 
-    private void usingValidSession() {
+    private void usingValidRedisSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+    }
+
+    private void usingValidOrchSession() {
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
+    }
+
+    private void withNoOrchSession() {
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
     }
 
     private void usingValidClientSession() {
