@@ -46,6 +46,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
@@ -94,8 +95,8 @@ class DocAppCallbackHandlerTest {
             mock(AuthorisationCodeService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
-
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
     private static final URI EXPECTED_ERROR_REDIRECT_URI = URI.create("https://example.com/error");
 
@@ -149,7 +150,8 @@ class DocAppCallbackHandlerTest {
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
                         authFrontend,
-                        docAppCriApi);
+                        docAppCriApi,
+                        orchSessionService);
         when(authFrontend.errorURI()).thenReturn(EXPECTED_ERROR_REDIRECT_URI);
         when(docAppCriApi.criDataURI()).thenReturn(DOC_APP_CRI_V2_URI);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);

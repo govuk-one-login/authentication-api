@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -77,6 +78,7 @@ public class DocAppCallbackHandler
     private final CookieHelper cookieHelper;
     private final AuthFrontend authFrontend;
     private final DocAppCriAPI docAppCriApi;
+    private final OrchSessionService orchSessionService;
     protected final Json objectMapper = SerializationService.getInstance();
 
     public DocAppCallbackHandler() {
@@ -96,7 +98,8 @@ public class DocAppCallbackHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
             AuthFrontend authFrontend,
-            DocAppCriAPI docAppCriApi) {
+            DocAppCriAPI docAppCriApi,
+            OrchSessionService orchSessionService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -110,6 +113,7 @@ public class DocAppCallbackHandler
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.authFrontend = authFrontend;
         this.docAppCriApi = docAppCriApi;
+        this.orchSessionService = orchSessionService;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
@@ -134,6 +138,7 @@ public class DocAppCallbackHandler
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public DocAppCallbackHandler(
@@ -161,6 +166,7 @@ public class DocAppCallbackHandler
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);
         this.authFrontend = new AuthFrontend(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     @Override
