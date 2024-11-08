@@ -203,7 +203,12 @@ public class AuthCodeHandler
             var state = authenticationRequest.getState();
             authCode =
                     generateAuthCode(
-                            clientID, redirectUri, clientSession, clientSessionId, session);
+                            clientID,
+                            redirectUri,
+                            clientSession,
+                            clientSessionId,
+                            session,
+                            orchSession);
             authenticationResponse =
                     orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                             authenticationRequest, authCode, redirectUri, state);
@@ -370,19 +375,27 @@ public class AuthCodeHandler
             URI redirectUri,
             ClientSession clientSession,
             String clientSessionId,
-            Session session)
+            Session session,
+            OrchSessionItem orchSession)
             throws ClientNotFoundException, ProcessAuthRequestException {
         if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
         }
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                 VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+        var currentCredentialStrength = session.getCurrentCredentialStrength();
         if (isNull(session.getCurrentCredentialStrength())
                 || lowestRequestedCredentialTrustLevel.compareTo(
                                 session.getCurrentCredentialStrength())
                         > 0) {
             session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
+        if (isNull(currentCredentialStrength)
+                || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength) > 0) {
+            orchSessionService.updateSession(
+                    orchSession.withCurrentCredentialStrength(lowestRequestedCredentialTrustLevel));
+        }
+
         return authorisationCodeService.generateAndSaveAuthorisationCode(
                 clientSessionId, session.getEmailAddress(), clientSession);
     }

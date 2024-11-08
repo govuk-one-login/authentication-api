@@ -101,7 +101,8 @@ class AuthenticationCallbackHandlerTest {
                     null,
                     List.of(
                             VectorOfTrust.of(
-                                    CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                                    CredentialTrustLevel.MEDIUM_LEVEL,
+                                    LevelOfConfidence.MEDIUM_LEVEL)),
                     CLIENT_NAME);
     private static final String COOKIE_HEADER_NAME = "Cookie";
     private static final AuthorizationCode AUTH_CODE_ORCH_TO_AUTH = new AuthorizationCode();
@@ -142,6 +143,10 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
                 .thenReturn(MFAMethodType.AUTH_APP.getValue());
+        when(USER_INFO.getClaim(
+                        AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
+                        CredentialTrustLevel.class))
+                .thenReturn(null);
     }
 
     @BeforeEach
@@ -413,7 +418,7 @@ class AuthenticationCallbackHandlerTest {
         handler.handleRequest(event, null);
 
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        verify(orchSessionService, times(2)).updateSession(orchSessionCaptor.capture());
+        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 OrchSessionItem.AccountState.NEW,
                 equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
@@ -423,6 +428,26 @@ class AuthenticationCallbackHandlerTest {
         assertEquals(
                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                 orchSessionCaptor.getValue().getInternalCommonSubjectId());
+    }
+
+    @Test
+    void shouldUpdateTheCurrentCredentialStrengthWhenTheLowestCredentialTrustIsGreater()
+            throws UnsuccessfulCredentialResponseException {
+        when(USER_INFO.getClaim(
+                        AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
+                        CredentialTrustLevel.class))
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        handler.handleRequest(event, null);
+
+        assertSessionUpdatedAuthJourney(false);
     }
 
     @Nested
@@ -874,10 +899,15 @@ class AuthenticationCallbackHandlerTest {
 
     private void assertSessionUpdatedAuthJourney(boolean setAuthenticatedFlagForIPV) {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
+        var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
+        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 sessionSaveCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.LOW_LEVEL));
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                orchSessionCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(
                 Session.AccountState.NEW,
                 equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));

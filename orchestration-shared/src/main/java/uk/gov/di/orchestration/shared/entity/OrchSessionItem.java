@@ -12,6 +12,7 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
+    public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "CurrentCredentialStrength";
 
     public enum AccountState {
         NEW,
@@ -26,6 +27,7 @@ public class OrchSessionItem {
     private String verifiedMfaMethodType;
     private AccountState isNewAccount;
     private String internalCommonSubjectId;
+    private CredentialTrustLevel currentCredentialStrength;
 
     public OrchSessionItem() {}
 
@@ -116,6 +118,21 @@ public class OrchSessionItem {
 
     public OrchSessionItem withInternalCommonSubjectId(String internalCommonSubjectId) {
         this.internalCommonSubjectId = internalCommonSubjectId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH)
+    public CredentialTrustLevel getCurrentCredentialStrength() {
+        return this.currentCredentialStrength;
+    }
+
+    public void setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
+        this.currentCredentialStrength = currentCredentialStrength;
+    }
+
+    public OrchSessionItem withCurrentCredentialStrength(
+            CredentialTrustLevel currentCredentialStrength) {
+        this.currentCredentialStrength = currentCredentialStrength;
         return this;
     }
 }

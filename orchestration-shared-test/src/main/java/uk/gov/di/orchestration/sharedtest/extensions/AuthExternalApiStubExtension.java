@@ -2,6 +2,8 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.sharedtest.httpstub.HttpStubExtension;
 
@@ -35,6 +37,9 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
         UserInfo userInfo = new UserInfo(subjectId);
         userInfo.setClaim(NEW_ACCOUNT.getValue(), true);
         userInfo.setClaim("verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
+        userInfo.setClaim(
+                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
+                CredentialTrustLevel.LOW_LEVEL);
         register("/userinfo", 200, "application/json", userInfo.toJSONString());
     }
 
@@ -56,6 +61,9 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
         userInfo.setClaim("new_account", true);
         userInfo.setClaim("verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
         userInfo.setClaim("password_reset_time", passwordResetTime);
+        userInfo.setClaim(
+                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
+                CredentialTrustLevel.LOW_LEVEL);
         register("/userinfo", 200, "application/json", userInfo.toJSONString());
     }
 }
