@@ -12,7 +12,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -23,7 +22,6 @@ import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -52,12 +50,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
-    private final AuthSessionService authSessionService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
-            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -72,7 +68,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authenticationService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
-        this.authSessionService = authSessionService;
     }
 
     public CheckUserExistsHandler() {
@@ -83,7 +78,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public CheckUserExistsHandler(
@@ -91,7 +85,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -157,17 +150,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = new UserMfaDetail();
-            var session = userContext.getSession();
-
-            var optionalAuthSession =
-                    authSessionService.getSessionFromRequestHeaders(input.getHeaders());
-
-            if (optionalAuthSession.isEmpty()) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-
-            AuthSessionItem authSession = optionalAuthSession.get();
-
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
@@ -177,7 +159,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
                                 .getValue();
-                var internalCommonSubjectId =
+                var internalPairwiseId =
                         ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                         userProfile.get(),
                                         configurationService.getInternalSectorUri(),
@@ -185,9 +167,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 .getValue();
 
                 LOG.info("Setting internal common subject identifier in user session");
+                userContext.getSession().setInternalCommonSubjectIdentifier(internalPairwiseId);
 
-                session.setInternalCommonSubjectIdentifier(internalCommonSubjectId);
-                authSession.setInternalCommonSubjectId(internalCommonSubjectId);
                 var isPhoneNumberVerified = userProfile.get().isPhoneNumberVerified();
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
@@ -197,10 +178,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 userCredentials,
                                 userProfile.get().getPhoneNumber(),
                                 isPhoneNumberVerified);
-                auditContext = auditContext.withSubjectId(internalCommonSubjectId);
+                auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
-                session.setInternalCommonSubjectIdentifier(null);
-                authSession.setInternalCommonSubjectId(null);
+                userContext.getSession().setInternalCommonSubjectIdentifier(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
 
@@ -232,8 +212,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation);
-            sessionService.storeOrUpdateSession(session);
-            authSessionService.updateSession(authSession);
+            sessionService.storeOrUpdateSession(userContext.getSession());
 
             LOG.info("Successfully processed request");
 
