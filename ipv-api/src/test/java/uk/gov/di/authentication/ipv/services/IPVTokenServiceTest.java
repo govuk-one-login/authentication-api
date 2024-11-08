@@ -10,6 +10,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.GrantType;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
@@ -96,7 +97,7 @@ class IPVTokenServiceTest {
     }
 
     @Test
-    void shouldConstructTokenRequest() throws JOSEException {
+    void shouldConstructTokenRequest() throws JOSEException, ParseException {
         signJWTWithKMS();
         TokenRequest tokenRequest = ipvTokenService.constructTokenRequest(AUTH_CODE.getValue());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(IPV_URI + "token"));
@@ -104,16 +105,17 @@ class IPVTokenServiceTest {
                 tokenRequest.getClientAuthentication().getMethod().getValue(),
                 equalTo("private_key_jwt"));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("redirect_uri").get(0),
                 equalTo(REDIRECT_URI.toString()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("grant_type").get(0),
                 equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("client_id").get(0),
                 equalTo(CLIENT_ID.getValue()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("resource"), equalTo(null));
+                tokenRequest.toHTTPRequest().getBodyAsFormParameters().get("resource"),
+                equalTo(null));
     }
 
     @Test
@@ -154,7 +156,7 @@ class IPVTokenServiceTest {
             throws IOException, UnsuccessfulCredentialResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
@@ -187,7 +189,7 @@ class IPVTokenServiceTest {
             throws IOException, UnsuccessfulCredentialResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(httpRequest.send()).thenReturn(new HTTPResponse(500)).thenReturn(userInfoHTTPResponse);
@@ -202,7 +204,7 @@ class IPVTokenServiceTest {
     void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(httpRequest.send()).thenReturn(new HTTPResponse(500));
@@ -256,7 +258,7 @@ class IPVTokenServiceTest {
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return tokenHTTPResponse;
     }

@@ -10,6 +10,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.GrantType;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
@@ -77,7 +78,7 @@ class ReverificationResultServiceTest {
     }
 
     @Test
-    void shouldConstructTokenRequest() throws JOSEException {
+    void shouldConstructTokenRequest() throws JOSEException, ParseException {
         signJWTWithKMS();
         TokenRequest newTokenRequest =
                 reverificationResultService.constructTokenRequest(AUTH_CODE.getValue());
@@ -86,13 +87,17 @@ class ReverificationResultServiceTest {
                 newTokenRequest.getClientAuthentication().getMethod().getValue(),
                 equalTo("private_key_jwt"));
         assertThat(
-                newTokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
+                newTokenRequest
+                        .toHTTPRequest()
+                        .getBodyAsFormParameters()
+                        .get("redirect_uri")
+                        .get(0),
                 equalTo(REDIRECT_URI.toString()));
         assertThat(
-                newTokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                newTokenRequest.toHTTPRequest().getBodyAsFormParameters().get("grant_type").get(0),
                 equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
         assertThat(
-                newTokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
+                newTokenRequest.toHTTPRequest().getBodyAsFormParameters().get("client_id").get(0),
                 equalTo(CLIENT_ID.getValue()));
     }
 
@@ -134,13 +139,13 @@ class ReverificationResultServiceTest {
             throws IOException, UnsuccessfulReverificationResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         var reverificationResult =
                 reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
-        assertThat(reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
+        assertThat(reverificationResult.getBody(), equalTo(userInfoHTTPResponse.getBody()));
     }
 
     @Test
@@ -148,21 +153,21 @@ class ReverificationResultServiceTest {
             throws IOException, UnsuccessfulReverificationResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(httpRequest.send()).thenReturn(new HTTPResponse(500)).thenReturn(userInfoHTTPResponse);
 
         var reverificationResult =
                 reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
-        assertThat(reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
+        assertThat(reverificationResult.getBody(), equalTo(userInfoHTTPResponse.getBody()));
     }
 
     @Test
     void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        userInfoHTTPResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
         when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         when(httpRequest.send()).thenReturn(new HTTPResponse(500));
@@ -216,7 +221,7 @@ class ReverificationResultServiceTest {
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return tokenHTTPResponse;
     }
