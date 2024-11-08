@@ -233,7 +233,7 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
       setAuthenticatedFlagForIpv: false
-      setIsNewAccountInOrchSession: false
+      setIsNewAccountInOrchSession: true
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
