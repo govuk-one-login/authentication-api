@@ -27,20 +27,21 @@ cmk_for_back_channel_logout_enabled   = true
 
 contra_state_bucket = "di-auth-staging-tfstate"
 
-orch_openid_configuration_enabled    = true
-orch_doc_app_callback_enabled        = true
-orch_token_enabled                   = true
-orch_jwks_enabled                    = true
-orch_authorisation_enabled           = true
-orch_logout_enabled                  = true
-orch_ipv_callback_enabled            = true
-orch_register_enabled                = true
-orch_authentication_callback_enabled = true
-auth_spot_response_disabled          = true
-orch_auth_code_enabled               = true
-orch_userinfo_enabled                = true
-orch_storage_token_jwk_enabled       = true
-orch_trustmark_enabled               = true
+orch_openid_configuration_enabled           = true
+orch_doc_app_callback_enabled               = true
+orch_token_enabled                          = true
+orch_jwks_enabled                           = true
+orch_authorisation_enabled                  = true
+orch_logout_enabled                         = true
+orch_ipv_callback_enabled                   = true
+orch_register_enabled                       = true
+orch_authentication_callback_enabled        = true
+auth_spot_response_disabled                 = true
+orch_auth_code_enabled                      = true
+orch_userinfo_enabled                       = true
+orch_storage_token_jwk_enabled              = true
+orch_trustmark_enabled                      = true
+is_destroy_orch_session_on_sign_out_enabled = true
 
 reauth_enter_email_count_ttl         = 300
 reauth_enter_password_count_ttl      = 300

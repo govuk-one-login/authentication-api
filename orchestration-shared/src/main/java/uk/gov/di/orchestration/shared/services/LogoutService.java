@@ -120,8 +120,11 @@ public class LogoutService {
         }
         LOG.info("Deleting Session");
         sessionService.deleteStoredSession(session.getSessionId());
-        LOG.info("Deleting Orch Session");
-        orchSessionService.deleteSession(session.getSessionId());
+
+        if (configurationService.isDestroyOrchSessionOnSignOutEnabled()) {
+            LOG.info("Deleting Orch Session");
+            orchSessionService.deleteSession(session.getSessionId());
+        }
     }
 
     public APIGatewayProxyResponseEvent handleLogout(
