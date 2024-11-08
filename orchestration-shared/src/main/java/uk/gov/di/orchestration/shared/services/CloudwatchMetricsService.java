@@ -4,6 +4,7 @@ import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 
 import java.util.Map;
@@ -69,6 +70,35 @@ public class CloudwatchMetricsService {
                             clientName));
         }
         if (EXISTING.equals(accountState) && !isTestJourney) {
+            incrementCounter(
+                    SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            CLIENT.getValue(),
+                            clientId,
+                            CLIENT_NAME.getValue(),
+                            clientName));
+        }
+    }
+
+    public void incrementSignInByClient(
+            OrchSessionItem.AccountState accountState,
+            String clientId,
+            String clientName,
+            boolean isTestJourney) {
+        if (OrchSessionItem.AccountState.NEW.equals(accountState) && !isTestJourney) {
+            incrementCounter(
+                    SIGN_IN_NEW_ACCOUNT_BY_CLIENT.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            CLIENT.getValue(),
+                            clientId,
+                            CLIENT_NAME.getValue(),
+                            clientName));
+        }
+        if (OrchSessionItem.AccountState.EXISTING.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(
