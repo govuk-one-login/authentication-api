@@ -32,7 +32,15 @@ resource "aws_lambda_function" "endpoint_lambda" {
   }
   kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
 
-  runtime = var.handler_runtime
+  runtime       = var.handler_runtime
+  architectures = var.architectures
+
+  dynamic "snap_start" {
+    for_each = var.snapstart ? [1] : []
+    content {
+      apply_on = "PublishedVersions"
+    }
+  }
 
   tags = var.default_tags
 }
@@ -68,7 +76,7 @@ resource "aws_lambda_alias" "endpoint_lambda" {
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
-  count = var.provisioned_concurrency == 0 ? 0 : 1
+  count = (var.snapstart == false && var.provisioned_concurrency > 0) ? 1 : 0
 
   function_name = aws_lambda_function.endpoint_lambda.function_name
   qualifier     = aws_lambda_alias.endpoint_lambda.name
@@ -82,7 +90,7 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
 }
 
 resource "aws_appautoscaling_target" "lambda_target" {
-  count = var.max_provisioned_concurrency > var.provisioned_concurrency ? 1 : 0
+  count = (var.snapstart == false && var.max_provisioned_concurrency > var.provisioned_concurrency) ? 1 : 0
 
   max_capacity       = var.max_provisioned_concurrency
   min_capacity       = var.provisioned_concurrency
@@ -92,7 +100,7 @@ resource "aws_appautoscaling_target" "lambda_target" {
 }
 
 resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
-  count = var.max_provisioned_concurrency > var.provisioned_concurrency ? 1 : 0
+  count = (var.snapstart == false && var.max_provisioned_concurrency > var.provisioned_concurrency) ? 1 : 0
 
   name               = "LambdaProvisonedConcurrency:${aws_lambda_function.endpoint_lambda.function_name}"
   resource_id        = aws_appautoscaling_target.lambda_target[0].resource_id
