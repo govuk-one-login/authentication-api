@@ -19,6 +19,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -87,6 +89,7 @@ class CheckUserExistsHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -94,6 +97,7 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = mock(Session.class);
+    private final AuthSessionItem authSession = mock(AuthSessionItem.class);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
@@ -135,6 +139,7 @@ class CheckUserExistsHandlerTest {
                 new CheckUserExistsHandler(
                         configurationService,
                         sessionService,
+                        authSessionService,
                         clientSessionService,
                         clientService,
                         authenticationService,
@@ -148,6 +153,7 @@ class CheckUserExistsHandlerTest {
         @BeforeEach
         void setup() {
             usingValidSession();
+            authSessionExists();
             var userProfile =
                     generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
             setupUserProfileAndClient(Optional.of(userProfile));
@@ -286,6 +292,7 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn200IfUserDoesNotExist() throws Json.JsonException {
         usingValidSession();
+        authSessionExists();
 
         setupUserProfileAndClient(Optional.empty());
 
@@ -342,9 +349,30 @@ class CheckUserExistsHandlerTest {
                         AUDIT_CONTEXT.withEmail("joe.bloggs"));
     }
 
+    @Test
+    void shouldReturn400IfAuthSessionExpired() {
+        usingValidSession();
+        authSessionMissing();
+        setupClient();
+
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private void authSessionExists() {
+        when(authSessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(authSession));
+    }
+
+    private void authSessionMissing() {
+        when(authSessionService.getSessionFromRequestHeaders(any())).thenReturn(Optional.empty());
     }
 
     private UserProfile generateUserProfile() {

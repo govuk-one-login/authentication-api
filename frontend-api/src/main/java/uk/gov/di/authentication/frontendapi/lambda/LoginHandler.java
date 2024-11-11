@@ -199,8 +199,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         UserCredentials userCredentials = userContext.getUserCredentials().get();
         auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
-        var internalCommonSubjectIdentifier = getInternalCommonSubjectIdentifier(userProfile);
-        auditContext = auditContext.withUserId(internalCommonSubjectIdentifier);
+        var internalCommonSubjectId = getInternalCommonSubjectId(userProfile);
+        auditContext = auditContext.withUserId(internalCommonSubjectId);
 
         if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
             var reauthCounts =
@@ -271,7 +271,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         return handleValidCredentials(
                 request,
                 userContext,
-                internalCommonSubjectIdentifier,
+                internalCommonSubjectId,
                 userCredentials,
                 userProfile,
                 auditContext,
@@ -308,7 +308,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
 
         authSessionService.updateSession(
-                authSessionItem.withAccountState(AuthSessionItem.AccountState.EXISTING));
+                authSessionItem
+                        .withAccountState(AuthSessionItem.AccountState.EXISTING)
+                        .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
 
         var userMfaDetail =
                 getUserMFADetail(
@@ -451,13 +453,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 : codeStorageService.getIncorrectPasswordCount(email);
     }
 
-    private String getInternalCommonSubjectIdentifier(UserProfile userProfile) {
-        var internalCommonSubjectIdentifier =
+    private String getInternalCommonSubjectId(UserProfile userProfile) {
+        var internalCommonSubjectId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
                         userProfile,
                         configurationService.getInternalSectorUri(),
                         authenticationService);
-        return internalCommonSubjectIdentifier.getValue();
+        return internalCommonSubjectId.getValue();
     }
 
     private boolean isTermsAndConditionsAccepted(UserContext userContext, UserProfile userProfile) {
