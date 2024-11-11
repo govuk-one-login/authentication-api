@@ -422,6 +422,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("SET_IS_NEW_ACCOUNT_IN_ORCH_SESSION");
     }
 
+    public boolean isCurrentCredentialStrengthInOrchSessionEnabled() {
+        return getFlagOrFalse("CURRENT_CREDENTIAL_STRENGTH_IN_ORCH_SESSION");
+    }
+
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =
