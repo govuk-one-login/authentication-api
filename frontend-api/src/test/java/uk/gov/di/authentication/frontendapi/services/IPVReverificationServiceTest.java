@@ -60,7 +60,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.C
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
-class MfaResetIPVAuthorizationServiceTest {
+class IPVReverificationServiceTest {
     private static final JWSAlgorithm TEST_SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private static final String TEST_MFA_RESET_SCOPE = "reverification";
     private static final String TEST_STATE_STORAGE_PREFIX = "mfaReset:state:";
@@ -97,8 +97,8 @@ class MfaResetIPVAuthorizationServiceTest {
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private final JWTClaimsSet testJwtClaims = constructTestClaimSet();
-    private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService =
-            new MfaResetIPVAuthorizationService(
+    private final IPVReverificationService ipvReverificationService =
+            new IPVReverificationService(
                     configurationService,
                     nowClock,
                     jwtService,
@@ -147,7 +147,7 @@ class MfaResetIPVAuthorizationServiceTest {
                         })) {
 
             String redirectUri =
-                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+                    ipvReverificationService.buildIpvReverificationRedirectUri(
                             TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION);
 
             RSAPublicKey expectedPublicKey =
@@ -234,8 +234,7 @@ class MfaResetIPVAuthorizationServiceTest {
     private static String constructTestPublicKey() {
         var encodedKey =
                 Base64.getMimeEncoder()
-                        .encodeToString(
-                                MfaResetIPVAuthorizationServiceTest.TEST_PUBLIC_KEY.getEncoded());
+                        .encodeToString(IPVReverificationServiceTest.TEST_PUBLIC_KEY.getEncoded());
         return "-----BEGIN PUBLIC KEY-----\n" + encodedKey + "\n-----END PUBLIC KEY-----\n";
     }
 

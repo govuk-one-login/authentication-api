@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -33,8 +34,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
-public class MfaResetIPVAuthorizationService {
-    private static final Logger LOG = LogManager.getLogger(MfaResetIPVAuthorizationService.class);
+public class IPVReverificationService {
+    private static final Logger LOG = LogManager.getLogger(IPVReverificationService.class);
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private static final String MFA_RESET_SCOPE = "reverification";
     private static final String STATE_STORAGE_PREFIX = "mfaReset:state:";
@@ -45,7 +46,7 @@ public class MfaResetIPVAuthorizationService {
     private final RedisConnectionService redisConnectionService;
     private final Json objectMapper = SerializationService.getInstance();
 
-    public MfaResetIPVAuthorizationService(
+    public IPVReverificationService(
             ConfigurationService configurationService,
             JwtService jwtService,
             TokenService tokenService,
@@ -58,7 +59,7 @@ public class MfaResetIPVAuthorizationService {
                 redisConnectionService);
     }
 
-    public MfaResetIPVAuthorizationService(
+    public IPVReverificationService(
             ConfigurationService configurationService,
             NowClock nowClock,
             JwtService jwtService,
@@ -71,7 +72,7 @@ public class MfaResetIPVAuthorizationService {
         this.redisConnectionService = redisConnectionService;
     }
 
-    public String buildMfaResetIpvRedirectUri(
+    public String buildIpvReverificationRedirectUri(
             Subject subject, String clientSessionId, Session session) throws JwtServiceException {
         State state = new State();
         ClaimsSetRequest claims = buildMfaResetClaimsRequest(subject);
@@ -86,13 +87,13 @@ public class MfaResetIPVAuthorizationService {
                         .requestObject(requestJWT);
 
         AuthorizationRequest ipvAuthorisationRequest = authRequestBuilder.build();
-        String ipvAuthorisationRequestURI = ipvAuthorisationRequest.toURI().toString();
+        String ipvReverificationRequestURI = ipvAuthorisationRequest.toURI().toString();
 
         storeState(session.getSessionId(), state);
 
-        LOG.info("MFA reset JAR created, redirect URI {}", ipvAuthorisationRequestURI);
+        LOG.info("IPV reverification JAR created, redirect URI {}", ipvReverificationRequestURI);
 
-        return ipvAuthorisationRequestURI;
+        return ipvReverificationRequestURI;
     }
 
     private EncryptedJWT constructMfaResetAuthorizationJWT(
@@ -160,7 +161,7 @@ public class MfaResetIPVAuthorizationService {
                     .toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException(e);
+            throw new IPVReverificationServiceException(e.getMessage());
         }
     }
 
@@ -172,7 +173,7 @@ public class MfaResetIPVAuthorizationService {
                     configurationService.getSessionExpiry());
         } catch (Json.JsonException e) {
             LOG.error("Unable to save state to Redis");
-            throw new RuntimeException(e);
+            throw new IPVReverificationServiceException(e.getMessage());
         }
     }
 }

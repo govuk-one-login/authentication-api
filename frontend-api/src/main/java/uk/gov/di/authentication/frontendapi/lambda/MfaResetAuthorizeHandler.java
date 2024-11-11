@@ -10,9 +10,8 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
-import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
+import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
-import uk.gov.di.authentication.frontendapi.services.MfaResetIPVAuthorizationService;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -39,7 +38,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOG = LogManager.getLogger(MfaResetAuthorizeHandler.class);
-    private final MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService;
+    private final IPVReverificationService ipvReverificationService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
@@ -49,7 +48,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            MfaResetIPVAuthorizationService mfaResetIPVAuthorizationService,
+            IPVReverificationService ipvReverificationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService) {
         super(
@@ -59,7 +58,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.mfaResetIPVAuthorizationService = mfaResetIPVAuthorizationService;
+        this.ipvReverificationService = ipvReverificationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
@@ -75,8 +74,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                         configurationService, redisConnectionService, kmsConnectionService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.mfaResetIPVAuthorizationService =
-                new MfaResetIPVAuthorizationService(
+        this.ipvReverificationService =
+                new IPVReverificationService(
                         configurationService, jwtService, tokenService, redisConnectionService);
     }
 
@@ -114,21 +113,18 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             Subject internalCommonSubjectId =
                     new Subject(userSession.getInternalCommonSubjectIdentifier());
 
-            var ipvAuthorisationRequestURI =
-                    mfaResetIPVAuthorizationService.buildMfaResetIpvRedirectUri(
+            var ipvReverificationRequestURI =
+                    ipvReverificationService.buildIpvReverificationRedirectUri(
                             internalCommonSubjectId, clientSessionId, userSession);
 
             auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
             cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
             return generateApiGatewayProxyResponse(
-                    200, new MfaResetResponse(ipvAuthorisationRequestURI));
-        } catch (JwtServiceException e) {
-            LOG.error("Error in JWT service", e);
+                    200, new MfaResetResponse(ipvReverificationRequestURI));
+        } catch (Json.JsonException | RuntimeException e) {
+            LOG.error("Error building the IPV reverification request.", e);
             return generateApiGatewayProxyResponse(500, ERROR_1060.getMessage());
-        } catch (Json.JsonException e) {
-            LOG.error("Error serialising MFA reset response", e);
-            throw new RuntimeException(e);
         }
     }
 }
