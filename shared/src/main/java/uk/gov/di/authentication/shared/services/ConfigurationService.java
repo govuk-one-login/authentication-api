@@ -508,6 +508,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
 
+    public boolean canLogInternalPairwiseId() {
+        return List.of("test", "dev", "authdev1", "authdev2", "sandpit", "build")
+                .contains(getEnvironment());
+    }
+
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =
