@@ -177,6 +177,8 @@ class AuthCodeHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.isCurrentCredentialStrengthInOrchSessionEnabled())
+                .thenReturn(true);
         when(authCodeResponseService.getSubjectId(session)).thenReturn(SUBJECT.getValue());
         when(authCodeResponseService.getRpPairwiseId(session, CLIENT_ID, dynamoClientService))
                 .thenReturn(
