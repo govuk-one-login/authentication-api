@@ -418,6 +418,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("SET_AUTHENTICATED_FLAG_FOR_IPV");
     }
 
+    public boolean isCurrentCredentialStrengthInOrchSessionEnabled() {
+        return getFlagOrFalse("CURRENT_CREDENTIAL_STRENGTH_IN_ORCH_SESSION");
+    }
+
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =

@@ -379,14 +379,15 @@ public class AuthCodeHandler
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                 VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
         var currentCredentialStrength = session.getCurrentCredentialStrength();
-        if (isNull(session.getCurrentCredentialStrength())
-                || lowestRequestedCredentialTrustLevel.compareTo(
-                                session.getCurrentCredentialStrength())
-                        > 0) {
-            session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
-        }
         if (isNull(currentCredentialStrength)
                 || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength) > 0) {
+            session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
+        }
+
+        if (configurationService.isCurrentCredentialStrengthInOrchSessionEnabled()
+                && (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
+                                > 0)) {
             orchSessionService.updateSession(
                     orchSession.withCurrentCredentialStrength(lowestRequestedCredentialTrustLevel));
         }
