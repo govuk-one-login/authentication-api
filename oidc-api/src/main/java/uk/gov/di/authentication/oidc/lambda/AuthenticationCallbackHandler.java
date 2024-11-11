@@ -399,17 +399,18 @@ public class AuthenticationCallbackHandler
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
-                long authTime = NowHelper.now().toInstant().getEpochSecond();
                 if (setAuthenticatedFlagForIPV) {
-                    if (userSession.isAuthenticated()) {
-                        if (lowestRequestedCredentialTrustLevel.compareTo(
-                                        userSession.getCurrentCredentialStrength())
-                                > 0) {
-                            orchSessionService.updateSession(orchSession.withAuthTime(authTime));
-                        }
-                    } else {
+                    long authTime = NowHelper.now().toInstant().getEpochSecond();
+                    boolean userHasUplifted =
+                            userSession.getCurrentCredentialStrength() != null
+                                    && lowestRequestedCredentialTrustLevel.compareTo(
+                                                    userSession.getCurrentCredentialStrength())
+                                            > 0;
+                    if (!userSession.isAuthenticated()) {
                         sessionService.storeOrUpdateSession(
                                 userSession.setNewAccount(accountState).setAuthenticated(true));
+                        orchSessionService.updateSession(orchSession.withAuthTime(authTime));
+                    } else if (userHasUplifted) {
                         orchSessionService.updateSession(orchSession.withAuthTime(authTime));
                     }
                 } else {
