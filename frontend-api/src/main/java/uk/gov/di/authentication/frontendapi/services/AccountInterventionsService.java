@@ -72,7 +72,18 @@ public class AccountInterventionsService {
                                                 .getAccountInterventionServiceCallTimeout()))
                         .build();
         try {
-            return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (configurationService.canLogInternalPairwiseId()) {
+                LOG.info(
+                        "Sending account interventions request with internalPairwiseId {}",
+                        internalPairwiseId);
+            }
+            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (configurationService.canLogInternalPairwiseId()) {
+                LOG.info(
+                        "Recieved account interventions response for internalPairwiseId {}",
+                        internalPairwiseId);
+            }
+            return response;
         } catch (HttpTimeoutException e) {
             throw timeoutException(
                     configurationService.getAccountInterventionServiceCallTimeout(), e);
