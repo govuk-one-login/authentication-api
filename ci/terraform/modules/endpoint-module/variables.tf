@@ -177,3 +177,9 @@ variable "scaling_trigger" {
 variable "runbook_link" {
   default = ""
 }
+
+variable "wait_for_alias_timeout" {
+  type        = number
+  description = "The number of seconds to wait for the alias to be created"
+  default     = 300
+}

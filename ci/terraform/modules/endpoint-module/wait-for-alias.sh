@@ -1,0 +1,1 @@
+../endpoint-lambda/wait-for-alias.sh
