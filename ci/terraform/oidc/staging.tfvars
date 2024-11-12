@@ -21,6 +21,7 @@ authentication_attempts_service_enabled = true
 
 orch_account_id                     = "590183975515"
 is_orch_stubbed                     = false
+orch_environment                    = "staging"
 cmk_for_back_channel_logout_enabled = true
 
 contra_state_bucket = "di-auth-staging-tfstate"

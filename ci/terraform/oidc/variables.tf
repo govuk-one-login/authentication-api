@@ -696,6 +696,11 @@ variable "is_orch_stubbed" {
   default = false
 }
 
+variable "orch_environment" {
+  type    = string
+  default = ""
+}
+
 variable "cmk_for_back_channel_logout_enabled" {
   default     = false
   type        = bool

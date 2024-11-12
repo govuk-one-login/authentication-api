@@ -77,4 +77,5 @@ orch_storage_token_jwk_enabled       = true
 
 orch_account_id                     = "816047645251"
 is_orch_stubbed                     = false
+orch_environment                    = "dev"
 cmk_for_back_channel_logout_enabled = true

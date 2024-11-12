@@ -40,8 +40,9 @@ authorize_protected_subnet_enabled = true
 
 contra_state_bucket = "digital-identity-dev-tfstate"
 
-orch_account_id = "058264132019"
-is_orch_stubbed = false
+orch_account_id  = "058264132019"
+is_orch_stubbed  = false
+orch_environment = "integration"
 
 orch_trustmark_enabled               = true
 orch_openid_configuration_enabled    = true
