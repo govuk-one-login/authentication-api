@@ -80,3 +80,16 @@ module "start" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_start" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "start"
+  environment          = var.environment
+  lambda_function_name = module.start.lambda_function_name
+  lambda_version       = module.start.lambda_version
+  lambda_alias_name    = module.start.lambda_alias_name
+  lambda_alias_version = module.start.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

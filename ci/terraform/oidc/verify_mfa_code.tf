@@ -90,3 +90,16 @@ module "verify_mfa_code" {
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]
 }
+
+module "codedeploy_verify_mfa_code" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "verify-mfa-code"
+  environment          = var.environment
+  lambda_function_name = module.verify_mfa_code.lambda_function_name
+  lambda_version       = module.verify_mfa_code.lambda_version
+  lambda_alias_name    = module.verify_mfa_code.lambda_alias_name
+  lambda_alias_version = module.verify_mfa_code.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}

@@ -67,3 +67,16 @@ module "auth-code" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_auth_code" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "auth-code"
+  environment          = var.environment
+  lambda_function_name = module.auth-code.lambda_function_name
+  lambda_version       = module.auth-code.lambda_version
+  lambda_alias_name    = module.auth-code.lambda_alias_name
+  lambda_alias_version = module.auth-code.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
+}
