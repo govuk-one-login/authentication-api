@@ -45,3 +45,23 @@ import {
   to = aws_ssm_parameter.at_doc_app_url
   id = "/acceptance-tests/${var.environment}/DOC_APP_URL"
 }
+
+resource "aws_ssm_parameter" "user_profile_table" {
+  name  = "/acceptance-tests/${var.environment}/USER_PROFILE_TABLE"
+  type  = "String"
+  value = aws_dynamodb_table.user_profile_table.arn
+}
+import {
+  to = aws_ssm_parameter.user_profile_table
+  id = "/acceptance-tests/${var.environment}/USER_PROFILE_TABLE"
+}
+
+resource "aws_ssm_parameter" "user_credentials_table" {
+  name  = "/acceptance-tests/${var.environment}/USER_CREDENTIALS_TABLE"
+  type  = "String"
+  value = aws_dynamodb_table.user_credentials_table.arn
+}
+import {
+  to = aws_ssm_parameter.user_credentials_table
+  id = "/acceptance-tests/${var.environment}/USER_CREDENTIALS_TABLE"
+}
