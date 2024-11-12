@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
+import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -72,10 +73,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     public static final String PREVIOUS_SESSION_ID = "4waJ14KA9IyxKzY7bIGIA3hUDos";
     public static final String REQUEST_BODY =
-            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\"}";
+            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\", \"authenticated\": %s}";
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+
+    @RegisterExtension
+    protected static final AuthenticationAttemptsStoreExtension authAttemptsExtension =
+            new AuthenticationAttemptsStoreExtension();
 
     @BeforeEach
     void setup() {
@@ -98,7 +103,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             boolean identityRequired,
             boolean isAuthenticated)
             throws Json.JsonException {
-        String sessionId = redis.createSession(isAuthenticated);
+        String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
         redis.addEmailToSession(sessionId, EMAIL);
         var state = new State();
@@ -115,10 +120,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
-
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(makeRequestBody(isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -165,7 +169,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200AndStartResponseWithAuthenticatedFalseWhenReauthenticationIsRequested()
             throws Json.JsonException {
-        String sessionId = redis.createSession(true);
+        String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
         redis.addEmailToSession(sessionId, EMAIL);
         var state = new State();
@@ -185,7 +189,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
 
-        var response = makeRequest(Optional.of(REQUEST_BODY), headers, Map.of());
+        var response = makeRequest(Optional.of(makeRequestBody(true)), headers, Map.of());
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
@@ -206,7 +210,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn200WithCorrectMfaMethodTypeWhenTheseIsAnExistingSession(
             MFAMethodType mfaMethodType) throws Json.JsonException {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var sessionId = redis.createSession(true);
+        var isAuthenticated = true;
+        var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, userEmail);
 
         userStore.signUp(userEmail, "rubbbishPassword");
@@ -234,7 +239,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(makeRequestBody(isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -285,7 +290,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(makeRequestBody(isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -310,6 +315,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void userShouldNotComeBackAsAuthenticatedWhenSessionIsAuthenticatedButNoUserProfileExists()
             throws Json.JsonException {
         var scope = new Scope(OIDCScopeValue.OPENID);
+        var isAuthenticated = true;
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
@@ -319,14 +325,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var sessionId = redis.createSession(true);
+        var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, userEmail);
         redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(makeRequestBody(isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
 
@@ -382,7 +388,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     equalTo(true));
 
             makeRequest(
-                    Optional.of(REQUEST_BODY), standardHeadersWithSessionId(sessionId), Map.of());
+                    Optional.of(makeRequestBody(false)),
+                    standardHeadersWithSessionId(sessionId),
+                    Map.of());
 
             assertThat(
                     authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
@@ -393,13 +401,19 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldAddSessionToDynamoWhenPreviousSessionIsProvidedInRequestBodyButIsNotInDynamo() {
             makeRequest(
-                    Optional.of(REQUEST_BODY), standardHeadersWithSessionId(sessionId), Map.of());
+                    Optional.of(makeRequestBody(false)),
+                    standardHeadersWithSessionId(sessionId),
+                    Map.of());
 
             assertThat(
                     authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
                     equalTo(false));
             assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         }
+    }
+
+    private String makeRequestBody(boolean isAuthenticated) {
+        return String.format(REQUEST_BODY, isAuthenticated);
     }
 
     private void registerClient(KeyPair keyPair, ClientType clientType) {

@@ -56,18 +56,12 @@ public class StartService {
         this.sessionService = sessionService;
     }
 
-    public Session validateSession(Session session, String clientSessionId) {
-        LOG.info("Validating session");
-        Optional<UserProfile> userProfile =
-                Optional.ofNullable(session.getEmailAddress())
-                        .flatMap(dynamoService::getUserProfileByEmailMaybe);
-        if (session.isAuthenticated() && userProfile.isEmpty()) {
-            LOG.info(
-                    "Session is authenticated but user profile is empty. Creating new session with existing sessionID");
-            session = new Session(session.getSessionId());
-            session.addClientSession(clientSessionId);
-            sessionService.storeOrUpdateSession(session);
-        }
+    public Session createNewSessionWithExistingIdAndClientSession(
+            Session session, String clientSessionId) {
+        LOG.info("Creating new session with existing sessionID");
+        session = new Session(session.getSessionId());
+        session.addClientSession(clientSessionId);
+        sessionService.storeOrUpdateSession(session);
         return session;
     }
 
@@ -148,7 +142,8 @@ public class StartService {
             String gaTrackingId,
             boolean identityEnabled,
             boolean reauthenticate,
-            boolean isBlockedForReauth) {
+            boolean isBlockedForReauth,
+            boolean isAuthenticated) {
         var uplift = false;
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
@@ -168,10 +163,7 @@ public class StartService {
             mfaMethodType = MFAMethodType.AUTH_APP;
         }
 
-        var userIsAuthenticated =
-                !docCheckingAppUser
-                        && userContext.getSession().isAuthenticated()
-                        && !reauthenticate;
+        var userIsAuthenticated = !docCheckingAppUser && isAuthenticated && !reauthenticate;
 
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}, IsBlockedForReauth: {}",
@@ -226,6 +218,12 @@ public class StartService {
         } catch (ClientNotFoundException e) {
             throw new RuntimeException("Client not found", e);
         }
+    }
+
+    public boolean isUserProfileEmpty(Session session) {
+        return Optional.ofNullable(session.getEmailAddress())
+                .flatMap(dynamoService::getUserProfileByEmailMaybe)
+                .isEmpty();
     }
 
     private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {

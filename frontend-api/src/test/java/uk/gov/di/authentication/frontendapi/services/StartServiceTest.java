@@ -58,7 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
@@ -99,15 +98,16 @@ class StartServiceTest {
     }
 
     @Test
-    void shouldReturnUnauthenticatedSessionIfUserIsAuthenticatedButNoUserProfileIsFound() {
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
+    void shouldOverwriteSessionWithNewSessionUsingExistingSessionAndClientSessionIds() {
         var currentClientSessionId = "some-client-session-id";
-        SESSION.setAuthenticated(true);
         SESSION.addClientSession("previous-session-client-session-id");
         SESSION.setNewAccount(Session.AccountState.EXISTING);
         SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
         SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        var session = startService.validateSession(SESSION, currentClientSessionId);
+
+        var session =
+                startService.createNewSessionWithExistingIdAndClientSession(
+                        SESSION, currentClientSessionId);
 
         assertFalse(session.isAuthenticated());
         assertThat(session.getCurrentCredentialStrength(), equalTo(null));
@@ -116,33 +116,6 @@ class StartServiceTest {
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
         assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
         verify(sessionService).storeOrUpdateSession(session);
-    }
-
-    @Test
-    void shouldReturnAuthenticatedSessionIfUserIsAuthenticatedAndUserProfileIsFound() {
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(
-                        Optional.of(
-                                new UserProfile()
-                                        .withEmail(EMAIL)
-                                        .withSubjectID(new Subject().getValue())));
-        var currentClientSessionId = "some-client-session-id";
-        SESSION.setAuthenticated(true);
-        SESSION.addClientSession(currentClientSessionId);
-        SESSION.addClientSession("previous-session-client-session-id");
-        SESSION.setNewAccount(Session.AccountState.EXISTING);
-        SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
-        SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        var session = startService.validateSession(SESSION, currentClientSessionId);
-
-        assertTrue(session.isAuthenticated());
-        assertThat(
-                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        assertThat(session.isNewAccount(), equalTo(Session.AccountState.EXISTING));
-        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertTrue(session.getClientSessions().contains("some-client-session-id"));
-        assertTrue(session.getClientSessions().contains("previous-session-client-session-id"));
-        verifyNoInteractions(sessionService);
     }
 
     @Test
@@ -177,6 +150,18 @@ class StartServiceTest {
         assertThat(userContext.getClientSession(), equalTo(clientSession));
     }
 
+    @Test
+    void returnsFalseIfUserProfilePresent() {
+        withUserProfile();
+        assertFalse(startService.isUserProfileEmpty(SESSION));
+    }
+
+    @Test
+    void returnsTrueWhenUserProfileEmpty() {
+        withNoUserProfile();
+        assertTrue(startService.isUserProfileEmpty(SESSION));
+    }
+
     private static Stream<Arguments> userStartInfo() {
         return Stream.of(
                 Arguments.of(jsonArrayOf("Cl"), "some-cookie-consent", null, false, false),
@@ -207,7 +192,13 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, cookieConsent, gaTrackingId, true, false, false);
+                        userContext,
+                        cookieConsent,
+                        gaTrackingId,
+                        true,
+                        false,
+                        false,
+                        isAuthenticated);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -253,6 +244,7 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         identityEnabled,
                         false,
+                        false,
                         false);
 
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
@@ -272,7 +264,8 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         true,
                         false,
-                        isBlockedForReauth);
+                        isBlockedForReauth,
+                        false);
 
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(isBlockedForReauth));
     }
@@ -303,6 +296,7 @@ class StartServiceTest {
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
+                        false,
                         false,
                         false);
 
@@ -427,14 +421,8 @@ class StartServiceTest {
 
     @Test
     void shouldCreateUserStartInfoWithAuthenticatedFalseWhenReauthenticationIsTrue() {
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(
-                        Optional.of(
-                                new UserProfile()
-                                        .withEmail(EMAIL)
-                                        .withSubjectID(new Subject().getValue())));
+        withUserProfile();
 
-        SESSION.setAuthenticated(true);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
@@ -442,7 +430,8 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         true,
                         true,
-                        false);
+                        false,
+                        true);
 
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
     }
@@ -478,6 +467,7 @@ class StartServiceTest {
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
+                        false,
                         false,
                         false);
 
@@ -691,5 +681,18 @@ class StartServiceTest {
         var signer = new RSASSASigner(keyPair.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
+    }
+
+    private void withUserProfile() {
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(new Subject().getValue())));
+    }
+
+    private void withNoUserProfile() {
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
     }
 }
