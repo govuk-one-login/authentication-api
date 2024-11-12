@@ -8,6 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class OrchSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
+    public static final String ATTRIBUTE_PREVIOUS_SESSION_ID = "PreviousSessionId";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
@@ -20,6 +21,7 @@ public class OrchSessionItem {
     }
 
     private String sessionId;
+    private String previousSessionId;
     private long timeToLive;
     private String verifiedMfaMethodType;
     private AccountState isNewAccount;
@@ -44,6 +46,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withSessionId(String sessionId) {
         this.sessionId = sessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PREVIOUS_SESSION_ID)
+    public String getPreviousSessionId() {
+        return previousSessionId;
+    }
+
+    public void setPreviousSessionId(String previousSessionId) {
+        this.previousSessionId = previousSessionId;
+    }
+
+    public OrchSessionItem withPreviousSessionId(String previousSessionId) {
+        this.previousSessionId = previousSessionId;
         return this;
     }
 
