@@ -173,3 +173,8 @@ variable "max_provisioned_concurrency" {
 variable "scaling_trigger" {
   default = 0.7
 }
+variable "wait_for_alias_timeout" {
+  type        = number
+  description = "The number of seconds to wait for the alias to be created"
+  default     = 300
+}
