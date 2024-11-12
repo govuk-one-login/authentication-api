@@ -300,7 +300,7 @@ public class AuthenticationCallbackHandler
 
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
-                            authenticationRequest, input, user, userSession);
+                            authenticationRequest, input, user, userSession, orchSession);
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
@@ -482,12 +482,12 @@ public class AuthenticationCallbackHandler
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    userSession, input, clientId, intervention);
+                                    userSession, orchSession, input, clientId, intervention);
                         }
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        userSession, input, clientId, intervention);
+                                        userSession, orchSession, input, clientId, intervention);
                             }
                             // continue
                         }
@@ -700,14 +700,15 @@ public class AuthenticationCallbackHandler
                     AuthenticationRequest authenticationRequest,
                     APIGatewayProxyRequestEvent input,
                     TxmaAuditUser user,
-                    Session session) {
+                    Session session,
+                    OrchSessionItem orchSessionItem) {
         try {
             authorisationService.validateRequest(
                     input.getQueryStringParameters(), session.getSessionId());
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
-                            authenticationRequest, input, e, user, session));
+                            authenticationRequest, input, e, user, session, orchSessionItem));
         }
         return Optional.empty();
     }
@@ -717,7 +718,8 @@ public class AuthenticationCallbackHandler
             APIGatewayProxyRequestEvent input,
             AuthenticationCallbackValidationException exception,
             TxmaAuditUser user,
-            Session session) {
+            Session session,
+            OrchSessionItem orchSession) {
         var error = exception.getError();
         LOG.warn(
                 "Error in Authentication Authorisation Response. ErrorCode: {}. ErrorDescription: {}.{}",
@@ -739,6 +741,7 @@ public class AuthenticationCallbackHandler
         if (exception.getLogoutRequired()) {
             return logoutService.handleReauthenticationFailureLogout(
                     session,
+                    orchSession,
                     input,
                     authenticationRequest.getClientID().getValue(),
                     errorResponseUri);
