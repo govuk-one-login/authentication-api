@@ -17,11 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
@@ -52,6 +54,7 @@ class LogoutHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
@@ -71,9 +74,10 @@ class LogoutHandlerTest {
     private LogoutHandler handler;
     private SignedJWT signedIDToken;
     private String idTokenHint;
-    private static final Subject SUBJECT = new Subject();
+    private static final Subject INTERNAL_COMMON_SUBJECT_ID = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
     private uk.gov.di.orchestration.shared.entity.Session session;
+    private OrchSessionItem orchSession;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutHandler.class);
@@ -88,40 +92,48 @@ class LogoutHandlerTest {
                                         SESSION_ID,
                                         CLIENT_SESSION_ID,
                                         PERSISTENT_SESSION_ID,
-                                        SUBJECT.toString()))));
+                                        INTERNAL_COMMON_SUBJECT_ID.toString()))));
     }
 
     @BeforeEach
     void setUp() throws JOSEException {
         handler =
                 new LogoutHandler(
-                        sessionService, dynamoClientService, tokenValidationService, logoutService);
+                        sessionService,
+                        orchSessionService,
+                        dynamoClientService,
+                        tokenValidationService,
+                        logoutService);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
                         "client-id",
-                        SUBJECT,
+                        INTERNAL_COMMON_SUBJECT_ID,
                         "http://localhost-rp",
                         "id-token-client-session-id",
                         ecSigningKey);
         idTokenHint = signedIDToken.serialize();
 
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(logoutService.handleLogout(any(), any(), any(), any(), any(), any(), any()))
+        when(logoutService.handleLogout(any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
+        session =
+                generateSession()
+                        .setEmailAddress(EMAIL)
+                        .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID.getValue());
+        orchSession =
+                new OrchSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID.getValue());
     }
 
     @Test
     void shouldDestroySessionAndLogoutWhenSessionIsAvailable() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -136,19 +148,20 @@ class LogoutHandlerTest {
                                 extractPersistentIdFromCookieHeader(event.getHeaders()))
                         .withGovukSigninJourneyId("id-token-client-session-id")
                         .withSessionId(SESSION_ID)
-                        .withUserId(SUBJECT.getValue());
+                        .withUserId(INTERNAL_COMMON_SUBJECT_ID.getValue());
 
         handler.handleRequest(event, context);
 
         verify(logoutService, times(1))
                 .handleLogout(
                         Optional.of(session),
+                        Optional.of(orchSession),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
                         auditUser,
                         Optional.of("client-id"),
-                        Optional.of(SUBJECT.getValue()));
+                        Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()));
     }
 
     @Test
@@ -174,19 +187,16 @@ class LogoutHandlerTest {
                 .handleLogout(
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
                         auditUser,
                         Optional.of("client-id"),
-                        Optional.of(SUBJECT.getValue()));
+                        Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()));
     }
 
     @Test
     void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -205,19 +215,20 @@ class LogoutHandlerTest {
                                 extractPersistentIdFromCookieHeader(event.getHeaders()))
                         .withGovukSigninJourneyId("id-token-client-session-id")
                         .withSessionId(SESSION_ID)
-                        .withUserId(SUBJECT.getValue());
+                        .withUserId(INTERNAL_COMMON_SUBJECT_ID.getValue());
 
         handler.handleRequest(event, context);
 
         verify(logoutService, times(1))
                 .handleLogout(
                         Optional.of(session),
+                        Optional.of(orchSession),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
                         auditUser,
                         Optional.of("client-id"),
-                        Optional.of(SUBJECT.getValue()));
+                        Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()));
     }
 
     private uk.gov.di.orchestration.shared.entity.Session generateSession() {
@@ -225,8 +236,11 @@ class LogoutHandlerTest {
                 .addClientSession(CLIENT_SESSION_ID);
     }
 
-    private void generateSessionFromCookie(uk.gov.di.orchestration.shared.entity.Session session) {
+    private void generateSessionFromCookie(
+            uk.gov.di.orchestration.shared.entity.Session session, OrchSessionItem orchSession) {
         when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromSessionCookie(anyMap()))
+                .thenReturn(Optional.of(orchSession));
     }
 
     private ClientRegistry createClientRegistry() {
@@ -265,7 +279,7 @@ class LogoutHandlerTest {
     private void setupSessions() {
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {

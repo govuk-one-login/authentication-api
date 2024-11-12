@@ -59,6 +59,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
@@ -318,7 +319,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, intervention);
+                            session, Optional.of(orchSession), input, clientId, intervention);
                 }
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -375,7 +376,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, intervention);
+                            session, Optional.of(orchSession), input, clientId, intervention);
                 }
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
                 if (returnCodePresentInIPVResponse(returnCode)) {
