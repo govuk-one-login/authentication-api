@@ -228,7 +228,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
-      setAuthenticatedFlagForIpv: false
+      setAuthenticatedFlagForIpv: true
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
