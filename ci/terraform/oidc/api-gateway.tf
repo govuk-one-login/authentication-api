@@ -705,24 +705,13 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
   }
 }
 
-resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
-  count        = var.enforce_cloudfront ? 0 : 1
-  resource_arn = aws_api_gateway_stage.endpoint_stage.arn
-  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
-
-  depends_on = [
-    aws_api_gateway_stage.endpoint_stage,
-    aws_wafv2_web_acl.wafregional_web_acl_oidc_api
-  ]
-}
-
 data "aws_cloudformation_export" "oidc_origin_cloaking_waf_arn" {
-  count = var.enforce_cloudfront ? 1 : 0
+  count = var.oidc_cloudfront_enabled ? 1 : 0
   name  = "${local.secure_pipelines_environment}-oidc-cloudfront-CloakingOriginWebACLArn"
 }
 
 resource "aws_wafv2_web_acl_association" "oidc_origin_cloaking_waf" {
-  count        = var.enforce_cloudfront ? 1 : 0
+  count        = var.oidc_cloudfront_enabled ? 1 : 0
   resource_arn = aws_api_gateway_stage.endpoint_stage.arn
   web_acl_arn  = data.aws_cloudformation_export.oidc_origin_cloaking_waf_arn[0].value
 }
