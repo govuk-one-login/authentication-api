@@ -24,7 +24,7 @@ module "account_interventions_stub_lambda" {
   provisioned_concurrency     = 0
   max_provisioned_concurrency = local.default_performance_parameters.max_concurrency
   scaling_trigger             = local.default_performance_parameters.scaling_trigger
-  snapstart                   = true
+  snapstart                   = false
 
   source_bucket           = aws_s3_bucket.interventions_api_stub_source_bucket.bucket
   lambda_zip_file         = aws_s3_object.interventions_api_stub_release_zip.key
