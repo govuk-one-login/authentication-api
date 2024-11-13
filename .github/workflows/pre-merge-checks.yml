@@ -12,6 +12,11 @@ on:
   merge_group:
 
 jobs:
+  check-changed-files:
+    permissions:
+      pull-requests: write
+    uses: ./.github/workflows/call_get_changed_files.yml
+
   check-openapi-specs:
     runs-on: ubuntu-latest
     steps:
@@ -30,20 +35,27 @@ jobs:
           find ci/terraform -type f -name "*openapi*.yaml" -exec python scripts/validate_openapi_definition.py {} \;
   build:
     runs-on: ubuntu-latest
+    needs:
+      - check-changed-files
     steps:
       - name: Check out repository code
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
       - name: Build Cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
@@ -53,26 +65,32 @@ jobs:
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Build
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
 
   style-checks:
     runs-on: ubuntu-latest
     needs:
       - build
+      - check-changed-files
     steps:
       - name: Check out repository code
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
@@ -83,26 +101,32 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: Run Spotless
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         run: ./gradlew --no-daemon spotlessCheck
 
   run-unit-tests:
     runs-on: ubuntu-latest
     needs:
       - build
+      - check-changed-files
     steps:
       - name: Check out repository code
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
@@ -112,11 +136,13 @@ jobs:
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Unit Tests
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x spotlessApply -x spotlessCheck
 
       - name: Cache Unit Test Reports
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/save@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
@@ -131,7 +157,7 @@ jobs:
             !delivery-receipts-integration-tests/build/reports/
       - name: Upload Unit Test Reports
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: failure()
+        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: unit-test-reports
           path: |
@@ -146,6 +172,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+      - check-changed-files
     services:
       localstack:
         image: localstack/localstack:3.0.0
@@ -179,18 +206,22 @@ jobs:
           - 8000:8000
     steps:
       - name: Check out repository code
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
@@ -200,10 +231,12 @@ jobs:
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Integration Tests
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
           ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
 
       - name: Cache Test Reports
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/save@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
@@ -212,7 +245,7 @@ jobs:
             integration-tests/build/reports/
       - name: Upload Integration Test Reports
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: failure()
+        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: integration-test-reports
           path: integration-tests/build/reports/tests/test/
@@ -222,6 +255,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+      - check-changed-files
     services:
       localstack:
         image: localstack/localstack:3.0.0
@@ -257,18 +291,22 @@ jobs:
           - 8000:8000
     steps:
       - name: Check out repository code
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
@@ -279,20 +317,23 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: Run Account Management Integration Tests
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
           ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: failure()
+        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: account-management-integration-test-reports
           path: account-management-integration-tests/build/reports/tests/test/
           retention-days: 5
       - name: Run Delivery Receipts Integration Tests
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
           ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
 
       - name: Cache Test Reports
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/save@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
@@ -304,7 +345,7 @@ jobs:
 
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: failure()
+        if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: delivery-receipts-integration-test-reports
           path: delivery-receipts-integration-tests/build/reports/tests/test/
@@ -316,23 +357,28 @@ jobs:
       - run-unit-tests
       - run-integration-tests
       - run-account-management-and-delivery-receipts-tests
+      - check-changed-files
     if: github.event_name != 'merge_group'
     steps:
       - name: Check out repository code
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
       - name: Set up JDK 17
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
@@ -343,6 +389,7 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: Restore Cached Unit Test Reports
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
@@ -356,6 +403,7 @@ jobs:
             !delivery-receipts-integration-tests/build/jacoco/
             !delivery-receipts-integration-tests/build/reports/
       - name: Restore Cached Integration Test Reports
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
@@ -363,6 +411,7 @@ jobs:
             integration-tests/build/jacoco/
             integration-tests/build/reports/
       - name: Restore Cached AM DR Integration Test Reports
+        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
@@ -372,7 +421,7 @@ jobs:
             delivery-receipts-integration-tests/build/jacoco/
             delivery-receipts-integration-tests/build/reports/
       - name: Run SonarCloud Analysis
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'  && needs.check-changed-files.outputs.java_changed == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

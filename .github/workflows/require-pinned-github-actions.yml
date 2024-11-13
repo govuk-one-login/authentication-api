@@ -6,7 +6,9 @@ on:
       - reopened
       - ready_for_review
       - synchronize
-  merge_group:
+    paths:
+      - ".github/workflows/**.yml"
+      - ".github/workflows/**.yaml"
 
 jobs:
   check-actions-sha:

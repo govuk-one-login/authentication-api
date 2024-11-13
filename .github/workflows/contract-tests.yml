@@ -17,9 +17,24 @@ on:
       - reopened
       - ready_for_review
       - synchronize
+    paths:
+      - ".github/workflows/contract-tests.yml"
+      # Ensure these are synchronized with the paths in the check-changed-files job
+      - "**/src/**"
+      - "**/*.java"
+      - "**/*.gradle"
+      - "**/*.properties"
+      - "gradle*"
   push:
     branches:
       - main
+    paths:
+      # Ensure these are synchronized with the paths in the check-changed-files job
+      - "**/src/**"
+      - "**/*.java"
+      - "**/*.gradle"
+      - "**/*.properties"
+      - "gradle*"
 
 jobs:
   contract-testing:
@@ -44,11 +59,11 @@ jobs:
         run: ./gradlew pactConsumerTests
 
       - name: Upload pacts to broker
-        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' && github.event_name != 'push' }}
+        if: github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' && github.event_name != 'push'
         run: ./gradlew pactPublish
 
       - name: Upload pacts to broker on push to main
-        if: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'push' }}
+        if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
         env:
           CONSUMER_APP_VERSION: ${{ github.sha }}
         run: ./gradlew pactPublish
