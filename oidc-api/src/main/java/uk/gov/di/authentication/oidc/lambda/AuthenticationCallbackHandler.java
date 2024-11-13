@@ -397,15 +397,9 @@ public class AuthenticationCallbackHandler
                                     : OrchSessionItem.AccountState.EXISTING;
                 }
 
-                boolean setAuthenticatedFlagForIPV =
-                        configurationService.isAuthenticatedFlagForIpvEnabled();
+                sessionService.storeOrUpdateSession(
+                        userSession.setNewAccount(accountState).setAuthenticated(true));
 
-                if (setAuthenticatedFlagForIPV) {
-                    sessionService.storeOrUpdateSession(
-                            userSession.setNewAccount(accountState).setAuthenticated(true));
-                } else {
-                    sessionService.storeOrUpdateSession(userSession.setNewAccount(accountState));
-                }
                 orchSessionService.updateSession(orchSession.withAccountState(orchAccountState));
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
@@ -525,12 +519,7 @@ public class AuthenticationCallbackHandler
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
-                if (setAuthenticatedFlagForIPV) {
-                    sessionService.storeOrUpdateSession(userSession);
-                } else {
-                    sessionService.storeOrUpdateSession(userSession.setAuthenticated(true));
-                }
-
+                sessionService.storeOrUpdateSession(userSession);
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         accountState, clientId, clientSession.getClientName(), isTestJourney);
