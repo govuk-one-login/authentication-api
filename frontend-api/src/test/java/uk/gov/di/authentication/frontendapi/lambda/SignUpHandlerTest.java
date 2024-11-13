@@ -41,6 +41,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -193,7 +194,12 @@ class SignUpHandlerTest {
 
         verify(authSessionService)
                 .updateSession(
-                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.NEW));
+                        argThat(
+                                s ->
+                                        s.getIsNewAccount() == AuthSessionItem.AccountState.NEW
+                                                && Objects.equals(
+                                                        s.getInternalCommonSubjectId(),
+                                                        expectedCommonSubject)));
         verify(sessionService, atLeastOnce())
                 .storeOrUpdateSession(
                         argThat(
