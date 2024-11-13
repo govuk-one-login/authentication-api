@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.interventions.api.stub.entity.AccountInterventionsStore;
 import uk.gov.di.authentication.interventions.api.stub.services.AccountInterventionsDbService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -35,9 +34,7 @@ class AccountInterventionsApiStubHandlerTest {
 
     @Test
     void shouldReturn200ForSuccessfulRequest() {
-        var handler =
-                new AccountInterventionsApiStubHandler(
-                        accountInterventionsDbService, new ConfigurationService());
+        var handler = new AccountInterventionsApiStubHandler(accountInterventionsDbService);
         when(accountInterventionsDbService.getAccountInterventions(PAIRWISE_ID))
                 .thenReturn(Optional.of(accountInterventionsStore));
 
@@ -57,9 +54,7 @@ class AccountInterventionsApiStubHandlerTest {
 
     @Test
     void shouldReturn200WhenThePairwiseIdDoesNotExistInTheDatabase() {
-        var handler =
-                new AccountInterventionsApiStubHandler(
-                        accountInterventionsDbService, new ConfigurationService());
+        var handler = new AccountInterventionsApiStubHandler(accountInterventionsDbService);
         when(accountInterventionsDbService.getAccountInterventions(PAIRWISE_ID))
                 .thenReturn(Optional.empty());
 
