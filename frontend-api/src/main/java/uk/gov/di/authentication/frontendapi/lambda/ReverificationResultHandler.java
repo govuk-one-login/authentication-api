@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,7 +12,6 @@ import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
-import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -24,10 +24,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -89,19 +86,25 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var tokenResponse =
-                InstrumentationHelper.segmentedFunctionCall(
-                        "getIpvToken", () -> reverificationResultService.getToken(request.code()));
-
-        if (!tokenResponse.indicatesSuccess()) {
-            LOG.error(
-                    "IPV TokenResponse was not successful: {}",
-                    tokenResponse.toErrorResponse().toJSONObject());
-            auditService.submitAuditEvent(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED, auditContext);
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1058);
-        }
-        LOG.info("Successful IPV TokenResponse");
-        auditService.submitAuditEvent(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED, auditContext);
+        // The following code is commented out while we work on implementing the flow step by step.
+        // It will be uncommented in a subsequent PR
+        //        var tokenResponse =
+        //                InstrumentationHelper.segmentedFunctionCall(
+        //                        "getIpvToken", () ->
+        // reverificationResultService.getToken(request.code()));
+        //
+        //        if (!tokenResponse.indicatesSuccess()) {
+        //            LOG.error(
+        //                    "IPV TokenResponse was not successful: {}",
+        //                    tokenResponse.toErrorResponse().toJSONObject());
+        //            auditService.submitAuditEvent(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED,
+        // auditContext);
+        //            return generateApiGatewayProxyErrorResponse(400, ERROR_1058);
+        //        }
+        //        LOG.info("Successful IPV TokenResponse");
+        //        auditService.submitAuditEvent(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
+        // auditContext);
+        LOG.warn("Temporarily skipping token response and assuming success");
 
         try {
             var reverificationResult =
@@ -110,10 +113,14 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                                     ConstructUriHelper.buildURI(
                                             configurationService.getIPVBackendURI().toString(),
                                             "reverification"),
-                                    tokenResponse
-                                            .toSuccessResponse()
-                                            .getTokens()
-                                            .getBearerAccessToken()));
+                                    // This is also temporarily commented out and replaced by a
+                                    // hard-coded bearer access token while work continues on
+                                    // implementing this step by step
+                                    // tokenResponse
+                                    //  .toSuccessResponse()
+                                    //  .getTokens()
+                                    //  .getBearerAccessToken()));
+                                    new BearerAccessToken(3600, null)));
 
             LOG.info("Successful IPV ReverificationResult");
             auditService.submitAuditEvent(

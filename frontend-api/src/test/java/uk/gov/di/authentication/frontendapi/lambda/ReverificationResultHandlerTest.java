@@ -32,14 +32,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -96,22 +93,25 @@ class ReverificationResultHandlerTest {
             assertThat(result, hasBody(userInfo.getContent()));
         }
 
-        @Test
-        void shouldSubmitSuccessfulTokenReceivedAuditEvent()
-                throws ParseException, UnsuccessfulReverificationResponseException {
-            HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContent(
-                    "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getSuccessfulTokenResponse());
-            when(reverificationResultService.sendIpvReverificationRequest(any()))
-                    .thenReturn(userInfo);
+        // TODO: This should be reinstated when the implementation code is reinstated
 
-            handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
-
-            verify(auditService)
-                    .submitAuditEvent(eq(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED), any());
-        }
+        //        @Test
+        //        void shouldSubmitSuccessfulTokenReceivedAuditEvent()
+        //                throws ParseException, UnsuccessfulReverificationResponseException {
+        //            HTTPResponse userInfo = new HTTPResponse(200);
+        //            userInfo.setContent(
+        //                    "{ \"sub\":
+        // \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+        //            when(reverificationResultService.getToken(any()))
+        //                    .thenReturn(getSuccessfulTokenResponse());
+        //            when(reverificationResultService.sendIpvReverificationRequest(any()))
+        //                    .thenReturn(userInfo);
+        //
+        //            handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+        //
+        //            verify(auditService)
+        //                    .submitAuditEvent(eq(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED), any());
+        //        }
 
         @Test
         void shouldSubmitSuccessfulReverificationInfoAuditEvent()
@@ -134,37 +134,40 @@ class ReverificationResultHandlerTest {
 
     @Nested
     class TokenErrors {
-        @Test
-        void shouldHandleIPVTokenError()
-                throws ParseException, UnsuccessfulReverificationResponseException {
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getUnsuccessfulTokenResponse());
-            when(reverificationResultService.sendIpvReverificationRequest(any()))
-                    .thenThrow(
-                            new UnsuccessfulReverificationResponseException(
-                                    "Error getting reverification result"));
-
-            var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1058));
-        }
-
-        @Test
-        void shouldSubmitUnsuccessfulTokenReceivedAuditEvent()
-                throws ParseException, UnsuccessfulReverificationResponseException {
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getUnsuccessfulTokenResponse());
-            when(reverificationResultService.sendIpvReverificationRequest(any()))
-                    .thenThrow(
-                            new UnsuccessfulReverificationResponseException(
-                                    "Error getting reverification result"));
-
-            handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
-
-            verify(auditService)
-                    .submitAuditEvent(eq(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED), any());
-        }
+        // TODO: These tests should be reinstated when the implementation code is reinstated
+        //        @Test
+        //        void shouldHandleIPVTokenError()
+        //                throws ParseException, UnsuccessfulReverificationResponseException {
+        //            when(reverificationResultService.getToken(any()))
+        //                    .thenReturn(getUnsuccessfulTokenResponse());
+        //            when(reverificationResultService.sendIpvReverificationRequest(any()))
+        //                    .thenThrow(
+        //                            new UnsuccessfulReverificationResponseException(
+        //                                    "Error getting reverification result"));
+        //
+        //            var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL),
+        // context);
+        //
+        //            assertThat(result, hasStatus(400));
+        //            assertThat(result, hasJsonBody(ERROR_1058));
+        //        }
+        //
+        //        @Test
+        //        void shouldSubmitUnsuccessfulTokenReceivedAuditEvent()
+        //                throws ParseException, UnsuccessfulReverificationResponseException {
+        //            when(reverificationResultService.getToken(any()))
+        //                    .thenReturn(getUnsuccessfulTokenResponse());
+        //            when(reverificationResultService.sendIpvReverificationRequest(any()))
+        //                    .thenThrow(
+        //                            new UnsuccessfulReverificationResponseException(
+        //                                    "Error getting reverification result"));
+        //
+        //            handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+        //
+        //            verify(auditService)
+        //                    .submitAuditEvent(eq(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED),
+        // any());
+        //        }
     }
 
     @Nested
