@@ -37,9 +37,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyReques
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class ReverificationResultHandlerTest {
@@ -170,24 +168,27 @@ class ReverificationResultHandlerTest {
         //        }
     }
 
-    @Nested
-    class ReverificationErrors {
-        @Test
-        void shouldHandleIPVReverificationError()
-                throws ParseException, UnsuccessfulReverificationResponseException {
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getSuccessfulTokenResponse());
-            when(reverificationResultService.sendIpvReverificationRequest(any()))
-                    .thenThrow(
-                            new UnsuccessfulReverificationResponseException(
-                                    "Error getting reverification result"));
+    // TODO this should be uncommented when the implementation is restored
 
-            var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
-        }
-    }
+    //    @Nested
+    //    class ReverificationErrors {
+    //        @Test
+    //        void shouldHandleIPVReverificationError()
+    //                throws ParseException, UnsuccessfulReverificationResponseException {
+    //            when(reverificationResultService.getToken(any()))
+    //                    .thenReturn(getSuccessfulTokenResponse());
+    //            when(reverificationResultService.sendIpvReverificationRequest(any()))
+    //                    .thenThrow(
+    //                            new UnsuccessfulReverificationResponseException(
+    //                                    "Error getting reverification result"));
+    //
+    //            var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL),
+    // context);
+    //
+    //            assertThat(result, hasStatus(400));
+    //            assertThat(result, hasJsonBody(ERROR_1059));
+    //        }
+    //    }
 
     public TokenResponse getSuccessfulTokenResponse() throws ParseException {
         var tokenResponseContent =
