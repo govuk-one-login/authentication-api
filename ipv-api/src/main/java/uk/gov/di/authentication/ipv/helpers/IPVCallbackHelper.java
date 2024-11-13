@@ -199,7 +199,8 @@ public class IPVCallbackHelper {
             String internalPairwiseSubjectId,
             UserInfo userIdentityUserInfo,
             String ipAddress,
-            String persistentSessionId)
+            String persistentSessionId,
+            boolean isGetNewAccountFromOrchSessionEnabled)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
@@ -226,7 +227,12 @@ public class IPVCallbackHelper {
 
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
-        metadataPairs.add(pair("isNewAccount", session.isNewAccount()));
+        metadataPairs.add(
+                pair(
+                        "isNewAccount",
+                        isGetNewAccountFromOrchSessionEnabled
+                                ? orchSession.getIsNewAccount()
+                                : session.isNewAccount()));
         metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubject.getValue()));
         metadataPairs.add(pair("authCode", authCode));
         if (authRequest.getNonce() != null) {
@@ -252,11 +258,19 @@ public class IPVCallbackHelper {
         LOG.info("Is journey a test journey: {}", isTestJourney);
 
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-        cloudwatchMetricsService.incrementSignInByClient(
-                session.isNewAccount(),
-                clientSessionId,
-                clientSession.getClientName(),
-                isTestJourney);
+        if (isGetNewAccountFromOrchSessionEnabled) {
+            cloudwatchMetricsService.incrementSignInByClient(
+                    orchSession.getIsNewAccount(),
+                    clientSessionId,
+                    clientSession.getClientName(),
+                    isTestJourney);
+        } else {
+            cloudwatchMetricsService.incrementSignInByClient(
+                    session.isNewAccount(),
+                    clientSessionId,
+                    clientSession.getClientName(),
+                    isTestJourney);
+        }
 
         authCodeResponseService.saveSession(
                 false, sessionService, session, orchSessionService, orchSession);
