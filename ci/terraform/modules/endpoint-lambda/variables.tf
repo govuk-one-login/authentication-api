@@ -149,3 +149,13 @@ variable "dynatrace_secret" {
   })
   sensitive = true
 }
+
+variable "snapstart" {
+  type    = bool
+  default = false
+}
+
+variable "architectures" {
+  type    = list(string)
+  default = ["x86_64"]
+}
