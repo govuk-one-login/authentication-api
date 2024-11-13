@@ -46,10 +46,20 @@ jobs:
 
   pr-data:
     name: Get data for merged PR
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
-    uses: ./.github/workflows/call_get_pr_data.yml
+    outputs:
+      data: ${{ steps.fetch-pr-metadata.outputs.escaped-json }}
+      shell: ${{ steps.fetch-pr-metadata.outputs.shell }}
+    steps:
+      - name: Fetch PR Metadata
+        uses: govuk-one-login/authentication-artifact-metadata-action@d0ea2b26de2edf3ba08e649f9f06e6300460f2f6
+        id: fetch-pr-metadata
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          shell: bash
 
   build-cache:
     name: Set up build cache
@@ -196,6 +206,9 @@ jobs:
 
       - name: Upload single promotion artifact to S3
         working-directory: promotion-artifacts
+        shell: bash
+        env:
+          ARTIFACT_BUCKET: ${{ needs.set-up.outputs.artifact_bucket }}
         run: |
           echo "::group::Zip all promotion artifacts"
           zip -r authentication-api.zip .
@@ -203,10 +216,10 @@ jobs:
 
           echo "::group::Upload final artifact to S3"
           OBJECT_VERSION="$(aws s3api put-object \
-            --bucket ${{ needs.set-up.outputs.artifact_bucket }} \
+            --bucket "${ARTIFACT_BUCKET}" \
             --key authentication-api.zip \
             --body authentication-api.zip \
-            --metadata '${{ toJson(fromJson(needs.pr-data.outputs.data)) }}' \
+            --metadata ${{ needs.pr-data.outputs.data}} \
             --query VersionId --output text)"
           echo "::endgroup::"
           echo "::notice title=Final artifact uploaded to S3::object: authentication-api.zip, version: $OBJECT_VERSION"
