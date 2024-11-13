@@ -43,3 +43,5 @@ authorize_protected_subnet_enabled = true
 orch_account_id = "816047645251"
 
 contra_state_bucket = "di-auth-development-tfstate"
+
+oidc_cloudfront_enabled = false
