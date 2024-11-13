@@ -196,7 +196,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
-      setAuthenticatedFlagForIpv: false
+      setAuthenticatedFlagForIpv: true
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -228,7 +228,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
-      setAuthenticatedFlagForIpv: false
+      setAuthenticatedFlagForIpv: true
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
