@@ -175,7 +175,7 @@ jobs:
       - check-changed-files
     services:
       localstack:
-        image: localstack/localstack:3.0.0
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:3.0.0' || '' }}
         env:
           SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events"
           GATEWAY_LISTEN: 0.0.0.0:45678
@@ -187,7 +187,7 @@ jobs:
         ports:
           - 45678:45678
       redis:
-        image: redis:6.0.5-alpine
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'redis:6.0.5-alpine' || '' }}
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -196,7 +196,7 @@ jobs:
         ports:
           - 6379:6379
       dynamodb:
-        image: amazon/dynamodb-local:1.22.0
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:1.22.0' || '' }}
         options: >-
           --health-cmd "curl http://localhost:8000"
           --health-interval 10s
@@ -258,7 +258,7 @@ jobs:
       - check-changed-files
     services:
       localstack:
-        image: localstack/localstack:3.0.0
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:3.0.0' || '' }}
         env:
           SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events"
           DEFAULT_REGION: eu-west-2
@@ -272,7 +272,7 @@ jobs:
         ports:
           - 45678:45678
       redis:
-        image: redis:6.0.5-alpine
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'redis:6.0.5-alpine' || '' }}
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -281,7 +281,7 @@ jobs:
         ports:
           - 6379:6379
       dynamodb:
-        image: amazon/dynamodb-local:1.22.0
+        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:1.22.0' || '' }}
         options: >-
           --health-cmd "curl http://localhost:8000"
           --health-interval 10s
