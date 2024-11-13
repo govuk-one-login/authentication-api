@@ -18,9 +18,8 @@ stub_rp_clients = [
     logout_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
-    test_client                     = "1"
-    client_type                     = "web"
-    identity_verification_supported = "0"
+    test_client = "1"
+    client_type = "web"
     scopes = [
       "openid",
       "email",
@@ -42,9 +41,8 @@ stub_rp_clients = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/signed-out",
       "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
-    test_client                     = "1"
-    client_type                     = "app"
-    identity_verification_supported = "1"
+    test_client = "1"
+    client_type = "app"
     scopes = [
       "openid",
       "email",
