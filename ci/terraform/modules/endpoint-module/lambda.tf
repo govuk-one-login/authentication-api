@@ -38,8 +38,6 @@ resource "aws_lambda_function" "endpoint_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
   tags              = var.extra_tags
   kms_key_id        = var.cloudwatch_key_arn
@@ -48,6 +46,11 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   depends_on = [
     aws_lambda_function.endpoint_lambda
   ]
+}
+
+moved {
+  from = aws_cloudwatch_log_group.lambda_log_group[0]
+  to   = aws_cloudwatch_log_group.lambda_log_group
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {

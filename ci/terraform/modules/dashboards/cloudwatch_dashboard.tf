@@ -1,7 +1,10 @@
 resource "aws_cloudwatch_dashboard" "main" {
-  count          = var.use_localstack ? 0 : 1
   dashboard_name = "${var.api_gateway_name}-dashboard"
   dashboard_body = jsonencode(local.template)
+}
+moved {
+  from = aws_cloudwatch_dashboard.main[0]
+  to   = aws_cloudwatch_dashboard.main
 }
 
 locals {

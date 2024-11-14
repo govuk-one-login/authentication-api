@@ -30,7 +30,6 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_api_gateway_name"></a> [api\_gateway\_name](#input\_api\_gateway\_name) | The endpoint that will be monitored by the dashboard | `string` | n/a | yes |
-| <a name="input_use_localstack"></a> [use\_localstack](#input\_use\_localstack) | n/a | `bool` | n/a | yes |
 
 ## Outputs
 

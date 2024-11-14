@@ -1,5 +1,4 @@
 resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
-  count          = var.use_localstack ? 0 : 1
   name           = replace("${var.environment}-${var.endpoint_name}-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = aws_cloudwatch_log_group.lambda_log_group[0].name
@@ -10,6 +9,10 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
     value     = "1"
   }
 }
+moved {
+  from = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0]
+  to   = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter
+}
 
 locals {
   base_error_alarm_description      = "${var.lambda_log_alarm_threshold} or more errors have occurred in the ${var.environment} ${var.endpoint_name} lambda.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
@@ -19,7 +22,6 @@ locals {
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
   alarm_name          = replace("${var.environment}-${var.endpoint_name}-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
@@ -33,9 +35,13 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
 
   tags = local.extra_tags
 }
+moved {
+  from = aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm[0]
+  to   = aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm
+}
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
-  count               = var.use_localstack || var.lambda_error_rate_alarm_disabled ? 0 : 1
+  count               = var.lambda_error_rate_alarm_disabled ? 0 : 1
   alarm_name          = replace("${var.environment}-${var.endpoint_name}-error-rate-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"

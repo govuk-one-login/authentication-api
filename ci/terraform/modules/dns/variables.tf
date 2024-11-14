@@ -19,11 +19,6 @@ variable "environment" {
   type = string
 }
 
-variable "is_localstack" {
-  type    = bool
-  default = false
-}
-
 variable "is_sandpit" {
   type    = bool
   default = false
