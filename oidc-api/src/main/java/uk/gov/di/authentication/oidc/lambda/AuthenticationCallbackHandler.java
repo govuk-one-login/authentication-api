@@ -396,11 +396,14 @@ public class AuthenticationCallbackHandler
                                     ? OrchSessionItem.AccountState.NEW
                                     : OrchSessionItem.AccountState.EXISTING;
                 }
+                userSession.setNewAccount(accountState);
+                orchSession.withAccountState(orchAccountState);
 
-                sessionService.storeOrUpdateSession(
-                        userSession.setNewAccount(accountState).setAuthenticated(true));
+                userSession.setAuthenticated(true);
 
-                orchSessionService.updateSession(orchSession.withAccountState(orchAccountState));
+                sessionService.storeOrUpdateSession(userSession);
+                orchSessionService.updateSession(orchSession);
+
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
