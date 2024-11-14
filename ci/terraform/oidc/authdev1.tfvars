@@ -1,7 +1,4 @@
 environment                                 = "authdev1"
-dns_state_bucket                            = null
-dns_state_key                               = null
-dns_state_role                              = null
 shared_state_bucket                         = "di-auth-development-tfstate"
 test_clients_enabled                        = "true"
 ipv_api_enabled                             = true

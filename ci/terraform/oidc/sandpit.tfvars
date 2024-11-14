@@ -1,7 +1,4 @@
 environment                                 = "sandpit"
-dns_state_bucket                            = null
-dns_state_key                               = null
-dns_state_role                              = null
 shared_state_bucket                         = "digital-identity-dev-tfstate"
 test_clients_enabled                        = "true"
 ipv_api_enabled                             = true
