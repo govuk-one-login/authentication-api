@@ -77,6 +77,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -162,6 +163,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertAuthTimeHasBeenSetInOrchSessionTable();
     }
 
     @Test
@@ -806,6 +808,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertEquals(
                 MFAMethodType.AUTH_APP.getValue(), orchSession.get().getVerifiedMfaMethodType());
         assertThat(OrchSessionItem.AccountState.NEW, equalTo(orchSession.get().getIsNewAccount()));
+    }
+
+    private void assertAuthTimeHasBeenSetInOrchSessionTable() {
+        Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+        var session = orchSession.get();
+        assertNotEquals(0L, session.getAuthTime());
     }
 
     private void setupClientReg(boolean identityVerificationSupported) {

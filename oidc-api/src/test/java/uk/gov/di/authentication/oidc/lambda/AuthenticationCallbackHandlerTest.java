@@ -43,6 +43,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -427,6 +428,26 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 OrchSessionItem.AccountState.UNKNOWN,
                 equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
+    }
+
+    @Test
+    void shouldSetAuthTimeInOrchSession() throws UnsuccessfulCredentialResponseException {
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        assertEquals(0L, orchSessionService.getSession(SESSION_ID).get().getAuthTime());
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+
+        handler.handleRequest(event, null);
+
+        var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
+        verify(orchSessionService, times(2)).updateSession(captor.capture());
+        assertNotEquals(0L, orchSessionService.getSession(SESSION_ID).get().getAuthTime());
     }
 
     @Nested
