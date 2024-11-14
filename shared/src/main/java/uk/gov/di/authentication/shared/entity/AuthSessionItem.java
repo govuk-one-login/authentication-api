@@ -11,6 +11,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
     public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "currentCredentialStrength";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
+    public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
 
     public enum AccountState {
         NEW,
@@ -24,6 +25,7 @@ public class AuthSessionItem {
     private long timeToLive;
     private AccountState isNewAccount;
     private CredentialTrustLevel currentCredentialStrength;
+    private String internalCommonSubjectId;
 
     public AuthSessionItem() {}
 
@@ -53,6 +55,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withVerifiedMfaMethodType(String verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID)
+    public String getInternalCommonSubjectId() {
+        return internalCommonSubjectId;
+    }
+
+    public void setInternalCommonSubjectId(String internalCommonSubjectId) {
+        this.internalCommonSubjectId = internalCommonSubjectId;
+    }
+
+    public AuthSessionItem withInternalCommonSubjectId(String internalCommonSubjectId) {
+        this.internalCommonSubjectId = internalCommonSubjectId;
         return this;
     }
 

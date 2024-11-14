@@ -62,6 +62,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             MFAMethodType mfaMethodType) throws JsonException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
+        authSessionStore.addSession(Optional.empty(), sessionId);
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
 
@@ -106,6 +107,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
 
         String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
+        authSessionStore.addSession(Optional.empty(), sessionId);
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 
@@ -151,6 +153,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws JsonException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = redis.createSession();
+        authSessionStore.addSession(Optional.empty(), sessionId);
         var clientSessionId = IdGenerator.generate();
         setUpClientSession(emailAddress, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
@@ -178,6 +181,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws JsonException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
+        authSessionStore.addSession(Optional.empty(), sessionId);
         redis.blockMfaCodesForEmail(
                 emailAddress,
                 CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
