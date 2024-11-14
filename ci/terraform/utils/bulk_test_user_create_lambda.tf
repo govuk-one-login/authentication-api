@@ -36,8 +36,6 @@ resource "aws_lambda_function" "bulk_test_user_create_lambda" {
       TERMS_CONDITIONS_VERSION = var.terms_and_conditions
     })
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_s3_bucket_notification" "bulk_test_user_create_lambda_trigger" {
@@ -64,8 +62,6 @@ resource "aws_cloudwatch_log_group" "bulk_test_user_create_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.bulk_test_user_create_lambda[0].function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
-
-  tags = local.default_tags
 
   depends_on = [
     aws_lambda_function.bulk_test_user_create_lambda

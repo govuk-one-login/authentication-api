@@ -67,8 +67,6 @@ resource "aws_lambda_function" "account_metrics_lambda" {
       ENVIRONMENT = var.environment
     })
   }
-
-  tags = local.default_tags
 }
 
 
@@ -78,8 +76,6 @@ resource "aws_cloudwatch_log_group" "account_metrics_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.account_metrics_lambda.function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
-
-  tags = local.default_tags
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_metrics_log_subscription" {

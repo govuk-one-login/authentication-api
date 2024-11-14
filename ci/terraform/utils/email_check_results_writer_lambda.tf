@@ -56,8 +56,6 @@ resource "aws_lambda_function" "email_check_results_writer_lambda" {
     }
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-
-  tags = local.default_tags
 }
 
 resource "aws_lambda_alias" "email_check_results_writer_lambda" {
@@ -83,7 +81,6 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name       = "/aws/lambda/${aws_lambda_function.email_check_results_writer_lambda.function_name}"
-  tags       = local.default_tags
   kms_key_id = local.cloudwatch_encryption_key_arn
   #checkov:skip=CKV_AWS_338:Cloudwatch logs do not need to be retained for a year, as they are shipped elsewhere (Splunk)
   retention_in_days = var.cloudwatch_log_retention

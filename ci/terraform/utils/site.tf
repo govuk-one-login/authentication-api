@@ -28,15 +28,16 @@ provider "aws" {
     s3         = var.aws_endpoint
     dynamodb   = var.aws_dynamodb_endpoint
   }
+
+  default_tags {
+    tags = {
+      environment = var.environment
+      application = "utils"
+    }
+  }
 }
 
 locals {
-  // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
-  default_tags = var.use_localstack ? null : {
-    environment = var.environment
-    application = "utils"
-  }
-
   request_tracing_allowed                     = contains(["build", "sandpit"], var.environment)
   deploy_bulk_email_users_count               = 0
   bulk_user_email_audience_loader_lambda_name = "${var.environment}-bulk-user-email-audience-loader-lambda"

@@ -34,8 +34,6 @@ resource "aws_lambda_function" "bulk_test_user_delete_lambda" {
   tracing_config {
     mode = "Active"
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_cloudwatch_log_group" "bulk_test_user_delete_lambda_log_group" {
@@ -44,8 +42,6 @@ resource "aws_cloudwatch_log_group" "bulk_test_user_delete_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.bulk_test_user_delete_lambda[0].function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
-
-  tags = local.default_tags
 
   depends_on = [
     aws_lambda_function.bulk_test_user_delete_lambda

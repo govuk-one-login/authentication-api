@@ -1,6 +1,5 @@
 resource "aws_s3_bucket" "bulk_test_user" {
   bucket = "${var.environment}-bulk-test-user-bucket"
-  tags   = local.default_tags
 }
 
 resource "aws_s3_bucket_public_access_block" "bulk_test_private_bucket" {

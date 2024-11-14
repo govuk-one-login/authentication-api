@@ -73,8 +73,6 @@ resource "aws_lambda_function" "bulk_user_email_audience_loader_lambda" {
       BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS     = var.bulk_user_email_included_terms_and_conditions
     })
   }
-
-  tags = local.default_tags
   # checkov:skip=CKV_AWS_116:Adding a DLQ would not be useful as the events cannot be replayed.
 }
 
@@ -85,8 +83,6 @@ resource "aws_cloudwatch_log_group" "bulk_user_email_audience_loader_lambda_log_
   name              = "/aws/lambda/${aws_lambda_function.bulk_user_email_audience_loader_lambda[0].function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
-
-  tags = local.default_tags
   # checkov:skip=CKV_AWS_338:Log retention policy is currently 5d not 1 year. To be reviewed.
 }
 

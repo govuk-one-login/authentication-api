@@ -1,6 +1,5 @@
 resource "aws_s3_bucket" "common_passwords" {
   bucket = "${var.environment}-common-passwords-bucket"
-  tags   = local.default_tags
 }
 
 resource "aws_s3_bucket_public_access_block" "common_passwords_private_bucket" {
