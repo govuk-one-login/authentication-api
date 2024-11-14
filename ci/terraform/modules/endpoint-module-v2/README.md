@@ -80,7 +80,6 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_provisioned_concurrency"></a> [provisioned\_concurrency](#input\_provisioned\_concurrency) | n/a | `number` | `0` | no |
 | <a name="input_scaling_trigger"></a> [scaling\_trigger](#input\_scaling\_trigger) | n/a | `number` | `0.7` | no |
 | <a name="input_slack_event_topic_arn"></a> [slack\_event\_topic\_arn](#input\_slack\_event\_topic\_arn) | The ARN of the slack event topic | `string` | `null` | no |
-| <a name="input_use_localstack"></a> [use\_localstack](#input\_use\_localstack) | n/a | `bool` | `false` | no |
 
 ## Outputs
 
