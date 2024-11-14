@@ -15,8 +15,8 @@ resource "aws_sqs_queue" "back_channel_logout_queue" {
 resource "aws_sqs_queue" "back_channel_logout_dead_letter_queue" {
   name = "${var.environment}-back-channel-logout-dlq"
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = 300
 
   message_retention_seconds = 3600 * 6
 }

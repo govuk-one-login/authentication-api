@@ -37,9 +37,8 @@ module "authorize" {
     DOMAIN_NAME                          = local.service_domain
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
     ENVIRONMENT                          = var.environment
-    HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
+    HEADERS_CASE_INSENSITIVE             = "false"
     IDENTITY_ENABLED                     = var.ipv_api_enabled
-    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
     AUTH_FRONTEND_BASE_URL               = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                    = local.api_base_url
     ORCH_CLIENT_ID                       = var.orch_client_id
@@ -56,7 +55,6 @@ module "authorize" {
     DOC_APP_DOMAIN                       = var.doc_app_domain
     DOC_APP_AUD                          = var.doc_app_aud
     DOC_APP_NEW_AUD_CLAIM_ENABLED        = var.doc_app_new_aud_claim_enabled
-    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     CUSTOM_DOC_APP_CLAIM_ENABLED         = var.custom_doc_app_claim_enabled
     ORCH_REDIRECT_URI                    = var.orch_redirect_uri
     EXTERNAL_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
@@ -90,7 +88,6 @@ module "authorize" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
 
-  use_localstack = var.use_localstack
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,

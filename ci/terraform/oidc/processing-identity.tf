@@ -63,11 +63,9 @@ module "processing-identity" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                             = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     ENVIRONMENT                                 = var.environment
-    HEADERS_CASE_INSENSITIVE                    = var.use_localstack ? "true" : "false"
-    LOCALSTACK_ENDPOINT                         = var.use_localstack ? var.localstack_endpoint : null
+    HEADERS_CASE_INSENSITIVE                    = "false"
     REDIS_KEY                                   = local.redis_key
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
@@ -113,6 +111,4 @@ module "processing-identity" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]
-
-  use_localstack = var.use_localstack
 }

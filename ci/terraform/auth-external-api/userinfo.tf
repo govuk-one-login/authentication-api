@@ -33,9 +33,7 @@ module "auth_userinfo" {
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     TXMA_AUDIT_QUEUE_URL = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT  = null,
     REDIS_KEY            = local.redis_key
-    DYNAMO_ENDPOINT      = null
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest"
@@ -66,8 +64,6 @@ module "auth_userinfo" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-
-  use_localstack = false
 
   depends_on = [
     aws_api_gateway_rest_api.di_auth_ext_api,

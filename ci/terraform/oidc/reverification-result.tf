@@ -26,8 +26,6 @@ module "reverification_result" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                 = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : null
     TXMA_AUDIT_QUEUE_URL            = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI             = var.internal_sector_uri
     REDIS_KEY                       = local.redis_key
@@ -67,8 +65,6 @@ module "reverification_result" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
-
-  use_localstack = false
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api

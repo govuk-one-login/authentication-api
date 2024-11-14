@@ -27,7 +27,6 @@ module "delete-synthetics-user" {
 
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
     SYNTHETICS_USERS     = var.synthetics_users
     TXMA_AUDIT_QUEUE_URL = module.test_services_txma_audit.queue_url
   }
@@ -55,8 +54,6 @@ module "delete-synthetics-user" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_test_services_api,

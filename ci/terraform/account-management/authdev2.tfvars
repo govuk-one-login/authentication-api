@@ -1,5 +1,4 @@
 environment         = "authdev2"
-use_localstack      = false
 common_state_bucket = "di-auth-development-tfstate"
 
 logging_endpoint_enabled = false

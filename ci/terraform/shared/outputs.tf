@@ -1,9 +1,9 @@
 output "redis_host" {
-  value = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
+  value = aws_elasticache_replication_group.sessions_store.primary_endpoint_address
 }
 
 output "redis_port" {
-  value = var.use_localstack ? var.external_redis_port : aws_elasticache_replication_group.sessions_store[0].port
+  value = aws_elasticache_replication_group.sessions_store.port
 }
 
 output "redis_password" {

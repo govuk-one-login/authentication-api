@@ -103,7 +103,6 @@ resource "aws_lambda_function" "spot_response_lambda" {
   }
   environment {
     variables = merge({
-      DYNAMO_ENDPOINT        = var.use_localstack ? var.lambda_dynamo_endpoint : null
       ENVIRONMENT            = var.environment
       TXMA_AUDIT_QUEUE_URL   = module.oidc_txma_audit.queue_url
       AUTH_FRONTEND_BASE_URL = "https://${local.frontend_fqdn}/"

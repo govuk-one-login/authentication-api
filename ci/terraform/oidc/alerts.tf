@@ -1,5 +1,4 @@
 resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
   alarm_name          = replace("${var.environment}-email-notification-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
@@ -15,9 +14,12 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/4164649233/BAU+Daytime+Support+Hygiene+and+Optimisation+Rota#SUP-7%3A-Resolve-DLQ-messages"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
+moved {
+  from = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm[0]
+  to   = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm
+}
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
   alarm_name          = replace("${var.environment}-spot-request-queue-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
@@ -32,6 +34,10 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   }
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/DYDMBgE"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+}
+moved {
+  from = aws_cloudwatch_metric_alarm.spot_request_sqs_dlq_cloudwatch_alarm[0]
+  to   = aws_cloudwatch_metric_alarm.spot_request_sqs_dlq_cloudwatch_alarm
 }
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_alarm" {
@@ -71,7 +77,6 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_oidc_blocked_request_cloudwatch_alarm" {
-#  count               = var.use_localstack ? 0 : 1
 #  alarm_name          = replace("${var.environment}-oidc-waf-blocked-requests-alarm", ".", "")
 #  comparison_operator = "GreaterThanOrEqualToThreshold"
 #  evaluation_periods  = "1"
@@ -93,7 +98,6 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_frontend_blocked_request_cloudwatch_alarm" {
-#  count               = var.use_localstack ? 0 : 1
 #  alarm_name          = replace("${var.environment}-frontend-waf-blocked-requests-alarm", ".", "")
 #  comparison_operator = "GreaterThanOrEqualToThreshold"
 #  evaluation_periods  = "1"
