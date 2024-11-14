@@ -5,8 +5,6 @@ resource "aws_kms_key" "id_token_signing_key_rsa" {
   customer_master_key_spec = "RSA_4096"
 
   policy = data.aws_iam_policy_document.id_token_signing_key_rsa_access_policy.json
-
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "id_token_signing_key_alias" {

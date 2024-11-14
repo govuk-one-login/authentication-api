@@ -12,8 +12,6 @@ resource "aws_sqs_queue" "spot_request_queue" {
 
   kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.spot_request_sqs_key.id
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
-
-  tags = local.default_tags
 }
 
 resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
@@ -23,8 +21,6 @@ resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
   message_retention_seconds = 3600 * 6
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "cross_account_spot_request_queue_policy_document" {
@@ -160,8 +156,6 @@ resource "aws_kms_key" "spot_request_sqs_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
   enable_key_rotation      = true
-
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "spot_request_sqs_key_alias" {

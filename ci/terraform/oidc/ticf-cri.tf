@@ -41,8 +41,6 @@ resource "aws_lambda_function" "ticf_cri_lambda" {
       TICF_CRI_SERVICE_URI          = var.ticf_cri_service_uri
     })
   }
-
-  tags = local.default_tags
   # checkov:skip=CKV_AWS_116:Adding a DLQ would not be useful as we're not adding a retry policy.
 }
 
@@ -50,7 +48,6 @@ resource "aws_cloudwatch_log_group" "ticf_cri_lambda_log_group" {
   count = local.deploy_ticf_cri_count # only create log group if lambda is deployed
 
   name              = "/aws/lambda/${aws_lambda_function.ticf_cri_lambda[count.index].function_name}"
-  tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 }

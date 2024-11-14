@@ -20,8 +20,6 @@ resource "aws_iam_role" "api_gateway_logging_iam_role" {
   name = "${var.environment}-api-gateway-logging-lambda-role"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "api_gateway_logging_policy" {
@@ -61,8 +59,6 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
   name           = "${var.environment}-di-authentication-api"
   api_key_source = "HEADER"
-
-  tags = local.default_tags
 }
 
 resource "aws_api_gateway_api_key" "client_registry_api_key" {
@@ -268,7 +264,6 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
 
 resource "aws_cloudwatch_log_group" "orch_frontend_authorizer_logs" {
   name              = "/aws/lambda/${aws_lambda_function.orch_frontend_authorizer.function_name}"
-  tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 }
@@ -300,8 +295,6 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
       format          = local.access_logging_template
     }
   }
-
-  tags = local.default_tags
 
   depends_on = [
     module.auth-code,

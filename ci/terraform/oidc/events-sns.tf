@@ -1,7 +1,6 @@
 resource "aws_sns_topic" "events" {
   name              = "${var.environment}-events"
   kms_master_key_id = local.events_topic_encryption_key_arn
-  tags              = local.default_tags
 }
 
 data "aws_iam_policy_document" "events_policy_document" {

@@ -1,7 +1,5 @@
 resource "aws_api_gateway_rest_api" "di_authentication_frontend_api" {
   name = "${var.environment}-di-authentication-frontend-api"
-
-  tags = local.default_tags
 }
 
 resource "aws_api_gateway_usage_plan" "di_auth_frontend_usage_plan" {
@@ -200,8 +198,6 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
       format          = local.access_logging_template
     }
   }
-
-  tags = local.default_tags
 
   depends_on = [
     module.account_recovery,
