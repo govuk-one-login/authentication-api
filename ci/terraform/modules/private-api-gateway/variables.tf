@@ -10,6 +10,7 @@ variable "api_gateway_name" {
 variable "tags" {
   description = "The tags to apply to the created resources"
   type        = map(string)
+  default     = {}
 }
 
 variable "openapi_spec" {

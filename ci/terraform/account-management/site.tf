@@ -35,14 +35,15 @@ provider "aws" {
     dynamodb    = var.aws_dynamodb_endpoint
     sns         = var.aws_endpoint
   }
+
+  default_tags {
+    tags = {
+      environment = var.environment
+      application = "account-management-api"
+    }
+  }
 }
 locals {
-  // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
-  default_tags = var.use_localstack ? null : {
-    environment = var.environment
-    application = "account-management-api"
-  }
-
   request_tracing_allowed = contains(["build", "sandpit"], var.environment)
 
   access_logging_template = jsonencode({

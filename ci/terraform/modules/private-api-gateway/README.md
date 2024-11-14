@@ -42,8 +42,8 @@ No resources.
 | <a name="input_environment"></a> [environment](#input\_environment) | The environment the API Gateway is in | `string` | n/a | yes |
 | <a name="input_logging_endpoint_arns"></a> [logging\_endpoint\_arns](#input\_logging\_endpoint\_arns) | The ARNs of the logging endpoints | `list(string)` | n/a | yes |
 | <a name="input_openapi_spec"></a> [openapi\_spec](#input\_openapi\_spec) | The content of the OpenAPI spec to deploy | `string` | n/a | yes |
-| <a name="input_tags"></a> [tags](#input\_tags) | The tags to apply to the created resources | `map(string)` | n/a | yes |
 | <a name="input_vpc_endpoint_ids"></a> [vpc\_endpoint\_ids](#input\_vpc\_endpoint\_ids) | The VPC endpoint IDs | `list(string)` | n/a | yes |
+| <a name="input_tags"></a> [tags](#input\_tags) | The tags to apply to the created resources | `map(string)` | `{}` | no |
 | <a name="input_waf_arns"></a> [waf\_arns](#input\_waf\_arns) | The ARNs of any WAFs to attach to the API Gateway | `list(string)` | `[]` | no |
 
 ## Outputs

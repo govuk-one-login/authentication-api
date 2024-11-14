@@ -19,8 +19,6 @@ resource "aws_sqs_queue" "email_queue" {
     deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
     maxReceiveCount     = 3
   })
-
-  tags = local.default_tags
 }
 
 
@@ -31,8 +29,6 @@ resource "aws_sqs_queue" "email_dead_letter_queue" {
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
   message_retention_seconds = 3600 * 6
-
-  tags = local.default_tags
 }
 
 resource "time_sleep" "wait_60_seconds" {
@@ -189,8 +185,6 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
-  tags = local.default_tags
-
   depends_on = [
     module.account_management_sqs_role,
   ]
@@ -200,7 +194,6 @@ resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
 
   name              = "/aws/lambda/${aws_lambda_function.email_sqs_lambda.function_name}"
-  tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 

@@ -70,7 +70,6 @@ module "send_otp_notification" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-  default_tags                           = local.default_tags
   authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
 
   account_alias         = data.aws_iam_account_alias.current.account_alias
