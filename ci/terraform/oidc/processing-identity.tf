@@ -18,6 +18,9 @@ module "ipv_processing_identity_role" {
     local.identity_credentials_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "processing-identity"
+  }
 }
 
 module "ipv_processing_identity_role_with_orch_session_table_access" {

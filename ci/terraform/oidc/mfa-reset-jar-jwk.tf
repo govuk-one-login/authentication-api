@@ -1,3 +1,7 @@
+locals {
+  reverification_jwk_json_endpoint_name = "reverification-jwk.json"
+}
+
 module "mfa_reset_jar_signing_jwk_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -7,12 +11,15 @@ module "mfa_reset_jar_signing_jwk_role" {
   policies_to_attach = [
     aws_iam_policy.mfa_reset_jar_kms_signing_jwk_policy.arn
   ]
+  extra_tags = {
+    Service = local.reverification_jwk_json_endpoint_name
+  }
 }
 
 module "mfa_reset_jar_signing_jwk" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "reverification-jwk.json"
+  endpoint_name   = local.reverification_jwk_json_endpoint_name
   path_part       = "reverification-jwk.json"
   endpoint_method = ["GET"]
   environment     = var.environment

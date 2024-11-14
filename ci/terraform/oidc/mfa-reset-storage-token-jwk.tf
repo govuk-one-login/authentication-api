@@ -7,6 +7,9 @@ module "mfa_reset_storage_token_jwk_role" {
   policies_to_attach = [
     aws_iam_policy.mfa_reset_storage_token_kms_signing_policy.arn
   ]
+  extra_tags = {
+    Service = "mfa-reset-jwk.json"
+  }
 }
 
 module "mfa_reset_storage_token_jwk" {

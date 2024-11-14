@@ -16,6 +16,9 @@ module "frontend_api_account_interventions_role" {
     ], local.deploy_ticf_cri_count == 1 ? [
     aws_iam_policy.ticf_cri_lambda_invocation_policy[0].arn,
   ] : [])
+  extra_tags = {
+    Service = "account-interventions"
+  }
 }
 
 module "account_interventions" {

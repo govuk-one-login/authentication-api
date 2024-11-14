@@ -23,6 +23,9 @@ module "frontend_api_verify_code_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "verify-code"
+  }
 }
 
 module "verify_code" {

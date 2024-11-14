@@ -13,6 +13,9 @@ module "account_management_api_update_password_role" {
     local.common_passwords_encryption_policy_arn,
     local.user_profile_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "update-password"
+  }
 }
 
 module "update_password" {

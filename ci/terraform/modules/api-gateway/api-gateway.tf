@@ -1,3 +1,5 @@
+
+
 resource "aws_api_gateway_rest_api" "rest_api" {
   name = var.api_gateway_name
 
@@ -99,6 +101,8 @@ resource "aws_api_gateway_usage_plan" "api_usage_plan" {
     api_id = aws_api_gateway_rest_api.rest_api.id
     stage  = aws_api_gateway_stage.stage.stage_name
   }
+
+  tags = var.extra_tags
   # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda
 }
 
@@ -129,6 +133,8 @@ resource "aws_cloudwatch_log_group" "access_logs" {
   #checkov:skip=CKV_AWS_338:Cloudwatch logs do not need to be retained for a year, as they are shipped elsewhere (Splunk)
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = var.cloudwatch_encryption_key_arn
+
+  tags = var.extra_tags
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "stage_access_log_subscription" {
@@ -148,6 +154,8 @@ resource "aws_cloudwatch_log_group" "execution_logs" {
   #checkov:skip=CKV_AWS_338:Cloudwatch logs do not need to be retained for a year, as they are shipped elsewhere (Splunk)
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = var.cloudwatch_encryption_key_arn
+
+  tags = var.extra_tags
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "execution_log_subscription" {
@@ -177,6 +185,8 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
   #checkov:skip=CKV_AWS_338:Cloudwatch logs do not need to be retained for a year, as they are shipped elsewhere (Splunk)
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = var.cloudwatch_encryption_key_arn
+
+  tags = var.extra_tags
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "waf_log_subscription" {

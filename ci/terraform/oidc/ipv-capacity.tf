@@ -10,6 +10,9 @@ module "ipv_capacity_role" {
     aws_iam_policy.ipv_capacity_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
+  extra_tags = {
+    Service = "ipv-capacity"
+  }
 }
 
 module "ipv-capacity" {

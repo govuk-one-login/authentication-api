@@ -42,12 +42,12 @@ resource "aws_lambda_function" "endpoint_lambda" {
     }
   }
 
-  tags = var.extra_tags
+  tags = local.extra_tags
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
-  tags              = var.extra_tags
+  tags              = local.extra_tags
   kms_key_id        = var.cloudwatch_key_arn
   retention_in_days = var.cloudwatch_log_retention
 
@@ -110,6 +110,7 @@ resource "aws_appautoscaling_target" "lambda_target" {
   service_namespace  = "lambda"
 
   depends_on = [aws_lambda_provisioned_concurrency_config.endpoint_lambda_concurrency_config]
+  tags       = local.extra_tags
 }
 
 resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {

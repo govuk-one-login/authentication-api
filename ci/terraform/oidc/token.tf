@@ -1,3 +1,7 @@
+locals {
+  oidc_token_endpoint_name = "token"
+}
+
 module "oidc_token_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -16,6 +20,9 @@ module "oidc_token_role" {
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = local.oidc_token_endpoint_name
+  }
 }
 
 data "aws_iam_policy_document" "kms_signing_policy_document" {
@@ -40,12 +47,15 @@ resource "aws_iam_policy" "oidc_token_kms_signing_policy" {
   description = "IAM policy for managing KMS connection for a lambda which allows signing"
 
   policy = data.aws_iam_policy_document.kms_signing_policy_document.json
+  tags = {
+    Service = local.oidc_token_endpoint_name
+  }
 }
 
 module "token" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "token"
+  endpoint_name   = local.oidc_token_endpoint_name
   path_part       = var.orch_token_enabled ? "token-auth" : "token"
   endpoint_method = ["POST"]
   environment     = var.environment

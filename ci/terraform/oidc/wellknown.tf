@@ -1,15 +1,22 @@
+locals {
+  openid_configuration_endpoint_name = "openid-configuration"
+}
+
 module "openid_configuration_role" {
   source = "../modules/lambda-role"
 
   role_name   = "openid-configuration"
   environment = var.environment
   vpc_arn     = local.authentication_vpc_arn
+  extra_tags = {
+    Service = local.openid_configuration_endpoint_name
+  }
 }
 
 module "openid_configuration_discovery" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "openid-configuration"
+  endpoint_name   = local.openid_configuration_endpoint_name
   path_part       = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
   endpoint_method = ["GET"]
   environment     = var.environment

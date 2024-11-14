@@ -20,6 +20,9 @@ module "frontend_api_orch_auth_code_role" {
     local.user_credentials_encryption_policy_arn,
     local.email_check_results_encryption_policy_arn,
   ]
+  extra_tags = {
+    Service = "orch-auth-code"
+  }
 }
 
 module "orch_auth_code" {

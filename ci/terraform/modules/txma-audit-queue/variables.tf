@@ -17,3 +17,9 @@ variable "service_name" {
   type        = string
   description = "Name of the service that will be using these queues. Used for disambiguation"
 }
+
+locals {
+  extra_tags = merge(var.extra_tags, {
+    ServiceName = var.service_name
+  })
+}

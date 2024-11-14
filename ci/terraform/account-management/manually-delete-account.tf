@@ -15,6 +15,9 @@ module "account_management_manually_delete_account_role" {
     aws_iam_policy.permit_send_email_queue_policy.arn,
     aws_iam_policy.legacy_account_deletion_topic.arn
   ]
+  extra_tags = {
+    Service = "manually-delete-account"
+  }
 }
 
 resource "aws_lambda_function" "manually_delete_account_lambda" {

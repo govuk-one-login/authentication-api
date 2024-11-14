@@ -20,6 +20,9 @@ module "oidc_authorize_role" {
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.oidc_token_kms_signing_policy.arn
   ]
+  extra_tags = {
+    Service = "authorize"
+  }
 }
 
 module "authorize" {

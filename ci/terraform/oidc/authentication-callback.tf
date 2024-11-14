@@ -18,6 +18,9 @@ module "oidc_api_authentication_callback_role" {
     local.client_registry_encryption_policy_arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn
   ]
+  extra_tags = {
+    Service = "orchestration-redirect"
+  }
 }
 
 

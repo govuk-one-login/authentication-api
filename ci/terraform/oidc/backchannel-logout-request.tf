@@ -7,6 +7,9 @@ module "backchannel_logout_request_role" {
     aws_iam_policy.oidc_token_kms_signing_policy.arn,
     aws_iam_policy.back_channel_logout_queue_read_access_policy.arn
   ]
+  extra_tags = {
+    Service = "backchannel-logout-request"
+  }
 }
 
 resource "aws_lambda_function" "backchannel_logout_request_lambda" {
@@ -33,6 +36,9 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
+  tags = {
+    Service = "backchannel-logout-request"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "backchannel_logout_request_lambda_log_group" {
@@ -74,4 +80,7 @@ resource "aws_lambda_event_source_mapping" "backchannel_logout_lambda_sqs_mappin
     aws_sqs_queue.back_channel_logout_queue,
     aws_lambda_function.backchannel_logout_request_lambda
   ]
+  tags = {
+    Service = "backchannel-logout-request"
+  }
 }

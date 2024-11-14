@@ -16,6 +16,9 @@ module "frontend_api_check_reauth_user_role" {
     aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn
   ]
+  extra_tags = {
+    Service = "check-reauth-user"
+  }
 }
 
 module "check_reauth_user" {

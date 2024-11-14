@@ -4,6 +4,9 @@ module "ticf_cri_stub_role" {
   role_name          = "ticf_cri_stub-role"
   vpc_arn            = local.authentication_vpc_arn
   policies_to_attach = [aws_iam_policy.stub_ticf_cri_dynamo_read_access.arn]
+  extra_tags = {
+    Service = "ticf-cri-stub"
+  }
 }
 
 module "ticf_cri_stub_lambda" {

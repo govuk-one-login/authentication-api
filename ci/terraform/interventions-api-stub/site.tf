@@ -20,7 +20,12 @@ provider "aws" {
 
   default_tags {
     tags = {
-      environment = var.environment
+      Environment = var.environment
+      Owner       = "di-authentication@digital.cabinet-office.gov.uk"
+      Product     = "GOV.UK Sign In"
+      System      = "interventions-api-stub"
+      # Don't set `Service` by default as it's not always applicable
+
       application = "interventions-api-stub"
     }
   }

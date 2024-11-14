@@ -28,4 +28,6 @@ resource "aws_iam_policy" "txma_audit_queue_access_policy" {
   description = "IAM Policy for write access to the TxMA audit queue"
 
   policy = data.aws_iam_policy_document.txma_audit_queue_access_policy_document.json
+
+  tags = local.extra_tags
 }

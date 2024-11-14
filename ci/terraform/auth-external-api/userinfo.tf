@@ -17,6 +17,9 @@ module "auth_userinfo_role" {
     aws_iam_policy.dynamo_auth_session_write_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn
   ]
+  extra_tags = {
+    Service = "auth-userinfo"
+  }
 }
 
 module "auth_userinfo" {

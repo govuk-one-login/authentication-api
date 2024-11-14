@@ -17,6 +17,9 @@ module "frontend_api_account_recovery_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "account-recovery"
+  }
 }
 
 

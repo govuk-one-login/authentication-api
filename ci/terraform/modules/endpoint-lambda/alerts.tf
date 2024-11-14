@@ -21,6 +21,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
   threshold           = var.lambda_log_alarm_threshold
   alarm_description   = "${var.lambda_log_alarm_threshold} or more errors have occurred in the ${var.environment} ${var.endpoint_name} lambda.ACCOUNT: ${var.account_alias}"
   alarm_actions       = [var.slack_event_topic_arn]
+
+  tags = local.extra_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
@@ -67,4 +69,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
     }
   }
   alarm_actions = [var.slack_event_topic_arn]
+
+  tags = local.extra_tags
 }

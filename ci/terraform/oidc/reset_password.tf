@@ -20,6 +20,9 @@ module "frontend_api_reset_password_role" {
     local.common_passwords_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "reset-password"
+  }
 }
 
 module "reset_password" {

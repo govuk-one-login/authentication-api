@@ -12,6 +12,9 @@ module "identity_progress_role" {
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
   ]
+  extra_tags = {
+    Service = "identity-progress"
+  }
 }
 
 module "identity_progress" {

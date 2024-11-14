@@ -20,6 +20,9 @@ module "oidc_userinfo_role" {
     local.doc_app_credential_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "userinfo"
+  }
 }
 
 module "userinfo" {

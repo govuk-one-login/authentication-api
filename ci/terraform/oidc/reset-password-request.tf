@@ -14,6 +14,9 @@ module "frontend_api_reset_password_request_role" {
     local.account_modifiers_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "reset-password-request"
+  }
 }
 
 module "reset-password-request" {

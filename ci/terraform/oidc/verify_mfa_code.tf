@@ -23,6 +23,9 @@ module "frontend_api_verify_mfa_code_role" {
     local.user_credentials_encryption_policy_arn,
     local.experian_phone_check_sqs_queue_policy_arn
   ]
+  extra_tags = {
+    Service = "verify-mfa-code"
+  }
 }
 
 module "verify_mfa_code" {
