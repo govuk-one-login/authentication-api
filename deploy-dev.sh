@@ -12,6 +12,7 @@ Usage:
 
 Options:
     -b, --build                 run gradle and buildZip tasks before applying the Terraform configuration. (default: true)
+    --no-build                  do not run gradle and buildZip tasks before applying the Terraform configuration. (default: false)
     -p, --prompt                prompt for confirmation before applying the Terraform configuration. (default: false)
     -c, --clean                 run gradle clean before build. (default: false)
     --shell                     start a shell in the Terraform configuration directory. (does not automatically apply) (default: false)
@@ -58,6 +59,7 @@ AUTO_APPROVE="-auto-approve"
 while (($#)); do
   case $1 in
     -b | --build) O_BUILD=1 ;;
+    --no-build) O_BUILD=0 ;;
     -p | --prompt) AUTO_APPROVE="" ;;
     -c | --clean) O_CLEAN="clean" ;;
     --shell) O_SHELL=1 ;;
