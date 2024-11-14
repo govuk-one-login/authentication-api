@@ -43,6 +43,7 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
+  UseSpotStub: !Not [!Condition IpvExists]
   EnableProvisionedConcurrency:
     !Or [
       !Equals [build, !Ref Environment],
@@ -3419,6 +3420,29 @@ Resources:
             Unit: Count
   #endregion
 
+  #region Stub SPOT Request Queue
+  StubSpotRequestQueueKey:
+    Type: AWS::KMS::Key
+    Condition: UseSpotStub
+    Properties:
+      Description: "Key used to encrypt Stub SPOT request queue"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+
+  StubSpotRequestQueue:
+    Type: AWS::SQS::Queue
+    Condition: UseSpotStub
+    Properties:
+      QueueName: !Sub ${Environment}-stub-spot-request-queue
+      MaximumMessageSize: 256000
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      VisibilityTimeout: 60
+      KmsMasterKeyId: !Ref StubSpotRequestQueueKey
+      KmsDataKeyReusePeriodSeconds: 300
+  #endregion
+
   #region SPOT Response Lambda
 
   SpotResponseFunction:
@@ -4714,31 +4738,36 @@ Resources:
               - sqs:SendMessage
               - sqs:ChangeMessageVisibility
               - sqs:GetQueueAttributes
-            Resource: !Sub
-              - arn:aws:sqs:eu-west-2:${AccountId}:${AuthEnvironment}-spot-request-queue
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
+            Resource: !If
+              - IpvExists
+              - !Sub
+                - arn:aws:sqs:eu-west-2:${AccountId}:${AuthEnvironment}-spot-request-queue
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
+              - !GetAtt StubSpotRequestQueue.Arn
           - Sid: AllowEncryptionAccessToSpotQueueKey
             Effect: Allow
             Action:
               - kms:GenerateDataKey
               - kms:Decrypt
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                spotRequestQueueKmsArn,
-              ]
+            Resource: !If
+              - IpvExists
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  spotRequestQueueKmsArn,
+                ]
+              - !GetAtt StubSpotRequestQueueKey.Arn
 
   AccountInterventionsServiceUriSecretAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
