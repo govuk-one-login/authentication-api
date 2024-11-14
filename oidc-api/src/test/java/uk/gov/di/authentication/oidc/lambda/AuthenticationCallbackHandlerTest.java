@@ -431,14 +431,90 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void shouldSetAuthTimeInOrchSession() throws UnsuccessfulCredentialResponseException {
-        usingValidSession();
+    void shouldSetAuthTimeInOrchSessionWhenAuthenticatedChangesFromFalseToTrue()
+            throws UnsuccessfulCredentialResponseException {
+        when(sessionService.getSession(SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                session.setAuthenticated(false)
+                                        .setCurrentCredentialStrength(
+                                                CredentialTrustLevel.LOW_LEVEL)));
+        when(orchSessionService.getSession(SESSION_ID))
+                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
         usingValidClientSession();
         usingValidClient();
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
-        assertEquals(0L, orchSessionService.getSession(SESSION_ID).get().getAuthTime());
+        assertAuthTimeNotSetInOrchSession();
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+        handler.handleRequest(event, null);
+
+        var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
+        verify(orchSessionService, times(2)).updateSession(captor.capture());
+        assertAuthTimeSetInOrchSession();
+    }
+
+    @Test
+    void shouldSetAuthTimeInOrchSessionWhenUserIsAuthenticatedAndWasUplifted()
+            throws UnsuccessfulCredentialResponseException {
+        ClientSession clientSessionMediumTrust =
+                new ClientSession(
+                        generateRPAuthRequestForClientSession().toParameters(),
+                        null,
+                        List.of(
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.LOW_LEVEL)),
+                        CLIENT_NAME);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSessionMediumTrust));
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSessionMediumTrust))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        when(orchSessionService.getSession(SESSION_ID))
+                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+        when(sessionService.getSession(SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                session.setAuthenticated(true)
+                                        .setCurrentCredentialStrength(
+                                                CredentialTrustLevel.LOW_LEVEL)));
+        usingValidClient();
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        assertAuthTimeNotSetInOrchSession();
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+        handler.handleRequest(event, null);
+
+        var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
+        verify(orchSessionService, times(2)).updateSession(captor.capture());
+        assertAuthTimeSetInOrchSession();
+    }
+
+    @Test
+    void shouldNotSetAuthTimeInOrchSessionWhenUserIsAuthenticatedAndWasNotUplifted()
+            throws UnsuccessfulCredentialResponseException {
+        long existingAuthTime = 12345L;
+        when(orchSessionService.getSession(SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                new OrchSessionItem(SESSION_ID).withAuthTime(existingAuthTime)));
+        when(sessionService.getSession(SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                session.setAuthenticated(true)
+                                        .setCurrentCredentialStrength(
+                                                CredentialTrustLevel.LOW_LEVEL)));
+        usingValidClient();
+        usingValidClientSession();
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
@@ -447,6 +523,14 @@ class AuthenticationCallbackHandlerTest {
 
         var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(orchSessionService, times(2)).updateSession(captor.capture());
+        assertEquals(existingAuthTime, captor.getAllValues().get(0).getAuthTime());
+    }
+
+    private void assertAuthTimeNotSetInOrchSession() {
+        assertEquals(0L, orchSessionService.getSession(SESSION_ID).get().getAuthTime());
+    }
+
+    private void assertAuthTimeSetInOrchSession() {
         assertNotEquals(0L, orchSessionService.getSession(SESSION_ID).get().getAuthTime());
     }
 

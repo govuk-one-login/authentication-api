@@ -700,6 +700,49 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                 constructQueryStringParameters()));
     }
 
+    @Test
+    void shouldSetAuthTimeWhenUserHasBeenUplifted() throws Json.JsonException {
+        assertAuthTimeHasNotBeenSetInOrchSessionTable();
+        redis.setAuthenticated(SESSION_ID, true);
+        redis.setSessionCredentialTrustLevel(SESSION_ID, CredentialTrustLevel.LOW_LEVEL);
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertAuthTimeHasBeenSetInOrchSessionTable();
+    }
+
+    @Test
+    void shouldSetAuthTimeWhenUserIsNotYetAuthenticated() throws Json.JsonException {
+        assertAuthTimeHasNotBeenSetInOrchSessionTable();
+        redis.setAuthenticated(SESSION_ID, false);
+        redis.setSessionCredentialTrustLevel(SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertAuthTimeHasBeenSetInOrchSessionTable();
+    }
+
+    @Test
+    void shouldNotSetAuthTimeWhenUserIsAuthenticatedButHasNotBeenUplifted()
+            throws Json.JsonException {
+        assertAuthTimeHasNotBeenSetInOrchSessionTable();
+        redis.setAuthenticated(SESSION_ID, true);
+        redis.setSessionCredentialTrustLevel(SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertAuthTimeHasNotBeenSetInOrchSessionTable();
+    }
+
     private void assertRedirectToSuspendedPage(APIGatewayProxyResponseEvent response) {
         assertThat(response, hasStatus(302));
         assertThrows(
@@ -813,8 +856,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     private void assertAuthTimeHasBeenSetInOrchSessionTable() {
         Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
-        var session = orchSession.get();
-        assertNotEquals(0L, session.getAuthTime());
+        assertNotEquals(0L, orchSession.get().getAuthTime());
+    }
+
+    private void assertAuthTimeHasNotBeenSetInOrchSessionTable() {
+        Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+        assertEquals(0L, orchSession.get().getAuthTime());
     }
 
     private void setupClientReg(boolean identityVerificationSupported) {

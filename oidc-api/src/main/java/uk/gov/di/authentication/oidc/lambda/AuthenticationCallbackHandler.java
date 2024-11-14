@@ -389,8 +389,18 @@ public class AuthenticationCallbackHandler
                 userSession.setNewAccount(accountState);
                 orchSession.withAccountState(orchAccountState);
 
+                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
+                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                boolean userWasUplifted =
+                        userSession.isAuthenticated()
+                                && userSession.getCurrentCredentialStrength() != null
+                                && lowestRequestedCredentialTrustLevel.compareTo(
+                                                userSession.getCurrentCredentialStrength())
+                                        > 0;
+                if (!userSession.isAuthenticated() || userWasUplifted) {
+                    orchSession.setAuthTime(NowHelper.now().toInstant().getEpochSecond());
+                }
                 userSession.setAuthenticated(true);
-                orchSession.setAuthTime(NowHelper.now().toInstant().getEpochSecond());
 
                 sessionService.storeOrUpdateSession(userSession);
                 orchSessionService.updateSession(orchSession);
@@ -496,8 +506,6 @@ public class AuthenticationCallbackHandler
                         clientRedirectURI,
                         stateHash);
 
-                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
                 if (isNull(userSession.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
                                         userSession.getCurrentCredentialStrength())
