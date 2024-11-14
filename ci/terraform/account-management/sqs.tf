@@ -12,8 +12,8 @@ resource "aws_sqs_queue" "email_queue" {
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 180
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = 300
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
@@ -25,17 +25,20 @@ resource "aws_sqs_queue" "email_queue" {
 resource "aws_sqs_queue" "email_dead_letter_queue" {
   name = "${var.environment}-account-management-dlq"
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = 300
 
   message_retention_seconds = 3600 * 6
 }
 
 resource "time_sleep" "wait_60_seconds" {
   depends_on = [aws_sqs_queue.email_queue]
-  count      = var.use_localstack ? 0 : 1
 
   create_duration = "60s"
+}
+moved {
+  from = time_sleep.wait_60_seconds[0]
+  to   = time_sleep.wait_60_seconds
 }
 
 data "aws_iam_policy_document" "email_queue_policy_document" {
@@ -191,8 +194,6 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "/aws/lambda/${aws_lambda_function.email_sqs_lambda.function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
@@ -201,12 +202,16 @@ resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
     aws_lambda_function.email_sqs_lambda
   ]
 }
+moved {
+  from = aws_cloudwatch_log_group.sqs_lambda_log_group[0]
+  to   = aws_cloudwatch_log_group.sqs_lambda_log_group
+}
 
 resource "aws_cloudwatch_log_subscription_filter" "sqs_lambda_log_subscription" {
   count = length(var.logging_endpoint_arns)
 
   name            = "${aws_lambda_function.email_sqs_lambda.function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.sqs_lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.sqs_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

@@ -56,7 +56,7 @@ moved {
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.endpoint_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

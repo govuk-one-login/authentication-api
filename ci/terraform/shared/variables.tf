@@ -24,11 +24,6 @@ variable "lambda_dynamo_endpoint" {
   description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
 }
 
-variable "use_localstack" {
-  type    = bool
-  default = false
-}
-
 variable "external_redis_host" {
   type    = string
   default = "redis"
@@ -47,11 +42,6 @@ variable "external_redis_port" {
 variable "external_redis_password" {
   type    = string
   default = null
-}
-
-variable "localstack_endpoint" {
-  type    = string
-  default = "http://localhost:45678/"
 }
 
 variable "redis_use_tls" {

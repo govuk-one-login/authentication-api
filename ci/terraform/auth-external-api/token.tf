@@ -32,8 +32,6 @@ module "auth_token" {
   handler_environment_variables = {
     ENVIRONMENT                                = var.environment
     TXMA_AUDIT_QUEUE_URL                       = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                        = null
-    DYNAMO_ENDPOINT                            = null
     AUTHENTICATION_AUTHORIZATION_CALLBACK_URI  = var.authentication_auth_callback_uri
     ORCH_CLIENT_ID                             = var.orch_client_id
     AUTHENTICATION_BACKEND_URI                 = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
@@ -69,8 +67,6 @@ module "auth_token" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-
-  use_localstack = false
 
   depends_on = [
     aws_api_gateway_rest_api.di_auth_ext_api,

@@ -10,15 +10,15 @@ resource "aws_sqs_queue" "spot_request_queue" {
     maxReceiveCount     = 3
   })
 
-  kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.spot_request_sqs_key.id
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = aws_kms_key.spot_request_sqs_key.id
+  kms_data_key_reuse_period_seconds = 300
 }
 
 resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
   name = "${var.environment}-spot-request-dlq"
 
-  kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.spot_request_sqs_key.id
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = aws_kms_key.spot_request_sqs_key.id
+  kms_data_key_reuse_period_seconds = 300
 
   message_retention_seconds = 3600 * 6
 }

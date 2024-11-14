@@ -32,8 +32,6 @@ module "account_interventions" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                             = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT                         = var.use_localstack ? var.localstack_endpoint : null
     ENVIRONMENT                                 = var.environment
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
@@ -75,6 +73,4 @@ module "account_interventions" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
-
-  use_localstack = var.use_localstack
 }

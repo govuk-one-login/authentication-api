@@ -251,7 +251,6 @@ resource "aws_api_gateway_base_path_mapping" "api" {
 module "dashboard" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_account_management_api.name
-  use_localstack   = false
 }
 
 locals {

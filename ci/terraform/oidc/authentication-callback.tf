@@ -38,7 +38,6 @@ module "authentication_callback" {
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
     AUTHENTICATION_BACKEND_URI                  = "https://${local.di_auth_ext_api_id}-${local.vpce_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
     ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME     = var.account_interventions_error_metric_name
-    DYNAMO_ENDPOINT                             = var.use_localstack ? var.lambda_dynamo_endpoint : null
     ENVIRONMENT                                 = var.environment
     IDENTITY_ENABLED                            = var.ipv_api_enabled
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
@@ -47,7 +46,6 @@ module "authentication_callback" {
     IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_URI                       = var.ipv_authorisation_uri
     IPV_TOKEN_SIGNING_KEY_ALIAS                 = local.ipv_token_auth_key_alias_name
-    LOCALSTACK_ENDPOINT                         = var.use_localstack ? var.localstack_endpoint : null
     ORCH_CLIENT_ID                              = var.orch_client_id
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS        = local.orch_to_auth_signing_key_alias_name
     REDIS_KEY                                   = local.redis_key
@@ -84,8 +82,6 @@ module "authentication_callback" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = false
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api

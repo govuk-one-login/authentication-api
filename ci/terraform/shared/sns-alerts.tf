@@ -97,8 +97,6 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
 }
 
 resource "aws_cloudwatch_log_group" "sns_log_group" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "/aws/lambda/${aws_sns_topic.slack_events.name}"
   kms_key_id        = aws_kms_key.cloudwatch_log_encryption.arn
   retention_in_days = 30
@@ -107,11 +105,15 @@ resource "aws_cloudwatch_log_group" "sns_log_group" {
     aws_sns_topic.slack_events
   ]
 }
+moved {
+  from = aws_cloudwatch_log_group.sns_log_group[0]
+  to   = aws_cloudwatch_log_group.sns_log_group
+}
 
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${aws_sns_topic.slack_events.name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.sns_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.sns_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
