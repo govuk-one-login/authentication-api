@@ -16,8 +16,6 @@ resource "aws_dynamodb_table" "stub_account_interventions_table" {
   }
 
   #  server_side_encryption has not been enabled as this table contains only test data
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "stub_interventions_dynamo_read_access" {
