@@ -6,6 +6,7 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.sharedtest.httpstub.HttpStubExtension;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims.NEW_ACCOUNT;
 
 public class AuthExternalApiStubExtension extends HttpStubExtension {
 
@@ -32,7 +33,7 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
                         getHttpPort()));
 
         UserInfo userInfo = new UserInfo(subjectId);
-        userInfo.setClaim("new_account", true);
+        userInfo.setClaim(NEW_ACCOUNT.getValue(), true);
         userInfo.setClaim("verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
         register("/userinfo", 200, "application/json", userInfo.toJSONString());
     }

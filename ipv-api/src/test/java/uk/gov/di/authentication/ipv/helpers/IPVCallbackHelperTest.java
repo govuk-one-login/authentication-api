@@ -45,6 +45,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -85,6 +86,7 @@ class IPVCallbackHelperTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final OidcAPI oidcAPI = mock(OidcAPI.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
     private static final URI OIDC_TRUSTMARK_URI = URI.create("https://base-url.com/trustmark");
     private static final URI REDIRECT_URI = URI.create("test-uri");
@@ -156,7 +158,8 @@ class IPVCallbackHelperTest {
                         SerializationService.getInstance(),
                         sessionService,
                         sqsClient,
-                        oidcAPI);
+                        oidcAPI,
+                        orchSessionService);
         when(accountInterventionService.getAccountIntervention(
                         TEST_INTERNAL_COMMON_SUBJECT_ID, auditContext))
                 .thenReturn(
@@ -293,7 +296,8 @@ class IPVCallbackHelperTest {
                         objectMapper,
                         sessionService,
                         sqsClient,
-                        oidcAPI);
+                        oidcAPI,
+                        orchSessionService);
         when(objectMapper.writeValueAsString(any())).thenThrow(new JsonException("json-exception"));
 
         var exception =

@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -42,6 +43,7 @@ import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -99,7 +101,12 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authCodeResponse.getLocation(),
                 startsWith("https://rp-build.build.stubs.account.gov.uk/?code="));
 
-        assertTrue(redis.getSession(sessionID).isAuthenticated());
+        var redisSession = redis.getSession(sessionID);
+        var orchSession = orchSessionExtension.getSession(sessionID).get();
+
+        assertTrue(redisSession.isAuthenticated());
+        assertThat(redisSession.isNewAccount(), equalTo(Session.AccountState.EXISTING));
+        assertThat(orchSession.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.EXISTING));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
     }
 
@@ -134,7 +141,17 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authCodeResponse.getLocation(),
                 startsWith("https://rp-build.build.stubs.account.gov.uk/?code="));
 
-        assertFalse(redis.getSession(sessionID).isAuthenticated());
+        var redisSession = redis.getSession(sessionID);
+        var orchSession = orchSessionExtension.getSession(sessionID).get();
+
+        assertFalse(redisSession.isAuthenticated());
+        assertThat(
+                redisSession.isNewAccount(),
+                equalTo(Session.AccountState.EXISTING_DOC_APP_JOURNEY));
+        assertThat(
+                orchSession.getIsNewAccount(),
+                equalTo(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
+
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
     }
 

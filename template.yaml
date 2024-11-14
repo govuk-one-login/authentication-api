@@ -101,6 +101,7 @@ Mappings:
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
       setAuthenticatedFlagForIpv: true
+      setIsNewAccountInOrchSession: true
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -133,6 +134,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
       setAuthenticatedFlagForIpv: true
+      setIsNewAccountInOrchSession: true
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -165,6 +167,7 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
       setAuthenticatedFlagForIpv: true
+      setIsNewAccountInOrchSession: true
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -197,6 +200,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
       setAuthenticatedFlagForIpv: true
+      setIsNewAccountInOrchSession: false
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -229,6 +233,7 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
       setAuthenticatedFlagForIpv: true
+      setIsNewAccountInOrchSession: false
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
@@ -2682,6 +2687,12 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          SET_IS_NEW_ACCOUNT_IN_ORCH_SESSION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              setIsNewAccountInOrchSession,
+            ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -2689,6 +2700,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
+        - !Ref OrchSessionTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3283,6 +3295,12 @@ Resources:
                     authEnvironment,
                   ]
             - !Ref AWS::NoValue
+          SET_IS_NEW_ACCOUNT_IN_ORCH_SESSION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              setIsNewAccountInOrchSession,
+            ]
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
         - !Ref IdentityCredentialsTableWriteAccessPolicy
@@ -3295,6 +3313,7 @@ Resources:
         - !Ref SpotRequestQueueWritePolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
+        - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173

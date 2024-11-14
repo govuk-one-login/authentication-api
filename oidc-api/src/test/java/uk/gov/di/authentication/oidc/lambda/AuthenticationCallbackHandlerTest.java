@@ -413,10 +413,13 @@ class AuthenticationCallbackHandlerTest {
         handler.handleRequest(event, null);
 
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
-        assertEquals(
+        verify(orchSessionService, times(2)).updateSession(orchSessionCaptor.capture());
+        assertThat(
+                OrchSessionItem.AccountState.NEW,
+                equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
+        assertThat(
                 MFAMethodType.AUTH_APP.getValue(),
-                orchSessionCaptor.getValue().getVerifiedMfaMethodType());
+                equalTo(orchSessionCaptor.getAllValues().get(1).getVerifiedMfaMethodType()));
         assertEquals(
                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                 orchSessionCaptor.getValue().getInternalCommonSubjectId());

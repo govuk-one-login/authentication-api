@@ -377,8 +377,21 @@ public class AuthenticationCallbackHandler
                                 != null);
                 //
 
-                Boolean newAccount = userInfo.getBooleanClaim("new_account");
-                AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
+                Boolean newAccount =
+                        userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
+                AccountState accountState;
+                OrchSessionItem.AccountState orchAccountState;
+
+                if (newAccount == null) {
+                    accountState = AccountState.UNKNOWN;
+                    orchAccountState = OrchSessionItem.AccountState.UNKNOWN;
+                } else {
+                    accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
+                    orchAccountState =
+                            newAccount
+                                    ? OrchSessionItem.AccountState.NEW
+                                    : OrchSessionItem.AccountState.EXISTING;
+                }
 
                 boolean setAuthenticatedFlagForIPV =
                         configurationService.isAuthenticatedFlagForIpvEnabled();
@@ -389,7 +402,7 @@ public class AuthenticationCallbackHandler
                 } else {
                     sessionService.storeOrUpdateSession(userSession.setNewAccount(accountState));
                 }
-
+                orchSessionService.updateSession(orchSession.withAccountState(orchAccountState));
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(

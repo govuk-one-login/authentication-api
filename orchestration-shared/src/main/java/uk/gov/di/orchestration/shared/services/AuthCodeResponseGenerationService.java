@@ -125,4 +125,23 @@ public class AuthCodeResponseGenerationService {
                     session.setAuthenticated(true).setNewAccount(EXISTING));
         }
     }
+
+    public void saveSession(
+            boolean docAppJourney,
+            SessionService sessionService,
+            Session session,
+            OrchSessionService orchSessionService,
+            OrchSessionItem orchSession) {
+        if (docAppJourney) {
+            sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
+            orchSessionService.updateSession(
+                    orchSession.withAccountState(
+                            OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
+        } else {
+            sessionService.storeOrUpdateSession(
+                    session.setAuthenticated(true).setNewAccount(EXISTING));
+            orchSessionService.updateSession(
+                    orchSession.withAccountState(OrchSessionItem.AccountState.EXISTING));
+        }
+    }
 }

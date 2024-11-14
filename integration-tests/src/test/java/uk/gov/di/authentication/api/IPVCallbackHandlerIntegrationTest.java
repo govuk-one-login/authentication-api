@@ -32,6 +32,7 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -404,6 +405,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                             IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                             IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
                             AUTH_CODE_ISSUED));
+
+            assertSessionUpdatedWhenReturnCodeRequestedAndPresent();
         }
 
         assertTrue(
@@ -469,6 +472,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(REDIRECT_URI + "?code"));
+        assertSessionUpdatedWhenReturnCodeRequestedAndPresent();
     }
 
     @Test
@@ -539,6 +543,16 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         orchSessionExtension.addSession(
                 new OrchSessionItem(SESSION_ID)
                         .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
+    }
+
+    private void assertSessionUpdatedWhenReturnCodeRequestedAndPresent() throws Json.JsonException {
+        var redisSession = redis.getSession(SESSION_ID);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
+
+        assertThat(redisSession.isNewAccount(), equalTo(Session.AccountState.EXISTING));
+        assertTrue(redisSession.isAuthenticated());
+
+        assertThat(orchSession.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.EXISTING));
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
@@ -612,6 +626,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         @Override
         public boolean isIPVNoSessionResponseEnabled() {
+            return true;
+        }
+
+        @Override
+        public boolean isSetNewAccountInOrchSessionEnabled() {
             return true;
         }
     }
