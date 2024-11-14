@@ -13,8 +13,6 @@ resource "aws_sqs_queue" "pending_email_check_queue" {
     deadLetterTargetArn = aws_sqs_queue.pending_email_check_dead_letter_queue.arn
     maxReceiveCount     = 1
   })
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "pending_email_queue_access_policy_document" {
@@ -56,8 +54,6 @@ resource "aws_sqs_queue" "pending_email_check_dead_letter_queue" {
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
   message_retention_seconds = 1209600
-
-  tags = local.default_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "pending_email_check_dlq_cloudwatch_alarm" {

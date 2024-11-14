@@ -32,8 +32,6 @@ resource "aws_kms_key" "parameter_store_key" {
 
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
-
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "parameter_store_key_alias" {

@@ -1,7 +1,5 @@
 resource "aws_s3_bucket" "smoketest_sms_bucket" {
   bucket = "${var.environment}-smoke-test-sms-codes"
-
-  tags = local.default_tags
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "smoketest_sms_bucket" {

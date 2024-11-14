@@ -20,8 +20,6 @@ resource "aws_iam_role" "lambda_iam_role" {
   name = "${var.environment}-standard-lambda-role"
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "endpoint_logging_policy" {
@@ -117,9 +115,6 @@ resource "aws_iam_role" "sqs_lambda_iam_role" {
   name = "${var.environment}-sqs-lambda-role"
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-  tags = {
-    environment = var.environment
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "sqs_lambda_logs" {
@@ -136,9 +131,6 @@ resource "aws_iam_role" "dynamo_sqs_lambda_iam_role" {
   name = "${var.environment}-dynamo-sqs-lambda-role"
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-  tags = {
-    environment = var.environment
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_logs" {
@@ -154,9 +146,6 @@ resource "aws_iam_role_policy_attachment" "dynamo_sqs_lambda_networking" {
 resource "aws_iam_role" "token_lambda_iam_role" {
   name               = "${var.environment}-token-lambda-role"
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-  tags = {
-    environment = var.environment
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "token_lambda_logs" {
@@ -173,8 +162,6 @@ resource "aws_iam_role" "email_lambda_iam_role" {
   name = "${var.environment}-email-notification-sqs-lambda-role"
 
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_policy.json
-
-  tags = local.default_tags
 }
 
 resource "aws_iam_role_policy_attachment" "emaiL_lambda_logging_policy" {

@@ -52,8 +52,6 @@ resource "aws_elasticache_replication_group" "sessions_store" {
     ]
   }
 
-  tags = local.default_tags
-
   depends_on = [
     aws_sns_topic.slack_events,
   ]

@@ -6,7 +6,6 @@ resource "aws_kms_key" "id_token_signing_key" {
 
   policy = data.aws_iam_policy_document.id_token_signing_key_access_policy.json
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "id_token_signing_key_alias" {
@@ -115,7 +114,6 @@ resource "aws_kms_key" "audit_payload_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "audit_payload_signing_key_alias" {
@@ -221,7 +219,6 @@ resource "aws_kms_key" "cloudwatch_log_encryption" {
   enable_key_rotation     = true
   policy                  = data.aws_iam_policy_document.cloudwatch.json
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "lambda_env_vars_encryption_key" {
@@ -231,7 +228,6 @@ resource "aws_kms_key" "lambda_env_vars_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "lambda_env_vars_encryption_key_alias" {
@@ -277,7 +273,6 @@ resource "aws_kms_key" "events_topic_encryption" {
 
   policy              = data.aws_iam_policy_document.events_encryption_key_permissions.json
   enable_key_rotation = true
-  tags                = local.default_tags
 }
 
 resource "aws_kms_alias" "events_topic_encryption_alias" {
@@ -330,7 +325,6 @@ resource "aws_kms_key" "ipv_token_auth_signing_key" {
 
   policy = data.aws_iam_policy_document.ipv_token_signing_key_access_policy.json
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "ipv_token_auth_signing_key_alias" {
@@ -379,7 +373,6 @@ resource "aws_kms_key" "doc_app_auth_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  tags = local.default_tags
 
   policy = data.aws_iam_policy_document.cross_account_doc_app_auth_signing_key_policy.json
 }
@@ -432,7 +425,6 @@ resource "aws_kms_key" "orchestration_to_auth_signing_key" {
 
   policy = data.aws_iam_policy_document.orch_to_auth_signing_key_access_policy.json
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "orchestration_to_auth_signing_key_alias" {
@@ -496,7 +488,6 @@ resource "aws_kms_key" "auth_code_store_signing_key" {
       }
     ]
   })
-  tags = local.default_tags
 }
 
 # Authorization Token endpoint Signing KMS key
@@ -507,7 +498,6 @@ resource "aws_kms_key" "auth_id_token_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "auth_id_token_signing_key_alias" {
@@ -535,7 +525,6 @@ resource "aws_kms_key" "access_token_store_signing_key" {
       }
     ]
   })
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "bulk_email_users_encryption_key" {
@@ -559,7 +548,6 @@ resource "aws_kms_key" "bulk_email_users_encryption_key" {
       }
     ]
   })
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
@@ -569,7 +557,6 @@ resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
   policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-  tags                     = local.default_tags
 }
 
 resource "aws_kms_alias" "authentication_callback_userinfo_encryption_key_alias" {
@@ -597,7 +584,6 @@ resource "aws_kms_key" "account_modifiers_table_encryption_key" {
       }
     ]
   })
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "user_credentials_table_encryption_key" {
@@ -621,7 +607,6 @@ resource "aws_kms_key" "user_credentials_table_encryption_key" {
       }
     ]
   })
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "common_passwords_table_encryption_key" {
@@ -645,7 +630,6 @@ resource "aws_kms_key" "common_passwords_table_encryption_key" {
       }
     ]
   })
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
@@ -655,7 +639,6 @@ resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
   policy                   = data.aws_iam_policy_document.cross_account_doc_app_credential_table_encryption_key_policy.json
-  tags                     = local.default_tags
 }
 
 data "aws_iam_policy_document" "cross_account_doc_app_credential_table_encryption_key_policy" {
@@ -702,7 +685,6 @@ resource "aws_kms_key" "client_registry_table_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
   policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-  tags                     = local.default_tags
 }
 
 resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
@@ -717,7 +699,6 @@ resource "aws_kms_key" "identity_credentials_table_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
   policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-  tags                     = local.default_tags
 }
 
 resource "aws_kms_alias" "identity_credentials_table_encryption_key_alias" {
@@ -769,7 +750,6 @@ resource "aws_kms_key" "user_profile_table_encryption_key" {
 
   policy = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "user_profile_table_encryption_key_alias" {
@@ -798,7 +778,6 @@ resource "aws_kms_key" "email_check_result_encryption_key" {
       }
     ]
   })
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "pending_email_check_queue_encryption_key" {
@@ -829,7 +808,6 @@ resource "aws_kms_key" "pending_email_check_queue_encryption_key" {
     ]
   })
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_key" "authentication_attempt_encryption_key" {
@@ -855,7 +833,6 @@ resource "aws_kms_key" "authentication_attempt_encryption_key" {
     ]
   })
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "authentication_attempt_encryption_key_alias" {
@@ -886,7 +863,6 @@ resource "aws_kms_key" "auth_session_table_encryption_key" {
     ]
   })
 
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "auth_session_table_encryption_key_alias" {

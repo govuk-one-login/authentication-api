@@ -42,8 +42,6 @@ resource "aws_iam_role" "sns_logging_iam_role" {
   name = "${var.environment}-sns-slack-alert-role"
 
   assume_role_policy = data.aws_iam_policy_document.sns_can_assume_policy.json
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "sns_can_assume_policy" {
@@ -102,7 +100,6 @@ resource "aws_cloudwatch_log_group" "sns_log_group" {
   count = var.use_localstack ? 0 : 1
 
   name              = "/aws/lambda/${aws_sns_topic.slack_events.name}"
-  tags              = local.default_tags
   kms_key_id        = aws_kms_key.cloudwatch_log_encryption.arn
   retention_in_days = 30
 
