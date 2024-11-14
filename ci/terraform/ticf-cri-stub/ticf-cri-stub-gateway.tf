@@ -36,7 +36,6 @@ resource "aws_api_gateway_rest_api" "ticf_cri_stub" {
     }
   })
 
-  tags = local.default_tags
   endpoint_configuration {
     types            = ["PRIVATE"]
     vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
@@ -117,8 +116,6 @@ resource "aws_api_gateway_stage" "ticf_cri_stub_stage" {
     module.ticf_cri_stub_role,
     aws_api_gateway_deployment.ticf_cri_stub_deployment
   ]
-
-  tags = local.default_tags
 }
 
 resource "aws_api_gateway_deployment" "ticf_cri_stub_deployment" {
