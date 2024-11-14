@@ -1,7 +1,7 @@
 resource "aws_api_gateway_rest_api" "rest_api" {
   name = var.api_gateway_name
 
-  tags = var.tags
+  tags = var.extra_tags
 
   body = nonsensitive(var.openapi_spec) # Marked nonsensitive so we can see the diff when planning.
   dynamic "endpoint_configuration" {
@@ -86,7 +86,7 @@ resource "aws_api_gateway_stage" "stage" {
     replace_triggered_by = [aws_api_gateway_deployment.deployment.id]
   }
 
-  tags = var.tags
+  tags = var.extra_tags
   # checkov:skip=CKV_AWS_51:Client cert authentication is something we might want to consider in the future
   # checkov:skip=CKV2_AWS_51:Client cert authentication is something we might want to consider in the future
   # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda

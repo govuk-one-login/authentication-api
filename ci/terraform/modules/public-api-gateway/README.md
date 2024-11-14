@@ -43,9 +43,9 @@ Similar to [private-api-gateway](../private-api-gateway/), this is a wrapper for
 | <a name="input_enable_api_gateway_execution_logging"></a> [enable\_api\_gateway\_execution\_logging](#input\_enable\_api\_gateway\_execution\_logging) | Enable API Gateway execution logging | `bool` | n/a | yes |
 | <a name="input_enable_api_gateway_execution_request_tracing"></a> [enable\_api\_gateway\_execution\_request\_tracing](#input\_enable\_api\_gateway\_execution\_request\_tracing) | Enable API Gateway execution request tracing | `bool` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | The environment the API Gateway is in | `string` | n/a | yes |
+| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Additional tags to apply to created resources, in addition to the default tags from the provider. This is unlikely to be needed in most cases. | `map(string)` | n/a | yes |
 | <a name="input_logging_endpoint_arns"></a> [logging\_endpoint\_arns](#input\_logging\_endpoint\_arns) | The ARNs of the logging endpoints | `list(string)` | n/a | yes |
 | <a name="input_openapi_spec"></a> [openapi\_spec](#input\_openapi\_spec) | The content of the OpenAPI spec to deploy | `string` | n/a | yes |
-| <a name="input_tags"></a> [tags](#input\_tags) | The tags to apply to the created resources | `map(string)` | n/a | yes |
 | <a name="input_waf_arns"></a> [waf\_arns](#input\_waf\_arns) | The ARNs of any WAFs to attach to the API Gateway | `list(string)` | n/a | yes |
 
 ## Outputs

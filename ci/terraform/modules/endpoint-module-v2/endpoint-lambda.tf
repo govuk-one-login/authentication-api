@@ -16,7 +16,7 @@ module "endpoint_lambda" {
   logging_endpoint_enabled               = var.logging_endpoint_enabled
   logging_endpoint_arn                   = var.logging_endpoint_arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
-  default_tags                           = var.default_tags
+  extra_tags                             = var.extra_tags
   cloudwatch_key_arn                     = var.cloudwatch_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_log_alarm_threshold             = var.lambda_log_alarm_threshold

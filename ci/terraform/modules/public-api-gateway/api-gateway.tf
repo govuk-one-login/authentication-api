@@ -3,7 +3,7 @@ module "api-gateway" {
 
   environment                                  = var.environment
   api_gateway_name                             = var.api_gateway_name
-  tags                                         = var.tags
+  extra_tags                                   = var.extra_tags
   openapi_spec                                 = var.openapi_spec
   enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
   enable_api_gateway_execution_request_tracing = var.enable_api_gateway_execution_request_tracing

@@ -46,7 +46,7 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_environment"></a> [environment](#input\_environment) | n/a | `string` | n/a | yes |
 | <a name="input_role_name"></a> [role\_name](#input\_role\_name) | n/a | `string` | n/a | yes |
-| <a name="input_default_tags"></a> [default\_tags](#input\_default\_tags) | Default tags to apply to all resources | `map(string)` | `{}` | no |
+| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
 | <a name="input_policies_to_attach"></a> [policies\_to\_attach](#input\_policies\_to\_attach) | Policies to attach to the role | `list(string)` | `[]` | no |
 | <a name="input_vpc_arn"></a> [vpc\_arn](#input\_vpc\_arn) | n/a | `string` | `""` | no |
 

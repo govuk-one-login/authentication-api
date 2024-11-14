@@ -7,8 +7,8 @@ variable "api_gateway_name" {
   type        = string
 }
 
-variable "tags" {
-  description = "The tags to apply to the created resources"
+variable "extra_tags" {
+  description = "Additional tags to apply to created resources, in addition to the default tags from the provider. This is unlikely to be needed in most cases."
   type        = map(string)
   default     = {}
 }

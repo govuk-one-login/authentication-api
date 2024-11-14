@@ -3,7 +3,7 @@ resource "aws_iam_role" "lambda_role" {
   path               = "/${var.environment}/${var.role_name}/"
   assume_role_policy = data.aws_iam_policy_document.lambda_can_assume_role.json
 
-  tags = var.default_tags
+  tags = var.extra_tags
 }
 
 data "aws_iam_policy_document" "lambda_can_assume_role" {
