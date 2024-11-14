@@ -105,7 +105,7 @@ resource "aws_cloudwatch_log_subscription_filter" "bulk_user_email_audience_load
 resource "aws_cloudwatch_event_rule" "bulk_user_email_audience_loader_schedule" {
   count               = local.deploy_bulk_email_users_count
   name                = "${var.environment}-bulk-user-email-audience-loader-schedule"
-  is_enabled          = var.bulk_user_email_audience_loader_schedule_enabled
+  state               = var.bulk_user_email_audience_loader_schedule_enabled ? "ENABLED" : "DISABLED"
   schedule_expression = var.bulk_user_email_audience_loader_schedule_expression
 }
 
