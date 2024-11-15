@@ -46,6 +46,7 @@ authorize_protected_subnet_enabled = true
 contra_state_bucket = "digital-identity-dev-tfstate"
 
 orch_account_id = "767397776536"
+is_orch_stubbed = false
 
 orch_storage_token_jwk_enabled       = true
 orch_trustmark_enabled               = true
