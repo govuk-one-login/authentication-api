@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
@@ -51,6 +52,8 @@ public class UserInfoServiceTest {
     private static final String TEST_PHONE = "test-phone";
     private static final boolean TEST_PHONE_VERIFIED = true;
     private static final String TEST_VERIFIED_MFA_METHOD_TYPE = MFAMethodType.EMAIL.getValue();
+    private static final CredentialTrustLevel TEST_CURRENT_CREDENTIAL_STRENGTH =
+            CredentialTrustLevel.MEDIUM_LEVEL;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
     private static final UserProfile TEST_USER_PROFILE =
@@ -64,7 +67,9 @@ public class UserInfoServiceTest {
                     .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
                     .withSalt(TEST_SALT);
     private static final AuthSessionItem authSession =
-            new AuthSessionItem().withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE);
+            new AuthSessionItem()
+                    .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
+                    .withCurrentCredentialStrength(TEST_CURRENT_CREDENTIAL_STRENGTH);
 
     @BeforeEach
     public void setUp() {
@@ -90,7 +95,8 @@ public class UserInfoServiceTest {
             String expectedPhoneNumber,
             Boolean expectedPhoneNumberVerified,
             String expectedSalt,
-            String expectedVerifiedMfaMethod) {
+            String expectedVerifiedMfaMethod,
+            CredentialTrustLevel expectedCurrentCredentialStrength) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
@@ -106,6 +112,8 @@ public class UserInfoServiceTest {
         assertEquals(expectedPhoneNumberVerified, actual.getPhoneNumberVerified());
         assertEquals(expectedSalt, actual.getClaim("salt"));
         assertEquals(expectedVerifiedMfaMethod, actual.getClaim("verified_mfa_method_type"));
+        assertEquals(
+                expectedCurrentCredentialStrength, actual.getClaim("current_credential_strength"));
         assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
     }
 
@@ -116,6 +124,7 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         TEST_SUBJECT.getValue(),
+                        null,
                         null,
                         null,
                         null,
@@ -133,6 +142,7 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         null,
+                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -145,7 +155,8 @@ public class UserInfoServiceTest {
                                         "phone_number",
                                         "phone_number_verified",
                                         "salt",
-                                        "verified_mfa_method_type")),
+                                        "verified_mfa_method_type",
+                                        "current_credential_strength")),
                         TEST_LEGACY_SUBJECT_ID,
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
@@ -154,7 +165,8 @@ public class UserInfoServiceTest {
                         TEST_PHONE,
                         TEST_PHONE_VERIFIED,
                         bytesToBase64(TEST_SALT),
-                        TEST_VERIFIED_MFA_METHOD_TYPE));
+                        TEST_VERIFIED_MFA_METHOD_TYPE,
+                        TEST_CURRENT_CREDENTIAL_STRENGTH));
     }
 
     private static AccessTokenStore getMockAccessTokenStore(List<String> claims) {

@@ -114,6 +114,17 @@ public class UserInfoService {
             userInfo.setClaim(
                     AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                     authSession.getVerifiedMfaMethodType());
+            LOG.info("verified_mfa value: {}", authSession.getVerifiedMfaMethodType());
+        }
+        if (accessTokenInfo
+                .getClaims()
+                .contains(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
+                    authSession.getCurrentCredentialStrength());
+            LOG.info(
+                    "current_credential_strength value: {}",
+                    authSession.getCurrentCredentialStrength());
         }
     }
 
