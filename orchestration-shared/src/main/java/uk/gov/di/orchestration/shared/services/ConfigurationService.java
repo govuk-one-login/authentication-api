@@ -418,10 +418,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("SET_AUTHENTICATED_FLAG_FOR_IPV");
     }
 
-    public boolean isSetNewAccountInOrchSessionEnabled() {
-        return getFlagOrFalse("SET_IS_NEW_ACCOUNT_IN_ORCH_SESSION");
-    }
-
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =

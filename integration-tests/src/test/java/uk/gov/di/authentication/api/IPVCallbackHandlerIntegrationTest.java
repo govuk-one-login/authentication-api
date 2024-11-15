@@ -628,10 +628,5 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         public boolean isIPVNoSessionResponseEnabled() {
             return true;
         }
-
-        @Override
-        public boolean isSetNewAccountInOrchSessionEnabled() {
-            return true;
-        }
     }
 }
