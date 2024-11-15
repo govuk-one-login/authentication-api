@@ -19,10 +19,11 @@ ticf_cri_service_call_timeout           = 10000
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
 
-orch_account_id                     = "590183975515"
-is_orch_stubbed                     = false
-orch_environment                    = "staging"
-cmk_for_back_channel_logout_enabled = true
+orch_account_id                       = "590183975515"
+is_orch_stubbed                       = false
+orch_environment                      = "staging"
+orch_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:590183975515:key/156f87e0-001a-4ae8-a6c1-23f8f68b6e84"
+cmk_for_back_channel_logout_enabled   = true
 
 contra_state_bucket = "di-auth-staging-tfstate"
 

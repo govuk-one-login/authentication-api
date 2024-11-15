@@ -701,6 +701,11 @@ variable "orch_environment" {
   default = ""
 }
 
+variable "orch_session_table_encryption_key_arn" {
+  type    = string
+  default = ""
+}
+
 variable "cmk_for_back_channel_logout_enabled" {
   default     = false
   type        = bool
