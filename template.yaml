@@ -1153,6 +1153,12 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
+          GET_NEW_ACCOUNT_FROM_ORCH_SESSION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              getIsNewAccountFromOrchSession,
+            ]
       Policies:
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref DocAppCredentialTableWriteAccessPolicy
@@ -2680,6 +2686,12 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          GET_NEW_ACCOUNT_FROM_ORCH_SESSION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              getIsNewAccountFromOrchSession,
+            ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -3282,6 +3294,12 @@ Resources:
                     authEnvironment,
                   ]
             - !Ref AWS::NoValue
+          GET_NEW_ACCOUNT_FROM_ORCH_SESSION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              getIsNewAccountFromOrchSession,
+            ]
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
         - !Ref IdentityCredentialsTableWriteAccessPolicy
