@@ -147,7 +147,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(loginResponse.mfaMethodType(), equalTo(expectedMfaType));
         assertThat(loginResponse.mfaMethodVerified(), equalTo(mfaMethodVerified));
         assertTrue(
-                Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
+                authSessionExtension
+                        .getSession(sessionId)
+                        .flatMap(s -> Optional.ofNullable(s.getInternalCommonSubjectId()))
+                        .isPresent());
         assertTrue(
                 Objects.nonNull(
                         authSessionExtension
