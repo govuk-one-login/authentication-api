@@ -200,12 +200,9 @@ class SignUpHandlerTest {
                                                 && Objects.equals(
                                                         s.getInternalCommonSubjectId(),
                                                         expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .storeOrUpdateSession(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(authSessionService, atLeastOnce())
+                .updateSession(
+                        argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
     }
 
     @Test

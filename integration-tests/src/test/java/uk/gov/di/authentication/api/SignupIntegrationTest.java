@@ -84,7 +84,10 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .orElseThrow()
                                 .getInternalCommonSubjectId()));
         assertTrue(
-                Objects.nonNull(redis.getSession(SESSION_ID).getInternalCommonSubjectIdentifier()));
+                authSessionExtension
+                        .getSession(SESSION_ID)
+                        .flatMap(s -> Optional.ofNullable(s.getInternalCommonSubjectId()))
+                        .isPresent());
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
         assertThat(authSessionExtension.getSession(SESSION_ID).isPresent(), equalTo(true));
         assertThat(
