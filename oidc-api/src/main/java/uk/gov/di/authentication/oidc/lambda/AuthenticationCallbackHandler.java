@@ -389,6 +389,7 @@ public class AuthenticationCallbackHandler
                 orchSession.withAccountState(orchAccountState);
 
                 userSession.setAuthenticated(true);
+                orchSession.setAuthenticated(true);
 
                 sessionService.storeOrUpdateSession(userSession);
                 orchSessionService.updateSession(orchSession);
