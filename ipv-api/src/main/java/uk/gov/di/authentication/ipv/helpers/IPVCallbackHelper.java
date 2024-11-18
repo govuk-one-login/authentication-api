@@ -199,8 +199,7 @@ public class IPVCallbackHelper {
             String internalPairwiseSubjectId,
             UserInfo userIdentityUserInfo,
             String ipAddress,
-            String persistentSessionId,
-            boolean isSetIsNewAccountOrchSessionEnabled)
+            String persistentSessionId)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
@@ -259,13 +258,8 @@ public class IPVCallbackHelper {
                 clientSession.getClientName(),
                 isTestJourney);
 
-        if (isSetIsNewAccountOrchSessionEnabled) {
-            authCodeResponseService.saveSession(
-                    false, sessionService, session, orchSessionService, orchSession);
-        } else {
-            authCodeResponseService.saveSession(false, sessionService, session);
-        }
-
+        authCodeResponseService.saveSession(
+                false, sessionService, session, orchSessionService, orchSession);
         return authenticationResponse;
     }
 

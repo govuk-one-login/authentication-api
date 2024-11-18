@@ -379,18 +379,8 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        anyBoolean()))
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                        any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 REDIRECT_URI, null, null, null, null, null, null));
@@ -421,7 +411,6 @@ class IPVCallbackHandlerTest {
                 throws UnsuccessfulCredentialResponseException,
                         IpvCallbackException,
                         UserNotFoundException {
-            withSetIsNewAccountInOrchSession(isFlagEnabled);
             usingValidSession();
             var claimsSetRequest =
                     new ClaimsSetRequest()
@@ -455,18 +444,8 @@ class IPVCallbackHandlerTest {
             when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            eq(isFlagEnabled)))
+                            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                            any()))
                     .thenReturn(
                             new AuthenticationSuccessResponse(
                                     REDIRECT_URI, null, null, null, null, null, null));
@@ -490,10 +469,6 @@ class IPVCallbackHandlerTest {
             assertThat(response, hasStatus(302));
             assertEquals(
                     expectedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
-        }
-
-        void withSetIsNewAccountInOrchSession(boolean isFlagEnabled) {
-            when(configService.isSetNewAccountInOrchSessionEnabled()).thenReturn(isFlagEnabled);
         }
     }
 
@@ -546,18 +521,8 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        anyBoolean()))
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                        any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));
