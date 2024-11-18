@@ -234,6 +234,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
         var result =
                 makeCallWithCode(
@@ -247,6 +248,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                authSession.getCurrentCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -276,6 +280,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setCurrentCredentialStrength(credentialTrustLevel);
 
         var mfaCodeRequest =
                 new VerifyMfaCodeRequest(
@@ -314,6 +319,7 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         session.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         session.setInternalCommonSubjectIdentifier(null);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
@@ -329,6 +335,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                authSession.getCurrentCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -359,6 +368,7 @@ class VerifyMfaCodeHandlerTest {
         when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
@@ -371,6 +381,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                authSession.getCurrentCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(phoneNumberCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -401,6 +414,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         session.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
@@ -413,6 +427,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                authSession.getCurrentCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -443,6 +460,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         session.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
@@ -455,6 +473,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                authSession.getCurrentCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);

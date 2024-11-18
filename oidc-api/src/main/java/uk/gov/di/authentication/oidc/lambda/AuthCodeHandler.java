@@ -389,9 +389,11 @@ public class AuthCodeHandler
             session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
 
+        var currentCredentialStrengthFromOrch = orchSession.getCurrentCredentialStrength();
         if (configurationService.isCurrentCredentialStrengthInOrchSessionEnabled()
-                && (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
+                && (isNull(currentCredentialStrengthFromOrch)
+                        || lowestRequestedCredentialTrustLevel.compareTo(
+                                        currentCredentialStrengthFromOrch)
                                 > 0)) {
             orchSessionService.updateSession(
                     orchSession.withCurrentCredentialStrength(lowestRequestedCredentialTrustLevel));

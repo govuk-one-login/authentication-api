@@ -12,10 +12,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -126,6 +123,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getPhoneNumberVerified());
         assertNull(userInfoResponse.getClaim("salt"));
         assertNull(userInfoResponse.getClaim("verified_mfa_method_type"));
+        assertNull(userInfoResponse.getClaim("current_credential_strength"));
 
         assertThat(
                 authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),
@@ -294,6 +292,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         .getSession(TEST_SESSION_ID)
                         .get()
                         .withAccountState(AuthSessionItem.AccountState.NEW)
-                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                        .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
     }
 }
