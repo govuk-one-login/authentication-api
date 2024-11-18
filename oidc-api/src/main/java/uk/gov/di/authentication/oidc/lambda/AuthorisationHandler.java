@@ -657,6 +657,7 @@ public class AuthorisationHandler
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
                 session,
+                orchSession,
                 clientSessionId,
                 authenticationRequest,
                 persistentSessionId,
@@ -669,6 +670,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
             Session session,
+            OrchSessionItem orchSession,
             String clientSessionId,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
@@ -759,7 +761,7 @@ public class AuthorisationHandler
                         .claim("authenticated", session.isAuthenticated())
                         .claim(
                                 "current_credential_strength",
-                                session.getCurrentCredentialStrength());
+                                orchSession.getCurrentCredentialStrength());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
 
