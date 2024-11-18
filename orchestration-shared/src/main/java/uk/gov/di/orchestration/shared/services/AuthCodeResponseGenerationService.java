@@ -140,7 +140,9 @@ public class AuthCodeResponseGenerationService {
             sessionService.storeOrUpdateSession(
                     session.setAuthenticated(true).setNewAccount(EXISTING));
             orchSessionService.updateSession(
-                    orchSession.withAccountState(OrchSessionItem.AccountState.EXISTING));
+                    orchSession
+                            .withAuthenticated(true)
+                            .withAccountState(OrchSessionItem.AccountState.EXISTING));
         }
     }
 }
