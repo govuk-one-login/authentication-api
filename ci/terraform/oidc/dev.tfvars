@@ -9,6 +9,9 @@ shared_state_bucket                  = "di-auth-development-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.dev.account.gov.uk"
 call_ticf_cri                        = true
+ipv_authorisation_callback_uri       = "https://signin.dev.account.gov.uk/ipv/callback/authorize"
+ipv_authorisation_client_id          = "authTestClient"
+ipv_authorisation_uri                = "https://ipvstub.signin.dev.account.gov.uk/authorize/"
 
 # lockout config
 lockout_duration                     = 60
@@ -33,6 +36,18 @@ auth_to_orch_token_signing_public_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESgoCw5pZYyGtFpPBV2YfU3DGrDqC
 8UKoRGN4gYTbuwAsLkOSYYY8BM7dhSEhgF4DX9i66HXjteogg6mhOZI1mA==
+-----END PUBLIC KEY-----
+EOT
+
+ipv_authorization_public_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArukFibN4qI+/0SbSrMLg
+8v7Lj3KdV7tktgd+dol8VwDxMVfci0+5debd6yJFM6wgenCRI2FIxRXi+59bVgGY
+TwNENEaoaYfvb7CL6I7bYv0O5JOW6nJmA0md+7jb3zEpJk7bf8Syt2IilEZCUxv2
+MVDsk+GLTt2RHGi9pOgGAWeKb9OugsmYHEIlZ7OjKnjHnLhYDrALRFOdXN5PimSM
+Fd/HiEzFuxltuiQ7GXCmV/y1fND3SipvJOpnOJfJQuA696MrzIWgVt7GBfGbRSWF
+/45dQPPyNlvjm+VHUavcU3aB6/rtKWpLBg2oOaGnjHsgxjo62bGS6mkDBluku2NO
+gQIDAQAB
 -----END PUBLIC KEY-----
 EOT
 

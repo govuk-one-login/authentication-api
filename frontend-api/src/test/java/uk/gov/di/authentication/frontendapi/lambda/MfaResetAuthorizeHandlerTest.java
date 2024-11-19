@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
+import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -126,6 +127,18 @@ class MfaResetAuthorizeHandlerTest {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
                         new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
                 .thenThrow(new JwtServiceException("SomeError"));
+
+        APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
+
+        assertThat(response, hasStatus(500));
+        assertThat(response, hasBody(ERROR_1060.getMessage()));
+    }
+
+    @Test
+    void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
+        when(ipvReverificationService.buildIpvReverificationRedirectUri(
+                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
+                .thenThrow(new IPVReverificationServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 

@@ -20,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -161,6 +162,9 @@ public class IPVReverificationService {
                     .toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
+            throw new IPVReverificationServiceException(e.getMessage());
+        } catch (MissingEnvVariableException e) {
+            LOG.error("Missing environment variable IPV Auth Encryption Public Key");
             throw new IPVReverificationServiceException(e.getMessage());
         }
     }
