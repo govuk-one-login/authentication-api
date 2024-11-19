@@ -516,17 +516,6 @@ public class AuthenticationCallbackHandler
                                 > 0) {
                     userSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
                 }
-                var currentCredentialStrength =
-                        userInfo.getStringClaim(
-                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
-                if (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
-                                > 0) {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    lowestRequestedCredentialTrustLevel));
-                }
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
@@ -540,6 +529,18 @@ public class AuthenticationCallbackHandler
                     sessionService.storeOrUpdateSession(userSession);
                 } else {
                     sessionService.storeOrUpdateSession(userSession.setAuthenticated(true));
+                }
+                var currentCredentialStrength =
+                        userInfo.getStringClaim(
+                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
+                LOG.info("Current credential strength is: {}", currentCredentialStrength);
+                if (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(
+                        CredentialTrustLevel.valueOf(currentCredentialStrength))
+                        > 0) {
+                    orchSessionService.updateSession(
+                            orchSession.withCurrentCredentialStrength(
+                                    lowestRequestedCredentialTrustLevel));
                 }
 
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);

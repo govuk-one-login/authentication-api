@@ -734,6 +734,7 @@ public class AuthorisationHandler
         }
 
         var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
+        LOG.info("current credential strength is: {}", orchSession.getCurrentCredentialStrength());
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
