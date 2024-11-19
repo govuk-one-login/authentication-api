@@ -41,7 +41,6 @@ public class AuthCodeResponseGenerationService {
     }
 
     public Map<String, String> getDimensions(
-            Session session,
             OrchSessionItem orchSession,
             ClientSession clientSession,
             String clientSessionId,

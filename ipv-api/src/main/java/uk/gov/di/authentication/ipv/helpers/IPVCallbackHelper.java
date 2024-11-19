@@ -220,7 +220,7 @@ public class IPVCallbackHelper {
 
         var dimensions =
                 authCodeResponseService.getDimensions(
-                        session, orchSession, clientSession, clientSessionId, false, false);
+                        orchSession, clientSession, clientSessionId, false, false);
 
         var subjectId = authCodeResponseService.getSubjectId(session);
 

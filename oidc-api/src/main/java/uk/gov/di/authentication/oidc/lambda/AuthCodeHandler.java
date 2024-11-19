@@ -224,7 +224,6 @@ public class AuthCodeHandler
             var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
             var dimensions =
                     authCodeResponseService.getDimensions(
-                            session,
                             orchSession,
                             clientSession,
                             clientID.getValue(),

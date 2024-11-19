@@ -222,7 +222,6 @@ class AuthCodeHandlerTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
-                            eq(session),
                             eq(orchSession),
                             eq(clientSession),
                             eq(CLIENT_ID.getValue()),
@@ -373,7 +372,6 @@ class AuthCodeHandlerTest {
                         CLIENT_SESSION_ID, null, clientSession))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(session),
                         eq(orchSession),
                         eq(clientSession),
                         eq(CLIENT_ID.getValue()),
@@ -610,7 +608,6 @@ class AuthCodeHandlerTest {
                         CLIENT_SESSION_ID, null, clientSession))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(session),
                         eq(orchSession),
                         eq(clientSession),
                         eq(CLIENT_ID.getValue()),
