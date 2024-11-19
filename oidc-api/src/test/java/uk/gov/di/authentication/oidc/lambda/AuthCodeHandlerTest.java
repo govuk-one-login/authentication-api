@@ -139,7 +139,8 @@ class AuthCodeHandlerTest {
     private AuthCodeHandler handler;
 
     private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
-    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID).withAccountState(OrchSessionItem.AccountState.NEW);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -314,7 +315,7 @@ class AuthCodeHandlerTest {
                                 .withIpAddress("123.123.123.123")
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", SUBJECT.getValue()),
-                        pair("isNewAccount", AccountState.NEW),
+                        pair("isNewAccount", OrchSessionItem.AccountState.NEW),
                         pair("rpPairwiseId", expectedRpPairwiseId),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
@@ -425,7 +426,7 @@ class AuthCodeHandlerTest {
                                 .withIpAddress("123.123.123.123")
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", AccountState.UNKNOWN),
+                        pair("isNewAccount", OrchSessionItem.AccountState.NEW),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));

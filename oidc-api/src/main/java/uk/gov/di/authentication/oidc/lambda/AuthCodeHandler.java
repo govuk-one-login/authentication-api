@@ -248,12 +248,7 @@ public class AuthCodeHandler
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
             metadataPairs.add(pair("internalSubjectId", subjectId));
-            metadataPairs.add(
-                    pair(
-                            "isNewAccount",
-                            configurationService.getIsNewAccountFromOrchSession()
-                                    ? orchSession.getIsNewAccount()
-                                    : session.isNewAccount()));
+            metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
             metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
             metadataPairs.add(pair("authCode", authCode));
             if (authenticationRequest.getNonce() != null) {
@@ -278,19 +273,11 @@ public class AuthCodeHandler
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
-            if (configurationService.getIsNewAccountFromOrchSession()) {
-                cloudwatchMetricsService.incrementSignInByClient(
-                        orchSession.getIsNewAccount(),
-                        clientID.getValue(),
-                        clientSession.getClientName(),
-                        isTestJourney);
-            } else {
-                cloudwatchMetricsService.incrementSignInByClient(
-                        session.isNewAccount(),
-                        clientID.getValue(),
-                        clientSession.getClientName(),
-                        isTestJourney);
-            }
+            cloudwatchMetricsService.incrementSignInByClient(
+                    orchSession.getIsNewAccount(),
+                    clientID.getValue(),
+                    clientSession.getClientName(),
+                    isTestJourney);
 
             authCodeResponseService.saveSession(
                     docAppJourney, sessionService, session, orchSessionService, orchSession);
