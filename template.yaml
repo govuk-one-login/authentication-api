@@ -682,7 +682,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-openid-configuration-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -696,7 +696,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-openid-configuration-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -831,7 +831,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-trustmark-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -845,7 +845,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-trustmark-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -1352,7 +1352,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-token-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -1366,7 +1366,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-token-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -2059,7 +2059,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-jwks-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -2073,7 +2073,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-jwks-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -2365,7 +2365,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-authorisation-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -2379,7 +2379,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-authorisation-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -2563,7 +2563,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-userinfo-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -2577,7 +2577,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-userinfo-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -2752,7 +2752,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-auth-code-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -2766,7 +2766,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-auth-code-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -3366,7 +3366,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-ipv-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -3380,7 +3380,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-ipv-callback-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -3561,7 +3561,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-spot-response-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -3576,7 +3576,7 @@ Resources:
     Condition: IpvExists
     Properties:
       AlarmName: !Sub ${Environment}-spot-response-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -3736,7 +3736,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-storage-token-jwk-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -3750,7 +3750,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-storage-token-jwk-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
