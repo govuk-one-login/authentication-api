@@ -99,7 +99,7 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
       N = "1"
     }
     IdentityVerificationSupported = {
-      N = 1
+      N = "1"
     }
     ClientType = {
       S = each.value.client_type
