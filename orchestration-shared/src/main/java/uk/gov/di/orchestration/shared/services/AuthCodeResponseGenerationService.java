@@ -51,9 +51,7 @@ public class AuthCodeResponseGenerationService {
                 new HashMap<>(
                         Map.of(
                                 "Account",
-                                configurationService.getIsNewAccountFromOrchSession()
-                                        ? orchSession.getIsNewAccount().name()
-                                        : session.isNewAccount().name(),
+                                orchSession.getIsNewAccount().name(),
                                 "Environment",
                                 configurationService.getEnvironment(),
                                 "Client",
