@@ -391,13 +391,30 @@ public class AuthenticationCallbackHandler
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+
+                LOG.info("userSession.isAuthenticated(): {}", userSession.isAuthenticated());
+
+                if (userSession.getCurrentCredentialStrength() == null) {
+                    LOG.info("userSession.getCurrentCredentialStrength(): null");
+                } else {
+                    LOG.info(
+                            "userSession.getCurrentCredentialStrength(): {}",
+                            userSession.getCurrentCredentialStrength().getValue());
+                }
+                LOG.info(
+                        "lowestRequestedCredentialTrustLevel: {}",
+                        lowestRequestedCredentialTrustLevel.getValue());
+
                 boolean userWasUplifted =
                         userSession.isAuthenticated()
                                 && userSession.getCurrentCredentialStrength() != null
                                 && lowestRequestedCredentialTrustLevel.compareTo(
                                                 userSession.getCurrentCredentialStrength())
                                         > 0;
+
+                LOG.info("userWasUplifted: {}", userWasUplifted);
                 if (!userSession.isAuthenticated() || userWasUplifted) {
+                    LOG.info("authTime set");
                     orchSession.setAuthTime(NowHelper.now().toInstant().getEpochSecond());
                 }
                 userSession.setAuthenticated(true);
