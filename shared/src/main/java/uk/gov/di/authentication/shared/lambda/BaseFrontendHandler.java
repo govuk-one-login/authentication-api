@@ -182,8 +182,10 @@ public abstract class BaseFrontendHandler<T>
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;
         try {
+            LOG.info("BECKA input is {}", input.getBody());
             request = objectMapper.readValue(input.getBody(), clazz);
         } catch (JsonException e) {
+            LOG.info("BECKA Json exception here");
             LOG.warn("Request is missing parameters.");
             onRequestValidationError(clientSessionId, txmaAuditEncoded);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
