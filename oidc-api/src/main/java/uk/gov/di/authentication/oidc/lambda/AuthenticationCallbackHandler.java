@@ -383,24 +383,16 @@ public class AuthenticationCallbackHandler
 
                 Boolean newAccount =
                         userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
-                AccountState accountState;
-                OrchSessionItem.AccountState orchAccountState;
+                AccountState accountState = deduceAccountState(newAccount);
+                OrchSessionItem.AccountState orchAccountState = deduceOrchAccountState(newAccount);
+                userSession.setNewAccount(accountState);
+                orchSession.withAccountState(orchAccountState);
 
-                if (newAccount == null) {
-                    accountState = AccountState.UNKNOWN;
-                    orchAccountState = OrchSessionItem.AccountState.UNKNOWN;
-                } else {
-                    accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
-                    orchAccountState =
-                            newAccount
-                                    ? OrchSessionItem.AccountState.NEW
-                                    : OrchSessionItem.AccountState.EXISTING;
-                }
+                userSession.setAuthenticated(true);
 
-                sessionService.storeOrUpdateSession(
-                        userSession.setNewAccount(accountState).setAuthenticated(true));
+                sessionService.storeOrUpdateSession(userSession);
+                orchSessionService.updateSession(orchSession);
 
-                orchSessionService.updateSession(orchSession.withAccountState(orchAccountState));
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
@@ -567,6 +559,29 @@ public class AuthenticationCallbackHandler
             LOG.info("Cannot retrieve auth request params from client session id");
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         }
+    }
+
+    private AccountState deduceAccountState(Boolean newAccount) {
+        AccountState accountState;
+        if (newAccount == null) {
+            accountState = AccountState.UNKNOWN;
+        } else {
+            accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
+        }
+        return accountState;
+    }
+
+    private OrchSessionItem.AccountState deduceOrchAccountState(Boolean newAccount) {
+        OrchSessionItem.AccountState accountState;
+        if (newAccount == null) {
+            accountState = OrchSessionItem.AccountState.UNKNOWN;
+        } else {
+            accountState =
+                    newAccount
+                            ? OrchSessionItem.AccountState.NEW
+                            : OrchSessionItem.AccountState.EXISTING;
+        }
+        return accountState;
     }
 
     private Map<String, String> buildDimensions(

@@ -403,6 +403,32 @@ class AuthenticationCallbackHandlerTest {
                 orchSessionCaptor.getValue().getInternalCommonSubjectId());
     }
 
+    @Test
+    void shouldSetAccountStateToUnknownWhenNewAccountClaimIsNull()
+            throws UnsuccessfulCredentialResponseException {
+        when(USER_INFO.getBooleanClaim("new_account")).thenReturn(null);
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        handler.handleRequest(event, null);
+
+        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
+        var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
+        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
+        verify(orchSessionService, times(2)).updateSession(orchSessionCaptor.capture());
+        assertThat(
+                Session.AccountState.UNKNOWN,
+                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
+        assertThat(
+                OrchSessionItem.AccountState.UNKNOWN,
+                equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
+    }
+
     @Nested
     class AccountInterventions {
         private static MockedStatic<IdentityHelper> mockedIdentityHelper;
