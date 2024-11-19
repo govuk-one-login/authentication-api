@@ -414,6 +414,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
+    public boolean getIsNewAccountFromOrchSession() {
+        return getFlagOrFalse("GET_NEW_ACCOUNT_FROM_ORCH_SESSION");
+    }
+
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =

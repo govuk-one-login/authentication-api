@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.lambda.DocAppCallbackHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -33,6 +34,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.CriStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
@@ -86,6 +88,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension credentialExtension =
             new DocumentAppCredentialStoreExtension(180);
+
+    @RegisterExtension
+    protected static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
 
     protected static final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
@@ -352,6 +357,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(DOC_APP_STATE, SESSION_ID);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(SESSION_ID)
+                        .withAccountState(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
     }
 
     private Map<String, String> constructQueryStringParameters() {
