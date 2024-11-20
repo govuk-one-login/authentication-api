@@ -1716,7 +1716,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-            - !Ref AWS::NoValue
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           IPV_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/ipv-callback
             - ServiceDomain:
@@ -1726,14 +1733,24 @@ Resources:
                   serviceDomain,
                 ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
-          IPV_AUTHORISATION_URI: !Sub
-            - https://identity.${ServiceDomain}/oauth2/authorize
-            - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
-                ]
+          IPV_AUTHORISATION_URI: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}/oauth2/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           IPV_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -3232,7 +3249,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-            - !Ref AWS::NoValue
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           IPV_AUTHORISATION_CALLBACK_URI: !If
             - IpvExists
             - !Sub
@@ -3243,11 +3267,15 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-            - !Ref AWS::NoValue
-          IPV_AUTHORISATION_CLIENT_ID: !If
-            - IpvExists
-            - authOrchestrator
-            - !Ref AWS::NoValue
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}/ipv-callback
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+          IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
           IPV_AUTHORISATION_URI: !If
             - IpvExists
             - !Sub
@@ -3258,7 +3286,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-            - !Ref AWS::NoValue
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           IPV_BACKEND_URI: !If
             - IpvExists
             - !Sub
@@ -3269,7 +3304,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-            - !Ref AWS::NoValue
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           IPV_NO_SESSION_RESPONSE_ENABLED: true
           IPV_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
@@ -3293,7 +3335,7 @@ Resources:
                     !Ref Environment,
                     authEnvironment,
                   ]
-            - !Ref AWS::NoValue
+            - !GetAtt StubSpotRequestQueue.QueueUrl
           GET_NEW_ACCOUNT_FROM_ORCH_SESSION:
             !FindInMap [
               EnvironmentConfiguration,
@@ -3445,7 +3487,6 @@ Resources:
 
   SpotResponseFunction:
     Type: AWS::Serverless::Function
-    Condition: IpvExists
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
@@ -3517,7 +3558,6 @@ Resources:
 
   SpotResponseQueueEventMapping:
     Type: AWS::Lambda::EventSourceMapping
-    Condition: IpvExists
     Properties:
       Enabled: true
       BatchSize: 1
@@ -3528,14 +3568,13 @@ Resources:
 
   SpotResponseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
-    Condition: IpvExists
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
   SpotResponseFunctionSubscriptionFilter:
-    Condition: IpvExists
+    Condition: IsNotDevEnvironment
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
@@ -3544,7 +3583,6 @@ Resources:
 
   SpotResponseFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
-    Condition: IpvExists
     Properties:
       FilterName: !Sub ${Environment}-spot-response-request-errors
       FilterPattern: '{($.level = "ERROR")}'
@@ -3556,7 +3594,6 @@ Resources:
 
   SpotResponseFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: IpvExists
     Properties:
       ActionsEnabled: true
       AlarmActions:
@@ -3573,7 +3610,6 @@ Resources:
 
   SpotResponseFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: IpvExists
     Properties:
       AlarmName: !Sub ${Environment}-spot-response-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
@@ -4701,7 +4737,6 @@ Resources:
 
   SpotResponseQueueConsumePolicy:
     Type: AWS::IAM::ManagedPolicy
-    Condition: IpvExists
     Properties:
       PolicyDocument:
         Version: 2012-10-17
