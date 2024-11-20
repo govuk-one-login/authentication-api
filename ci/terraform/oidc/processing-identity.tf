@@ -74,6 +74,7 @@ module "processing-identity" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   api_key_required                       = true
+  runbook_link                           = "https://govukverify.atlassian.net/wiki/x/JoD2FwE"
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
