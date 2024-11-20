@@ -974,7 +974,7 @@ Resources:
         - true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       AlarmName: !Sub ${Environment}-backchannel-logout-request-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -988,7 +988,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       ActionsEnabled: !If
         - IsIntegration
         - false
