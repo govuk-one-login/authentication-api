@@ -12,6 +12,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "currentCredentialStrength";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
+    public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
 
     public enum AccountState {
         NEW,
@@ -26,6 +27,7 @@ public class AuthSessionItem {
     private AccountState isNewAccount;
     private CredentialTrustLevel currentCredentialStrength;
     private String internalCommonSubjectId;
+    private boolean upliftRequired;
 
     public AuthSessionItem() {}
 
@@ -112,6 +114,20 @@ public class AuthSessionItem {
     public AuthSessionItem withCurrentCredentialStrength(
             CredentialTrustLevel currentCredentialStrength) {
         this.currentCredentialStrength = currentCredentialStrength;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_UPLIFT_REQUIRED)
+    public boolean getUpliftRequired() {
+        return this.upliftRequired;
+    }
+
+    public void setUpliftRequired(boolean upliftRequired) {
+        this.upliftRequired = upliftRequired;
+    }
+
+    public AuthSessionItem withUpliftRequired(boolean upliftRequired) {
+        this.upliftRequired = upliftRequired;
         return this;
     }
 }
