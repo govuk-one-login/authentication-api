@@ -879,6 +879,7 @@ public class AuthorisationHandler
         claimsSet.add(AuthUserInfoClaims.EMAIL);
         claimsSet.add(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE);
         claimsSet.add(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH);
+        claimsSet.add(AuthUserInfoClaims.UPLIFT_REQUIRED);
         if (identityRequired) {
             LOG.info(
                     "Identity is required. Adding the local_account_id, salt, email_verified and phone_number claims");
