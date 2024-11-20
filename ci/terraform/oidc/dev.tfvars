@@ -12,6 +12,7 @@ call_ticf_cri                        = true
 ipv_authorisation_callback_uri       = "https://signin.dev.account.gov.uk/ipv/callback/authorize"
 ipv_authorisation_client_id          = "authTestClient"
 ipv_authorisation_uri                = "https://ipvstub.signin.dev.account.gov.uk/authorize/"
+ipv_backend_uri                      = "https://21zk2qmtvf.execute-api.eu-west-2.amazonaws.com/Live"
 
 # lockout config
 lockout_duration                     = 60

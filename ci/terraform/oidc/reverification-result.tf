@@ -31,6 +31,7 @@ module "reverification_result" {
     IPV_AUDIENCE                    = var.ipv_audience
     IPV_AUTHORISATION_CALLBACK_URI  = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID     = var.ipv_authorisation_client_id
+    IPV_BACKEND_URI                 = var.ipv_backend_uri
     ENVIRONMENT                     = var.environment
     MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.name
   }

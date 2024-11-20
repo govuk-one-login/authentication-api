@@ -92,22 +92,25 @@ public class ReverificationResultService {
                 if (count > 0) LOG.warn("Retrying IPV access token request");
                 count++;
                 tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
-                if (!tokenResponse.indicatesSuccess()) {
-                    HTTPResponse response = tokenResponse.toHTTPResponse();
-                    LOG.warn(
-                            "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
-                            response.getStatusCode(), count, response.getContent());
-                }
+                //                if (!tokenResponse.indicatesSuccess()) {
+                //                    HTTPResponse response = tokenResponse.toHTTPResponse();
+                //                    LOG.warn(
+                //                            "Unsuccessful %s response from IPV token endpoint on
+                // attempt %d: %s ",
+                //                            response.getStatusCode(), count,
+                // response.getContent());
+                //                }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
             return tokenResponse;
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
-            throw new RuntimeException(e);
+            //            throw new RuntimeException(e);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Error whilst parsing TokenResponse", e);
-            throw new RuntimeException(e);
+            //            throw new RuntimeException(e);
         }
+        return null;
     }
 
     public HTTPResponse sendIpvReverificationRequest(UserInfoRequest userInfoRequest)
