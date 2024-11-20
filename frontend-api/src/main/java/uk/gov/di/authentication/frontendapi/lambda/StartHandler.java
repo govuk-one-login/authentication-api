@@ -259,6 +259,14 @@ public class StartHandler
                             isBlockedForReauth,
                             isUserAuthenticatedWithValidProfile);
 
+            if (userStartInfo.isUpliftRequired()) {
+                var authSession = authSessionService.getSession(session.getSessionId());
+                authSession.ifPresent(
+                        authSessionItem ->
+                                authSessionService.updateSession(
+                                        authSessionItem.withUpliftRequired(true)));
+            }
+
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =
                         DocAppSubjectIdHelper.calculateDocAppSubjectId(
