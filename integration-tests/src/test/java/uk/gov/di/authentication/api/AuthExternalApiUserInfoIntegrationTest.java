@@ -129,6 +129,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getClaim("salt"));
         assertNull(userInfoResponse.getClaim("verified_mfa_method_type"));
         assertNull(userInfoResponse.getClaim("current_credential_strength"));
+        assertNull(userInfoResponse.getClaim("uplift_required"));
 
         assertThat(
                 authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),

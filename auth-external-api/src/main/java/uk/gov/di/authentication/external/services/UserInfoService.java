@@ -126,6 +126,11 @@ public class UserInfoService {
                     "current_credential_strength value: {}",
                     authSession.getCurrentCredentialStrength());
         }
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.UPLIFT_REQUIRED.getValue(), authSession.getUpliftRequired());
+            LOG.info("uplift_required value: {}", authSession.getUpliftRequired());
+        }
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {
