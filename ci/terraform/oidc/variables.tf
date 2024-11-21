@@ -746,6 +746,12 @@ variable "ipv_authorization_public_key" {
   description = "Public key for IPV"
 }
 
+variable "use_auth_session_ics_id" {
+  type        = bool
+  default     = false
+  description = "Feature flag to enable reading the internal common subject id from Auth session instead of session."
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

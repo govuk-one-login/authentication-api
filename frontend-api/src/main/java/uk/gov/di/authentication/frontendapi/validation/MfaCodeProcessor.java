@@ -67,12 +67,13 @@ public abstract class MfaCodeProcessor {
             String phoneNumber,
             String ipAddress,
             String persistentSessionId,
+            String internalCommonSubjectId,
             boolean accountRecovery) {
 
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        internalCommonSubjectId,
                         emailAddress,
                         ipAddress,
                         phoneNumber,
@@ -86,18 +87,19 @@ public abstract class MfaCodeProcessor {
     }
 
     void clearAccountRecoveryBlockIfPresent(
-            MFAMethodType mfaMethodType, String ipAddress, String persistentSessionId) {
+            MFAMethodType mfaMethodType,
+            String ipAddress,
+            String persistentSessionId,
+            String internalCommonSubjectId) {
         var accountRecoveryBlockPresent =
-                accountModifiersService.isAccountRecoveryBlockPresent(
-                        userContext.getSession().getInternalCommonSubjectIdentifier());
+                accountModifiersService.isAccountRecoveryBlockPresent(internalCommonSubjectId);
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
-            accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    userContext.getSession().getInternalCommonSubjectIdentifier());
+            accountModifiersService.removeAccountRecoveryBlockIfPresent(internalCommonSubjectId);
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            internalCommonSubjectId,
                             emailAddress,
                             ipAddress,
                             AuditService.UNKNOWN,
@@ -111,5 +113,6 @@ public abstract class MfaCodeProcessor {
 
     public abstract Optional<ErrorResponse> validateCode();
 
-    public abstract void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId);
+    public abstract void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, String internalCommonSubjectId);
 }

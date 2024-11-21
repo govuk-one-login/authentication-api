@@ -160,13 +160,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
 
-        Optional<AuthSessionItem> authSession =
+        Optional<AuthSessionItem> authSessionOptional =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (authSession.isEmpty()) {
+        if (authSessionOptional.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            attachAuthSessionIdToLogs(authSession.get());
         }
+
+        var authSession = authSessionOptional.get();
+
+        attachAuthSessionIdToLogs(authSession);
 
         var journeyType = codeRequest.getJourneyType();
         Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
@@ -183,7 +185,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        configurationService.getUseAuthSessionInternalCommonSubjectId()
+                                ? authSession.getInternalCommonSubjectId()
+                                : userContext.getSession().getInternalCommonSubjectIdentifier(),
                         userContext.getSession().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
@@ -208,7 +212,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     codeRequest,
                     userContext,
                     subjectID,
-                    authSession.get(),
+                    authSession,
                     maybeRpPairwiseId,
                     client);
         } catch (Exception e) {
@@ -318,6 +322,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         var errorResponseMaybe = mfaCodeProcessor.validateCode();
 
+        var internalCommonSubjectId =
+                configurationService.getUseAuthSessionInternalCommonSubjectId()
+                        ? authSession.getInternalCommonSubjectId()
+                        : session.getInternalCommonSubjectIdentifier();
         if (errorResponseMaybe.isPresent()) {
             var errorResponse = errorResponseMaybe.get();
             if (errorResponse.equals(ErrorResponse.ERROR_1041)) {
@@ -347,7 +355,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             }
         } else {
             processSuccessfulCodeSession(
-                    session, input, subjectId, codeRequest, mfaCodeProcessor, maybeRpPairwiseId);
+                    internalCommonSubjectId,
+                    session,
+                    input,
+                    subjectId,
+                    codeRequest,
+                    mfaCodeProcessor,
+                    maybeRpPairwiseId);
         }
 
         var auditableEvent =
@@ -358,7 +372,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        session.getInternalCommonSubjectIdentifier(),
+                        internalCommonSubjectId,
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
@@ -432,6 +446,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private void processSuccessfulCodeSession(
+            String internalCommonSubjectId,
             Session session,
             APIGatewayProxyRequestEvent input,
             String subjectId,
@@ -451,7 +466,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
         mfaCodeProcessor.processSuccessfulCodeRequest(
                 IpAddressHelper.extractIpAddress(input),
-                extractPersistentIdFromHeaders(input.getHeaders()));
+                extractPersistentIdFromHeaders(input.getHeaders()),
+                internalCommonSubjectId);
     }
 
     private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(

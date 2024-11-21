@@ -61,7 +61,8 @@ class AuthAppCodeProcessorTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String SESSION_ID = "a-session-id";
     private static final String IP_ADDRESS = "123.123.123.123";
-    private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
+    private static final String INTERNAL_COMMON_SUBJECT_ID =
+            "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
     private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private final int MAX_RETRIES = 5;
 
@@ -70,7 +71,7 @@ class AuthAppCodeProcessorTest {
                     CLIENT_ID,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    INTERNAL_SUB_ID,
+                    INTERNAL_COMMON_SUBJECT_ID,
                     CommonTestVariables.EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
@@ -202,7 +203,8 @@ class AuthAppCodeProcessorTest {
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_COMMON_SUBJECT_ID);
 
         verify(mockDynamoService, never())
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
@@ -225,7 +227,8 @@ class AuthAppCodeProcessorTest {
                         JourneyType.ACCOUNT_RECOVERY,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_COMMON_SUBJECT_ID);
 
         verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
         verify(mockDynamoService)
@@ -241,15 +244,17 @@ class AuthAppCodeProcessorTest {
 
     @Test
     void shouldClearAccountRecoveryBlockAndCreateAuditEventWhenSignInAndBlockIsPresent() {
-        when(mockAccountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_SUB_ID))
+        when(mockAccountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(true);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_COMMON_SUBJECT_ID);
 
         verifyNoInteractions(mockDynamoService);
-        verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
+        verify(mockAccountModifiersService)
+                .removeAccountRecoveryBlockIfPresent(INTERNAL_COMMON_SUBJECT_ID);
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
@@ -259,12 +264,13 @@ class AuthAppCodeProcessorTest {
 
     @Test
     void shouldNotClearAccountRecoveryBlockAndCreateAuditEventWhenSignInAndBlockIsNotresent() {
-        when(mockAccountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_SUB_ID))
+        when(mockAccountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(false);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, INTERNAL_COMMON_SUBJECT_ID);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService, never())
@@ -275,7 +281,8 @@ class AuthAppCodeProcessorTest {
     private void setUpSuccessfulCodeRequest(CodeRequest codeRequest) {
         when(mockSession.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(mockSession.getSessionId()).thenReturn(SESSION_ID);
-        when(mockSession.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
+        when(mockSession.getInternalCommonSubjectIdentifier())
+                .thenReturn(INTERNAL_COMMON_SUBJECT_ID);
         when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockUserContext.getClientId()).thenReturn(CLIENT_ID);
