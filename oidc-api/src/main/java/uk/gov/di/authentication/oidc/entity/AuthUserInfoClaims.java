@@ -16,7 +16,8 @@ public enum AuthUserInfoClaims {
     SALT("salt"),
     VERIFIED_MFA_METHOD_TYPE("verified_mfa_method_type"),
     CURRENT_CREDENTIAL_STRENGTH("current_credential_strength"),
-    NEW_ACCOUNT("new_account");
+    NEW_ACCOUNT("new_account"),
+    UPLIFT_REQUIRED("uplift_required");
 
     private final String value;
 

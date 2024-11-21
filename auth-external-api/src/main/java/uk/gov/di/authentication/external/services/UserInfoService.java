@@ -77,6 +77,11 @@ public class UserInfoService {
                 accessTokenInfo
                         .getClaims()
                         .contains(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()));
+        LOG.info(
+                "is uplift_required a requested claim: {}",
+                accessTokenInfo
+                        .getClaims()
+                        .contains(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()));
         //
 
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue())) {
