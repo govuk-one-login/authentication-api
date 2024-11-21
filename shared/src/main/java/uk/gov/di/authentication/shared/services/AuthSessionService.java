@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -40,10 +39,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         this.configurationService = configurationService;
     }
 
-    public void addOrUpdateSessionId(
-            Optional<String> previousSessionId,
-            String newSessionId,
-            CredentialTrustLevel currentCredentialStrength) {
+    public void addOrUpdateSessionId(Optional<String> previousSessionId, String newSessionId) {
         try {
             Optional<AuthSessionItem> oldItem = Optional.empty();
             if (previousSessionId.isPresent()) {
@@ -54,7 +50,6 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 AuthSessionItem newItem =
                         oldItem.get()
                                 .withSessionId(newSessionId)
-                                .withCurrentCredentialStrength(currentCredentialStrength)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
@@ -70,7 +65,6 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                         new AuthSessionItem()
                                 .withSessionId(newSessionId)
                                 .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                .withCurrentCredentialStrength(currentCredentialStrength)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
