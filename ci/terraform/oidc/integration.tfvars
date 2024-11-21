@@ -40,7 +40,10 @@ authorize_protected_subnet_enabled = true
 
 contra_state_bucket = "digital-identity-dev-tfstate"
 
-orch_account_id = "058264132019"
+orch_account_id                       = "058264132019"
+is_orch_stubbed                       = false
+orch_environment                      = "integration"
+orch_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:058264132019:key/1b5c001b-ed53-4a7b-bfbe-5d0f596110b5"
 
 orch_trustmark_enabled               = true
 orch_openid_configuration_enabled    = true

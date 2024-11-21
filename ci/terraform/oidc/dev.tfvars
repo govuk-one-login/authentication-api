@@ -56,6 +56,7 @@ orch_redirect_uri                  = "https://oidc.dev.account.gov.uk/orchestrat
 authorize_protected_subnet_enabled = true
 
 orch_account_id = "816047645251"
+is_orch_stubbed = true
 
 contra_state_bucket = "di-auth-development-tfstate"
 

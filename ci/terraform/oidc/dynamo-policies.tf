@@ -732,6 +732,46 @@ data "aws_iam_policy_document" "dynamo_auth_session_read_write_policy_document" 
   }
 }
 
+data "aws_iam_policy_document" "dynamo_orch_session_encryption_key_cross_account_decrypt_policy_document" {
+  statement {
+    sid    = "AllowOrchSessionEncryptionKeyCrossAccountDecryptAccess"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+    ]
+    resources = [
+      var.orch_session_table_encryption_key_arn,
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_access_policy_document" {
+  statement {
+    sid    = "AllowOrchSessionCrossAccountReadAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Orch-Session",
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_orch_session_cross_account_delete_access_policy_document" {
+  statement {
+    sid    = "AllowOrchSessionCrossAccountDeleteAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Orch-Session",
+    ]
+  }
+}
+
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -956,4 +996,28 @@ resource "aws_iam_policy" "dynamo_auth_session_delete_policy" {
   description = "IAM policy for managing delete permissions to the auth session table"
 
   policy = data.aws_iam_policy_document.dynamo_auth_session_delete_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_orch_session_encryption_key_cross_account_decrypt_policy" {
+  name_prefix = "dynamo-orch-session-encryption-key-cross-account-decrypt-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing decrypt and describe permissions to the orch session table's KMS encryption key"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_session_encryption_key_cross_account_decrypt_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_access_policy" {
+  name_prefix = "dynamo-orch-session-cross-account-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the orch session table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_read_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_orch_session_cross_account_delete_access_policy" {
+  name_prefix = "dynamo-orch-session-cross-account-delete-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing delete permissions to the orch session table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_delete_access_policy_document.json
 }

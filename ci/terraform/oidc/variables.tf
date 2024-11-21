@@ -691,6 +691,21 @@ variable "orch_account_id" {
   default = ""
 }
 
+variable "is_orch_stubbed" {
+  type    = string
+  default = false
+}
+
+variable "orch_environment" {
+  type    = string
+  default = ""
+}
+
+variable "orch_session_table_encryption_key_arn" {
+  type    = string
+  default = ""
+}
+
 variable "cmk_for_back_channel_logout_enabled" {
   default     = false
   type        = bool

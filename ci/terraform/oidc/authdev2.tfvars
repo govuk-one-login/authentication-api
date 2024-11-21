@@ -59,6 +59,7 @@ reauth_enter_auth_app_code_count_ttl      = 120
 
 orch_client_id  = "orchestrationAuth"
 orch_account_id = "816047645251"
+is_orch_stubbed = true
 
 contra_state_bucket = "di-auth-development-tfstate"
 
