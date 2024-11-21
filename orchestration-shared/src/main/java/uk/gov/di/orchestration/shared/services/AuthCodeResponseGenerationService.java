@@ -116,15 +116,6 @@ public class AuthCodeResponseGenerationService {
                 .getValue();
     }
 
-    public void saveSession(boolean docAppJourney, SessionService sessionService, Session session) {
-        if (docAppJourney) {
-            sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
-        } else {
-            sessionService.storeOrUpdateSession(
-                    session.setAuthenticated(true).setNewAccount(EXISTING));
-        }
-    }
-
     public void saveSession(
             boolean docAppJourney,
             SessionService sessionService,
