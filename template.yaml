@@ -1553,7 +1553,7 @@ Resources:
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref BackChannelLogoutQueueWritePolicy
         - !Ref OrchSessionTableReadAccessPolicy
-        - !Ref OrchSessionTableWriteAccessPolicy
+        - !Ref OrchSessionTableDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1852,7 +1852,7 @@ Resources:
         - !Ref OrchToAuthSigningKmsAccessPolicy
         - !Ref IpvPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
-        - !Ref OrchSessionTableReadAndWriteAccessPolicy
+        - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3402,6 +3402,7 @@ Resources:
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref OrchSessionTableWriteAccessPolicy
+        - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
@@ -3993,6 +3994,41 @@ Resources:
             Action:
               - kms:Encrypt
             Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
+
+  # This combined read, write and delete policy is required because we've reached the managed polices per role quota limit (20). Ticket raised to requst quota increase (ATO-1056)
+  OrchSessionTableReadWriteAndDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchSessionTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt OrchSessionTable.Arn
+          - Sid: AllowOrchSessionTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
+          - Sid: AllowOrchSessionTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt OrchSessionTable.Arn
+          - Sid: AllowOrchSessionTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
+          - Sid: AllowOrchSessionTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt OrchSessionTable.Arn
 
   OrchSessionTableDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
