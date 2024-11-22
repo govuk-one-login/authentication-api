@@ -61,10 +61,6 @@ subprojects {
                     because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
                 }
 
-                classpath('io.netty:netty-codec-http2:[4.1.100.Final,)') {
-                    because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
-                }
-
                 classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
                     because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
@@ -123,8 +119,8 @@ subprojects {
                     because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
                 }
 
-                add(conf.name, 'io.netty:netty-codec-http2:[4.1.100.Final,)') {
-                    because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
+                add(conf.name, 'io.netty:netty-common:[4.1.115.Final,4.2)') {
+                    because 'CVE-2024-47535 is fixed in io.netty:netty-common:4.1.115.Final and higher'
                 }
 
                 add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
@@ -133,10 +129,6 @@ subprojects {
 
                 add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
                     because 'CVE-2024-7254 is fixed in 3.25.5 and above'
-                }
-
-                add(conf.name, 'commons-io:commons-io:[2.14.0,)') {
-                    because 'CVE-2024-47554 is fixed in 2.14.0 and above'
                 }
             }
         }
