@@ -92,10 +92,21 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             logAndThrowAuthSessionException("Failed to get Auth session item", sessionId, e);
         }
         if (authSession.isEmpty()) {
-            LOG.info("No Auth session item found with session ID: {}", sessionId);
-            return authSession;
+            LOG.info(
+                    "No Auth session item found with session ID {} on first attempt. Using strongly consistent read on second attempt.",
+                    sessionId);
+            authSession = getWithStronglyConsistentRead(sessionId);
+            if (authSession.isEmpty()) {
+                LOG.info(
+                        "No Auth session item found with session ID {} after second and final attempt.",
+                        sessionId);
+                return authSession;
+            } else {
+                LOG.info(
+                        "Auth session item with session ID {} found after strongly consistent read.",
+                        sessionId);
+            }
         }
-
         Optional<AuthSessionItem> validAuthSession =
                 authSession.filter(
                         s -> s.getTimeToLive() > NowHelper.now().toInstant().getEpochSecond());

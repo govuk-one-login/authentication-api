@@ -212,6 +212,13 @@ public class StartHandler
             authSessionService.addOrUpdateSessionId(
                     previousSessionId, session.getSessionId(), currentCredentialStrength);
 
+            // For testing only, remove in ATO-1244
+            var testSession = authSessionService.getSession(session.getSessionId());
+            if (testSession.isEmpty()) {
+                LOG.info("Auth session is still not found even after strongly consistent read");
+            }
+            //
+
             var clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),

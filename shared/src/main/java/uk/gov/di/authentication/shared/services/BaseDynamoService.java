@@ -4,6 +4,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
@@ -53,6 +54,15 @@ public class BaseDynamoService<T> {
         return Optional.ofNullable(
                 dynamoTable.getItem(
                         Key.builder().partitionValue(partition).sortValue(sortKey).build()));
+    }
+
+    public Optional<T> getWithStronglyConsistentRead(String partition) {
+        GetItemEnhancedRequest request =
+                GetItemEnhancedRequest.builder()
+                        .key(k -> k.partitionValue(partition))
+                        .consistentRead(true)
+                        .build();
+        return Optional.ofNullable(dynamoTable.getItem(request));
     }
 
     public void delete(String partition) {
