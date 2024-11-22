@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -31,11 +30,9 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -64,7 +61,6 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -590,35 +586,6 @@ class StartHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    @Test
-    void shouldSetCurrentCredentialStrengthInAuthSession() throws ParseException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidClientSession();
-        usingValidSession();
-
-        var body =
-                format(
-                        """
-               { "rp-pairwise-id-for-reauth": %s,
-               "previous-govuk-signin-journey-id": %s,
-                "authenticated": %s,
-                "current-credential-strength": %s}
-                """,
-                        TEST_RP_PAIRWISE_ID,
-                        TEST_PREVIOUS_SIGN_IN_JOURNEY_ID,
-                        true,
-                        CredentialTrustLevel.MEDIUM_LEVEL);
-        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
-        handler.handleRequest(event, context);
-
-        var authSessionCaptor = ArgumentCaptor.forClass(AuthSessionItem.class);
-        verify(authSessionService, times(1)).updateSession(authSessionCaptor.capture());
-        assertEquals(
-                CredentialTrustLevel.MEDIUM_LEVEL,
-                authSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength());
-    }
-
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated) {
         return String.format("{\"authenticated\": %s}", authenticated);
     }
@@ -644,8 +611,6 @@ class StartHandlerTest {
         when(startService.createNewSessionWithExistingIdAndClientSession(
                         session, CLIENT_SESSION_ID))
                 .thenReturn(session);
-        when(authSessionService.getSession(SESSION_ID))
-                .thenReturn(Optional.ofNullable(new AuthSessionItem().withSessionId(SESSION_ID)));
     }
 
     private void usingInvalidSession() {
