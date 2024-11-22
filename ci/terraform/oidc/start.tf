@@ -41,6 +41,7 @@ module "start" {
     IDENTITY_ENABLED                        = var.ipv_api_enabled
     INTERNAl_SECTOR_URI                     = var.internal_sector_uri
     AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED = var.authentication_attempts_service_enabled
+    START_SESSION_REFACTOR_ENABLED          = var.start_session_refactor_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.StartHandler::handleRequest"
 

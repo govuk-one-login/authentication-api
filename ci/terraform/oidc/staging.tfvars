@@ -18,6 +18,7 @@ call_ticf_cri                           = true
 ticf_cri_service_call_timeout           = 10000
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
+start_session_refactor_enabled          = true
 
 orch_account_id                       = "590183975515"
 is_orch_stubbed                       = false

@@ -746,6 +746,12 @@ variable "ipv_authorization_public_key" {
   description = "Public key for IPV"
 }
 
+variable "start_session_refactor_enabled" {
+  description = "Flag to enable a refactor of session setting in start handler"
+  type        = bool
+  default     = false
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

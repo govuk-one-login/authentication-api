@@ -509,6 +509,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
 
+    public boolean isStartSessionRefactorEnabled() {
+        return System.getenv()
+                .getOrDefault("START_SESSION_REFACTOR_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =
