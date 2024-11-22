@@ -84,6 +84,45 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
     }
 
+    public void addOrUpdateSessionId(Optional<String> previousSessionId, String newSessionId) {
+        try {
+            Optional<AuthSessionItem> oldItem = Optional.empty();
+            if (previousSessionId.isPresent()) {
+                LOG.info("previousSessionId is present");
+                oldItem = getSession(previousSessionId.get());
+            }
+            if (oldItem.isPresent()) {
+                AuthSessionItem newItem =
+                        oldItem.get()
+                                .withSessionId(newSessionId)
+                                .withTimeToLive(
+                                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                                .toInstant()
+                                                .getEpochSecond());
+                put(newItem);
+                delete(previousSessionId.get());
+                LOG.info(
+                        "Session ID updated in Auth session table. previousSessionId: {}, sessionId: {}",
+                        previousSessionId,
+                        newSessionId);
+            } else {
+                AuthSessionItem newItem =
+                        new AuthSessionItem()
+                                .withSessionId(newSessionId)
+                                .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                .withTimeToLive(
+                                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                                .toInstant()
+                                                .getEpochSecond());
+                put(newItem);
+                LOG.info("New item added to Auth session table. sessionId: {}", newSessionId);
+            }
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to add or update session ID of Auth session item", newSessionId, e);
+        }
+    }
+
     public Optional<AuthSessionItem> getSession(String sessionId) {
         Optional<AuthSessionItem> authSession = Optional.empty();
         try {

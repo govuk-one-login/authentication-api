@@ -209,8 +209,12 @@ public class StartHandler
                     Optional.ofNullable(startRequest.previousSessionId());
             CredentialTrustLevel currentCredentialStrength =
                     startRequest.currentCredentialStrength();
-            authSessionService.addOrUpdateSessionId(
-                    previousSessionId, session.getSessionId(), currentCredentialStrength);
+            if (configurationService.isStartSessionRefactorEnabled()) {
+                authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
+            } else {
+                authSessionService.addOrUpdateSessionId(
+                        previousSessionId, session.getSessionId(), currentCredentialStrength);
+            }
 
             var clientSessionId =
                     getHeaderValueFromHeaders(

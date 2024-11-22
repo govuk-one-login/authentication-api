@@ -73,7 +73,7 @@ class AuthSessionServiceTest {
 
     @Test
     void shouldAddNewSessionWhenNoPreviousSessionGiven() {
-        authSessionService.addOrUpdateSessionId(Optional.empty(), NEW_SESSION_ID, null);
+        authSessionService.addOrUpdateSessionId(Optional.empty(), NEW_SESSION_ID);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
@@ -87,7 +87,7 @@ class AuthSessionServiceTest {
     void shouldAddNewSessionWhenNoPreviousSessionExists() {
         withNoSession();
 
-        authSessionService.addOrUpdateSessionId(Optional.of(SESSION_ID), NEW_SESSION_ID, null);
+        authSessionService.addOrUpdateSessionId(Optional.of(SESSION_ID), NEW_SESSION_ID);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
@@ -101,7 +101,7 @@ class AuthSessionServiceTest {
     void shouldPutAndDeleteSessionWhenUpdatingSessionId() {
         AuthSessionItem existingSession = withValidSession();
 
-        authSessionService.addOrUpdateSessionId(Optional.of(SESSION_ID), NEW_SESSION_ID, null);
+        authSessionService.addOrUpdateSessionId(Optional.of(SESSION_ID), NEW_SESSION_ID);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
