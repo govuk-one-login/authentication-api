@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.*;
-import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -205,25 +204,19 @@ public class StartHandler
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
+
+            Optional<String> previousSessionId =
+                    Optional.ofNullable(startRequest.previousSessionId());
+            CredentialTrustLevel currentCredentialStrength =
+                    startRequest.currentCredentialStrength();
+            authSessionService.addOrUpdateSessionId(
+                    previousSessionId, session.getSessionId(), currentCredentialStrength);
+
             var clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
                             CLIENT_SESSION_ID_HEADER,
                             configurationService.getHeadersCaseInsensitive());
-
-            Optional<String> previousSessionId =
-                    Optional.ofNullable(startRequest.previousSessionId());
-            authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
-            AuthSessionItem authSession =
-                    authSessionService
-                            .getSession(session.getSessionId())
-                            .orElseThrow(
-                                    () ->
-                                            new AuthSessionException(
-                                                    "Auth session not found in DynamoDB"));
-            authSession.setCurrentCredentialStrength(startRequest.currentCredentialStrength());
-            authSessionService.updateSession(authSession);
-
             var txmaAuditHeader =
                     getOptionalHeaderValueFromHeaders(
                             input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
