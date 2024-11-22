@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -30,6 +32,7 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -584,6 +587,32 @@ class StartHandlerTest {
         assertThat(result, hasBody(expectedResponse));
 
         verifyNoInteractions(auditService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldSetOrNotSetUpliftRequiredInAuthSession(boolean upliftRequired)
+            throws ParseException {
+        var userStartInfo =
+                new UserStartInfo(upliftRequired, false, true, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidClientSession();
+        usingValidSession();
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(true));
+        handler.handleRequest(event, context);
+
+        var authSessionCaptor = ArgumentCaptor.forClass(AuthSessionItem.class);
+        if (upliftRequired) {
+            verify(authSessionService, times(1)).updateSession(authSessionCaptor.capture());
+            assertTrue(authSessionCaptor.getAllValues().get(0).getUpliftRequired());
+            assertTrue(authSessionService.getSession(SESSION_ID).get().getUpliftRequired());
+        } else {
+            verify(authSessionService, times(0)).updateSession(authSessionCaptor.capture());
+            assertFalse(authSessionService.getSession(SESSION_ID).get().getUpliftRequired());
+        }
     }
 
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated) {
