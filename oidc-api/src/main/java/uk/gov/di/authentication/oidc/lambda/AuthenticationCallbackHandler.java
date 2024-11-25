@@ -515,7 +515,7 @@ public class AuthenticationCallbackHandler
                 sessionService.storeOrUpdateSession(userSession);
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
-                        accountState, clientId, clientSession.getClientName(), isTestJourney);
+                        orchAccountState, clientId, clientSession.getClientName(), isTestJourney);
 
                 LOG.info("Successfully processed request");
 

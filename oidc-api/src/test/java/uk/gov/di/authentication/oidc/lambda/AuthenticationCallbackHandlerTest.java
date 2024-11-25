@@ -209,7 +209,7 @@ class AuthenticationCallbackHandlerTest {
         verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
         verify(cloudwatchMetricsService)
                 .incrementSignInByClient(
-                        eq(Session.AccountState.NEW),
+                        eq(OrchSessionItem.AccountState.NEW),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_NAME),
                         eq(false));
