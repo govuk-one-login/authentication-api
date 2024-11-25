@@ -205,12 +205,10 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
-            Optional<String> previousSessionId =
-                    Optional.ofNullable(startRequest.previousSessionId());
-            CredentialTrustLevel currentCredentialStrength =
-                    startRequest.currentCredentialStrength();
             authSessionService.updateSessionIncludingSessionId(
-                    previousSessionId, session.getSessionId(), currentCredentialStrength);
+                    Optional.ofNullable(startRequest.previousSessionId()),
+                    session.getSessionId(),
+                    startRequest.currentCredentialStrength());
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
