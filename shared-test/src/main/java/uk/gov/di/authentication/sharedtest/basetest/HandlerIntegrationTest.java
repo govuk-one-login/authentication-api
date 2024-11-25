@@ -338,5 +338,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
         public String getFrontendBaseUrl() {
             return "http://localhost:3000/reset-password?code=";
         }
+
+        @Override
+        public boolean getUseAuthSessionInternalCommonSubjectId() {
+            return true;
+        }
     }
 }
