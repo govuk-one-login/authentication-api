@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
-import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -226,8 +225,19 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(UserContext userContext) {
-        return !DocAppUserHelper.isDocCheckingAppUser(userContext)
-                && UpliftHelper.upliftRequired(userContext);
+        if (DocAppUserHelper.isDocCheckingAppUser(userContext)
+                || Objects.isNull(userContext.getSession().getCurrentCredentialStrength())) {
+            return false;
+        }
+        return (userContext
+                        .getSession()
+                        .getCurrentCredentialStrength()
+                        .compareTo(
+                                userContext
+                                        .getClientSession()
+                                        .getEffectiveVectorOfTrust()
+                                        .getCredentialTrustLevel())
+                < 0);
     }
 
     private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {
