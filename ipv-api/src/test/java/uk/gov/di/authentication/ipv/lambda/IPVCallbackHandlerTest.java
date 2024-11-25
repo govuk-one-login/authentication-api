@@ -379,7 +379,7 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
                         any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
@@ -445,7 +445,7 @@ class IPVCallbackHandlerTest {
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                             any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                            any()))
+                            any(), any()))
                     .thenReturn(
                             new AuthenticationSuccessResponse(
                                     REDIRECT_URI, null, null, null, null, null, null));
@@ -521,7 +521,7 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
                         any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
