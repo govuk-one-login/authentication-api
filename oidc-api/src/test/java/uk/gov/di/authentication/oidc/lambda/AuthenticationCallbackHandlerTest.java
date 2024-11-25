@@ -15,6 +15,9 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
@@ -33,8 +36,10 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.*;
 
+import javax.swing.text.StyledEditorKit;
 import java.net.URI;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
@@ -448,6 +453,129 @@ class AuthenticationCallbackHandlerTest {
         handler.handleRequest(event, null);
 
         assertSessionUpdatedAuthJourney(false);
+    }
+
+    @Nested
+    class CurrentCredentialStrengthScenarios {
+
+        @BeforeEach
+        void setup() {}
+
+        private static Stream<Arguments> currentCredentialStrengthPermutations() {
+            return Stream.of(
+                    Arguments.of( //1
+                            CredentialTrustLevel.MEDIUM_LEVEL,
+                            LevelOfConfidence.MEDIUM_LEVEL,
+                            CredentialTrustLevel.MEDIUM_LEVEL,
+                            false,
+                            CredentialTrustLevel.MEDIUM_LEVEL),
+                    Arguments.of( //2
+                            CredentialTrustLevel.MEDIUM_LEVEL,
+                            LevelOfConfidence.MEDIUM_LEVEL,
+                            CredentialTrustLevel.LOW_LEVEL,
+                            true,
+                            CredentialTrustLevel.MEDIUM_LEVEL),
+                    Arguments.of( //3
+                            CredentialTrustLevel.MEDIUM_LEVEL,
+                            LevelOfConfidence.MEDIUM_LEVEL,
+                            null,
+                            true,
+                            CredentialTrustLevel.MEDIUM_LEVEL),
+                    Arguments.of( //4
+                            CredentialTrustLevel.LOW_LEVEL,
+                            LevelOfConfidence.MEDIUM_LEVEL,
+                            CredentialTrustLevel.MEDIUM_LEVEL,
+                            false,
+                            CredentialTrustLevel.MEDIUM_LEVEL),
+                    Arguments.of( //5
+                            CredentialTrustLevel.LOW_LEVEL,
+                            LevelOfConfidence.MEDIUM_LEVEL,
+                            CredentialTrustLevel.LOW_LEVEL,
+                            false,
+                            CredentialTrustLevel.LOW_LEVEL),
+                    Arguments.of( //6
+                            CredentialTrustLevel.LOW_LEVEL,
+                            LevelOfConfidence.MEDIUM_LEVEL,
+                            null,
+                            true,
+                            CredentialTrustLevel.LOW_LEVEL));
+        }
+
+        @ParameterizedTest
+        @MethodSource("currentCredentialStrengthPermutations")
+        void shouldUpdateTheCurrentCredentialStrengthWhenTheLowestCredentialTrustIsGreater(
+                CredentialTrustLevel credentialTrustLevel,
+                LevelOfConfidence levelOfConfidence,
+                CredentialTrustLevel userInfoCurrentCredentialStrengthResponse,
+                Boolean shouldUpdateCurrentCredentialStrength,
+                CredentialTrustLevel correctCredentialTrustLevelSet)
+                throws UnsuccessfulCredentialResponseException {
+
+            usingValidClientSession(credentialTrustLevel, levelOfConfidence);
+            returnCurrentStrengthValue(userInfoCurrentCredentialStrengthResponse);
+            usingValidSessionWithTrustValue(userInfoCurrentCredentialStrengthResponse);
+            usingValidClient();
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+
+            handler.handleRequest(event, null);
+
+            assertCurrentCredentialStrength(correctCredentialTrustLevelSet, shouldUpdateCurrentCredentialStrength);
+        }
+
+        private void usingValidSessionWithTrustValue(CredentialTrustLevel credentialTrustLevel) {
+            session.setCurrentCredentialStrength(credentialTrustLevel);
+            when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+            when(orchSessionService.getSession(SESSION_ID))
+                    .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+        }
+
+        private void usingValidClientSession(CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
+            ClientSession clientSession =
+                    createClientSession(credentialTrustLevel, levelOfConfidence);
+            when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                    CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
+                    .thenReturn(AUTH_CODE_RP_TO_ORCH);
+            when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                    .thenReturn(Optional.of(clientSession));
+        }
+
+        private ClientSession createClientSession(
+                CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
+            return new ClientSession(
+                    generateRPAuthRequestForClientSession().toParameters(),
+                    null,
+                    List.of(VectorOfTrust.of(credentialTrustLevel, levelOfConfidence)),
+                    CLIENT_NAME);
+        }
+
+        private void returnCurrentStrengthValue(CredentialTrustLevel credentialTrustLevel) {
+            when(USER_INFO.getStringClaim(
+                    AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
+                    .thenReturn(Objects.toString(credentialTrustLevel, null));
+        }
+
+        private void assertCurrentCredentialStrength(CredentialTrustLevel credentialTrustLevel, Boolean shouldUpdateCurrentCredentialStrength) {
+            var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
+            var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
+            verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
+            Integer timesToUpdate;
+            if (shouldUpdateCurrentCredentialStrength) {
+                timesToUpdate = 3;
+            } else {
+                timesToUpdate = 2;
+            }
+            verify(orchSessionService, times(timesToUpdate)).updateSession(orchSessionCaptor.capture());
+            assertThat(
+                    sessionSaveCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
+                    equalTo(credentialTrustLevel));
+            assertThat(
+                    orchSessionCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
+                    equalTo(credentialTrustLevel));
+        }
     }
 
     @Nested

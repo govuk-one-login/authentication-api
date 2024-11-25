@@ -512,17 +512,6 @@ public class AuthenticationCallbackHandler
                                 > 0) {
                     userSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
                 }
-                var currentCredentialStrength =
-                        userInfo.getStringClaim(
-                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
-                if (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
-                                > 0) {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    lowestRequestedCredentialTrustLevel));
-                }
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
@@ -537,7 +526,17 @@ public class AuthenticationCallbackHandler
                 } else {
                     sessionService.storeOrUpdateSession(userSession.setAuthenticated(true));
                 }
-
+                var currentCredentialStrength =
+                        userInfo.getStringClaim(
+                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
+                if (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(
+                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
+                                > 0) {
+                    orchSessionService.updateSession(
+                            orchSession.withCurrentCredentialStrength(
+                                    lowestRequestedCredentialTrustLevel));
+                }
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         accountState, clientId, clientSession.getClientName(), isTestJourney);
