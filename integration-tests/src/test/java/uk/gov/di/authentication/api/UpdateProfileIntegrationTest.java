@@ -33,6 +33,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-id";
     private static final String CLIENT_NAME = "test-client-name";
+    private static final String INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
 
     @BeforeEach
     void setup() {
@@ -81,6 +82,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         .nonce(new Nonce())
                         .build();
         redis.createClientSession(clientSessionId, CLIENT_NAME, authRequest.toParameters());
+        saveAuthSession(sessionId);
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -95,5 +97,12 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 "public");
         userStore.signUp(EMAIL_ADDRESS, "password");
         return authRequest;
+    }
+
+    private void saveAuthSession(String sessionId) {
+        authSessionStore.addSession(Optional.empty(), sessionId);
+        var authSession = authSessionStore.getSession(sessionId);
+        authSessionStore.updateSession(
+                authSession.orElseThrow().withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID));
     }
 }

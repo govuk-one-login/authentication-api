@@ -155,13 +155,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
-            Optional<AuthSessionItem> authSession =
+            Optional<AuthSessionItem> authSessionOptional =
                     authSessionService.getSessionFromRequestHeaders(input.getHeaders());
-            if (authSession.isEmpty()) {
+            if (authSessionOptional.isEmpty()) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
 
-            attachAuthSessionIdToLogs(authSession.get());
+            var authSession = authSessionOptional.get();
+
+            attachAuthSessionIdToLogs(authSession);
+
             var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
@@ -169,7 +172,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            session.getInternalCommonSubjectIdentifier(),
+                            authSession.getInternalCommonSubjectId(),
                             session.getEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
@@ -235,7 +238,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
                 SessionHelper.updateSessionWithSubject(
                         userContext,
-                        authSession.get(),
+                        authSession,
                         sessionService,
                         authSessionService,
                         authenticationService,
@@ -243,7 +246,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    authSession.get(),
+                    authSession,
                     codeRequest,
                     userContext,
                     subjectId,
@@ -408,7 +411,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.setVerifiedMfaMethodType(MFAMethodType.SMS));
             authSessionService.updateSession(
                     authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
-            clearAccountRecoveryBlockIfPresent(session, auditContext);
+            clearAccountRecoveryBlockIfPresent(authSession, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     authSession.getIsNewAccount(),
                     clientId,
@@ -537,14 +540,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         };
     }
 
-    private void clearAccountRecoveryBlockIfPresent(Session session, AuditContext auditContext) {
+    private void clearAccountRecoveryBlockIfPresent(
+            AuthSessionItem authSession, AuditContext auditContext) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
-                        session.getInternalCommonSubjectIdentifier());
+                        authSession.getInternalCommonSubjectId());
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    session.getInternalCommonSubjectIdentifier());
+                    authSession.getInternalCommonSubjectId());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
                     auditContext,

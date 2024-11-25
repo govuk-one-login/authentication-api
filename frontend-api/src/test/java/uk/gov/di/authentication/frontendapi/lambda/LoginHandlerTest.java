@@ -901,12 +901,9 @@ class LoginHandlerTest {
         verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .storeOrUpdateSession(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(authSessionService, atLeastOnce())
+                .updateSession(
+                        argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
     }
 
     private void verifyAuthSessionIsSaved() {

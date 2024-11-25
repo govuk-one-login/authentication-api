@@ -12,12 +12,14 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -41,10 +43,12 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
     private final IPVReverificationService ipvReverificationService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final AuthSessionService authSessionService;
 
     public MfaResetAuthorizeHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -61,6 +65,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.ipvReverificationService = ipvReverificationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.authSessionService = authSessionService;
     }
 
     public MfaResetAuthorizeHandler(ConfigurationService configurationService) {
@@ -77,6 +82,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.ipvReverificationService =
                 new IPVReverificationService(
                         configurationService, jwtService, tokenService, redisConnectionService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public MfaResetAuthorizeHandler() {
@@ -110,8 +116,13 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                             AuditService.UNKNOWN,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
+            var maybeAuthSession =
+                    authSessionService.getSession(userContext.getSession().getSessionId());
             Subject internalCommonSubjectId =
-                    new Subject(userSession.getInternalCommonSubjectIdentifier());
+                    new Subject(
+                            maybeAuthSession
+                                    .map(AuthSessionItem::getInternalCommonSubjectId)
+                                    .orElseThrow());
 
             var ipvReverificationRequestURI =
                     ipvReverificationService.buildIpvReverificationRedirectUri(

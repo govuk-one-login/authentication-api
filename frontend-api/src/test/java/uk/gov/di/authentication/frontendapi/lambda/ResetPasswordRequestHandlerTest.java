@@ -22,6 +22,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -42,6 +43,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -109,6 +111,7 @@ class ResetPasswordRequestHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -135,13 +138,18 @@ class ResetPasswordRequestHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(CommonTestVariables.EMAIL)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+            new Session(SESSION_ID).setEmailAddress(CommonTestVariables.EMAIL);
+
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(expectedCommonSubject);
+
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
                     sessionService,
+                    authSessionService,
                     clientSessionService,
                     clientService,
                     authenticationService,
@@ -180,6 +188,7 @@ class ResetPasswordRequestHandlerTest {
         when(codeGeneratorService.twentyByteEncodedRandomCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
+        when(authSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(authSession));
     }
 
     @Nested
