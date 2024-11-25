@@ -226,6 +226,11 @@ public class StartService {
                 .isEmpty();
     }
 
+    public boolean isUpliftRequired(UserContext userContext) {
+        return !DocAppUserHelper.isDocCheckingAppUser(userContext)
+                && UpliftHelper.upliftRequired(userContext);
+    }
+
     private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {
         return clientService
                 .getClient(clientID)

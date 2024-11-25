@@ -205,6 +205,8 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
+            boolean upliftRequired = startService.isUpliftRequired(userContext);
+
             authSessionService.addOrUpdateSessionIncludingSessionId(
                     Optional.ofNullable(startRequest.previousSessionId()),
                     session.getSessionId(),
