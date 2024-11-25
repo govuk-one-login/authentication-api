@@ -40,7 +40,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         this.configurationService = configurationService;
     }
 
-    public void addOrUpdateSessionId(
+    public void addOrUpdateSessionIncludingSessionId(
             Optional<String> previousSessionId,
             String newSessionId,
             CredentialTrustLevel currentCredentialStrength) {
