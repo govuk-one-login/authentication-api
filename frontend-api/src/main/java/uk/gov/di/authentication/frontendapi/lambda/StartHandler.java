@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -205,12 +207,10 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
-            Optional<String> previousSessionId =
-                    Optional.ofNullable(startRequest.previousSessionId());
-            CredentialTrustLevel currentCredentialStrength =
-                    startRequest.currentCredentialStrength();
-            authSessionService.addOrUpdateSessionId(
-                    previousSessionId, session.getSessionId(), currentCredentialStrength);
+            updateAuthSession(
+                    Optional.ofNullable(startRequest.previousSessionId()),
+                    session.getSessionId(),
+                    startRequest);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
@@ -296,6 +296,43 @@ public class StartHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
+        }
+    }
+
+    private void updateAuthSession(
+            Optional<String> previousSessionId, String newSessionId, StartRequest startRequest) {
+        Optional<AuthSessionItem> previousAuthSession = Optional.empty();
+        if (previousSessionId.isPresent()) {
+            previousAuthSession = authSessionService.getSession(previousSessionId.get());
+        }
+        AuthSessionItem authSession;
+        if (previousAuthSession.isPresent()) {
+            authSession =
+                    previousAuthSession
+                            .get()
+                            .withSessionId(newSessionId)
+                            .withCurrentCredentialStrength(startRequest.currentCredentialStrength())
+                            .withTimeToLive(
+                                    NowHelper.nowPlus(
+                                                    configurationService.getSessionExpiry(),
+                                                    ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond());
+            authSessionService.updateSession(authSession);
+            authSessionService.deleteSession(previousSessionId.get());
+        } else {
+            authSession =
+                    new AuthSessionItem()
+                            .withSessionId(newSessionId)
+                            .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                            .withCurrentCredentialStrength(startRequest.currentCredentialStrength())
+                            .withTimeToLive(
+                                    NowHelper.nowPlus(
+                                                    configurationService.getSessionExpiry(),
+                                                    ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond());
+            authSessionService.addSession(authSession);
         }
     }
 
