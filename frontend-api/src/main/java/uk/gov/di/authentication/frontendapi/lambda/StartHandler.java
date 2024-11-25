@@ -258,7 +258,8 @@ public class StartHandler
                             configurationService.isIdentityEnabled(),
                             reauthenticate,
                             isBlockedForReauth,
-                            isUserAuthenticatedWithValidProfile);
+                            isUserAuthenticatedWithValidProfile,
+                            upliftRequired);
 
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =

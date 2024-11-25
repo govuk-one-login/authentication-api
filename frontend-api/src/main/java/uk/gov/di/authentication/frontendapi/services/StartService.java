@@ -143,13 +143,12 @@ public class StartService {
             boolean identityEnabled,
             boolean reauthenticate,
             boolean isBlockedForReauth,
-            boolean isAuthenticated) {
-        var uplift = false;
+            boolean isAuthenticated,
+            boolean upliftRequired) {
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
         var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
         if (Boolean.FALSE.equals(docCheckingAppUser)) {
-            uplift = UpliftHelper.upliftRequired(userContext);
             var clientRegistry = userContext.getClient().orElseThrow();
             identityRequired =
                     IdentityHelper.identityRequired(
@@ -168,7 +167,7 @@ public class StartService {
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}, IsBlockedForReauth: {}",
                 userIsAuthenticated,
-                uplift,
+                upliftRequired,
                 identityRequired,
                 cookieConsent,
                 gaTrackingId,
@@ -176,7 +175,7 @@ public class StartService {
                 isBlockedForReauth);
 
         return new UserStartInfo(
-                uplift,
+                upliftRequired,
                 identityRequired,
                 userIsAuthenticated,
                 cookieConsent,
