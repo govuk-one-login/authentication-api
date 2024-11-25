@@ -382,8 +382,6 @@ public class IPVCallbackHandler
                     if (rpRequestedReturnCode(clientRegistry, authRequest)) {
                         LOG.info("Generating auth code response for return code(s)");
 
-                        boolean isGetNewAccountFromOrchSessionEnabled =
-                                configurationService.getIsNewAccountFromOrchSession();
                         var authenticationResponse =
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
@@ -396,8 +394,7 @@ public class IPVCallbackHandler
                                         internalPairwiseSubjectId,
                                         userIdentityUserInfo,
                                         ipAddress,
-                                        persistentId,
-                                        isGetNewAccountFromOrchSessionEnabled);
+                                        persistentId);
                         return generateApiGatewayProxyResponse(
                                 302,
                                 "",

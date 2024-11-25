@@ -139,7 +139,8 @@ class AuthCodeHandlerTest {
     private AuthCodeHandler handler;
 
     private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
-    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID).withAccountState(OrchSessionItem.AccountState.NEW);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -221,7 +222,6 @@ class AuthCodeHandlerTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
-                            eq(session),
                             eq(orchSession),
                             eq(clientSession),
                             eq(CLIENT_ID.getValue()),
@@ -314,7 +314,7 @@ class AuthCodeHandlerTest {
                                 .withIpAddress("123.123.123.123")
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", SUBJECT.getValue()),
-                        pair("isNewAccount", AccountState.NEW),
+                        pair("isNewAccount", OrchSessionItem.AccountState.NEW),
                         pair("rpPairwiseId", expectedRpPairwiseId),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
@@ -372,7 +372,6 @@ class AuthCodeHandlerTest {
                         CLIENT_SESSION_ID, null, clientSession))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(session),
                         eq(orchSession),
                         eq(clientSession),
                         eq(CLIENT_ID.getValue()),
@@ -425,7 +424,7 @@ class AuthCodeHandlerTest {
                                 .withIpAddress("123.123.123.123")
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", AccountState.UNKNOWN),
+                        pair("isNewAccount", OrchSessionItem.AccountState.NEW),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
@@ -609,7 +608,6 @@ class AuthCodeHandlerTest {
                         CLIENT_SESSION_ID, null, clientSession))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(session),
                         eq(orchSession),
                         eq(clientSession),
                         eq(CLIENT_ID.getValue()),

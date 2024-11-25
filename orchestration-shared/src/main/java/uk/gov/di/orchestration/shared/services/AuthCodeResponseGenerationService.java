@@ -41,7 +41,6 @@ public class AuthCodeResponseGenerationService {
     }
 
     public Map<String, String> getDimensions(
-            Session session,
             OrchSessionItem orchSession,
             ClientSession clientSession,
             String clientSessionId,
@@ -51,9 +50,7 @@ public class AuthCodeResponseGenerationService {
                 new HashMap<>(
                         Map.of(
                                 "Account",
-                                configurationService.getIsNewAccountFromOrchSession()
-                                        ? orchSession.getIsNewAccount().name()
-                                        : session.isNewAccount().name(),
+                                orchSession.getIsNewAccount().name(),
                                 "Environment",
                                 configurationService.getEnvironment(),
                                 "Client",
