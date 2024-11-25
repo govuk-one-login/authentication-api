@@ -72,7 +72,8 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
     }
 
     public void addSession(Optional<String> previousSessionId, String sessionId) {
-        authSessionService.addOrUpdateSessionIncludingSessionId(previousSessionId, sessionId, null);
+        authSessionService.addOrUpdateSessionIncludingSessionId(
+                previousSessionId, sessionId, null, false);
     }
 
     public void updateSession(AuthSessionItem sessionItem) {

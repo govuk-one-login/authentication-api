@@ -43,7 +43,8 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
     public void addOrUpdateSessionIncludingSessionId(
             Optional<String> previousSessionId,
             String newSessionId,
-            CredentialTrustLevel currentCredentialStrength) {
+            CredentialTrustLevel currentCredentialStrength,
+            boolean upliftRequired) {
         try {
             Optional<AuthSessionItem> oldItem = Optional.empty();
             if (previousSessionId.isPresent()) {
@@ -55,6 +56,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                         oldItem.get()
                                 .withSessionId(newSessionId)
                                 .withCurrentCredentialStrength(currentCredentialStrength)
+                                .withUpliftRequired(upliftRequired)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
@@ -71,6 +73,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                 .withSessionId(newSessionId)
                                 .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
                                 .withCurrentCredentialStrength(currentCredentialStrength)
+                                .withUpliftRequired(upliftRequired)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()

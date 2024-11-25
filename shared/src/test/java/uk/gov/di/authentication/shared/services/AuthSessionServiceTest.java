@@ -74,7 +74,7 @@ class AuthSessionServiceTest {
     @Test
     void shouldAddNewSessionWhenNoPreviousSessionGiven() {
         authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.empty(), NEW_SESSION_ID, null);
+                Optional.empty(), NEW_SESSION_ID, null, false);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
@@ -89,7 +89,7 @@ class AuthSessionServiceTest {
         withNoSession();
 
         authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.of(SESSION_ID), NEW_SESSION_ID, null);
+                Optional.of(SESSION_ID), NEW_SESSION_ID, null, false);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
@@ -104,7 +104,7 @@ class AuthSessionServiceTest {
         AuthSessionItem existingSession = withValidSession();
 
         authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.of(SESSION_ID), NEW_SESSION_ID, null);
+                Optional.of(SESSION_ID), NEW_SESSION_ID, null, false);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
@@ -116,11 +116,11 @@ class AuthSessionServiceTest {
     }
 
     @Test
-    void shouldIncludeTheCurrentCredentialStrengthWhenUpdating() {
+    void shouldAddFieldsToSessionWhenUpdating() {
         withValidSession();
 
         authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.of(SESSION_ID), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+                Optional.of(SESSION_ID), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL, true);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
@@ -128,14 +128,15 @@ class AuthSessionServiceTest {
 
         assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
         assertThat(savedItem.getCurrentCredentialStrength(), is(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertTrue(savedItem.getUpliftRequired());
     }
 
     @Test
-    void shouldIncludeTheCurrentCredentialStrengthWhenNewSession() {
+    void shouldAddFieldsToSessionWhenNewSession() {
         withNoSession();
 
         authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.empty(), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+                Optional.empty(), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL, false);
 
         ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
         verify(table).putItem(captor.capture());
@@ -143,6 +144,7 @@ class AuthSessionServiceTest {
 
         assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
         assertThat(savedItem.getCurrentCredentialStrength(), is(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertFalse(savedItem.getUpliftRequired());
     }
 
     @Test

@@ -210,7 +210,8 @@ public class StartHandler
             authSessionService.addOrUpdateSessionIncludingSessionId(
                     Optional.ofNullable(startRequest.previousSessionId()),
                     session.getSessionId(),
-                    startRequest.currentCredentialStrength());
+                    startRequest.currentCredentialStrength(),
+                    upliftRequired);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
