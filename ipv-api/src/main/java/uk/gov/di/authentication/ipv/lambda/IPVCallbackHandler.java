@@ -394,7 +394,8 @@ public class IPVCallbackHandler
                                         internalPairwiseSubjectId,
                                         userIdentityUserInfo,
                                         ipAddress,
-                                        persistentId);
+                                        persistentId,
+                                        clientId);
                         return generateApiGatewayProxyResponse(
                                 302,
                                 "",

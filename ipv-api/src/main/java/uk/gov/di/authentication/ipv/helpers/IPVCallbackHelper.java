@@ -199,7 +199,8 @@ public class IPVCallbackHelper {
             String internalPairwiseSubjectId,
             UserInfo userIdentityUserInfo,
             String ipAddress,
-            String persistentSessionId)
+            String persistentSessionId,
+            String clientId)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
@@ -255,7 +256,7 @@ public class IPVCallbackHelper {
 
         cloudwatchMetricsService.incrementSignInByClient(
                 orchSession.getIsNewAccount(),
-                clientSessionId,
+                clientId,
                 clientSession.getClientName(),
                 isTestJourney);
 
