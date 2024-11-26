@@ -5,7 +5,6 @@ import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 
 import java.util.Map;
 import java.util.Optional;
@@ -17,8 +16,6 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.E
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.LOGOUT_SUCCESS;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
@@ -51,35 +48,6 @@ public class CloudwatchMetricsService {
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
         putEmbeddedValue(name, 1, dimensions);
-    }
-
-    public void incrementSignInByClient(
-            Session.AccountState accountState,
-            String clientId,
-            String clientName,
-            boolean isTestJourney) {
-        if (NEW.equals(accountState) && !isTestJourney) {
-            incrementCounter(
-                    SIGN_IN_NEW_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
-        }
-        if (EXISTING.equals(accountState) && !isTestJourney) {
-            incrementCounter(
-                    SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
-        }
     }
 
     public void incrementSignInByClient(
