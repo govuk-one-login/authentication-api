@@ -76,7 +76,7 @@ public class AuthenticationCallbackUserInfoStoreExtension extends DynamoExtensio
         dynamoDB.createTable(request);
     }
 
-    public Optional<AuthenticationUserInfo> getUserInfoBySubjectId(String subjectId) {
+    public Optional<AuthenticationUserInfo> getUserInfoDataBySubjectId(String subjectId) {
         return userInfoService.getAuthenticationUserInfoData(subjectId);
     }
 
