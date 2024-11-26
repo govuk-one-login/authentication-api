@@ -121,6 +121,7 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(false);
+        when(configurationService.isDestroyOrchSessionOnSignOutEnabled()).thenReturn(true);
         when(accountInterventionService.getAccountIntervention(anyString(), any(), any()))
                 .thenReturn(
                         new AccountIntervention(

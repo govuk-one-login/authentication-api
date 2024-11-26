@@ -31,6 +31,7 @@ public class LogoutService {
 
     private final ConfigurationService configurationService;
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
@@ -43,6 +44,7 @@ public class LogoutService {
     public LogoutService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -54,6 +56,7 @@ public class LogoutService {
     public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
@@ -65,6 +68,7 @@ public class LogoutService {
     public LogoutService(
             ConfigurationService configurationService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
             ClientSessionService clientSessionService,
             AuditService auditService,
@@ -73,6 +77,7 @@ public class LogoutService {
             AuthFrontend authFrontend) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
@@ -115,6 +120,11 @@ public class LogoutService {
         }
         LOG.info("Deleting Session");
         sessionService.deleteStoredSession(session.getSessionId());
+
+        if (configurationService.isDestroyOrchSessionOnSignOutEnabled()) {
+            LOG.info("Deleting Orch Session");
+            orchSessionService.deleteSession(session.getSessionId());
+        }
     }
 
     public APIGatewayProxyResponseEvent handleLogout(

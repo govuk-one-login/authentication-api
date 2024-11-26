@@ -78,6 +78,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
@@ -278,6 +279,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -300,6 +303,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -309,7 +314,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToBlockedPage(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertSessionIsDeleted();
     }
 
     @Test
@@ -322,6 +327,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -331,7 +338,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertSessionIsDeleted();
     }
 
     @Test
@@ -344,6 +351,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -353,7 +362,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertSessionIsDeleted();
     }
 
     @Test
@@ -365,6 +374,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -388,6 +399,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -397,7 +410,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertSessionIsDeleted();
     }
 
     @Test
@@ -412,6 +425,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -436,6 +451,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -456,6 +473,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         assertDoesNotThrow(
                 () ->
@@ -475,6 +494,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         assertThrows(
                 AccountInterventionException.class,
@@ -496,6 +517,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -523,6 +546,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -545,6 +570,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -554,7 +581,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToBlockedPage(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertSessionIsDeleted();
     }
 
     @Test
@@ -567,6 +594,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -590,6 +619,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -599,7 +630,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         constructQueryStringParameters());
 
         assertRedirectToSuspendedPage(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertSessionIsDeleted();
     }
 
     @Test
@@ -612,6 +643,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -639,6 +672,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -666,6 +701,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         var response =
                 makeRequest(
@@ -686,6 +723,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var session = redis.getSession(SESSION_ID);
         assertNotNull(session);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
 
         assertThrows(
                 AccountInterventionException.class,
@@ -806,6 +845,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertEquals(
                 MFAMethodType.AUTH_APP.getValue(), orchSession.get().getVerifiedMfaMethodType());
         assertThat(OrchSessionItem.AccountState.NEW, equalTo(orchSession.get().getIsNewAccount()));
+    }
+
+    private void assertSessionIsDeleted() {
+        var session = redis.getFromRedis(SESSION_ID);
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertNull(session);
+        assertTrue(orchSession.isEmpty());
     }
 
     private void setupClientReg(boolean identityVerificationSupported) {

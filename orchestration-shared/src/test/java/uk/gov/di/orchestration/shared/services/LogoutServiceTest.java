@@ -62,6 +62,7 @@ class LogoutServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -137,6 +138,7 @@ class LogoutServiceTest {
 
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configurationService.isDestroyOrchSessionOnSignOutEnabled()).thenReturn(true);
 
         when(authFrontend.defaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(authFrontend.errorLogoutURI(ERROR_OBJECT)).thenReturn(ERROR_LOGOUT_URI);
@@ -147,6 +149,7 @@ class LogoutServiceTest {
                 new LogoutService(
                         configurationService,
                         sessionService,
+                        orchSessionService,
                         dynamoClientService,
                         clientSessionService,
                         auditService,
@@ -192,6 +195,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -224,6 +228,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -256,6 +261,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -289,6 +295,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -332,6 +339,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -361,6 +369,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -401,6 +410,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -469,6 +479,7 @@ class LogoutServiceTest {
         verify(clientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(clientSessionService).deleteStoredClientSession("client-session-id-3");
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -515,6 +526,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));

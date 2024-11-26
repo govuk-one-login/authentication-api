@@ -69,6 +69,7 @@ module "processing-identity" {
     AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                           = local.api_base_url
     JAVA_TOOL_OPTIONS                           = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+    IS_DESTROY_ORCH_SESSION_ON_SIGN_OUT_ENABLED = var.is_destroy_orch_session_on_sign_out_enabled
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 
