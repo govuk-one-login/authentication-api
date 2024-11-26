@@ -66,6 +66,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -123,6 +124,8 @@ class IPVCallbackHandlerTest {
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
+    private final AuthenticationUserInfoStorageService authUserInfoStorageService =
+            mock(AuthenticationUserInfoStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -269,6 +272,7 @@ class IPVCallbackHandlerTest {
                         ipvTokenService,
                         sessionService,
                         orchSessionService,
+                        authUserInfoStorageService,
                         dynamoService,
                         clientSessionService,
                         dynamoClientService,
