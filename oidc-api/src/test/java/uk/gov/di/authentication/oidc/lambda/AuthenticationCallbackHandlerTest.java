@@ -146,7 +146,6 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(new TokenErrorResponse(new ErrorObject("1", TEST_ERROR_MESSAGE)));
         when(USER_INFO.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(USER_INFO.getSubject()).thenReturn(new Subject(TEST_INTERNAL_COMMON_SUBJECT_ID));
-        when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(), String.class))
                 .thenReturn(RP_PAIRWISE_ID.getValue());
         when(USER_INFO.getPhoneNumber()).thenReturn("1234");
@@ -163,6 +162,7 @@ class AuthenticationCallbackHandlerTest {
         reset(logoutService);
         reset(authorizationService);
         session.setCurrentCredentialStrength(null);
+        when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any()))
                 .thenAnswer(
                         args -> {
