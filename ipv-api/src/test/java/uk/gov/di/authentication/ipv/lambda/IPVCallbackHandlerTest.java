@@ -117,7 +117,6 @@ import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMes
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerTest {
-    private static final Subject SUBJECT = new Subject();
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final IPVAuthorisationService responseService = mock(IPVAuthorisationService.class);
@@ -167,7 +166,7 @@ class IPVCallbackHandlerTest {
                     new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
                     new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
     private IPVCallbackHandler handler;
-    private final byte[] salt =
+    private static final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private final URI accessDeniedURI =
@@ -179,9 +178,11 @@ class IPVCallbackHandlerTest {
                     .toURI();
     private final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
     private final UserProfile userProfile = generateUserProfile();
-    private final String expectedCommonSubject =
+
+    private static final Subject TEST_SUBJECT = new Subject();
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    SUBJECT.getValue(), "test.account.gov.uk", salt);
+                    TEST_SUBJECT.getValue(), "test.account.gov.uk", salt);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -190,7 +191,7 @@ class IPVCallbackHandlerTest {
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+                    .setInternalCommonSubjectIdentifier(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
 
     private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
 
@@ -1013,7 +1014,7 @@ class IPVCallbackHandlerTest {
                 .withPhoneNumber("012345678902")
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .withSubjectID(SUBJECT.getValue());
+                .withSubjectID(TEST_SUBJECT.getValue());
     }
 
     private static ClientRegistry generateClientRegistryNoClaims() {
@@ -1057,7 +1058,7 @@ class IPVCallbackHandlerTest {
                         TxmaAuditUser.user()
                                 .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                 .withSessionId(SESSION_ID)
-                                .withUserId(expectedCommonSubject)
+                                .withUserId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
                                 .withEmail(TEST_EMAIL_ADDRESS)
                                 .withPhone(userProfile.getPhoneNumber())
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID));
