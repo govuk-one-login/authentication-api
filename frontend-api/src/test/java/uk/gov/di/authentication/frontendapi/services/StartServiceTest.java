@@ -198,7 +198,8 @@ class StartServiceTest {
                         true,
                         false,
                         false,
-                        isAuthenticated);
+                        isAuthenticated,
+                        false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -245,6 +246,7 @@ class StartServiceTest {
                         identityEnabled,
                         false,
                         false,
+                        false,
                         false);
 
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
@@ -265,6 +267,7 @@ class StartServiceTest {
                         true,
                         false,
                         isBlockedForReauth,
+                        false,
                         false);
 
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(isBlockedForReauth));
@@ -296,6 +299,7 @@ class StartServiceTest {
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
+                        false,
                         false,
                         false,
                         false);
@@ -431,7 +435,8 @@ class StartServiceTest {
                         true,
                         true,
                         false,
-                        true);
+                        true,
+                        false);
 
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
     }
@@ -461,6 +466,8 @@ class StartServiceTest {
                 .getSession()
                 .setCurrentCredentialStrength(credentialTrustLevel)
                 .setEmailAddress(EMAIL);
+
+        var upliftRequired = startService.isUpliftRequired(userContext);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
@@ -469,7 +476,8 @@ class StartServiceTest {
                         true,
                         false,
                         false,
-                        false);
+                        false,
+                        upliftRequired);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
     }

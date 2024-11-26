@@ -205,12 +205,13 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
-            Optional<String> previousSessionId =
-                    Optional.ofNullable(startRequest.previousSessionId());
-            CredentialTrustLevel currentCredentialStrength =
-                    startRequest.currentCredentialStrength();
-            authSessionService.addOrUpdateSessionId(
-                    previousSessionId, session.getSessionId(), currentCredentialStrength);
+            boolean upliftRequired = startService.isUpliftRequired(userContext);
+
+            authSessionService.addOrUpdateSessionIncludingSessionId(
+                    Optional.ofNullable(startRequest.previousSessionId()),
+                    session.getSessionId(),
+                    startRequest.currentCredentialStrength(),
+                    upliftRequired);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
@@ -257,7 +258,8 @@ public class StartHandler
                             configurationService.isIdentityEnabled(),
                             reauthenticate,
                             isBlockedForReauth,
-                            isUserAuthenticatedWithValidProfile);
+                            isUserAuthenticatedWithValidProfile,
+                            upliftRequired);
 
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =

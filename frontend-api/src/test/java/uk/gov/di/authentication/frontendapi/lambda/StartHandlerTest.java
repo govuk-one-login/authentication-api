@@ -389,7 +389,14 @@ class StartHandlerTest {
                         any(Session.class), eq(CLIENT_SESSION_ID));
         verify(startService)
                 .buildUserStartInfo(
-                        any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), eq(false));
+                        any(),
+                        any(),
+                        any(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        eq(false),
+                        anyBoolean());
     }
 
     @Test
@@ -412,7 +419,14 @@ class StartHandlerTest {
                         any(Session.class), eq(CLIENT_SESSION_ID));
         verify(startService)
                 .buildUserStartInfo(
-                        any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), eq(true));
+                        any(),
+                        any(),
+                        any(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        eq(true),
+                        anyBoolean());
     }
 
     @Test
@@ -696,6 +710,7 @@ class StartHandlerTest {
                         eq(userContext),
                         any(),
                         any(),
+                        anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),

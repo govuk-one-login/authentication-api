@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
-import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -143,13 +142,12 @@ public class StartService {
             boolean identityEnabled,
             boolean reauthenticate,
             boolean isBlockedForReauth,
-            boolean isAuthenticated) {
-        var uplift = false;
+            boolean isAuthenticated,
+            boolean upliftRequired) {
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
         var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
         if (Boolean.FALSE.equals(docCheckingAppUser)) {
-            uplift = UpliftHelper.upliftRequired(userContext);
             var clientRegistry = userContext.getClient().orElseThrow();
             identityRequired =
                     IdentityHelper.identityRequired(
@@ -168,7 +166,7 @@ public class StartService {
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}, IsBlockedForReauth: {}",
                 userIsAuthenticated,
-                uplift,
+                upliftRequired,
                 identityRequired,
                 cookieConsent,
                 gaTrackingId,
@@ -176,7 +174,7 @@ public class StartService {
                 isBlockedForReauth);
 
         return new UserStartInfo(
-                uplift,
+                upliftRequired,
                 identityRequired,
                 userIsAuthenticated,
                 cookieConsent,
@@ -224,6 +222,22 @@ public class StartService {
         return Optional.ofNullable(session.getEmailAddress())
                 .flatMap(dynamoService::getUserProfileByEmailMaybe)
                 .isEmpty();
+    }
+
+    public boolean isUpliftRequired(UserContext userContext) {
+        if (DocAppUserHelper.isDocCheckingAppUser(userContext)
+                || Objects.isNull(userContext.getSession().getCurrentCredentialStrength())) {
+            return false;
+        }
+        return (userContext
+                        .getSession()
+                        .getCurrentCredentialStrength()
+                        .compareTo(
+                                userContext
+                                        .getClientSession()
+                                        .getEffectiveVectorOfTrust()
+                                        .getCredentialTrustLevel())
+                < 0);
     }
 
     private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {
