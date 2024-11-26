@@ -99,7 +99,7 @@ public class AuthenticationTokenService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from Authentication token endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
             return tokenResponse;
@@ -127,14 +127,14 @@ public class AuthenticationTokenService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from Authentication userinfo endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call Authentication userinfo endpoint: %s",
-                                response.getStatusCode(), response.getContent()));
+                                response.getStatusCode(), response.getBody()));
             }
 
             LOG.info("Received successful userinfo response");
@@ -148,7 +148,7 @@ public class AuthenticationTokenService {
     UserInfo parseUserInfoFromResponse(HTTPResponse response)
             throws UnsuccessfulCredentialResponseException {
         try {
-            String content = response.getContent();
+            String content = response.getBody();
             if (content == null) {
                 throw new UnsuccessfulCredentialResponseException("No content in HTTP response");
             }

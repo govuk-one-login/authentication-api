@@ -132,11 +132,11 @@ public class DocAppCriService {
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call CRI data endpoint: %s",
-                                response.getStatusCode(), response.getContent()),
+                                response.getStatusCode(), response.getBody()),
                         response.getStatusCode());
             }
 
-            if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
+            if (!response.getBodyAsJSONObject().get("sub").equals(docAppSubjectId)
                     && !configurationService.getEnvironment().equals("build")) {
                 throw new UnsuccessfulCredentialResponseException(
                         "Sub in CRI response does not match docAppSubjectId in client session");
@@ -156,7 +156,7 @@ public class DocAppCriService {
     private List<SignedJWT> parseResponse(HTTPResponse response)
             throws UnsuccessfulCredentialResponseException {
         try {
-            var contentAsJSONObject = response.getContentAsJSONObject();
+            var contentAsJSONObject = response.getBodyAsJSONObject();
             if (Objects.isNull(contentAsJSONObject.get(CREDENTIAL_JWT.getValue()))) {
                 throw new UnsuccessfulCredentialResponseException(
                         "No Credential JWT claim present");

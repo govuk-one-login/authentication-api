@@ -105,7 +105,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
         String responseBody = response.getBody();
         HTTPResponse httpResponse = new HTTPResponse(200);
-        httpResponse.setContent(responseBody);
+        httpResponse.setBody(responseBody);
         httpResponse.setContentType(response.getHeaders().get("Content-Type"));
         TokenResponse tokenResponse = TokenResponse.parse(httpResponse);
         assertTrue(

@@ -91,7 +91,7 @@ class ReverificationTest {
                                 tokens.getBearerAccessToken()));
 
         assertThat(
-                reverificationResponse.getContentAsJSONObject(),
+                reverificationResponse.getBodyAsJSONObject(),
                 equalTo(getResponseFromSuccessfulReverification()));
     }
 
@@ -189,7 +189,7 @@ class ReverificationTest {
     private JSONObject getResponseFromSuccessfulReverification() throws ParseException {
         var reverificationHTTPResponse = new HTTPResponse(200);
         reverificationHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        reverificationHTTPResponse.setContent(
+        reverificationHTTPResponse.setBody(
                 "{"
                         + "\""
                         + SUB_FIELD
@@ -200,13 +200,13 @@ class ReverificationTest {
                         + SUCCESS_FIELD
                         + "\":true"
                         + "}");
-        return reverificationHTTPResponse.getContentAsJSONObject();
+        return reverificationHTTPResponse.getBodyAsJSONObject();
     }
 
     private String getResponseFromUnsuccessfulReverification() {
         var reverificationHTTPResponse = new HTTPResponse(400);
         reverificationHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        reverificationHTTPResponse.setContent(
+        reverificationHTTPResponse.setBody(
                 "{"
                         + "\""
                         + ERROR_CODE_FIELD
@@ -227,6 +227,6 @@ class ReverificationTest {
                         + SUCCESS_FIELD
                         + "\":false"
                         + "}\n");
-        return reverificationHTTPResponse.getContent();
+        return reverificationHTTPResponse.getBody();
     }
 }
