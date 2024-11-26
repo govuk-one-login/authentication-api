@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -73,15 +72,10 @@ public class AuthenticationTokenService {
                         NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
-        return new TokenRequest(
-                tokenURI,
-                generatePrivateKeyJwt(claimsSet),
-                codeGrant,
-                null,
-                singletonList(tokenURI),
-                Map.of(
-                        "client_id",
-                        singletonList(configurationService.getOrchestrationClientId())));
+        return new TokenRequest.Builder(tokenURI, generatePrivateKeyJwt(claimsSet), codeGrant)
+                .resource(tokenURI)
+                .customParameter("client_id", configurationService.getOrchestrationClientId())
+                .build();
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {

@@ -37,7 +37,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -83,15 +82,10 @@ public class DocAppCriService {
                         NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
-        return new TokenRequest(
-                tokenURI,
-                generatePrivateKeyJwt(claimsSet),
-                codeGrant,
-                null,
-                singletonList(tokenURI),
-                Map.of(
-                        "client_id",
-                        singletonList(configurationService.getDocAppAuthorisationClientId())));
+        return new TokenRequest.Builder(tokenURI, generatePrivateKeyJwt(claimsSet), codeGrant)
+                .resource(tokenURI)
+                .customParameter("client_id", configurationService.getDocAppAuthorisationClientId())
+                .build();
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {

@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 
 import static java.util.Collections.singletonList;
 
@@ -71,15 +70,9 @@ public class ReverificationResultService {
                         NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
-        return new TokenRequest(
-                ipvTokenURI,
-                generatePrivateKeyJwt(claimsSet),
-                codeGrant,
-                null,
-                null,
-                Map.of(
-                        "client_id",
-                        singletonList(configurationService.getIPVAuthorisationClientId())));
+        return new TokenRequest.Builder(ipvTokenURI, generatePrivateKeyJwt(claimsSet), codeGrant)
+                .customParameter("client_id", configurationService.getIPVAuthorisationClientId())
+                .build();
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
