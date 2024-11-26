@@ -10,11 +10,9 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-
-import java.nio.ByteBuffer;
-import java.util.Base64;
 
 public class UserInfoService {
 
@@ -106,7 +104,7 @@ public class UserInfoService {
             userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
         }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.SALT.getValue())) {
-            String base64StringFromSalt = bytesToBase64(userProfile.getSalt());
+            String base64StringFromSalt = SaltHelper.byteBufferToBase64(userProfile.getSalt());
             userInfo.setClaim("salt", base64StringFromSalt);
         }
     }
@@ -136,11 +134,5 @@ public class UserInfoService {
                     AuthUserInfoClaims.UPLIFT_REQUIRED.getValue(), authSession.getUpliftRequired());
             LOG.info("uplift_required value: {}", authSession.getUpliftRequired());
         }
-    }
-
-    private static String bytesToBase64(ByteBuffer byteBuffer) {
-        byte[] byteArray = new byte[byteBuffer.remaining()];
-        byteBuffer.get(byteArray);
-        return Base64.getEncoder().encodeToString(byteArray);
     }
 }

@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.shared.helpers;
 
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.util.Base64;
 
 public class SaltHelper {
 
@@ -13,5 +15,15 @@ public class SaltHelper {
         byte[] salt = new byte[SALT_BYTES];
         secureRandom.nextBytes(salt);
         return salt;
+    }
+
+    public static String byteBufferToBase64(ByteBuffer byteBuffer) {
+        byte[] byteArray = new byte[byteBuffer.remaining()];
+        byteBuffer.get(byteArray);
+        return Base64.getEncoder().encodeToString(byteArray);
+    }
+
+    public static byte[] base64ToBytes(String saltAsBase64String) {
+        return Base64.getDecoder().decode(saltAsBase64String);
     }
 }
