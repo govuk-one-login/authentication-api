@@ -249,7 +249,8 @@ class AuthenticationCallbackHandlerTest {
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
                         eq(pair("new_account", true)),
-                        eq(pair("test_user", false)));
+                        eq(pair("test_user", false)),
+                        eq(pair("credential_trust_level", "LOW_LEVEL")));
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
@@ -443,6 +444,92 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 OrchSessionItem.AccountState.UNKNOWN,
                 equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
+    }
+
+    @Test
+    void shouldAuditMediumCredentialTrustLevelOn2FARequest()
+            throws UnsuccessfulCredentialResponseException {
+        usingValidSession();
+        var mediumRequestSession =
+                new ClientSession(
+                        generateRPAuthRequestForClientSession().toParameters(),
+                        null,
+                        List.of(
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.LOW_LEVEL)),
+                        CLIENT_NAME);
+
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(mediumRequestSession));
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, mediumRequestSession))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        usingValidClient();
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        handler.handleRequest(event, null);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHENTICATION_COMPLETE,
+                        CLIENT_ID.getValue(),
+                        TxmaAuditUser.user()
+                                .withSessionId(SESSION_ID)
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withIpAddress("123.123.123.123")
+                                .withUserId(TEST_INTERNAL_COMMON_SUBJECT_ID)
+                                .withEmail(TEST_EMAIL_ADDRESS)
+                                .withPhone("1234"),
+                        pair("new_account", true),
+                        pair("test_user", false),
+                        pair("credential_trust_level", "MEDIUM_LEVEL"));
+    }
+
+    @Test
+    void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
+            throws UnsuccessfulCredentialResponseException {
+        Session mediumLevelSession =
+                new Session(SESSION_ID)
+                        .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
+                        .setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
+        when(orchSessionService.getSession(SESSION_ID))
+                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+        usingValidClientSession();
+        usingValidClient();
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        handler.handleRequest(event, null);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHENTICATION_COMPLETE,
+                        CLIENT_ID.getValue(),
+                        TxmaAuditUser.user()
+                                .withSessionId(SESSION_ID)
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withIpAddress("123.123.123.123")
+                                .withUserId(TEST_INTERNAL_COMMON_SUBJECT_ID)
+                                .withEmail(TEST_EMAIL_ADDRESS)
+                                .withPhone("1234"),
+                        pair("new_account", true),
+                        pair("test_user", false),
+                        pair("credential_trust_level", "MEDIUM_LEVEL"));
     }
 
     private static Stream<Arguments> currentCredentialStrengthParams() {

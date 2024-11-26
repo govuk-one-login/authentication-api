@@ -426,12 +426,24 @@ public class AuthenticationCallbackHandler
                                                 .orElse(UNKNOWN))
                                 .withIpAddress(IpAddressHelper.extractIpAddress(input));
 
+                CredentialTrustLevel requestedCredentialTrustLevel =
+                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                CredentialTrustLevel credentialTrustLevel =
+                        Optional.ofNullable(userSession.getCurrentCredentialStrength())
+                                .map(
+                                        sessionValue ->
+                                                CredentialTrustLevel.max(
+                                                        sessionValue,
+                                                        requestedCredentialTrustLevel))
+                                .orElse(requestedCredentialTrustLevel);
+
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         clientId,
                         user,
                         pair("new_account", newAccount),
-                        pair("test_user", isTestJourney));
+                        pair("test_user", isTestJourney),
+                        pair("credential_trust_level", credentialTrustLevel.toString()));
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
