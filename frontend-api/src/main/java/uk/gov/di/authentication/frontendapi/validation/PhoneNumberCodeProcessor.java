@@ -11,7 +11,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -138,7 +137,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     @Override
-    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+    public void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, String internalCommonSubjectId) {
         JourneyType journeyType = codeRequest.getJourneyType();
         if (journeyType == JourneyType.REGISTRATION
                 || journeyType == JourneyType.ACCOUNT_RECOVERY) {
@@ -150,7 +150,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         "Phone number not submitted for checking as smoke test client and test number");
             } else {
                 LOG.info("Sending number to phone check sqs queue");
-                submitRequestToExperianPhoneCheckSQSQueue(journeyType, phoneNumber);
+                submitRequestToExperianPhoneCheckSQSQueue(
+                        journeyType, phoneNumber, internalCommonSubjectId);
             }
 
             switch (journeyType) {
@@ -166,21 +167,19 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                     phoneNumber,
                     ipAddress,
                     persistentSessionId,
+                    internalCommonSubjectId,
                     journeyType == JourneyType.ACCOUNT_RECOVERY);
         }
     }
 
     private void submitRequestToExperianPhoneCheckSQSQueue(
-            JourneyType journeyType, String phoneNumber) {
+            JourneyType journeyType, String phoneNumber, String internalCommonSubjectId) {
         UserProfile userProfile = userContext.getUserProfile().get();
         boolean phoneNumberVerified = userProfile.isPhoneNumberVerified();
         boolean updatedPhoneNumber = !phoneNumber.equals(userProfile.getPhoneNumber());
 
         if (configurationService.isPhoneCheckerWithReplyEnabled()
                 && (journeyType != JourneyType.ACCOUNT_RECOVERY || updatedPhoneNumber)) {
-            Session session = userContext.getSession();
-            String internalCommonSubjectIdentifier =
-                    session != null ? session.getInternalCommonSubjectIdentifier() : "";
 
             var phoneNumberRequest =
                     new PhoneNumberRequest(
@@ -188,7 +187,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                             phoneNumber,
                             updatedPhoneNumber,
                             journeyType,
-                            internalCommonSubjectIdentifier);
+                            internalCommonSubjectId);
             try {
                 sqsClient.send(objectMapper.writeValueAsString(phoneNumberRequest));
                 LOG.info("Message successfully sent to Experian phone check SQS queue");

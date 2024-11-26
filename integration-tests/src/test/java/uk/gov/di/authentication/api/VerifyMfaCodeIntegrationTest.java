@@ -77,7 +77,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_NAME = "test-client-name";
-    private final String internalCommonSubjectId =
+    private static final String INTERNAL_COMMON_SUBJECT_ID =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
     private final List<JourneyType> accountVerifiedJourneyTypes =
@@ -107,8 +107,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
 
         this.sessionId = redis.createSession();
-        authSessionExtension.addSession(Optional.empty(), this.sessionId);
-        redis.addInternalCommonSubjectIdToSession(this.sessionId, internalCommonSubjectId);
+        saveAuthSession(sessionId);
         setUpTest(sessionId, withScope());
     }
 
@@ -140,7 +139,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(204));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_CODE_VERIFIED));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
@@ -167,7 +167,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(
@@ -197,7 +198,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
@@ -224,7 +226,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
 
         var mfaMethod = userStore.getMfaMethod(EMAIL_ADDRESS);
@@ -252,7 +255,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1041));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(false));
         assertTrue(Objects.isNull(userStore.getMfaMethod(EMAIL_ADDRESS)));
     }
@@ -273,7 +277,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1041));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
@@ -306,7 +311,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
 
         var mfaMethod = userStore.getMfaMethod(EMAIL_ADDRESS);
@@ -329,7 +335,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             names = {"SIGN_IN", "PASSWORD_RESET_MFA"})
     void whenValidAuthAppOtpReturn204AndClearAccountRecoveryBlockForSignInOrPasswordReset(
             JourneyType journeyType) {
-        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
+        accountModifiersStore.setAccountRecoveryBlock(INTERNAL_COMMON_SUBJECT_ID);
         setUpAuthAppRequest(journeyType);
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, journeyType);
@@ -344,7 +350,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         List<AuditableEvent> expectedAuditableEvents =
                 List.of(AUTH_CODE_VERIFIED, AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED);
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, expectedAuditableEvents);
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+        assertThat(
+                accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
@@ -453,7 +460,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @MethodSource("existingUserAuthAppJourneyTypes")
     void whenWrongSecretUsedByAuthAppReturn400AndNotClearAccountRecoveryBlockWhenPresent(
             JourneyType journeyType) {
-        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
+        accountModifiersStore.setAccountRecoveryBlock(INTERNAL_COMMON_SUBJECT_ID);
         setUpAuthAppRequest(journeyType);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
@@ -468,7 +475,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_INVALID_CODE_SENT));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
+        assertThat(accountModifiersStore.isBlockPresent(INTERNAL_COMMON_SUBJECT_ID), equalTo(true));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
@@ -1019,5 +1026,12 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.setAccountVerified(EMAIL_ADDRESS);
             userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
         }
+    }
+
+    private void saveAuthSession(String sessionId) {
+        authSessionStore.addSession(Optional.empty(), sessionId);
+        var authSession = authSessionStore.getSession(sessionId);
+        authSessionStore.updateSession(
+                authSession.orElseThrow().withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID));
     }
 }
