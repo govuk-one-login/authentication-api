@@ -15,7 +15,9 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
@@ -47,6 +50,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +85,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
 
+    @RegisterExtension
+    protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
+            new AuthenticationCallbackUserInfoStoreExtension(180);
+
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
                     ipvStub,
@@ -94,7 +102,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final String CLIENT_ID = "test-client-id";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String REDIRECT_URI = "http://localhost/redirect";
+    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String SESSION_ID = "some-session-id";
     public static final String CLIENT_NAME = "test-client-name";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
@@ -121,6 +131,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 calculatePairwiseIdentifier(TEST_SUBJECT.getValue(), TEST_INTERNAL_SECTOR_ID, salt);
 
         setupOrchSession(internalCommonSubjectId);
+        setupAuthUserInfoTable(internalCommonSubjectId, salt);
     }
 
     @Test
@@ -553,6 +564,29 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 new OrchSessionItem(SESSION_ID)
                         .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                         .withInternalCommonSubjectId(internalCommonSubjectId));
+    }
+
+    private void setupAuthUserInfoTable(String internalCommonSubjectId, byte[] salt) {
+        var userInfo =
+                new UserInfo(
+                        new JSONObject(
+                                Map.of(
+                                        "sub",
+                                        internalCommonSubjectId,
+                                        "vot",
+                                        "P0",
+                                        "vtm",
+                                        OIDC_BASE_URL + "/trustmark",
+                                        "email",
+                                        TEST_EMAIL_ADDRESS,
+                                        "phone_number",
+                                        TEST_PHONE_NUMBER,
+                                        "salt",
+                                        ByteBuffer.wrap(salt).asReadOnlyBuffer(),
+                                        "local_account_id",
+                                        TEST_SUBJECT.getValue())));
+
+        userInfoStorageExtension.addAuthenticationUserInfoData(internalCommonSubjectId, userInfo);
     }
 
     private void assertSessionUpdatedWhenReturnCodeRequestedAndPresent() throws Json.JsonException {

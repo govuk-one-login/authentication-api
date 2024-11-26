@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -82,6 +83,7 @@ public class IPVCallbackHandler
     private final IPVTokenService ipvTokenService;
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
+    private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
@@ -104,6 +106,7 @@ public class IPVCallbackHandler
             IPVTokenService ipvTokenService,
             SessionService sessionService,
             OrchSessionService orchSessionService,
+            AuthenticationUserInfoStorageService authUserInfoStorageService,
             DynamoService dynamoService,
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
@@ -119,6 +122,7 @@ public class IPVCallbackHandler
         this.ipvTokenService = ipvTokenService;
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
+        this.authUserInfoStorageService = authUserInfoStorageService;
         this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
         this.dynamoClientService = dynamoClientService;
@@ -142,6 +146,8 @@ public class IPVCallbackHandler
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
+        this.authUserInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
@@ -168,6 +174,8 @@ public class IPVCallbackHandler
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService, redis);
         this.orchSessionService = new OrchSessionService(configurationService);
+        this.authUserInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.dynamoClientService = new DynamoClientService(configurationService);
