@@ -14,6 +14,8 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.nio.ByteBuffer;
+
 public class UserInfoService {
 
     private final AuthenticationService authenticationService;
@@ -104,7 +106,9 @@ public class UserInfoService {
             userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
         }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.SALT.getValue())) {
-            String base64StringFromSalt = SaltHelper.byteBufferToBase64(userProfile.getSalt());
+            byte[] saltAsByteArray = authenticationService.getOrGenerateSalt(userProfile);
+            ByteBuffer saltAsByteBuffer = ByteBuffer.wrap(saltAsByteArray);
+            String base64StringFromSalt = SaltHelper.byteBufferToBase64(saltAsByteBuffer);
             userInfo.setClaim("salt", base64StringFromSalt);
         }
     }
