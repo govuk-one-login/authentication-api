@@ -148,8 +148,10 @@ public class AuthCodeResponseGenerationService {
                 VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
         CredentialTrustLevel currentCredentialStrength = orchSession.getCurrentCredentialStrength();
 
-        if (isNull(currentCredentialStrength)
-                || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength) > 0) {
+        if (configurationService.isCurrentCredentialStrengthInOrchSessionEnabled()
+                && (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
+                                > 0)) {
             orchSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
     }
