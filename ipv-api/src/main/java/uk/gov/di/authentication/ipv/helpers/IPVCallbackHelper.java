@@ -261,7 +261,7 @@ public class IPVCallbackHelper {
                 isTestJourney);
 
         authCodeResponseService.saveSession(
-                false, sessionService, session, orchSessionService, orchSession);
+                false, sessionService, session, orchSessionService, orchSession, clientSession);
         return authenticationResponse;
     }
 

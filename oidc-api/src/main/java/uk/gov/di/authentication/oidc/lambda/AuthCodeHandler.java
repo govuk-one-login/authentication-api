@@ -277,9 +277,13 @@ public class AuthCodeHandler
                     clientID.getValue(),
                     clientSession.getClientName(),
                     isTestJourney);
-
             authCodeResponseService.saveSession(
-                    docAppJourney, sessionService, session, orchSessionService, orchSession);
+                    docAppJourney,
+                    sessionService,
+                    session,
+                    orchSessionService,
+                    orchSession,
+                    clientSession);
 
             LOG.info("Generating successful auth code response");
             return generateApiGatewayProxyResponse(

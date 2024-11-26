@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 
@@ -121,7 +122,11 @@ public class AuthCodeResponseGenerationService {
             SessionService sessionService,
             Session session,
             OrchSessionService orchSessionService,
-            OrchSessionItem orchSession) {
+            OrchSessionItem orchSession,
+            ClientSession clientSession) {
+
+        setCurrentCredentialStrength(orchSession, clientSession);
+
         if (docAppJourney) {
             sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
             orchSessionService.updateSession(
@@ -134,6 +139,18 @@ public class AuthCodeResponseGenerationService {
                     orchSession
                             .withAuthenticated(true)
                             .withAccountState(OrchSessionItem.AccountState.EXISTING));
+        }
+    }
+
+    private void setCurrentCredentialStrength(
+            OrchSessionItem orchSession, ClientSession clientSession) {
+        CredentialTrustLevel lowestRequestedCredentialTrustLevel =
+                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+        CredentialTrustLevel currentCredentialStrength = orchSession.getCurrentCredentialStrength();
+
+        if (isNull(currentCredentialStrength)
+                || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength) > 0) {
+            orchSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
     }
 }

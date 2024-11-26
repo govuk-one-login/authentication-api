@@ -521,6 +521,15 @@ public class AuthenticationCallbackHandler
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
                 sessionService.storeOrUpdateSession(userSession);
+                CredentialTrustLevel currentCredentialStrength =
+                        orchSession.getCurrentCredentialStrength();
+                if (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
+                                > 0) {
+                    orchSessionService.updateSession(
+                            orchSession.withCurrentCredentialStrength(
+                                    lowestRequestedCredentialTrustLevel));
+                }
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         orchAccountState, clientId, clientSession.getClientName(), isTestJourney);
