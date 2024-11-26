@@ -10,10 +10,12 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.ipv.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
@@ -60,6 +62,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
@@ -293,6 +296,43 @@ public class IPVCallbackHandler
                             URI.create(configurationService.getInternalSectorURI()),
                             dynamoService.getOrGenerateSalt(userProfile));
 
+            // TODO: ATO-1117: temporary logs to check values are as expected
+            Optional<UserInfo> authUserInfo =
+                    getAuthUserInfo(
+                            authUserInfoStorageService, orchSession.getInternalCommonSubjectId());
+
+            if (authUserInfo.isEmpty()) {
+                LOG.info("authUserInfo not found");
+            } else {
+                LOG.info(
+                        "is email the same on authUserInfo as on session: {}",
+                        session.getEmailAddress().equals(authUserInfo.get().getEmailAddress()));
+                if (userProfile.getPhoneNumber() != null) {
+                    LOG.info(
+                            "is phone number the same on authUserInfo as on UserProfile: {}",
+                            userProfile
+                                    .getPhoneNumber()
+                                    .equals(authUserInfo.get().getPhoneNumber()));
+                }
+                LOG.info(
+                        "is subjectId the same on authUserInfo as on UserProfile: {}",
+                        userProfile
+                                .getSubjectID()
+                                .equals(
+                                        authUserInfo
+                                                .get()
+                                                .getClaim(
+                                                        AuthUserInfoClaims.LOCAL_ACCOUNT_ID
+                                                                .getValue())));
+            }
+            LOG.info(
+                    "is rpPairwiseId the same on clientSession as calculated: {}",
+                    rpPairwiseSubject.getValue().equals(clientSession.getRpPairwiseId()));
+            LOG.info(
+                    "is internalPairwiseSubjectId the same on orchSession as calculated: {}",
+                    internalPairwiseSubjectId.equals(orchSession.getInternalCommonSubjectId()));
+            //
+
             var ipAddress = IpAddressHelper.extractIpAddress(input);
             var user =
                     TxmaAuditUser.user()
@@ -483,6 +523,19 @@ public class IPVCallbackHandler
         } catch (UserNotFoundException e) {
             LOG.error(e.getMessage());
             throw new RuntimeException(e);
+        }
+    }
+
+    private static Optional<UserInfo> getAuthUserInfo(
+            AuthenticationUserInfoStorageService authUserInfoStorageService,
+            String internalCommonSubjectId) {
+        try {
+            return authUserInfoStorageService.getAuthenticationUserInfo(internalCommonSubjectId);
+        } catch (ParseException e) {
+            // TODO: ATO-1117: temporary logs. authUserInfo is not essential, so we don't want this
+            // to exit the lambda yet.
+            LOG.info("error parsing authUserInfo. Message: {}", e.getMessage());
+            return Optional.empty();
         }
     }
 

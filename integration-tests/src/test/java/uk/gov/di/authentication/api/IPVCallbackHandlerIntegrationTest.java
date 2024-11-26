@@ -541,6 +541,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     private void setupUserProfileAndUserCredentials() {
         userStore.signUp(TEST_EMAIL_ADDRESS, "password", TEST_SUBJECT);
+        userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
     }
 
     private void setupClientStore() {
