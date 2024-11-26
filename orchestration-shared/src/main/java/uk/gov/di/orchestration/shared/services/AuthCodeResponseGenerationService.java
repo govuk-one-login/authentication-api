@@ -140,6 +140,12 @@ public class AuthCodeResponseGenerationService {
                             .withAuthenticated(true)
                             .withAccountState(OrchSessionItem.AccountState.EXISTING));
         }
+        LOG.info(
+                "Shared session current credential strength: {}",
+                session.getCurrentCredentialStrength());
+        LOG.info(
+                "Orch session current credential strength: {}",
+                orchSession.getCurrentCredentialStrength());
     }
 
     private void setCurrentCredentialStrength(
