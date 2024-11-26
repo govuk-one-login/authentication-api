@@ -28,7 +28,7 @@ class AuthenticationUserInfoStorageServiceIntegrationTest {
         userInfoExtension.addAuthenticationUserInfoData(SUBJECT_ID, userInfo);
 
         Optional<AuthenticationUserInfo> retrievedUserInfoData =
-                userInfoExtension.getUserInfoBySubjectId(SUBJECT_ID);
+                userInfoExtension.getUserInfoDataBySubjectId(SUBJECT_ID);
 
         UserInfo retrievedUserInfo = userInfoExtension.getUserInfo(SUBJECT_ID).orElseThrow();
 
@@ -41,7 +41,7 @@ class AuthenticationUserInfoStorageServiceIntegrationTest {
     @Test
     void shouldReturnOptionalEmptyWhenNoUserInfo() {
         Optional<AuthenticationUserInfo> retrievedUserInfo =
-                userInfoExtension.getUserInfoBySubjectId(SUBJECT_ID);
+                userInfoExtension.getUserInfoDataBySubjectId(SUBJECT_ID);
 
         assertThat(retrievedUserInfo.isEmpty(), equalTo(true));
     }
