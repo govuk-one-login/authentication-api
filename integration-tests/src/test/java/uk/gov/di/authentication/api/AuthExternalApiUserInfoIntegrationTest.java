@@ -129,6 +129,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getClaim("salt"));
         assertNull(userInfoResponse.getClaim("verified_mfa_method_type"));
         assertNull(userInfoResponse.getClaim("current_credential_strength"));
+        assertNull(userInfoResponse.getClaim("uplift_required"));
 
         assertThat(
                 authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),
@@ -172,7 +173,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                 List.of(
                         OIDCScopeValue.EMAIL.getValue(),
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
-                        AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()),
+                        AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
+                        AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()),
                 true);
         withAuthSessionNewAccount();
 
@@ -195,6 +197,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                 userInfoResponse.getClaim(
                         AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()),
                 equalTo("MEDIUM_LEVEL"));
+        assertTrue(
+                (Boolean) userInfoResponse.getClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()));
     }
 
     @Test
@@ -332,6 +336,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         .get()
                         .withAccountState(AuthSessionItem.AccountState.NEW)
                         .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
-                        .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
+                        .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
+                        .withUpliftRequired(true));
     }
 }

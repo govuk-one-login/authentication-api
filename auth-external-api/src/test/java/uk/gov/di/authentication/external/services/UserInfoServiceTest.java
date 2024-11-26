@@ -54,6 +54,7 @@ public class UserInfoServiceTest {
     private static final String TEST_VERIFIED_MFA_METHOD_TYPE = MFAMethodType.EMAIL.getValue();
     private static final CredentialTrustLevel TEST_CURRENT_CREDENTIAL_STRENGTH =
             CredentialTrustLevel.MEDIUM_LEVEL;
+    private static final boolean TEST_UPLIFT_REQUIRED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
     private static final UserProfile TEST_USER_PROFILE =
@@ -69,7 +70,8 @@ public class UserInfoServiceTest {
     private static final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
-                    .withCurrentCredentialStrength(TEST_CURRENT_CREDENTIAL_STRENGTH);
+                    .withCurrentCredentialStrength(TEST_CURRENT_CREDENTIAL_STRENGTH)
+                    .withUpliftRequired(TEST_UPLIFT_REQUIRED);
 
     @BeforeEach
     public void setUp() {
@@ -96,7 +98,8 @@ public class UserInfoServiceTest {
             Boolean expectedPhoneNumberVerified,
             String expectedSalt,
             String expectedVerifiedMfaMethod,
-            CredentialTrustLevel expectedCurrentCredentialStrength) {
+            CredentialTrustLevel expectedCurrentCredentialStrength,
+            Boolean expectedUpliftRequired) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
@@ -115,6 +118,7 @@ public class UserInfoServiceTest {
         assertEquals(
                 expectedCurrentCredentialStrength, actual.getClaim("current_credential_strength"));
         assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
+        assertEquals(expectedUpliftRequired, actual.getClaim("uplift_required"));
     }
 
     private static Stream<Arguments> provideTestData() {
@@ -124,6 +128,7 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         TEST_SUBJECT.getValue(),
+                        null,
                         null,
                         null,
                         null,
@@ -143,6 +148,7 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         null,
+                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -156,7 +162,8 @@ public class UserInfoServiceTest {
                                         "phone_number_verified",
                                         "salt",
                                         "verified_mfa_method_type",
-                                        "current_credential_strength")),
+                                        "current_credential_strength",
+                                        "uplift_required")),
                         TEST_LEGACY_SUBJECT_ID,
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
@@ -166,7 +173,8 @@ public class UserInfoServiceTest {
                         TEST_PHONE_VERIFIED,
                         bytesToBase64(TEST_SALT),
                         TEST_VERIFIED_MFA_METHOD_TYPE,
-                        TEST_CURRENT_CREDENTIAL_STRENGTH));
+                        TEST_CURRENT_CREDENTIAL_STRENGTH,
+                        TEST_UPLIFT_REQUIRED));
     }
 
     private static AccessTokenStore getMockAccessTokenStore(List<String> claims) {
