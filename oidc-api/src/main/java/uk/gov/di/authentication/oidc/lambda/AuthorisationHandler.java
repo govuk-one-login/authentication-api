@@ -449,6 +449,10 @@ public class AuthorisationHandler
                 user);
     }
 
+    private boolean maxAgeExpired(Long authTime, Long maxAge) {
+        return authTime + maxAge < NowHelper.now().toInstant().getEpochSecond();
+    }
+
     private static String getRpSid(AuthenticationRequest authRequest) {
         try {
             if (authRequest.getCustomParameter("rp_sid") != null) {
@@ -459,6 +463,19 @@ public class AuthorisationHandler
             LOG.error("Failed to retrieve rp_sid. Passing unknown");
             return AuditService.UNKNOWN;
         }
+    }
+
+    private long getMaxAge(AuthenticationRequest authRequest) {
+        int maxAge;
+        try {
+            maxAge = authRequest.getMaxAge();
+        } catch (Exception e) {
+            LOG.error(
+                    "Failed to retrieve max_age from auth request. Assuming value of -1 meaning 'not specified'.");
+            return -1;
+        }
+        LOG.info("Max age from auth request: {}", maxAge);
+        return maxAge;
     }
 
     private List<VectorOfTrust> getVtrList(
@@ -620,22 +637,29 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
-        OrchSessionItem orchSession;
+        OrchSessionItem newOrchSession;
         String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
-            orchSession = new OrchSessionItem(newSessionId);
+            newOrchSession = new OrchSessionItem(newSessionId);
             LOG.info("Created new Orch session");
         } else {
-            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
-            orchSession =
-                    orchSessionService.addOrUpdateSessionId(
-                            Optional.of(previousOrchSessionId), newSessionId);
-            LOG.info(
-                    "Updated Orch session ID from {} to {}",
-                    previousOrchSessionId,
-                    orchSession.getSessionId());
+            OrchSessionItem existingOrchSession = orchSessionOptional.get();
+            if (configurationService.supportMaxAgeEnabled()) {
+                var maxAgeEnabledAndExpired =
+                        client.getMaxAgeEnabled()
+                                && maxAgeExpired(
+                                        orchSessionOptional.get().getAuthTime(),
+                                        getMaxAge(authenticationRequest));
+
+                newOrchSession =
+                        maxAgeEnabledAndExpired
+                                ? handleMaxAgeSessionUpdate(existingOrchSession, newSessionId)
+                                : handleSessionUpdate(existingOrchSession, newSessionId);
+            } else {
+                newOrchSession = handleSessionUpdate(existingOrchSession, newSessionId);
+            }
         }
-        attachOrchSessionIdToLogs(orchSession.getSessionId());
+        attachOrchSessionIdToLogs(newOrchSession.getSessionId());
 
         user = user.withSessionId(session.getSessionId());
         auditService.submitAuditEvent(
@@ -647,8 +671,8 @@ public class AuthorisationHandler
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
         orchSessionOptional.ifPresentOrElse(
-                s -> orchSessionService.updateSession(orchSession),
-                () -> orchSessionService.addSession(orchSession));
+                s -> orchSessionService.updateSession(newOrchSession),
+                () -> orchSessionService.addSession(newOrchSession));
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
@@ -665,6 +689,29 @@ public class AuthorisationHandler
                 vtrList,
                 user,
                 previousSessionId);
+    }
+
+    private OrchSessionItem handleMaxAgeSessionUpdate(
+            OrchSessionItem existingOrchSession, String newSessionId) {
+        LOG.info("Updating Orch session due to max age expiry");
+        orchSessionService.updateSession(
+                existingOrchSession.withTimeToLive(
+                        NowHelper.nowPlus(
+                                        configurationService.getSessionExpiry(), ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond()));
+
+        return existingOrchSession
+                .withSessionId(newSessionId)
+                .withPreviousSessionId(existingOrchSession.getSessionId())
+                .withAuthenticated(false);
+    }
+
+    private OrchSessionItem handleSessionUpdate(
+            OrchSessionItem existingOrchSession, String newSessionId) {
+        LOG.info("Updating Orch session");
+        return orchSessionService.addOrUpdateSessionId(
+                Optional.of(existingOrchSession.getSessionId()), newSessionId);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
