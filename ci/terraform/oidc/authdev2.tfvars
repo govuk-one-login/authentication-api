@@ -66,4 +66,5 @@ contra_state_bucket = "di-auth-development-tfstate"
 orch_redirect_uri                  = "https://oidc.authdev2.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
-oidc_cloudfront_enabled = false
+oidc_cloudfront_enabled                     = false
+is_destroy_orch_session_on_sign_out_enabled = false

@@ -60,4 +60,5 @@ is_orch_stubbed = true
 
 contra_state_bucket = "di-auth-development-tfstate"
 
-oidc_cloudfront_enabled = false
+oidc_cloudfront_enabled                     = false
+is_destroy_orch_session_on_sign_out_enabled = false

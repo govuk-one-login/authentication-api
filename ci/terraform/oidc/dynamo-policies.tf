@@ -121,6 +121,7 @@ data "aws_iam_policy_document" "dynamo_user_read_policy_document" {
   }
 }
 
+
 data "aws_iam_policy_document" "dynamo_client_registration_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -733,6 +734,7 @@ data "aws_iam_policy_document" "dynamo_auth_session_read_write_policy_document" 
 }
 
 data "aws_iam_policy_document" "dynamo_orch_session_encryption_key_cross_account_decrypt_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
   statement {
     sid    = "AllowOrchSessionEncryptionKeyCrossAccountDecryptAccess"
     effect = "Allow"
@@ -746,6 +748,7 @@ data "aws_iam_policy_document" "dynamo_orch_session_encryption_key_cross_account
 }
 
 data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
   statement {
     sid    = "AllowOrchSessionCrossAccountReadAccess"
     effect = "Allow"
@@ -760,6 +763,7 @@ data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_access_po
 }
 
 data "aws_iam_policy_document" "dynamo_orch_session_cross_account_delete_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
   statement {
     sid    = "AllowOrchSessionCrossAccountDeleteAccess"
     effect = "Allow"
@@ -999,6 +1003,7 @@ resource "aws_iam_policy" "dynamo_auth_session_delete_policy" {
 }
 
 resource "aws_iam_policy" "dynamo_orch_session_encryption_key_cross_account_decrypt_policy" {
+  count       = var.is_orch_stubbed ? 0 : 1
   name_prefix = "dynamo-orch-session-encryption-key-cross-account-decrypt-policy"
   path        = "/${var.environment}/oidc-shared/"
   description = "IAM policy for managing decrypt and describe permissions to the orch session table's KMS encryption key"
@@ -1007,6 +1012,7 @@ resource "aws_iam_policy" "dynamo_orch_session_encryption_key_cross_account_decr
 }
 
 resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_access_policy" {
+  count       = var.is_orch_stubbed ? 0 : 1
   name_prefix = "dynamo-orch-session-cross-account-read-policy"
   path        = "/${var.environment}/oidc-shared/"
   description = "IAM policy for managing read permissions to the orch session table"
@@ -1015,6 +1021,7 @@ resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_access_policy"
 }
 
 resource "aws_iam_policy" "dynamo_orch_session_cross_account_delete_access_policy" {
+  count       = var.is_orch_stubbed ? 0 : 1
   name_prefix = "dynamo-orch-session-cross-account-delete-policy"
   path        = "/${var.environment}/oidc-shared/"
   description = "IAM policy for managing delete permissions to the orch session table"
