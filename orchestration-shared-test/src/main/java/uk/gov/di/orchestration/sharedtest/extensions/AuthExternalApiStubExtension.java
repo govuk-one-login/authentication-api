@@ -38,7 +38,7 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
         register("/userinfo", 200, "application/json", userInfo.toJSONString());
     }
 
-    public void init(Subject subjectId, Long passwordResetTime) {
+    public void init(Subject subjectId, Long passwordResetTime, boolean upliftRequired) {
         register(
                 "/token",
                 200,
@@ -56,6 +56,7 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
         userInfo.setClaim("new_account", true);
         userInfo.setClaim("verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
         userInfo.setClaim("password_reset_time", passwordResetTime);
+        userInfo.setClaim("uplift_required", upliftRequired);
         register("/userinfo", 200, "application/json", userInfo.toJSONString());
     }
 }
