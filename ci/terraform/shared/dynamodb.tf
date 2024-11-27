@@ -697,8 +697,8 @@ resource "aws_dynamodb_table" "auth_session_table" {
   }
 
   ttl {
-    attribute_name = "ttl"
-    enabled        = true
+    attribute_name = "TimeToLive"
+    enabled        = false
   }
 
   point_in_time_recovery {
