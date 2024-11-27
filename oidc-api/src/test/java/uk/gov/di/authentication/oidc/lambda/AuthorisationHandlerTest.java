@@ -651,7 +651,6 @@ class AuthorisationHandlerTest {
             verify(orchSessionService)
                     .addOrUpdateSessionId(
                             Optional.of(orchSession.getSessionId()), session.getSessionId());
-            verify(orchSessionService).updateSession(orchSession);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
             inOrder.verify(auditService)
@@ -725,7 +724,6 @@ class AuthorisationHandlerTest {
             verify(orchSessionService)
                     .addOrUpdateSessionId(
                             Optional.of(orchSession.getSessionId()), session.getSessionId());
-            verify(orchSessionService).updateSession(orchSession);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
             inOrder.verify(auditService)
@@ -771,7 +769,6 @@ class AuthorisationHandlerTest {
             verify(orchSessionService)
                     .addOrUpdateSessionId(
                             Optional.of(orchSession.getSessionId()), session.getSessionId());
-            verify(orchSessionService).updateSession(orchSession);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
             inOrder.verify(auditService)
