@@ -15,6 +15,9 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
@@ -35,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.*;
 
 import java.net.URI;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
@@ -43,6 +47,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -84,7 +90,9 @@ class AuthenticationCallbackHandlerTest {
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
     private static final Session session =
-            new Session(SESSION_ID).setVerifiedMfaMethodType(MFAMethodType.EMAIL);
+            new Session(SESSION_ID)
+                    .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
+                    .setAuthenticated(false);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -142,6 +150,8 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
                 .thenReturn(MFAMethodType.AUTH_APP.getValue());
+        when(USER_INFO.getBooleanClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()))
+                .thenReturn(false);
     }
 
     @BeforeEach
@@ -429,6 +439,52 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 OrchSessionItem.AccountState.UNKNOWN,
                 equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
+    }
+
+    @Nested
+    class AuthTime {
+
+        private static Stream<Arguments> authenticatedAndUpliftParams() {
+            return Stream.of(
+                    Arguments.of(false, false, true),
+                    Arguments.of(true, true, true),
+                    Arguments.of(false, true, true),
+                    Arguments.of(true, false, false),
+                    Arguments.of(true, null, false));
+        }
+
+        @ParameterizedTest
+        @MethodSource("authenticatedAndUpliftParams")
+        void shouldSetOrNotSetAuthTimeDependingOnValuesOfAuthenticatedAndUpliftRequired(
+                Boolean authenticated, Boolean upliftRequired, boolean authTimeSet)
+                throws UnsuccessfulCredentialResponseException {
+            when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+            when(orchSessionService.getSession(SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new OrchSessionItem(SESSION_ID)
+                                            .withAuthenticated(authenticated)));
+            usingValidClientSession();
+            usingValidClient();
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(USER_INFO.getBooleanClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()))
+                    .thenReturn(upliftRequired);
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+            handler.handleRequest(event, null);
+
+            var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
+            verify(orchSessionService, times(2)).updateSession(captor.capture());
+
+            if (authTimeSet) {
+                assertNotEquals(null, captor.getAllValues().get(0).getAuthTime());
+            } else {
+                assertNull(captor.getAllValues().get(0).getAuthTime());
+            }
+        }
     }
 
     @Nested
@@ -731,7 +787,7 @@ class AuthenticationCallbackHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID).withAuthenticated(false)));
     }
 
     private void usingValidClientSession() {

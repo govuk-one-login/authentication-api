@@ -47,6 +47,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -379,6 +380,9 @@ public class AuthenticationCallbackHandler
                         "is current_credential_strength attached to auth-external-api userinfo response: {}",
                         userInfo.getClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())
                                 != null);
+                LOG.info(
+                        "is uplift_required attached to auth-external-api userinfo response: {}",
+                        userInfo.getClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()) != null);
                 //
 
                 Boolean newAccount =
@@ -387,6 +391,10 @@ public class AuthenticationCallbackHandler
                 OrchSessionItem.AccountState orchAccountState = deduceOrchAccountState(newAccount);
                 userSession.setNewAccount(accountState);
                 orchSession.withAccountState(orchAccountState);
+
+                if (!orchSession.getAuthenticated() || deduceUpliftRequired(userInfo)) {
+                    orchSession.setAuthTime(NowHelper.now().toInstant().getEpochSecond());
+                }
 
                 userSession.setAuthenticated(true);
                 orchSession.setAuthenticated(true);
@@ -559,6 +567,18 @@ public class AuthenticationCallbackHandler
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+        }
+    }
+
+    private boolean deduceUpliftRequired(UserInfo userInfo) {
+        Boolean upliftRequiredClaim =
+                userInfo.getBooleanClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue());
+        if (upliftRequiredClaim == null) {
+            LOG.error(
+                    "uplift_required claim is null in userinfo response. Defaulting value to false.");
+            return false;
+        } else {
+            return upliftRequiredClaim;
         }
     }
 

@@ -77,6 +77,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -419,7 +420,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     throws Json.JsonException {
         accountInterventionSetup();
         setupTestWithDefaultEnvVars();
-        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
@@ -445,7 +446,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     throws Json.JsonException {
         accountInterventionSetup();
         setupTestWithDefaultEnvVars();
-        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
 
@@ -666,7 +667,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             JOSEException {
         accountInterventionSetupWithIdentity();
         setupTestWithDefaultEnvVars();
-        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
@@ -695,7 +696,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             JOSEException {
         accountInterventionSetupWithIdentity();
         setupTestWithDefaultEnvVars();
-        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
 
@@ -735,6 +736,36 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                         Optional.of(
                                                 buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                                 constructQueryStringParameters()));
+    }
+
+    @Test
+    void shouldSetAuthTimeWhenUserHasBeenUplifted() {
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, true);
+        assertAuthTimeHasNotBeenSetInOrchSessionTable();
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        orchSessionExtension.updateSession(orchSession.get().withAuthenticated(true));
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertAuthTimeHasBeenSetInOrchSessionTable();
+    }
+
+    @Test
+    void shouldSetAuthTimeWhenUserIsNotYetAuthenticated() {
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
+        assertAuthTimeHasNotBeenSetInOrchSessionTable();
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        orchSessionExtension.updateSession(orchSession.get().withAuthenticated(false));
+
+        makeRequest(
+                Optional.empty(),
+                constructHeaders(Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                constructQueryStringParameters());
+
+        assertAuthTimeHasBeenSetInOrchSessionTable();
     }
 
     private void assertRedirectToSuspendedPage(APIGatewayProxyResponseEvent response) {
@@ -845,6 +876,18 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertEquals(
                 MFAMethodType.AUTH_APP.getValue(), orchSession.get().getVerifiedMfaMethodType());
         assertThat(OrchSessionItem.AccountState.NEW, equalTo(orchSession.get().getIsNewAccount()));
+    }
+
+    private void assertAuthTimeHasBeenSetInOrchSessionTable() {
+        Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+        assertNotEquals(null, orchSession.get().getAuthTime());
+    }
+
+    private void assertAuthTimeHasNotBeenSetInOrchSessionTable() {
+        Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+        assertEquals(null, orchSession.get().getAuthTime());
     }
 
     private void assertSessionIsDeleted() {

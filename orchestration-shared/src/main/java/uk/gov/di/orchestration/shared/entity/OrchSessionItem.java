@@ -13,6 +13,7 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_AUTHENTICATED = "Authenticated";
+    public static final String ATTRIBUTE_AUTH_TIME = "AuthTime";
 
     public enum AccountState {
         NEW,
@@ -28,6 +29,7 @@ public class OrchSessionItem {
     private boolean isAuthenticated;
     private AccountState isNewAccount;
     private String internalCommonSubjectId;
+    private Long authTime;
 
     public OrchSessionItem() {}
 
@@ -132,6 +134,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withAuthenticated(boolean authenticated) {
         this.isAuthenticated = authenticated;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_AUTH_TIME)
+    public Long getAuthTime() {
+        return authTime;
+    }
+
+    public void setAuthTime(Long authTime) {
+        this.authTime = authTime;
+    }
+
+    public OrchSessionItem withAuthTime(Long authTime) {
+        this.authTime = authTime;
         return this;
     }
 }
