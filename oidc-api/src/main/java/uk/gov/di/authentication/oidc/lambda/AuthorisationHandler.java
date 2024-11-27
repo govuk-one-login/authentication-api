@@ -620,23 +620,23 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
-        OrchSessionItem orchSession;
+        OrchSessionItem newOrchSession;
         String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
-            orchSession = new OrchSessionItem(newSessionId);
-            orchSessionService.addSession(orchSession);
+            newOrchSession = new OrchSessionItem(newSessionId);
+            orchSessionService.addSession(newOrchSession);
             LOG.info("Created new Orch session");
         } else {
-            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
-            orchSession =
+            OrchSessionItem existingOrchSession = orchSessionOptional.get();
+            newOrchSession =
                     orchSessionService.addOrUpdateSessionId(
-                            Optional.of(previousOrchSessionId), newSessionId);
+                            Optional.of(existingOrchSession.getSessionId()), newSessionId);
             LOG.info(
                     "Updated Orch session ID from {} to {}",
-                    previousOrchSessionId,
-                    orchSession.getSessionId());
+                    existingOrchSession.getSessionId(),
+                    newOrchSession.getSessionId());
         }
-        attachOrchSessionIdToLogs(orchSession.getSessionId());
+        attachOrchSessionIdToLogs(newOrchSession.getSessionId());
 
         user = user.withSessionId(session.getSessionId());
         auditService.submitAuditEvent(
