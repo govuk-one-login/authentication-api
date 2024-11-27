@@ -472,6 +472,7 @@ public class AuthorisationHandler
                     "Failed to retrieve max_age from authorize request. Assuming value of -1 meaning 'not specified'.");
             return -1;
         }
+        LOG.info("authRequest.getMaxAge(): {}", maxAge);
         return maxAge;
     }
 
