@@ -398,6 +398,8 @@ public class AuthorisationHandler
                 pair("identityRequested", identityRequested),
                 pair("reauthRequested", reauthRequested));
 
+        getMaxAge(authRequest);
+
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
         Optional<OrchSessionItem> orchSessionOptional =
                 orchSessionService.getSessionFromSessionCookie(input.getHeaders());
@@ -459,6 +461,18 @@ public class AuthorisationHandler
             LOG.error("Failed to retrieve rp_sid. Passing unknown");
             return AuditService.UNKNOWN;
         }
+    }
+
+    private int getMaxAge(AuthenticationRequest authRequest) {
+        int maxAge;
+        try {
+            maxAge = authRequest.getMaxAge();
+        } catch (Exception e) {
+            LOG.error(
+                    "Failed to retrieve max_age from authorize request. Assuming value of -1 meaning 'not specified'.");
+            return -1;
+        }
+        return maxAge;
     }
 
     private List<VectorOfTrust> getVtrList(
