@@ -52,6 +52,7 @@ public class ReverificationResultService {
 
     public TokenResponse getToken(String authCode) {
         var tokenRequest = constructTokenRequest(authCode);
+        LOG.info("Token request: {}", tokenRequest);
         return sendTokenRequest(tokenRequest);
     }
 
