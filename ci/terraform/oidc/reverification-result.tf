@@ -11,6 +11,7 @@ module "reverification_result_role" {
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
+    aws_iam_policy.dynamo_auth_session_read_policy.arn,
   ]
 }
 
