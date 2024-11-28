@@ -19,6 +19,7 @@ module "frontend_api_orch_auth_code_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.email_check_results_encryption_policy_arn,
+    aws_iam_policy.dynamo_auth_session_read_policy.arn,
   ]
 }
 

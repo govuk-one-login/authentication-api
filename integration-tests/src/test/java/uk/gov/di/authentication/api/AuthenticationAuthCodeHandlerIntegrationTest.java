@@ -127,6 +127,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         Map<String, String> headers = new HashMap<>();
         // TODO: Not appropriate place to do this.
         var sessionId = redis.createSession();
+        authSessionStore.addSession(Optional.empty(), sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         headers.put("Session-Id", sessionId);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
