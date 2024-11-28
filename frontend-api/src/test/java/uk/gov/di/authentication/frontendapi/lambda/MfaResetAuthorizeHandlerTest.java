@@ -14,8 +14,10 @@ import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -58,8 +60,10 @@ class MfaResetAuthorizeHandlerTest {
     private static final ClientService clientService = mock(ClientService.class);
     private static final Context context = mock(Context.class);
     private static final SessionService sessionService = mock(SessionService.class);
+    private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
     private static final Session session = mock(Session.class);
+    private static final AuthSessionItem authSession = mock(AuthSessionItem.class);
     private static final AuditService auditService = mock(AuditService.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -87,6 +91,9 @@ class MfaResetAuthorizeHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(session.getSessionId()).thenReturn(SESSION_ID);
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
+        when(authSession.getSessionId()).thenReturn(SESSION_ID);
     }
 
     @BeforeEach
@@ -95,6 +102,7 @@ class MfaResetAuthorizeHandlerTest {
                 new MfaResetAuthorizeHandler(
                         configurationService,
                         sessionService,
+                        authSessionService,
                         clientSessionService,
                         clientService,
                         authenticationService,
