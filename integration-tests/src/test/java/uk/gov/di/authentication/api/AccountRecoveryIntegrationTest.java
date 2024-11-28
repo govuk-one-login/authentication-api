@@ -63,6 +63,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
+        authSessionStore.addSession(Optional.empty(), sessionId);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
@@ -82,6 +83,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
         userStore.signUp(EMAIL, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
+        authSessionStore.addSession(Optional.empty(), sessionId);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
