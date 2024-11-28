@@ -10,6 +10,7 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -65,8 +66,9 @@ public class StartService {
         return session;
     }
 
-    public UserContext buildUserContext(Session session, ClientSession clientSession) {
-        var builder = UserContext.builder(session).withClientSession(clientSession);
+    public UserContext buildUserContext(
+            Session session, Optional<AuthSessionItem> authSession, ClientSession clientSession) {
+        var builder = UserContext.builder(session, authSession).withClientSession(clientSession);
         UserContext userContext;
         try {
             var clientId =
