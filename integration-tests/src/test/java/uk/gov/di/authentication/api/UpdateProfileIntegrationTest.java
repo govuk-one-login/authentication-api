@@ -46,6 +46,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldCallUpdateProfileToApproveTermsAndConditionsAndReturn204()
             throws Json.JsonException {
         String sessionId = redis.createSession();
+        authSessionStore.addSession(Optional.empty(), sessionId);
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId);
 

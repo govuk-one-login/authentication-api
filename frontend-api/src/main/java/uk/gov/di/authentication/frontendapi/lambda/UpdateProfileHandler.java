@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -46,6 +47,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     protected UpdateProfileHandler(
             AuthenticationService authenticationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ConfigurationService configurationService,
             AuditService auditService,
@@ -54,6 +56,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 UpdateProfileRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
