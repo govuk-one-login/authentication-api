@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -41,6 +42,8 @@ class DocAppUserHelperTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final Session SESSION = new Session("a-session-id");
+    private static final AuthSessionItem AUTH_SESSION =
+            new AuthSessionItem().withSessionId("a-session-id");
     private static final String AUDIENCE = "oidc-audience";
     private static final Scope VALID_SCOPE =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
@@ -185,7 +188,7 @@ class DocAppUserHelperTest {
                         .withClientName(CLIENT_NAME)
                         .withCookieConsentShared(false)
                         .withClientType(clientType.getValue());
-        return UserContext.builder(SESSION)
+        return UserContext.builder(SESSION, Optional.of(AUTH_SESSION))
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
                 .build();
