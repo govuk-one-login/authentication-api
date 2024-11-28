@@ -92,7 +92,8 @@ class AuthenticationCallbackHandlerTest {
     private static final Session session =
             new Session(SESSION_ID)
                     .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
-                    .setAuthenticated(false);
+                    .setAuthenticated(false)
+                    .setCurrentCredentialStrength(null);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -102,13 +103,15 @@ class AuthenticationCallbackHandlerTest {
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
     private static final State RP_STATE = new State();
     private static final Nonce RP_NONCE = new Nonce();
+    private static final CredentialTrustLevel lowestCredentialTrustLevel =
+            CredentialTrustLevel.LOW_LEVEL;
     private static final ClientSession clientSession =
             new ClientSession(
                     generateRPAuthRequestForClientSession().toParameters(),
                     null,
                     List.of(
                             VectorOfTrust.of(
-                                    CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                                    lowestCredentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
                     CLIENT_NAME);
     private static final String COOKIE_HEADER_NAME = "Cookie";
     private static final AuthorizationCode AUTH_CODE_ORCH_TO_AUTH = new AuthorizationCode();
@@ -159,6 +162,7 @@ class AuthenticationCallbackHandlerTest {
         reset(initiateIPVAuthorisationService);
         reset(logoutService);
         reset(authorizationService);
+        session.setCurrentCredentialStrength(null);
         when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any()))
                 .thenAnswer(
                         args -> {
@@ -403,7 +407,7 @@ class AuthenticationCallbackHandlerTest {
         handler.handleRequest(event, null);
 
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        verify(orchSessionService, times(2)).updateSession(orchSessionCaptor.capture());
+        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 OrchSessionItem.AccountState.NEW,
                 equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
@@ -432,13 +436,66 @@ class AuthenticationCallbackHandlerTest {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
-        verify(orchSessionService, times(2)).updateSession(orchSessionCaptor.capture());
+        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 Session.AccountState.UNKNOWN,
                 equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
         assertThat(
                 OrchSessionItem.AccountState.UNKNOWN,
                 equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
+    }
+
+    private static Stream<Arguments> currentCredentialStrengthParams() {
+        return Stream.of(
+                Arguments.of( // 1
+                        null,
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        true,
+                        CredentialTrustLevel.MEDIUM_LEVEL),
+                Arguments.of( // 2
+                        CredentialTrustLevel.LOW_LEVEL,
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        true,
+                        CredentialTrustLevel.MEDIUM_LEVEL),
+                Arguments.of( // 3
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        false,
+                        CredentialTrustLevel.MEDIUM_LEVEL),
+                Arguments.of( // 4
+                        null, CredentialTrustLevel.LOW_LEVEL, true, CredentialTrustLevel.LOW_LEVEL),
+                Arguments.of( // 5
+                        CredentialTrustLevel.LOW_LEVEL,
+                        CredentialTrustLevel.LOW_LEVEL,
+                        false,
+                        CredentialTrustLevel.LOW_LEVEL),
+                Arguments.of( // 6
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        CredentialTrustLevel.LOW_LEVEL,
+                        false,
+                        CredentialTrustLevel.MEDIUM_LEVEL));
+    }
+
+    @ParameterizedTest
+    @MethodSource("currentCredentialStrengthParams")
+    void shouldSetTheCurrentCredentialStrengthToTheLowestCredentialTrustLevel(
+            CredentialTrustLevel orchSessionCurrentCredentialStrength,
+            CredentialTrustLevel credentialTrustLevel,
+            Boolean shouldUpdateCurrentCredentialStrength,
+            CredentialTrustLevel correctCurrentCredentialStrengthSet)
+            throws UnsuccessfulCredentialResponseException {
+        orchSessionWithCurrentCredentialStrengthValue(orchSessionCurrentCredentialStrength);
+        clientSessionWithCredentialTrustValue(credentialTrustLevel);
+        usingValidClient();
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        handler.handleRequest(event, null);
+
+        assertCurrentCredentialSetCorrectly(
+                shouldUpdateCurrentCredentialStrength, correctCurrentCredentialStrengthSet);
     }
 
     @Nested
@@ -787,7 +844,11 @@ class AuthenticationCallbackHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID).withAuthenticated(false)));
+                .thenReturn(
+                        Optional.of(
+                                new OrchSessionItem(SESSION_ID)
+                                        .withAuthenticated(false)
+                                        .withCurrentCredentialStrength(null)));
     }
 
     private void usingValidClientSession() {
@@ -874,8 +935,8 @@ class AuthenticationCallbackHandlerTest {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
         assertThat(
-                sessionSaveCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.LOW_LEVEL));
+                sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
+                equalTo(lowestCredentialTrustLevel));
         assertThat(
                 Session.AccountState.NEW,
                 equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
@@ -884,7 +945,58 @@ class AuthenticationCallbackHandlerTest {
 
     private void assertOrchSessionUpdated() {
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        verify(orchSessionService, times(2)).updateSession(orchSessionCaptor.capture());
+        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertTrue(orchSessionCaptor.getAllValues().get(0).getAuthenticated());
+        assertThat(
+                orchSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
+                equalTo(lowestCredentialTrustLevel));
+    }
+
+    private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {
+        ClientSession clientSessionWithCredentialTrustLevel =
+                createClientSession(credentialTrustLevel);
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        CLIENT_SESSION_ID,
+                        TEST_EMAIL_ADDRESS,
+                        clientSessionWithCredentialTrustLevel))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSessionWithCredentialTrustLevel));
+    }
+
+    private ClientSession createClientSession(CredentialTrustLevel credentialTrustLevel) {
+        return new ClientSession(
+                generateRPAuthRequestForClientSession().toParameters(),
+                null,
+                List.of(VectorOfTrust.of(credentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
+                CLIENT_NAME);
+    }
+
+    private void orchSessionWithCurrentCredentialStrengthValue(
+            CredentialTrustLevel currentCredentialStrength) {
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                new OrchSessionItem(SESSION_ID)
+                                        .withAuthenticated(false)
+                                        .withCurrentCredentialStrength(currentCredentialStrength)));
+    }
+
+    private void assertCurrentCredentialSetCorrectly(
+            Boolean shouldUpdateCurrentCredentialStrength,
+            CredentialTrustLevel currentCredentialStrength) {
+        var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
+        Integer timesToUpdate;
+        if (shouldUpdateCurrentCredentialStrength) {
+            timesToUpdate = 3;
+        } else {
+            timesToUpdate = 2;
+        }
+
+        verify(orchSessionService, times(timesToUpdate)).updateSession(orchSessionCaptor.capture());
+        assertThat(
+                orchSessionCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
+                equalTo(currentCredentialStrength));
     }
 }

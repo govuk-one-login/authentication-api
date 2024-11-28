@@ -189,14 +189,26 @@ class AuthCodeHandlerTest {
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(true, sessionService, session, orchSessionService, orchSession);
+                .saveSession(
+                        true,
+                        sessionService,
+                        session,
+                        orchSessionService,
+                        orchSession,
+                        clientSession);
         doAnswer(
                         (i) -> {
                             session.setAuthenticated(true).setNewAccount(EXISTING);
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(false, sessionService, session, orchSessionService, orchSession);
+                .saveSession(
+                        false,
+                        sessionService,
+                        session,
+                        orchSessionService,
+                        orchSession,
+                        clientSession);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -296,7 +308,8 @@ class AuthCodeHandlerTest {
                         eq(sessionService),
                         eq(session),
                         eq(orchSessionService),
-                        eq(orchSession));
+                        eq(orchSession),
+                        eq(clientSession));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -411,7 +424,8 @@ class AuthCodeHandlerTest {
                         eq(sessionService),
                         eq(session),
                         any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        any(OrchSessionItem.class),
+                        eq(clientSession));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -643,7 +657,8 @@ class AuthCodeHandlerTest {
                         eq(sessionService),
                         eq(session),
                         any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        any(OrchSessionItem.class),
+                        eq(clientSession));
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(

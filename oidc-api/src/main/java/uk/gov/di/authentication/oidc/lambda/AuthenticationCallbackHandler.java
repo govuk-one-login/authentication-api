@@ -521,6 +521,22 @@ public class AuthenticationCallbackHandler
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
                 sessionService.storeOrUpdateSession(userSession);
+                CredentialTrustLevel currentCredentialStrength =
+                        orchSession.getCurrentCredentialStrength();
+                if (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
+                                > 0) {
+                    orchSessionService.updateSession(
+                            orchSession.withCurrentCredentialStrength(
+                                    lowestRequestedCredentialTrustLevel));
+                }
+                // ATO-975 logging to make sure there are no differences in production
+                LOG.info(
+                        "Shared session current credential strength: {}",
+                        userSession.getCurrentCredentialStrength());
+                LOG.info(
+                        "Orch session current credential strength: {}",
+                        orchSession.getCurrentCredentialStrength());
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         orchAccountState, clientId, clientSession.getClientName(), isTestJourney);
