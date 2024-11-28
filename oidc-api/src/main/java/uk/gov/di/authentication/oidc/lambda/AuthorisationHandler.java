@@ -624,24 +624,9 @@ public class AuthorisationHandler
         }
 
         String newSessionId = session.getSessionId();
-        if (existingOrchSessionOptional.isEmpty()) {
-            orchSessionService.addSession(new OrchSessionItem(newSessionId));
-            LOG.info("Created new Orch session");
-        } else {
-            OrchSessionItem existingOrchSession = existingOrchSessionOptional.get();
-            OrchSessionItem updatedOrchSession =
-                    new OrchSessionItem(existingOrchSession)
-                            .withSessionId(newSessionId)
-                            .withTimeToLive(
-                                    NowHelper.nowPlus(
-                                                    configurationService.getSessionExpiry(),
-                                                    ChronoUnit.SECONDS)
-                                            .toInstant()
-                                            .getEpochSecond());
-            orchSessionService.addSession(updatedOrchSession);
-            orchSessionService.deleteSession(existingOrchSession.getSessionId());
-            LOG.info("Updated SessionId and TTL of Orch session");
-        }
+        existingOrchSessionOptional.ifPresentOrElse(
+                existingOrchSession -> updateExistingOrchSession(newSessionId, existingOrchSession),
+                () -> createNewOrchSession(newSessionId));
         attachOrchSessionIdToLogs(newSessionId);
 
         user = user.withSessionId(session.getSessionId());
@@ -669,6 +654,27 @@ public class AuthorisationHandler
                 requestedCredentialTrustLevel,
                 user,
                 existingSessionId);
+    }
+
+    private void updateExistingOrchSession(
+            String newSessionId, OrchSessionItem existingOrchSession) {
+        OrchSessionItem updatedOrchSession =
+                new OrchSessionItem(existingOrchSession)
+                        .withSessionId(newSessionId)
+                        .withTimeToLive(
+                                NowHelper.nowPlus(
+                                                configurationService.getSessionExpiry(),
+                                                ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond());
+        orchSessionService.addSession(updatedOrchSession);
+        orchSessionService.deleteSession(existingOrchSession.getSessionId());
+        LOG.info("Updated existing Orch session");
+    }
+
+    private void createNewOrchSession(String newSessionId) {
+        orchSessionService.addSession(new OrchSessionItem(newSessionId));
+        LOG.info("Created new Orch session");
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
