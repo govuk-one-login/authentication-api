@@ -623,22 +623,26 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", existingSessionId);
         }
 
-        OrchSessionItem newOrchSession;
         String newSessionId = session.getSessionId();
         if (existingOrchSessionOptional.isEmpty()) {
-            newOrchSession = new OrchSessionItem(newSessionId);
+            orchSessionService.addSession(new OrchSessionItem(newSessionId));
             LOG.info("Created new Orch session");
         } else {
-            String existingOrchSessionId = existingOrchSessionOptional.get().getSessionId();
-            newOrchSession =
-                    orchSessionService.addOrUpdateSessionId(
-                            Optional.of(existingOrchSessionId), newSessionId);
-            LOG.info(
-                    "Updated Orch session ID from {} to {}",
-                    existingOrchSessionId,
-                    newOrchSession.getSessionId());
+            OrchSessionItem existingOrchSession = existingOrchSessionOptional.get();
+            OrchSessionItem updatedOrchSession =
+                    new OrchSessionItem(existingOrchSession)
+                            .withSessionId(newSessionId)
+                            .withTimeToLive(
+                                    NowHelper.nowPlus(
+                                                    configurationService.getSessionExpiry(),
+                                                    ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond());
+            orchSessionService.addSession(updatedOrchSession);
+            orchSessionService.deleteSession(existingOrchSession.getSessionId());
+            LOG.info("Updated SessionId and TTL of Orch session");
         }
-        attachOrchSessionIdToLogs(newOrchSession.getSessionId());
+        attachOrchSessionIdToLogs(newSessionId);
 
         user = user.withSessionId(session.getSessionId());
         auditService.submitAuditEvent(
@@ -649,9 +653,6 @@ public class AuthorisationHandler
                 pair("new_authentication_required", newAuthenticationRequired));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
-        existingOrchSessionOptional.ifPresentOrElse(
-                s -> orchSessionService.updateSession(newOrchSession),
-                () -> orchSessionService.addSession(newOrchSession));
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
