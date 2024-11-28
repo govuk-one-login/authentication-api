@@ -134,6 +134,7 @@ class CheckUserExistsHandlerTest {
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(session.getSessionId()).thenReturn(SESSION_ID);
+        when(authSession.getSessionId()).thenReturn(SESSION_ID);
 
         handler =
                 new CheckUserExistsHandler(
@@ -153,7 +154,6 @@ class CheckUserExistsHandlerTest {
         @BeforeEach
         void setup() {
             usingValidSession();
-            authSessionExists();
             var userProfile =
                     generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
             setupUserProfileAndClient(Optional.of(userProfile));
@@ -292,7 +292,6 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn200IfUserDoesNotExist() throws Json.JsonException {
         usingValidSession();
-        authSessionExists();
 
         setupUserProfileAndClient(Optional.empty());
 
@@ -353,6 +352,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn400IfAuthSessionExpired() {
         usingValidSession();
         authSessionMissing();
+
         setupClient();
 
         var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
@@ -364,10 +364,7 @@ class CheckUserExistsHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-    }
-
-    private void authSessionExists() {
-        when(authSessionService.getSessionFromRequestHeaders(any()))
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }
 
