@@ -84,7 +84,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
-    private final AuthSessionService authSessionService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -103,6 +102,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 LoginRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService,
@@ -113,7 +113,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
-        this.authSessionService = authSessionService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -127,7 +126,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -141,7 +139,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler() {
