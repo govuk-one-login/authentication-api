@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -14,6 +15,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.everyItem;
@@ -135,8 +137,10 @@ class TestClientHelperTest {
                         .withClientName("some-client")
                         .withTestClient(isTestClient)
                         .withTestClientEmailAllowlist(allowedEmails);
+        var sessionId = IdGenerator.generate();
         return UserContext.builder(
-                        new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS))
+                        new Session(sessionId).setEmailAddress(TEST_EMAIL_ADDRESS),
+                        Optional.of(new AuthSessionItem().withSessionId(sessionId)))
                 .withClient(clientRegistry)
                 .build();
     }
