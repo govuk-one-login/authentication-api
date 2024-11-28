@@ -79,7 +79,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
-    private final AuthSessionService authSessionService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -97,6 +96,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 VerifyMfaCodeRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
@@ -105,7 +105,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
-        this.authSessionService = authSessionService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -126,7 +125,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -144,7 +142,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
