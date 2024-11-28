@@ -14,7 +14,8 @@ module "frontend_api_check_reauth_user_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn
+    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
+    aws_iam_policy.dynamo_auth_session_read_policy.arn,
   ]
 }
 

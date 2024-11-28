@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -58,6 +59,7 @@ class CheckReAuthUserHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
@@ -153,6 +155,7 @@ class CheckReAuthUserHandlerTest {
                 new CheckReAuthUserHandler(
                         configurationService,
                         sessionService,
+                        authSessionService,
                         clientSessionService,
                         clientService,
                         authenticationService,
