@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -15,6 +16,7 @@ import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -36,6 +38,7 @@ import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLangua
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
@@ -50,6 +53,7 @@ public abstract class BaseFrontendHandler<T>
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
+    protected final AuthSessionService authSessionService;
     protected final ClientSessionService clientSessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
@@ -60,12 +64,14 @@ public abstract class BaseFrontendHandler<T>
             Class<T> clazz,
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = sessionService;
+        this.authSessionService = authSessionService;
         this.clientSessionService = clientSessionService;
         this.clientService = clientService;
         this.authenticationService = authenticationService;
@@ -75,6 +81,7 @@ public abstract class BaseFrontendHandler<T>
             Class<T> clazz,
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -83,6 +90,7 @@ public abstract class BaseFrontendHandler<T>
                 clazz,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
@@ -93,6 +101,7 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
@@ -105,6 +114,7 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
+        this.authSessionService = new AuthSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
@@ -166,7 +176,20 @@ public abstract class BaseFrontendHandler<T>
             attachSessionIdToLogs(session.get());
         }
 
-        UserContext.Builder userContextBuilder = UserContext.builder(session.get());
+        AuthSessionItem authSession;
+        var authSessionOptional =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+
+        if (authSessionOptional.isEmpty()) {
+            LOG.warn("Auth session cannot be found");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        } else {
+            authSession = authSessionOptional.get();
+            attachAuthSessionIdToLogs(authSession);
+        }
+
+        UserContext.Builder userContextBuilder =
+                UserContext.builder(session.get(), Optional.of(authSession));
         userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
