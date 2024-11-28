@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -66,6 +67,7 @@ class CheckEmailFraudBlockHandlerTest {
     private static ClientSessionService clientSessionServiceMock;
     private static DynamoEmailCheckResultService dbMock;
     private static SessionService sessionServiceMock;
+    private static AuthSessionService authSessionServiceMock;
     private static ClientRegistry clientRegistry;
     private static UserContext userContext;
 
@@ -81,6 +83,7 @@ class CheckEmailFraudBlockHandlerTest {
         configurationServiceMock = mock(ConfigurationService.class);
         authenticationServiceMock = mock(AuthenticationService.class);
         sessionServiceMock = mock(SessionService.class);
+        authSessionServiceMock = mock(AuthSessionService.class);
         clientSessionServiceMock = mock(ClientSessionService.class);
         clientRegistry = mock(ClientRegistry.class);
         userContext = mock(UserContext.class);
@@ -105,6 +108,7 @@ class CheckEmailFraudBlockHandlerTest {
                 new CheckEmailFraudBlockHandler(
                         configurationServiceMock,
                         sessionServiceMock,
+                        authSessionServiceMock,
                         clientSessionServiceMock,
                         clientServiceMock,
                         authenticationServiceMock,
