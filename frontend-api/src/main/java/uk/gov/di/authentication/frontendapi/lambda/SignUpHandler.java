@@ -47,7 +47,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
-    private final AuthSessionService authSessionService;
 
     public SignUpHandler(
             ConfigurationService configurationService,
@@ -63,13 +62,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 SignupRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
-        this.authSessionService = authSessionService;
     }
 
     public SignUpHandler() {
@@ -81,7 +80,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public SignUpHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -89,7 +87,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
