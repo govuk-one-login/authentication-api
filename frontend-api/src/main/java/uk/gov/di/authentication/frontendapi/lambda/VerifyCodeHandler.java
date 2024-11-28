@@ -80,7 +80,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountModifiersService accountModifiersService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
-    private final AuthSessionService authSessionService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -98,6 +97,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 VerifyCodeRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
@@ -106,7 +106,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountModifiersService = accountModifiersService;
         this.authenticationAttemptsService = authenticationAttemptsService;
-        this.authSessionService = authSessionService;
     }
 
     public VerifyCodeHandler() {
@@ -121,7 +120,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public VerifyCodeHandler(
@@ -133,7 +131,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
