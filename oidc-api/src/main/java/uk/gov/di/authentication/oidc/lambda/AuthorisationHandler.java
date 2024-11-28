@@ -669,12 +669,15 @@ public class AuthorisationHandler
                                         .getEpochSecond());
         orchSessionService.addSession(updatedOrchSession);
         orchSessionService.deleteSession(existingOrchSession.getSessionId());
-        LOG.info("Updated existing Orch session");
+        LOG.info(
+                "Updated existing Orch session ID from {} to {}",
+                existingOrchSession.getSessionId(),
+                newSessionId);
     }
 
-    private void createNewOrchSession(String newSessionId) {
-        orchSessionService.addSession(new OrchSessionItem(newSessionId));
-        LOG.info("Created new Orch session");
+    private void createNewOrchSession(String sessionId) {
+        orchSessionService.addSession(new OrchSessionItem(sessionId));
+        LOG.info("Created new Orch session with session ID: {}", sessionId);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
