@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -67,6 +68,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     public MfaHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             ClientSessionService clientSessionService,
@@ -78,6 +80,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 MfaRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
