@@ -537,6 +537,11 @@ public class AuthenticationCallbackHandler
                 LOG.info(
                         "Orch session current credential strength: {}",
                         orchSession.getCurrentCredentialStrength());
+                LOG.info(
+                        "Is shared session CCS equal to Orch session CCS: {}",
+                        Objects.equals(
+                                userSession.getCurrentCredentialStrength(),
+                                orchSession.getCurrentCredentialStrength()));
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         orchAccountState, clientId, clientSession.getClientName(), isTestJourney);
