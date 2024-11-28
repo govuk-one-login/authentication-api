@@ -61,6 +61,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
     void shouldReturnCorrectStatusBasedOnDbResult() throws Json.JsonException {
         userStore.signUp(EMAIL, "password-1", SUBJECT);
         var sessionId = redis.createSession();
+        authSessionStore.addSession(Optional.empty(), sessionId);
         dynamoEmailCheckResultService.saveEmailCheckResult(
                 EMAIL, EmailCheckResultStatus.ALLOW, unixTimePlusNDays(), "test-reference");
         redis.addEmailToSession(sessionId, EMAIL);
