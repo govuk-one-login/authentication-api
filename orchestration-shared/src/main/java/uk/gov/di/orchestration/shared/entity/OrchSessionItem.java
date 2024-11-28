@@ -40,6 +40,18 @@ public class OrchSessionItem {
         this.isNewAccount = AccountState.UNKNOWN;
     }
 
+    public OrchSessionItem(OrchSessionItem orchSessionItem) {
+        this.sessionId = orchSessionItem.sessionId;
+        this.previousSessionId = orchSessionItem.previousSessionId;
+        this.timeToLive = orchSessionItem.timeToLive;
+        this.verifiedMfaMethodType = orchSessionItem.verifiedMfaMethodType;
+        this.isAuthenticated = orchSessionItem.isAuthenticated;
+        this.isNewAccount = orchSessionItem.isNewAccount;
+        this.internalCommonSubjectId = orchSessionItem.internalCommonSubjectId;
+        this.authTime = orchSessionItem.authTime;
+        this.currentCredentialStrength = orchSessionItem.currentCredentialStrength;
+    }
+
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_SESSION_ID)
     public String getSessionId() {
