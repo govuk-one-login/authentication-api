@@ -581,7 +581,8 @@ class StartHandlerTest {
     @Test
     void shouldReturn400WhenBuildClientStartInfoThrowsException()
             throws ParseException, Json.JsonException {
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
+        when(startService.buildUserContext(session, Optional.empty(), clientSession))
+                .thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
                 .thenThrow(new ParseException("Unable to parse authentication request"));
         usingValidClientSession();
@@ -702,7 +703,7 @@ class StartHandlerTest {
     private void usingStartServiceThatReturns(
             UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo)
             throws ParseException {
-        when(startService.buildUserContext(eq(session), any())).thenReturn(userContext);
+        when(startService.buildUserContext(eq(session), any(), any())).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
