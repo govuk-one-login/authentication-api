@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -37,6 +38,7 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
     protected AccountRecoveryHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -46,6 +48,7 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                 AccountRecoveryRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);
