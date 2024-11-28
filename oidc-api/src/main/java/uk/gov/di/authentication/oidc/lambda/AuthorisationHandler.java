@@ -507,22 +507,26 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
-        OrchSessionItem orchSession;
         String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
-            orchSession = new OrchSessionItem(newSessionId);
+            orchSessionService.addSession(new OrchSessionItem(newSessionId));
             LOG.info("Created new Orch session");
         } else {
-            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
-            orchSession =
-                    orchSessionService.addOrUpdateSessionId(
-                            Optional.of(previousOrchSessionId), newSessionId);
-            LOG.info(
-                    "Updated Orch session ID from {} to {}",
-                    previousOrchSessionId,
-                    orchSession.getSessionId());
+            OrchSessionItem existingOrchSession = orchSessionOptional.get();
+            OrchSessionItem updatedOrchSession =
+                    existingOrchSession
+                            .withSessionId(newSessionId)
+                            .withTimeToLive(
+                                    NowHelper.nowPlus(
+                                                    configurationService.getSessionExpiry(),
+                                                    ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond());
+            orchSessionService.addSession(updatedOrchSession);
+            orchSessionService.deleteSession(existingOrchSession.getSessionId());
+            LOG.info("Updated SessionId and TTL of Orch session");
         }
-        attachOrchSessionIdToLogs(orchSession.getSessionId());
+        attachOrchSessionIdToLogs(newSessionId);
 
         Subject subjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
@@ -539,9 +543,6 @@ public class AuthorisationHandler
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session);
-        orchSessionOptional.ifPresentOrElse(
-                s -> orchSessionService.updateSession(orchSession),
-                () -> orchSessionService.addSession(orchSession));
         LOG.info("Session saved successfully");
 
         var state = new State();
