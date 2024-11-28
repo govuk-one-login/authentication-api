@@ -142,6 +142,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                         "clientName");
 
         redis.createClientSession("client-session-id", clientSession);
+        authSessionStore.addSession(Optional.empty(), sessionId);
 
         headers.put("Session-Id", sessionId);
         headers.put(CLIENT_SESSION_ID_HEADER, "client-session-id");
