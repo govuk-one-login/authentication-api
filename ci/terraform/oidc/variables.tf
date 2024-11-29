@@ -692,7 +692,7 @@ variable "orch_account_id" {
 }
 
 variable "is_orch_stubbed" {
-  type    = string
+  type    = bool
   default = false
 }
 
