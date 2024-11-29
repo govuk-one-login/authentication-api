@@ -21,6 +21,8 @@ module "ipv_processing_identity_role" {
 }
 
 module "ipv_processing_identity_role_with_orch_session_table_access" {
+  count = var.is_orch_stubbed ? 0 : 1
+
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-processing-identity-role-with-orch-session-access"
@@ -39,10 +41,14 @@ module "ipv_processing_identity_role_with_orch_session_table_access" {
     local.client_registry_encryption_policy_arn,
     local.identity_credentials_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
-    aws_iam_policy.dynamo_orch_session_encryption_key_cross_account_decrypt_policy.arn,
-    aws_iam_policy.dynamo_orch_session_cross_account_read_access_policy.arn,
-    aws_iam_policy.dynamo_orch_session_cross_account_delete_access_policy.arn
+    aws_iam_policy.dynamo_orch_session_encryption_key_cross_account_decrypt_policy[0].arn,
+    aws_iam_policy.dynamo_orch_session_cross_account_read_access_policy[0].arn,
+    aws_iam_policy.dynamo_orch_session_cross_account_delete_access_policy[0].arn
   ]
+}
+moved {
+  from = module.ipv_processing_identity_role_with_orch_session_table_access
+  to   = module.ipv_processing_identity_role_with_orch_session_table_access[0]
 }
 
 module "processing-identity" {
@@ -93,7 +99,7 @@ module "processing-identity" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role.arn : module.ipv_processing_identity_role_with_orch_session_table_access.arn
+  lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role.arn : module.ipv_processing_identity_role_with_orch_session_table_access[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
