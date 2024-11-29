@@ -178,6 +178,8 @@ class AuthCodeHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.isCurrentCredentialStrengthInOrchSessionEnabled())
+                .thenReturn(true);
         when(authCodeResponseService.getSubjectId(session)).thenReturn(SUBJECT.getValue());
         when(authCodeResponseService.getRpPairwiseId(session, CLIENT_ID, dynamoClientService))
                 .thenReturn(
@@ -189,26 +191,14 @@ class AuthCodeHandlerTest {
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(
-                        true,
-                        sessionService,
-                        session,
-                        orchSessionService,
-                        orchSession,
-                        clientSession);
+                .saveSession(true, sessionService, session, orchSessionService, orchSession);
         doAnswer(
                         (i) -> {
                             session.setAuthenticated(true).setNewAccount(EXISTING);
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(
-                        false,
-                        sessionService,
-                        session,
-                        orchSessionService,
-                        orchSession,
-                        clientSession);
+                .saveSession(false, sessionService, session, orchSessionService, orchSession);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -270,6 +260,7 @@ class AuthCodeHandlerTest {
                 .setNewAccount(AccountState.NEW)
                 .setEmailAddress(EMAIL)
                 .setVerifiedMfaMethodType(mfaMethodType);
+        orchSession.setCurrentCredentialStrength(initialLevel);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -300,6 +291,7 @@ class AuthCodeHandlerTest {
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
+        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertTrue(session.isAuthenticated());
 
         verify(authCodeResponseService, times(1))
@@ -308,8 +300,7 @@ class AuthCodeHandlerTest {
                         eq(sessionService),
                         eq(session),
                         eq(orchSessionService),
-                        eq(orchSession),
-                        eq(clientSession));
+                        eq(orchSession));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -417,6 +408,7 @@ class AuthCodeHandlerTest {
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
+        assertThat(orchSession.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(session.isAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(
@@ -424,8 +416,7 @@ class AuthCodeHandlerTest {
                         eq(sessionService),
                         eq(session),
                         any(OrchSessionService.class),
-                        any(OrchSessionItem.class),
-                        eq(clientSession));
+                        any(OrchSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -657,8 +648,7 @@ class AuthCodeHandlerTest {
                         eq(sessionService),
                         eq(session),
                         any(OrchSessionService.class),
-                        any(OrchSessionItem.class),
-                        eq(clientSession));
+                        any(OrchSessionItem.class));
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(

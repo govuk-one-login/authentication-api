@@ -203,7 +203,12 @@ public class AuthCodeHandler
             var state = authenticationRequest.getState();
             authCode =
                     generateAuthCode(
-                            clientID, redirectUri, clientSession, clientSessionId, session);
+                            clientID,
+                            redirectUri,
+                            clientSession,
+                            clientSessionId,
+                            session,
+                            orchSession);
             authenticationResponse =
                     orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                             authenticationRequest, authCode, redirectUri, state);
@@ -278,12 +283,7 @@ public class AuthCodeHandler
                     clientSession.getClientName(),
                     isTestJourney);
             authCodeResponseService.saveSession(
-                    docAppJourney,
-                    sessionService,
-                    session,
-                    orchSessionService,
-                    orchSession,
-                    clientSession);
+                    docAppJourney, sessionService, session, orchSessionService, orchSession);
 
             LOG.info("Generating successful auth code response");
             return generateApiGatewayProxyResponse(
@@ -370,7 +370,8 @@ public class AuthCodeHandler
             URI redirectUri,
             ClientSession clientSession,
             String clientSessionId,
-            Session session)
+            Session session,
+            OrchSessionItem orchSession)
             throws ClientNotFoundException, ProcessAuthRequestException {
         if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
@@ -382,6 +383,14 @@ public class AuthCodeHandler
                                 session.getCurrentCredentialStrength())
                         > 0) {
             session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
+        }
+        CredentialTrustLevel currentCredentialStrength = orchSession.getCurrentCredentialStrength();
+
+        if (configurationService.isCurrentCredentialStrengthInOrchSessionEnabled()
+                && (isNull(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
+                                > 0)) {
+            orchSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
         return authorisationCodeService.generateAndSaveAuthorisationCode(
                 clientSessionId, session.getEmailAddress(), clientSession);
