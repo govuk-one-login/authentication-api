@@ -1,0 +1,74 @@
+name: Get changed files
+on:
+  workflow_call:
+    outputs:
+      java_changed:
+        description: "Whether any Java files have changed"
+        value: ${{ jobs.check-changed-files.outputs.java_changed}}
+
+jobs:
+  check-changed-files:
+    runs-on: ubuntu-latest
+    outputs:
+      java_changed: ${{ steps.changed-java-files.outputs.any_changed }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Get changed Java files
+        id: changed-java-files
+        uses: tj-actions/changed-files@4edd678ac3f81e2dc578756871e4d00c19191daf # v45.0.4
+        with:
+          # If you change the paths here, ensure they are synchronised with the paths in the other jobs.
+          # Find these by searching for "Ensure these are synchronized with the paths in the check-changed-files job"
+          files: |
+            **/src/**
+            **/*.java
+            **/*.gradle
+            **/*.properties
+            gradle*
+
+      - name: Find PR comment
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3.1.0
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: Comment added by Check Java Files Action
+
+      - name: Update java comment to indicate test skipping
+        if: github.event_name == 'pull_request' && steps.changed-java-files.outputs.any_changed == 'false'
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Java Tests Skipped
+
+            No Java files were changed in this pull request. Java tests will be skipped[^1].
+
+            [^1]: These tests will still show as passing in the PR status check, but will not actually have run.
+
+            Any Java files that are changed in a subsequent commit will trigger the Java tests.
+
+            <!-- Comment added by Check Java Files Action -->
+          edit-mode: replace
+
+      - name: Update java comment to indicate test running
+        if: github.event_name == 'pull_request' && steps.changed-java-files.outputs.any_changed == 'true' && steps.fc.outputs.comment-id != 0
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Java Tests Not Skipped
+
+            Java files were previously skipped in this pull request. Subsequent changes have caused the tests to be run.
+
+            <!-- Comment added by Check Java Files Action -->
+          edit-mode: replace
+
+      - name: Add a warning to the job output if no Java files have changed
+        if: steps.changed-java-files.outputs.any_changed == 'false'
+        run: echo "::notice title=Java tests skipped::No Java files have changed in this pull request. Java tests will not be run (but will still show as passing)"
