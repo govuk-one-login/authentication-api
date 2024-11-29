@@ -1,12 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -18,14 +13,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.entity.MFAMethodType.AUTH_APP;
@@ -98,7 +89,7 @@ class AuthCodeResponseGenerationServiceTest {
     @Test
     void saveSessionUpdatesNonDocAppSessionWithAuthenticatedAndAccountState() {
         authCodeResponseGenerationService.saveSession(
-                false, sessionService, session, orchSessionService, orchSession, clientSession);
+                false, sessionService, session, orchSessionService, orchSession);
 
         verify(sessionService)
                 .storeOrUpdateSession(
@@ -119,7 +110,7 @@ class AuthCodeResponseGenerationServiceTest {
     @Test
     void saveSessionUpdatesDocAppSessionWithDocAppState() {
         authCodeResponseGenerationService.saveSession(
-                true, sessionService, session, orchSessionService, orchSession, clientSession);
+                true, sessionService, session, orchSessionService, orchSession);
 
         verify(sessionService)
                 .storeOrUpdateSession(
@@ -134,93 +125,5 @@ class AuthCodeResponseGenerationServiceTest {
                                         s.getIsNewAccount()
                                                 == OrchSessionItem.AccountState
                                                         .EXISTING_DOC_APP_JOURNEY));
-    }
-
-    @Nested
-    class CurrentCredentialStrength {
-
-        @BeforeEach
-        void setup() {
-            when(configurationService.isCurrentCredentialStrengthInOrchSessionEnabled())
-                    .thenReturn(true);
-        }
-
-        @Test
-        void
-                shouldSaveSessionWithCurrentCredentialStrengthWhenIsCurrentCredentialStrengthInOrchSessionFlagEnabled() {
-            authCodeResponseGenerationService.saveSession(
-                    true, sessionService, session, orchSessionService, orchSession, clientSession);
-            var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-            verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
-            assertThat(
-                    orchSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                    equalTo(lowestCredentialTrustLevel));
-        }
-
-        private static Stream<Arguments> currentCredentialStrengthParams() {
-            return Stream.of(
-                    Arguments.of( // 1
-                            null,
-                            CredentialTrustLevel.MEDIUM_LEVEL,
-                            CredentialTrustLevel.MEDIUM_LEVEL),
-                    Arguments.of( // 2
-                            CredentialTrustLevel.LOW_LEVEL,
-                            CredentialTrustLevel.MEDIUM_LEVEL,
-                            CredentialTrustLevel.MEDIUM_LEVEL),
-                    Arguments.of( // 3
-                            CredentialTrustLevel.MEDIUM_LEVEL,
-                            CredentialTrustLevel.MEDIUM_LEVEL,
-                            CredentialTrustLevel.MEDIUM_LEVEL),
-                    Arguments.of( // 4
-                            null, CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.LOW_LEVEL),
-                    Arguments.of( // 5
-                            CredentialTrustLevel.LOW_LEVEL,
-                            CredentialTrustLevel.LOW_LEVEL,
-                            CredentialTrustLevel.LOW_LEVEL),
-                    Arguments.of( // 6
-                            CredentialTrustLevel.MEDIUM_LEVEL,
-                            CredentialTrustLevel.LOW_LEVEL,
-                            CredentialTrustLevel.MEDIUM_LEVEL));
-        }
-
-        @ParameterizedTest
-        @MethodSource("currentCredentialStrengthParams")
-        void shouldSaveSesionWithCurrentCredentialStrengthWhenSessionValuesAreCorrect(
-                CredentialTrustLevel orchSessionCurrentCredentialStrength,
-                CredentialTrustLevel credentialTrustLevel,
-                CredentialTrustLevel correctCurrentCredentialStrengthSet) {
-            var clientSessionWithCredentialTrust =
-                    createSessionWithCredentialTrust(credentialTrustLevel);
-            var orchSessionWithCurentCredentialStrength =
-                    new OrchSessionItem(SESSION_ID)
-                            .withAccountState(NEW)
-                            .withVerifiedMfaMethodType(AUTH_APP.toString())
-                            .withCurrentCredentialStrength(orchSessionCurrentCredentialStrength);
-
-            authCodeResponseGenerationService.saveSession(
-                    true,
-                    sessionService,
-                    session,
-                    orchSessionService,
-                    orchSessionWithCurentCredentialStrength,
-                    clientSessionWithCredentialTrust);
-            var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-            verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
-            assertThat(
-                    orchSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                    equalTo(correctCurrentCredentialStrengthSet));
-        }
-
-        private ClientSession createSessionWithCredentialTrust(
-                CredentialTrustLevel credentialTrustLevel) {
-            return clientSession =
-                    new ClientSession(
-                            new HashMap<>(),
-                            LocalDateTime.MIN,
-                            List.of(
-                                    VectorOfTrust.of(
-                                            credentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                            CLIENT_NAME);
-        }
     }
 }
