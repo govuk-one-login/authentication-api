@@ -27,4 +27,11 @@ public enum CredentialTrustLevel {
     public static CredentialTrustLevel getDefault() {
         return MEDIUM_LEVEL;
     }
+
+    public static CredentialTrustLevel max(CredentialTrustLevel a, CredentialTrustLevel b) {
+        if (a.compareTo(b) >= 0) {
+            return a;
+        }
+        return b;
+    }
 }

@@ -738,6 +738,53 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldRedirectToLoginWhenSingleFactorInVtr() {
+            withExistingSession(session);
+            when(userContext.getClientSession()).thenReturn(clientSession);
+            when(userContext.getSession()).thenReturn(session);
+            when(clientSession.getAuthRequestParams())
+                    .thenReturn(generateAuthRequest(Optional.of(jsonArrayOf("Cl"))).toParameters());
+
+            APIGatewayProxyResponseEvent response =
+                    makeHandlerRequest(
+                            withRequestEvent(buildRequestParams(Map.of("vtr", "[\"Cl\"]"))));
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            assertThat(response, hasStatus(302));
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
+
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains(EXPECTED_SESSION_COOKIE_STRING));
+
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(
+                            diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
+
+            verify(sessionService).storeOrUpdateSession(session);
+            verify(orchSessionService)
+                    .addOrUpdateSessionId(
+                            Optional.of(orchSession.getSessionId()), session.getSessionId());
+            verify(orchSessionService).updateSession(orchSession);
+            verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "LOW_LEVEL");
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(session.getSessionId()),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
         void shouldRedirectToLoginWhenIdentityIsPresentInVtr() {
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
@@ -1467,7 +1514,7 @@ class AuthorisationHandlerTest {
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
-            verifyAuthorisationRequestParsedAuditEvent(rpSid, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(rpSid, false, false, "MEDIUM_LEVEL");
         }
 
         @Test
@@ -1479,7 +1526,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
         }
 
         @Test
@@ -1491,7 +1539,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
         }
 
         @Test
@@ -1503,7 +1552,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, true, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, true, false, "MEDIUM_LEVEL");
         }
 
         @Test
@@ -1523,7 +1573,8 @@ class AuthorisationHandlerTest {
 
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
             assertThat(uri.getQuery(), not(containsString("reauthenticate")));
             assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
         }
@@ -1544,7 +1595,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -1581,7 +1633,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -1624,7 +1677,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
@@ -1646,7 +1700,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
@@ -1691,7 +1746,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -1723,7 +1779,8 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -1842,7 +1899,8 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
@@ -1897,7 +1955,8 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -2638,7 +2697,10 @@ class AuthorisationHandlerTest {
     }
 
     private void verifyAuthorisationRequestParsedAuditEvent(
-            String rpSid, boolean identityRequested, boolean reauthRequested) {
+            String rpSid,
+            boolean identityRequested,
+            boolean reauthRequested,
+            String credentialTrustLevel) {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
@@ -2646,7 +2708,8 @@ class AuthorisationHandlerTest {
                         BASE_AUDIT_USER,
                         pair("rpSid", rpSid),
                         pair("identityRequested", identityRequested),
-                        pair("reauthRequested", reauthRequested));
+                        pair("reauthRequested", reauthRequested),
+                        pair("credential_trust_level", credentialTrustLevel));
     }
 
     private static ECKey generateECSigningKey() {

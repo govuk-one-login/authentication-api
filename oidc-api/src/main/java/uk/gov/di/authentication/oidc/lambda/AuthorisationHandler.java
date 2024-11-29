@@ -390,19 +390,22 @@ public class AuthorisationHandler
                         authRequest.toParameters(),
                         client.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
+        var vtrList = getVtrList(reauthRequested, authRequest);
+        var requestedCredentialTrustLevel = VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
+
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                 authRequest.getClientID().getValue(),
                 user,
                 pair("rpSid", getRpSid(authRequest)),
                 pair("identityRequested", identityRequested),
-                pair("reauthRequested", reauthRequested));
+                pair("reauthRequested", reauthRequested),
+                pair("credential_trust_level", requestedCredentialTrustLevel.toString()));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
         Optional<OrchSessionItem> orchSessionOptional =
                 orchSessionService.getSessionFromSessionCookie(input.getHeaders());
 
-        var vtrList = getVtrList(reauthRequested, authRequest);
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
                         authRequest.toParameters(),
@@ -445,7 +448,7 @@ public class AuthorisationHandler
                 clientSessionId,
                 reauthRequested,
                 newAuthenticationRequired,
-                vtrList,
+                requestedCredentialTrustLevel,
                 user);
     }
 
@@ -594,7 +597,7 @@ public class AuthorisationHandler
             String clientSessionId,
             boolean reauthRequested,
             boolean newAuthenticationRequired,
-            List<VectorOfTrust> vtrList,
+            CredentialTrustLevel requestedCredentialTrustLevel,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
@@ -662,7 +665,7 @@ public class AuthorisationHandler
                 persistentSessionId,
                 client,
                 reauthRequested,
-                vtrList,
+                requestedCredentialTrustLevel,
                 user,
                 previousSessionId);
     }
@@ -674,7 +677,7 @@ public class AuthorisationHandler
             String persistentSessionId,
             ClientRegistry client,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList,
+            CredentialTrustLevel requestedCredentialTrustLevel,
             TxmaAuditUser user,
             Optional<String> previousSessionId) {
         LOG.info("Redirecting");
@@ -731,7 +734,6 @@ public class AuthorisationHandler
             }
         }
 
-        var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
@@ -749,7 +751,7 @@ public class AuthorisationHandler
                         .claim("is_one_login_service", client.isOneLoginService())
                         .claim("service_type", client.getServiceType())
                         .claim("govuk_signin_journey_id", clientSessionId)
-                        .claim("confidence", confidence)
+                        .claim("confidence", requestedCredentialTrustLevel.getValue())
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
