@@ -75,19 +75,29 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   function_version = aws_lambda_function.endpoint_lambda.version
 }
 
+resource "terraform_data" "wait_for_alias" {
+  triggers_replace = [aws_lambda_function.endpoint_lambda.version]
+
+  depends_on = [aws_lambda_alias.endpoint_lambda]
+
+  provisioner "local-exec" {
+    command    = "timeout ${var.wait_for_alias_timeout} bash ${path.module}/wait-for-alias.sh ${aws_lambda_function.endpoint_lambda.function_name} ${aws_lambda_alias.endpoint_lambda.name} ${var.wait_for_alias_timeout}"
+    on_failure = fail
+  }
+}
+
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
   count = (var.snapstart == false && var.provisioned_concurrency > 0) ? 1 : 0
 
-  function_name = aws_lambda_function.endpoint_lambda.function_name
-  qualifier     = aws_lambda_alias.endpoint_lambda.name
-
+  function_name                     = aws_lambda_function.endpoint_lambda.function_name
   provisioned_concurrent_executions = var.provisioned_concurrency
-
-  depends_on = [aws_lambda_alias.endpoint_lambda]
+  qualifier                         = aws_lambda_alias.endpoint_lambda.name
 
   lifecycle {
     ignore_changes = [provisioned_concurrent_executions] # Ignoring as this is targeted by aws_app_autoscaling_target.lambda_target resource
   }
+
+  depends_on = [terraform_data.wait_for_alias]
 }
 
 resource "aws_appautoscaling_target" "lambda_target" {
@@ -98,6 +108,8 @@ resource "aws_appautoscaling_target" "lambda_target" {
   resource_id        = "function:${aws_lambda_function.endpoint_lambda.function_name}:${aws_lambda_alias.endpoint_lambda.name}"
   scalable_dimension = "lambda:function:ProvisionedConcurrency"
   service_namespace  = "lambda"
+
+  depends_on = [aws_lambda_provisioned_concurrency_config.endpoint_lambda_concurrency_config]
 }
 
 resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
@@ -115,6 +127,7 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
       predefined_metric_type = "LambdaProvisionedConcurrencyUtilization"
     }
   }
+  depends_on = [aws_lambda_provisioned_concurrency_config.endpoint_lambda_concurrency_config]
 }
 
 locals {
