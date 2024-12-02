@@ -91,7 +91,9 @@ public class ReverificationResultService {
             do {
                 if (count > 0) LOG.warn("Retrying IPV access token request");
                 count++;
-                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+                var httpRequest = tokenRequest.toHTTPRequest();
+                var httpResponse = httpRequest.send();
+                tokenResponse = TokenResponse.parse(httpResponse);
                 if (!tokenResponse.indicatesSuccess()) {
                     HTTPResponse response = tokenResponse.toHTTPResponse();
                     LOG.warn(
