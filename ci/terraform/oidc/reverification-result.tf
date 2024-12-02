@@ -33,6 +33,7 @@ module "reverification_result" {
     IPV_AUTHORISATION_CLIENT_ID     = var.ipv_authorisation_client_id
     ENVIRONMENT                     = var.environment
     MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.name
+    IPV_BACKEND_URI                 = var.ipv_backend_uri
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler::handleRequest"
