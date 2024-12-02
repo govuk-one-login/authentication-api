@@ -128,8 +128,5 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
         }
       ]
     }
-    MaxAgeEnabled = {
-      BOOL = each.value.max_age_enabled
-    }
   })
 }

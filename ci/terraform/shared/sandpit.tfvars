@@ -28,7 +28,6 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
-    max_age_enabled   = true
   },
   {
     client_name           = "relying-party-stub-sandpit-app"
