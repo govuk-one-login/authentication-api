@@ -29,6 +29,7 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
+    max_age_enabled   = false
   },
   {
     // this client may or may not work. It's needed for the SSM parameter generation though, so this could be classed as a dummy entry.
@@ -54,6 +55,7 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
+    max_age_enabled   = false
   },
 ]
 
