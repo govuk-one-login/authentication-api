@@ -33,6 +33,7 @@ No requirements.
 | <a name="input_api_gateway_name"></a> [api\_gateway\_name](#input\_api\_gateway\_name) | The name of the API Gateway | `string` | n/a | yes |
 | <a name="input_cloudwatch_encryption_key_arn"></a> [cloudwatch\_encryption\_key\_arn](#input\_cloudwatch\_encryption\_key\_arn) | The ARN of the CloudWatch encryption key | `string` | n/a | yes |
 | <a name="input_cloudwatch_log_retention"></a> [cloudwatch\_log\_retention](#input\_cloudwatch\_log\_retention) | The retention period for CloudWatch logs | `number` | n/a | yes |
+| <a name="input_domain_name"></a> [domain\_name](#input\_domain\_name) | The domain name to bind to the API Gateway | `string` | n/a | yes |
 | <a name="input_enable_api_gateway_execution_logging"></a> [enable\_api\_gateway\_execution\_logging](#input\_enable\_api\_gateway\_execution\_logging) | Enable API Gateway execution logging | `bool` | n/a | yes |
 | <a name="input_enable_api_gateway_execution_request_tracing"></a> [enable\_api\_gateway\_execution\_request\_tracing](#input\_enable\_api\_gateway\_execution\_request\_tracing) | Enable API Gateway execution request tracing | `bool` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | The environment the API Gateway is in | `string` | n/a | yes |
