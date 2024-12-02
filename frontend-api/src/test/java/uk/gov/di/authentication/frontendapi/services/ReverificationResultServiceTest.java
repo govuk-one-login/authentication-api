@@ -176,6 +176,34 @@ class ReverificationResultServiceTest {
         verify(userInfoRequest.toHTTPRequest(), times(2)).send();
     }
 
+    @Test
+    void shouldThrowRTEWhenSendToIPVFails() throws IOException {
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        when(tokenRequest.toHTTPRequest().send()).thenThrow(new IOException());
+
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    reverificationResultService.sendTokenRequest(tokenRequest);
+                });
+    }
+
+    @Test
+    void shouldThrowRTEWhenTokenParsingFails() throws IOException {
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+
+        HTTPResponse badResponse = new HTTPResponse(200);
+        badResponse.setContent("bad json");
+
+        when(tokenRequest.toHTTPRequest().send()).thenReturn(badResponse);
+
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    reverificationResultService.sendTokenRequest(tokenRequest);
+                });
+    }
+
     private void signJWTWithKMS() throws JOSEException {
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
