@@ -589,7 +589,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<Session> existingSession,
-            Optional<OrchSessionItem> orchSessionOptional,
+            Optional<OrchSessionItem> existingOrchSessionOptional,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
@@ -612,33 +612,22 @@ public class AuthorisationHandler
         var session = existingSession.orElseGet(sessionService::generateSession);
         attachSessionIdToLogs(session);
 
-        Optional<String> previousSessionId = existingSession.map(Session::getSessionId);
+        Optional<String> existingSessionId = existingSession.map(Session::getSessionId);
         if (existingSession.isEmpty()) {
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Created session");
         } else {
-            previousSessionId = Optional.of(session.getSessionId());
+            existingSessionId = Optional.of(session.getSessionId());
             sessionService.updateWithNewSessionId(session);
             updateAttachedSessionIdToLogs(session.getSessionId());
-            LOG.info("Updated session id from {} - new", previousSessionId);
+            LOG.info("Updated session id from {} - new", existingSessionId);
         }
 
-        OrchSessionItem orchSession;
         String newSessionId = session.getSessionId();
-        if (orchSessionOptional.isEmpty()) {
-            orchSession = new OrchSessionItem(newSessionId);
-            LOG.info("Created new Orch session");
-        } else {
-            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
-            orchSession =
-                    orchSessionService.addOrUpdateSessionId(
-                            Optional.of(previousOrchSessionId), newSessionId);
-            LOG.info(
-                    "Updated Orch session ID from {} to {}",
-                    previousOrchSessionId,
-                    orchSession.getSessionId());
-        }
-        attachOrchSessionIdToLogs(orchSession.getSessionId());
+        existingOrchSessionOptional.ifPresentOrElse(
+                existingOrchSession -> updateExistingOrchSession(newSessionId, existingOrchSession),
+                () -> createNewOrchSession(newSessionId));
+        attachOrchSessionIdToLogs(newSessionId);
 
         user = user.withSessionId(session.getSessionId());
         auditService.submitAuditEvent(
@@ -649,9 +638,6 @@ public class AuthorisationHandler
                 pair("new_authentication_required", newAuthenticationRequired));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
-        orchSessionOptional.ifPresentOrElse(
-                s -> orchSessionService.updateSession(orchSession),
-                () -> orchSessionService.addSession(orchSession));
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
@@ -667,7 +653,31 @@ public class AuthorisationHandler
                 reauthRequested,
                 requestedCredentialTrustLevel,
                 user,
-                previousSessionId);
+                existingSessionId);
+    }
+
+    private void updateExistingOrchSession(
+            String newSessionId, OrchSessionItem existingOrchSession) {
+        OrchSessionItem updatedOrchSession =
+                new OrchSessionItem(existingOrchSession)
+                        .withSessionId(newSessionId)
+                        .withTimeToLive(
+                                NowHelper.nowPlus(
+                                                configurationService.getSessionExpiry(),
+                                                ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond());
+        orchSessionService.addSession(updatedOrchSession);
+        orchSessionService.deleteSession(existingOrchSession.getSessionId());
+        LOG.info(
+                "Updated existing Orch session ID from {} to {}",
+                existingOrchSession.getSessionId(),
+                newSessionId);
+    }
+
+    private void createNewOrchSession(String sessionId) {
+        orchSessionService.addSession(new OrchSessionItem(sessionId));
+        LOG.info("Created new Orch session with session ID: {}", sessionId);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
