@@ -2,14 +2,6 @@ name: Dependency review for pull requests
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/dependency-review-on-pr.yml"
-      # Ensure these are synchronized with the paths in the check-changed-files job
-      - "**/src/**"
-      - "**/*.java"
-      - "**/*.gradle"
-      - "**/*.properties"
-      - "gradle*"
 
 permissions:
   contents: write
