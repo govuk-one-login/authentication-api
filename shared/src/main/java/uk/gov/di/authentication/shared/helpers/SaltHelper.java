@@ -17,6 +17,13 @@ public class SaltHelper {
         return salt;
     }
 
+    public static byte[] convertToByteArrayAndRewindBuffer(ByteBuffer byteBuffer) {
+        byte[] byteArray = new byte[byteBuffer.remaining()];
+        byteBuffer.get(byteArray);
+        byteBuffer.rewind();
+        return byteArray;
+    }
+
     public static String byteBufferToBase64(ByteBuffer byteBuffer) {
         byte[] byteArray = new byte[byteBuffer.remaining()];
         byteBuffer.get(byteArray);
