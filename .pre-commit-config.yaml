@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -9,7 +9,7 @@ repos:
       - id: check-executables-have-shebangs
 
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v1.11.1
+    rev: v1.20.2
     hooks:
       - id: cfn-python-lint
         exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml|orchestration-canary-alarms.template.yaml|.*.approved.json|checkov-policies.*|.terraform-docs.yml$
@@ -21,25 +21,25 @@ repos:
       - id: gradle-spotless-apply
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.92.1
+    rev: v1.96.2
     hooks:
       - id: terraform_fmt
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 1ee2e387938ec90ec10a64f85fc0b4be527ade6a # v0.5.5
+    rev: v0.8.1 # v0.5.5
     hooks:
       - id: ruff
         args: ["--fix"]
       - id: ruff-format
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: a23f6b85d0fdd5bb9d564e2579e678033debbdff # v0.10.0.1 # pragma: allowlist secret
+    rev: v0.10.0.1 # v0.10.0.1 # pragma: allowlist secret
     hooks:
       - id: shellcheck
         exclude: ./gradlew|./pre-commit.sh
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.0
+    rev: v1.7.4
     hooks:
       - id: actionlint
 
