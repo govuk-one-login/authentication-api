@@ -624,9 +624,10 @@ public class AuthorisationHandler
         }
 
         String newSessionId = session.getSessionId();
-        existingOrchSessionOptional.ifPresentOrElse(
-                existingOrchSession -> updateExistingOrchSession(newSessionId, existingOrchSession),
-                () -> createNewOrchSession(newSessionId));
+        var orchSession =
+                existingOrchSessionOptional.isPresent()
+                        ? updateExistingOrchSession(newSessionId, existingOrchSessionOptional.get())
+                        : createNewOrchSession(newSessionId);
         attachOrchSessionIdToLogs(newSessionId);
 
         user = user.withSessionId(session.getSessionId());
@@ -653,10 +654,11 @@ public class AuthorisationHandler
                 reauthRequested,
                 requestedCredentialTrustLevel,
                 user,
-                existingSessionId);
+                existingSessionId,
+                orchSession);
     }
 
-    private void updateExistingOrchSession(
+    private OrchSessionItem updateExistingOrchSession(
             String newSessionId, OrchSessionItem existingOrchSession) {
         OrchSessionItem updatedOrchSession =
                 new OrchSessionItem(existingOrchSession)
@@ -673,11 +675,14 @@ public class AuthorisationHandler
                 "Updated existing Orch session ID from {} to {}",
                 existingOrchSession.getSessionId(),
                 newSessionId);
+        return updatedOrchSession;
     }
 
-    private void createNewOrchSession(String sessionId) {
-        orchSessionService.addSession(new OrchSessionItem(sessionId));
+    private OrchSessionItem createNewOrchSession(String sessionId) {
+        var newOrchSessionItem = new OrchSessionItem(sessionId);
+        orchSessionService.addSession(newOrchSessionItem);
         LOG.info("Created new Orch session with session ID: {}", sessionId);
+        return newOrchSessionItem;
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
@@ -689,7 +694,8 @@ public class AuthorisationHandler
             boolean reauthRequested,
             CredentialTrustLevel requestedCredentialTrustLevel,
             TxmaAuditUser user,
-            Optional<String> previousSessionId) {
+            Optional<String> previousSessionId,
+            OrchSessionItem orchSession) {
         LOG.info("Redirecting");
 
         Optional<Prompt.Type> prompt =
@@ -768,7 +774,11 @@ public class AuthorisationHandler
                         .claim("reauthenticate", reauthSub)
                         .claim("previous_govuk_signin_journey_id", reauthSid)
                         .claim("channel", client.getChannel())
-                        .claim("authenticated", session.isAuthenticated())
+                        .claim(
+                                "authenticated",
+                                configurationService.isUseOrchSessionForAuthenticatedClaimEnabled()
+                                        ? orchSession.getAuthenticated()
+                                        : session.isAuthenticated())
                         .claim(
                                 "current_credential_strength",
                                 session.getCurrentCredentialStrength());

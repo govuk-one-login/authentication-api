@@ -179,6 +179,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 public String getOrchestrationToAuthenticationEncryptionPublicKey() {
                     return publicKey;
                 }
+
+                @Override
+                public boolean isUseOrchSessionForAuthenticatedClaimEnabled() {
+                    return true;
+                }
+                ;
             };
 
     @Test
