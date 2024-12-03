@@ -163,6 +163,8 @@ class AuthenticationCallbackHandlerTest {
         reset(authorizationService);
         session.setCurrentCredentialStrength(null);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
+        when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
+                .thenReturn(null);
         when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any()))
                 .thenAnswer(
                         args -> {
@@ -534,44 +536,36 @@ class AuthenticationCallbackHandlerTest {
 
     private static Stream<Arguments> currentCredentialStrengthParams() {
         return Stream.of(
-                Arguments.of( // 1
-                        null,
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        true,
-                        CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of( // 2
+                Arguments.of(
+                        null, CredentialTrustLevel.MEDIUM_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL),
+                Arguments.of(
                         CredentialTrustLevel.LOW_LEVEL,
                         CredentialTrustLevel.MEDIUM_LEVEL,
-                        true,
                         CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of( // 3
+                Arguments.of(
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         CredentialTrustLevel.MEDIUM_LEVEL,
-                        false,
                         CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of( // 4
-                        null, CredentialTrustLevel.LOW_LEVEL, true, CredentialTrustLevel.LOW_LEVEL),
-                Arguments.of( // 5
+                Arguments.of(null, CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.LOW_LEVEL),
+                Arguments.of(
                         CredentialTrustLevel.LOW_LEVEL,
                         CredentialTrustLevel.LOW_LEVEL,
-                        false,
                         CredentialTrustLevel.LOW_LEVEL),
-                Arguments.of( // 6
+                Arguments.of(
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         CredentialTrustLevel.LOW_LEVEL,
-                        false,
                         CredentialTrustLevel.MEDIUM_LEVEL));
     }
 
     @ParameterizedTest
     @MethodSource("currentCredentialStrengthParams")
     void shouldSetTheCurrentCredentialStrengthToTheLowestCredentialTrustLevel(
-            CredentialTrustLevel orchSessionCurrentCredentialStrength,
+            CredentialTrustLevel userInfoCurrentCredentialStrengthResponse,
             CredentialTrustLevel credentialTrustLevel,
-            Boolean shouldUpdateCurrentCredentialStrength,
             CredentialTrustLevel correctCurrentCredentialStrengthSet)
             throws UnsuccessfulCredentialResponseException {
-        orchSessionWithCurrentCredentialStrengthValue(orchSessionCurrentCredentialStrength);
+        usingValidSession();
+        returnCurrentCredentialStrengthValue(userInfoCurrentCredentialStrengthResponse);
         clientSessionWithCredentialTrustValue(credentialTrustLevel);
         usingValidClient();
         var event = new APIGatewayProxyRequestEvent();
@@ -581,8 +575,7 @@ class AuthenticationCallbackHandlerTest {
 
         handler.handleRequest(event, null);
 
-        assertCurrentCredentialSetCorrectly(
-                shouldUpdateCurrentCredentialStrength, correctCurrentCredentialStrengthSet);
+        assertCurrentCredentialSetCorrectly(correctCurrentCredentialStrengthSet);
     }
 
     @Nested
@@ -1059,29 +1052,16 @@ class AuthenticationCallbackHandlerTest {
                 CLIENT_NAME);
     }
 
-    private void orchSessionWithCurrentCredentialStrengthValue(
-            CredentialTrustLevel currentCredentialStrength) {
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
-        when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchSessionItem(SESSION_ID)
-                                        .withAuthenticated(false)
-                                        .withCurrentCredentialStrength(currentCredentialStrength)));
+    private void returnCurrentCredentialStrengthValue(CredentialTrustLevel credentialTrustLevel) {
+        when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
+                .thenReturn(Objects.toString(credentialTrustLevel, null));
     }
 
     private void assertCurrentCredentialSetCorrectly(
-            Boolean shouldUpdateCurrentCredentialStrength,
             CredentialTrustLevel currentCredentialStrength) {
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        Integer timesToUpdate;
-        if (shouldUpdateCurrentCredentialStrength) {
-            timesToUpdate = 3;
-        } else {
-            timesToUpdate = 2;
-        }
 
-        verify(orchSessionService, times(timesToUpdate)).updateSession(orchSessionCaptor.capture());
+        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 orchSessionCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
                 equalTo(currentCredentialStrength));

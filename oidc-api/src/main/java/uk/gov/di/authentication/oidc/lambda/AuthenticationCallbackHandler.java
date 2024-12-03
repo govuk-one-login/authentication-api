@@ -533,14 +533,20 @@ public class AuthenticationCallbackHandler
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
                 sessionService.storeOrUpdateSession(userSession);
-                CredentialTrustLevel currentCredentialStrength =
-                        orchSession.getCurrentCredentialStrength();
+                var currentCredentialStrength =
+                        userInfo.getStringClaim(
+                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
                 if (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
+                        || lowestRequestedCredentialTrustLevel.compareTo(
+                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
                                 > 0) {
                     orchSessionService.updateSession(
                             orchSession.withCurrentCredentialStrength(
                                     lowestRequestedCredentialTrustLevel));
+                } else {
+                    orchSessionService.updateSession(
+                            orchSession.withCurrentCredentialStrength(
+                                    CredentialTrustLevel.valueOf(currentCredentialStrength)));
                 }
                 // ATO-975 logging to make sure there are no differences in production
                 LOG.info(
