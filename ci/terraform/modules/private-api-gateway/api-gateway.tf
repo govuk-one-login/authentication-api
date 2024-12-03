@@ -3,7 +3,7 @@ module "api-gateway" {
 
   environment                                  = var.environment
   api_gateway_name                             = var.api_gateway_name
-  tags                                         = var.tags
+  extra_tags                                   = var.extra_tags
   openapi_spec                                 = var.openapi_spec
   vpc_endpoint_ids                             = var.vpc_endpoint_ids
   enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging

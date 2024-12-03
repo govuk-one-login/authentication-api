@@ -21,8 +21,6 @@ resource "aws_iam_role" "grafana_metrics_read_only_role" {
   name  = "grafana-metrics-read-only"
 
   assume_role_policy = data.aws_iam_policy_document.tools_account_assume_role_policy.json
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "metrics_access_policy_document" {

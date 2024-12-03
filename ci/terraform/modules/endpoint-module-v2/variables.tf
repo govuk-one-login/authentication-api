@@ -112,10 +112,10 @@ variable "use_localstack" {
   default = false
 }
 
-variable "default_tags" {
+variable "extra_tags" {
   default     = {}
   type        = map(string)
-  description = "Default tags to apply to all resources"
+  description = "Extra tags to apply to resources"
 }
 
 variable "authorizer_id" {

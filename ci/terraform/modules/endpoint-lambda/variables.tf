@@ -68,10 +68,10 @@ variable "logging_endpoint_arns" {
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
 
-variable "default_tags" {
+variable "extra_tags" {
   default     = {}
   type        = map(string)
-  description = "Default tags to apply to all resources"
+  description = "Extra tags to apply to resources"
 }
 
 variable "cloudwatch_key_arn" {

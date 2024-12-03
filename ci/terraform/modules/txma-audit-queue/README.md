@@ -40,7 +40,7 @@ No modules.
 | <a name="input_environment"></a> [environment](#input\_environment) | n/a | `string` | n/a | yes |
 | <a name="input_service_name"></a> [service\_name](#input\_service\_name) | Name of the service that will be using these queues. Used for disambiguation | `string` | n/a | yes |
 | <a name="input_txma_account_id"></a> [txma\_account\_id](#input\_txma\_account\_id) | Account id of the corresponding TxMA processor | `string` | n/a | yes |
-| <a name="input_default_tags"></a> [default\_tags](#input\_default\_tags) | Default tags to apply to all resources | `map(string)` | `{}` | no |
+| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
 
 ## Outputs
 

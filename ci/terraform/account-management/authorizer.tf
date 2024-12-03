@@ -51,8 +51,6 @@ resource "aws_lambda_function" "authorizer" {
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
-  tags = local.default_tags
-
   depends_on = [module.account_management_api_authorizer_role]
 }
 

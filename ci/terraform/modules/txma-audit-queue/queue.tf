@@ -11,7 +11,7 @@ resource "aws_sqs_queue" "txma_audit_queue" {
     maxReceiveCount     = 3
   })
 
-  tags = var.default_tags
+  tags = var.extra_tags
 }
 
 resource "aws_sqs_queue" "txma_audit_dead_letter_queue" {
@@ -22,7 +22,7 @@ resource "aws_sqs_queue" "txma_audit_dead_letter_queue" {
 
   message_retention_seconds = 604800
 
-  tags = var.default_tags
+  tags = var.extra_tags
 }
 
 resource "aws_sqs_queue_policy" "txma_audit_queue_subscription" {

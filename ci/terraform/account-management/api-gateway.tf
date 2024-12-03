@@ -20,8 +20,6 @@ resource "aws_iam_role" "api_gateway_logging_iam_role" {
   name = "${var.environment}-account-management-api-gateway-logging-lambda-role"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "api_gateway_logging_policy" {
@@ -86,7 +84,6 @@ resource "aws_iam_role" "invocation_role" {
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
-  tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 
@@ -110,8 +107,6 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
 
 resource "aws_api_gateway_rest_api" "di_account_management_api" {
   name = "${var.environment}-di-account-management-api"
-
-  tags = local.default_tags
 }
 
 data "aws_region" "current" {
@@ -217,8 +212,6 @@ resource "aws_api_gateway_stage" "stage" {
     destination_arn = aws_cloudwatch_log_group.account_management_access_logs.arn
     format          = local.access_logging_template
   }
-
-  tags = local.default_tags
 
   depends_on = [
     module.update_email,

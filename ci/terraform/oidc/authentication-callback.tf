@@ -80,7 +80,6 @@ module "authentication_callback" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-  default_tags                           = local.default_tags
   api_key_required                       = false
 
   use_localstack = var.use_localstack

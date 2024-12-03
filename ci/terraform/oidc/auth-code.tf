@@ -58,7 +58,6 @@ module "auth-code" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-  default_tags                           = local.default_tags
 
   use_localstack = var.use_localstack
   depends_on = [

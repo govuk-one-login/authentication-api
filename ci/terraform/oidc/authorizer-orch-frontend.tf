@@ -42,8 +42,6 @@ resource "aws_lambda_function" "orch_frontend_authorizer" {
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-
-  tags = local.default_tags
 }
 
 resource "aws_iam_role" "orch_frontend_authorizer_invocation_role" {

@@ -103,16 +103,12 @@ resource "aws_lambda_function" "spot_response_lambda" {
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-
-  tags = local.default_tags
 }
 
 resource "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.spot_response_lambda.function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
-
-  tags = local.default_tags
 
   depends_on = [
     aws_lambda_function.spot_response_lambda

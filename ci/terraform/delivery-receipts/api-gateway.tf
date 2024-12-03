@@ -1,7 +1,5 @@
 resource "aws_api_gateway_rest_api" "di_authentication_delivery_receipts_api" {
   name = "${var.environment}-di-authentication-delivery-receipts-api"
-
-  tags = local.default_tags
 }
 
 resource "aws_api_gateway_deployment" "delivery_receipts_api_deployment" {
@@ -79,8 +77,6 @@ resource "aws_api_gateway_stage" "endpoint_delivery_receipts_stage" {
       format          = local.access_logging_template
     }
   }
-
-  tags = local.default_tags
 
   depends_on = [
     aws_api_gateway_deployment.delivery_receipts_api_deployment,

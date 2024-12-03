@@ -75,8 +75,6 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   lifecycle {
     prevent_destroy = true
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "user_profile_table" {
@@ -162,8 +160,6 @@ resource "aws_dynamodb_table" "user_profile_table" {
   lifecycle {
     prevent_destroy = true
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "client_registry_table" {
@@ -206,8 +202,6 @@ resource "aws_dynamodb_table" "client_registry_table" {
   lifecycle {
     prevent_destroy = true
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "identity_credentials_table" {
@@ -242,8 +236,6 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
     attribute_name = "TimeToExist"
     enabled        = true
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "doc_app_credential_table" {
@@ -278,8 +270,6 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
     attribute_name = "TimeToExist"
     enabled        = true
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_resource_policy" "doc_app_credential_table_policy" {
@@ -333,8 +323,6 @@ resource "aws_dynamodb_table" "common_passwords_table" {
   lifecycle {
     prevent_destroy = true
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "account_modifiers_table" {
@@ -364,8 +352,6 @@ resource "aws_dynamodb_table" "account_modifiers_table" {
   lifecycle {
     prevent_destroy = false
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "access_token_store" {
@@ -400,8 +386,6 @@ resource "aws_dynamodb_table" "access_token_store" {
     attribute_name = "TimeToExist"
     enabled        = true
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "auth_code_store" {
@@ -437,7 +421,6 @@ resource "aws_dynamodb_table" "auth_code_store" {
     enabled        = true
   }
 
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "bulk_email_users" {
@@ -496,7 +479,6 @@ resource "aws_dynamodb_table" "bulk_email_users" {
     write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "authentication_callback_userinfo" {
@@ -545,7 +527,6 @@ resource "aws_dynamodb_table" "authentication_callback_userinfo" {
     enabled        = true
   }
 
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "email-check-result" {
@@ -582,7 +563,6 @@ resource "aws_dynamodb_table" "email-check-result" {
     prevent_destroy = false
   }
 
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_table" "authentication_attempt_table" {
@@ -620,7 +600,6 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
     prevent_destroy = false
   }
 
-  tags = local.default_tags
 }
 
 resource "aws_dynamodb_resource_policy" "authentication_callback_userinfo_table_policy" {
@@ -714,5 +693,4 @@ resource "aws_dynamodb_table" "auth_session_table" {
     prevent_destroy = true
   }
 
-  tags = local.default_tags
 }

@@ -21,9 +21,7 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
 }
 
 resource "aws_api_gateway_rest_api" "di_auth_ext_api" {
-  name = "${var.environment}-di-auth-ext-api"
-
-  tags   = local.default_tags
+  name   = "${var.environment}-di-auth-ext-api"
   policy = data.aws_iam_policy_document.di_auth_ext_api_policy_document.json
 
   endpoint_configuration {
@@ -99,7 +97,6 @@ resource "aws_api_gateway_stage" "di_auth_ext_stage" {
     aws_api_gateway_deployment.auth_ext_api_deployment,
   ]
 
-  tags = local.default_tags
   # checkov:skip=CKV_AWS_51:Client cert authentication is something we might want to consider in the future
   # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda
 }

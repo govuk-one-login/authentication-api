@@ -29,8 +29,6 @@ resource "aws_lambda_function" "common_passwords_dynamo_update_lambda" {
       ENVIRONMENT = var.environment
     })
   }
-
-  tags = local.default_tags
 }
 
 resource "aws_s3_bucket_notification" "common_passwords_dynamo_update_lambda_trigger" {
@@ -57,8 +55,6 @@ resource "aws_cloudwatch_log_group" "common_passwords_update_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.common_passwords_dynamo_update_lambda.function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
-
-  tags = local.default_tags
 
   depends_on = [
     aws_lambda_function.common_passwords_dynamo_update_lambda

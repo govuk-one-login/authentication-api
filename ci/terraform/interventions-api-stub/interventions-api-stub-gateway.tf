@@ -48,7 +48,6 @@ resource "aws_api_gateway_rest_api" "interventions_api_stub" {
     }
   })
 
-  tags = local.default_tags
   endpoint_configuration {
     types            = ["PRIVATE"]
     vpc_endpoint_ids = local.vpc_endpoint_ids
@@ -127,8 +126,6 @@ resource "aws_api_gateway_stage" "interventions_api_stub_stage" {
     module.account_interventions_stub_role,
     aws_api_gateway_deployment.interventions_api_stub_deployment
   ]
-
-  tags = local.default_tags
 }
 
 resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {

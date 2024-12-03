@@ -1,7 +1,5 @@
 resource "aws_api_gateway_rest_api" "di_authentication_test_services_api" {
   name = "${var.environment}-di-authentication-test-services-api"
-
-  tags = local.default_tags
 }
 
 resource "aws_api_gateway_usage_plan" "di_authentication_test_services_api_usage_plan" {
@@ -101,8 +99,6 @@ resource "aws_api_gateway_stage" "endpoint_test_services_stage" {
       format          = local.access_logging_template
     }
   }
-
-  tags = local.default_tags
 
   depends_on = [
     aws_api_gateway_deployment.test_services_api_deployment,

@@ -20,15 +20,16 @@ provider "aws" {
   skip_metadata_api_check     = false
   skip_requesting_account_id  = false
 
+  default_tags {
+    tags = {
+      environment = var.environment
+      application = "auth-external-api"
+    }
+  }
+
 }
 
 locals {
-  // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
-  default_tags = {
-    environment = var.environment
-    application = "auth-external-api"
-  }
-
   request_tracing_allowed = contains(["build", "sandpit"], var.environment)
 
   access_logging_template = jsonencode({

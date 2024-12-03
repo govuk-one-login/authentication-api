@@ -10,8 +10,6 @@ resource "aws_sqs_queue" "back_channel_logout_queue" {
 
   kms_master_key_id                 = var.cmk_for_back_channel_logout_enabled ? aws_kms_key.back_channel_logout_queue_encryption_key.arn : "alias/aws/sqs"
   kms_data_key_reuse_period_seconds = 300
-
-  tags = local.default_tags
 }
 
 resource "aws_sqs_queue" "back_channel_logout_dead_letter_queue" {
@@ -21,8 +19,6 @@ resource "aws_sqs_queue" "back_channel_logout_dead_letter_queue" {
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
 
   message_retention_seconds = 3600 * 6
-
-  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "back_channel_logout_dlq_queue_policy_document" {
@@ -61,8 +57,6 @@ resource "aws_kms_key" "back_channel_logout_queue_encryption_key" {
   enable_key_rotation      = true
 
   policy = data.aws_iam_policy_document.back_channel_logout_queue_encryption_key_access_policy.json
-
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "back_channel_logout_queue_encryption_key_alias" {

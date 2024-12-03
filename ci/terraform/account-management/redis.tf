@@ -5,8 +5,6 @@ locals {
 resource "aws_elasticache_subnet_group" "account_management_redis_session_store" {
   name       = "${var.environment}-acct-mgmt-redis-session-store-cache-subnet"
   subnet_ids = local.private_subnet_ids
-
-  tags = local.default_tags
 }
 
 
@@ -53,6 +51,4 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
       engine_version
     ]
   }
-
-  tags = local.default_tags
 }

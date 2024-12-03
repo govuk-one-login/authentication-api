@@ -5,8 +5,6 @@ resource "aws_kms_key" "storage_token_signing_key_ecc" {
   customer_master_key_spec = "ECC_NIST_P256"
 
   policy = data.aws_iam_policy_document.storage_token_signing_key_access_policy.json
-
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "storage_token_signing_key_alias" {
@@ -54,8 +52,6 @@ resource "aws_kms_key" "mfa_reset_token_signing_key_ecc" {
   customer_master_key_spec = "ECC_NIST_P256"
 
   policy = data.aws_iam_policy_document.mfa_reset_signing_key_access_policy.json
-
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "mfa_reset_token_signing_key_alias" {
@@ -88,8 +84,6 @@ resource "aws_kms_key" "mfa_reset_jar_signing_key_ecc" {
   customer_master_key_spec = "ECC_NIST_P256"
 
   policy = data.aws_iam_policy_document.mfa_reset_jar_signing_key_access_policy.json
-
-  tags = local.default_tags
 }
 
 resource "aws_kms_alias" "mfa_reset_jar_signing_key_alias" {

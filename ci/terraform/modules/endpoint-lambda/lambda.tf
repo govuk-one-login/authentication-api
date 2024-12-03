@@ -42,12 +42,12 @@ resource "aws_lambda_function" "endpoint_lambda" {
     }
   }
 
-  tags = var.default_tags
+  tags = var.extra_tags
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
-  tags              = var.default_tags
+  tags              = var.extra_tags
   kms_key_id        = var.cloudwatch_key_arn
   retention_in_days = var.cloudwatch_log_retention
 

@@ -46,7 +46,6 @@ module "account-management-method_management_gateway" {
 
   api_gateway_name = "${var.environment}-di-account-management-api-method-management"
   environment      = var.environment
-  tags             = local.default_tags
 
   enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
   enable_api_gateway_execution_request_tracing = var.enable_api_gateway_execution_request_tracing && local.request_tracing_allowed
