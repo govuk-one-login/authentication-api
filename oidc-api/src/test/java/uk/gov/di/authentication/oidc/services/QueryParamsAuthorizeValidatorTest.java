@@ -576,6 +576,33 @@ class QueryParamsAuthorizeValidatorTest {
         assertEquals(STATE, authRequestError.get().state());
     }
 
+    @Test
+    void shouldReturnErrorWhenMaxAgeIsInvalid() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(NONCE)
+                        .maxAge(-5);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequestBuilder.build());
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().errorObject(),
+                equalTo(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Value of max age cannot be lower than -1")));
+        assertEquals(STATE, errorObject.get().state());
+    }
+
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
         return generateClientRegistry(
                 redirectURI, clientID, singletonList("openid"), false, DEFAULT_CLIENT_LOCS);
