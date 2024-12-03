@@ -297,6 +297,7 @@ class AuthorisationHandlerTest {
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
+        when(configService.isUseOrchSessionForAuthenticatedClaimEnabled()).thenReturn(true);
     }
 
     @Nested
@@ -473,8 +474,9 @@ class AuthorisationHandlerTest {
 
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
-        void shouldPassAuthenticatedClaimToAuthFromSession(boolean isAuthenticated) {
-            withExistingSession(new Session(NEW_SESSION_ID).setAuthenticated(isAuthenticated));
+        void shouldPassAuthenticatedClaimToAuthFromOrchSession(boolean isAuthenticated) {
+            withExistingOrchSession(
+                    new OrchSessionItem(NEW_SESSION_ID).withAuthenticated(isAuthenticated));
 
             var requestParams =
                     buildRequestParams(
@@ -2586,6 +2588,12 @@ class AuthorisationHandlerTest {
                         .nonce(new Nonce());
         credentialTrustLevel.ifPresent(t -> builder.customParameter("vtr", t));
         return builder.build();
+    }
+
+    private void withExistingOrchSession(OrchSessionItem orchSession) {
+        when(orchSessionService.getSessionFromSessionCookie(any()))
+                .thenReturn(Optional.of(orchSession));
+        when(orchSessionService.addOrUpdateSessionId(any(), any())).thenReturn(orchSession);
     }
 
     private void withExistingSession(Session session) {
