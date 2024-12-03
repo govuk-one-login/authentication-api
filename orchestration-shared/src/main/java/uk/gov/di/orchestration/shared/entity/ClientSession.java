@@ -25,6 +25,8 @@ public class ClientSession {
 
     @Expose private List<VectorOfTrust> vtrList;
 
+    @Expose private String rpPairwiseId;
+
     @Expose private Subject docAppSubjectId;
 
     @Expose private String clientName;
@@ -62,6 +64,15 @@ public class ClientSession {
 
     public List<VectorOfTrust> getVtrList() {
         return vtrList;
+    }
+
+    public String getRpPairwiseId() {
+        return rpPairwiseId;
+    }
+
+    public ClientSession setRpPairwiseId(String rpPairwiseId) {
+        this.rpPairwiseId = rpPairwiseId;
+        return this;
     }
 
     public Subject getDocAppSubjectId() {
