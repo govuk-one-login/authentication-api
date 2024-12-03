@@ -2,10 +2,10 @@ data "terraform_remote_state" "dns" {
   count   = var.is_localstack || var.is_sandpit ? 0 : 1
   backend = "s3"
   config = {
-    bucket   = var.dns_state_bucket
-    key      = var.dns_state_key
-    role_arn = var.dns_state_role
-    region   = var.aws_region
+    bucket      = var.dns_state_bucket
+    key         = var.dns_state_key
+    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
+    region      = var.aws_region
   }
 }
 

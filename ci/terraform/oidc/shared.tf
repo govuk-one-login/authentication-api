@@ -1,10 +1,11 @@
 data "terraform_remote_state" "shared" {
   backend = "s3"
   config = {
-    bucket                      = var.shared_state_bucket
-    key                         = "${var.environment}-shared-terraform.tfstate"
-    role_arn                    = var.deployer_role_arn
-    region                      = var.aws_region
+    bucket      = var.shared_state_bucket
+    key         = "${var.environment}-shared-terraform.tfstate"
+    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
+    region      = var.aws_region
+
     endpoint                    = var.use_localstack ? "http://localhost:45678" : null
     iam_endpoint                = var.use_localstack ? "http://localhost:45678" : null
     sts_endpoint                = var.use_localstack ? "http://localhost:45678" : null
@@ -17,10 +18,11 @@ data "terraform_remote_state" "shared" {
 data "terraform_remote_state" "auth-ext-api" {
   backend = "s3"
   config = {
-    bucket                      = var.shared_state_bucket
-    key                         = "${var.environment}-auth-external-api-terraform.tfstate"
-    role_arn                    = var.deployer_role_arn
-    region                      = var.aws_region
+    bucket      = var.shared_state_bucket
+    key         = "${var.environment}-auth-external-api-terraform.tfstate"
+    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
+    region      = var.aws_region
+
     endpoint                    = var.use_localstack ? "http://localhost:45678" : null
     iam_endpoint                = var.use_localstack ? "http://localhost:45678" : null
     sts_endpoint                = var.use_localstack ? "http://localhost:45678" : null
@@ -33,10 +35,10 @@ data "terraform_remote_state" "auth-ext-api" {
 data "terraform_remote_state" "contra" {
   backend = "s3"
   config = {
-    bucket   = var.contra_state_bucket
-    key      = "${var.environment}-experian-phone-check-terraform.tfstate"
-    role_arn = var.deployer_role_arn
-    region   = var.aws_region
+    bucket      = var.contra_state_bucket
+    key         = "${var.environment}-experian-phone-check-terraform.tfstate"
+    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
+    region      = var.aws_region
   }
 }
 
