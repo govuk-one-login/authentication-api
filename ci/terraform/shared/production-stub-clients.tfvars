@@ -19,6 +19,7 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
+    max_age_enabled   = false
   },
   {
     client_name           = "relying-party-stub-production-app"
@@ -38,5 +39,6 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
+    max_age_enabled   = false
   },
 ]
