@@ -781,7 +781,7 @@ public class AuthorisationHandler
                                         : session.isAuthenticated())
                         .claim(
                                 "current_credential_strength",
-                                session.getCurrentCredentialStrength());
+                                orchSession.getCurrentCredentialStrength());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
 
