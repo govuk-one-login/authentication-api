@@ -402,9 +402,12 @@ public class AuthenticationCallbackHandler
 
                 userSession.setAuthenticated(true);
                 orchSession.setAuthenticated(true);
+                clientSession.setRpPairwiseId(
+                        userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
 
                 sessionService.storeOrUpdateSession(userSession);
                 orchSessionService.updateSession(orchSession);
+                clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
 
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =

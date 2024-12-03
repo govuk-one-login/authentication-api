@@ -148,6 +148,8 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getSubject()).thenReturn(new Subject(TEST_INTERNAL_COMMON_SUBJECT_ID));
         when(USER_INFO.getClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue(), String.class))
                 .thenReturn(RP_PAIRWISE_ID.getValue());
+        when(USER_INFO.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()))
+                .thenReturn(RP_PAIRWISE_ID.getValue());
         when(USER_INFO.getPhoneNumber()).thenReturn("1234");
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
@@ -272,6 +274,7 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())),
                         eq(pair("nonce", RP_NONCE.getValue())));
         assertOrchSessionUpdated();
+        assertClientSessionUpdated();
     }
 
     @Test
@@ -1030,6 +1033,13 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 orchSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
                 equalTo(lowestCredentialTrustLevel));
+    }
+
+    private void assertClientSessionUpdated() {
+        var clientSessionCaptor = ArgumentCaptor.forClass(ClientSession.class);
+        verify(clientSessionService, times(1))
+                .updateStoredClientSession(any(), clientSessionCaptor.capture());
+        assertEquals(RP_PAIRWISE_ID.getValue(), clientSessionCaptor.getValue().getRpPairwiseId());
     }
 
     private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {
