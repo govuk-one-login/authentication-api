@@ -401,6 +401,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public boolean isUseOrchSessionForAuthenticatedClaimEnabled() {
+        return getFlagOrFalse("USE_ORCH_SESSION_FOR_AUTHENTICATED_CLAIM");
+    }
+
     public boolean isCurrentCredentialStrengthInOrchSessionEnabled() {
         return getFlagOrFalse("CURRENT_CREDENTIAL_STRENGTH_IN_ORCH_SESSION");
     }
