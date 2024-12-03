@@ -6,8 +6,11 @@ terraform {
 provider "aws" {
   region = var.aws_region
 
-  assume_role {
-    role_arn = var.deployer_role_arn
+  dynamic "assume_role" {
+    for_each = var.deployer_role_arn != null ? [var.deployer_role_arn] : []
+    content {
+      role_arn = assume_role.value
+    }
   }
 
   insecure = var.use_localstack
@@ -40,8 +43,11 @@ provider "aws" {
 
   region = "us-east-1"
 
-  assume_role {
-    role_arn = var.deployer_role_arn
+  dynamic "assume_role" {
+    for_each = var.deployer_role_arn != null ? [var.deployer_role_arn] : []
+    content {
+      role_arn = assume_role.value
+    }
   }
 }
 

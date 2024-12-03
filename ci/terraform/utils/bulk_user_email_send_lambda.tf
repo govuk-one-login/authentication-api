@@ -87,7 +87,7 @@ resource "aws_cloudwatch_log_subscription_filter" "bulk_user_email_send_log_subs
 resource "aws_cloudwatch_event_rule" "bulk_user_email_send_schedule" {
   count               = local.deploy_bulk_email_users_count
   name                = "${var.environment}-bulk-user-email-send-schedule"
-  is_enabled          = var.bulk_user_email_send_schedule_enabled
+  state               = var.bulk_user_email_send_schedule_enabled ? "ENABLED" : "DISABLED"
   schedule_expression = var.bulk_user_email_send_schedule_expression
 }
 

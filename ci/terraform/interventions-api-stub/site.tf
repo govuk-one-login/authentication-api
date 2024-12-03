@@ -4,9 +4,14 @@ terraform {
 }
 provider "aws" {
   region = var.aws_region
-  assume_role {
-    role_arn = var.deployer_role_arn
+
+  dynamic "assume_role" {
+    for_each = var.deployer_role_arn != null ? [var.deployer_role_arn] : []
+    content {
+      role_arn = assume_role.value
+    }
   }
+
   insecure                    = false
   s3_use_path_style           = false
   skip_credentials_validation = false
