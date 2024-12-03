@@ -20,6 +20,10 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
@@ -28,15 +32,18 @@ import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResp
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.io.IOException;
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
+import java.util.stream.Stream;
 
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -45,6 +52,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class ReverificationResultServiceTest {
 
@@ -65,6 +73,10 @@ class ReverificationResultServiceTest {
                     + "\"success\": true"
                     + "}";
     private ReverificationResultService reverificationResultService;
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(ReverificationResultService.class);
 
     @BeforeEach
     void setUp() {
@@ -118,6 +130,67 @@ class ReverificationResultServiceTest {
         assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
     }
 
+    static Stream<Arguments> errorResponseArgumentProvider() {
+        return Stream.of(
+                Arguments.of(
+                        "Well formatted error response",
+                        """
+                        {
+                            "error": "server_error",
+                            "error_description": "server_error_description"
+                        }
+                        """
+                                .strip()
+                                .replace("\n", "")),
+                Arguments.of(
+                        "Not a JSON error response",
+                        """
+                        {
+                            "error": "server_error,
+                            "error_description": "server_error_description"
+                        }
+                        """
+                                .strip()
+                                .replace("\n", "")),
+                Arguments.of("Empty error response", ""),
+                Arguments.of(
+                        "Unexpected JSON error response",
+                        """
+                        {   "unknown": "unexpected",
+                            "error": "server_error,
+                            "error_description": "server_error_description"
+                        }
+                        """
+                                .strip()
+                                .replace("\n", "")));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("errorResponseArgumentProvider")
+    void shouldRetryTokenEndpointIfErrorResponse(String scenario, String error)
+            throws IOException, com.nimbusds.oauth2.sdk.ParseException {
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        var responseWithInvalidError = new HTTPResponse(500);
+        responseWithInvalidError.setContentType("application/json");
+        responseWithInvalidError.setContent(error);
+        responseWithInvalidError.setStatusMessage("client error");
+
+        when(tokenRequest.toHTTPRequest().send())
+                .thenReturn(responseWithInvalidError)
+                .thenReturn(getSuccessfulTokenHttpResponse());
+
+        var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+
+        var template = "Unsuccessful {} response from IPV token endpoint on attempt: {}; error: {}";
+        template = template.replaceFirst("\\{}", "500");
+        template = template.replaceFirst("\\{}", "1");
+        template = template.replaceFirst("\\{}", error);
+
+        assertThat(logging.events(), hasItem(withMessageContaining(template)));
+    }
+
     @Test
     void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail() throws IOException {
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
@@ -169,9 +242,7 @@ class ReverificationResultServiceTest {
 
         assertThrows(
                 UnsuccessfulReverificationResponseException.class,
-                () -> {
-                    reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
-                });
+                () -> reverificationResultService.sendIpvReverificationRequest(userInfoRequest));
 
         verify(userInfoRequest.toHTTPRequest(), times(2)).send();
     }
@@ -183,9 +254,7 @@ class ReverificationResultServiceTest {
 
         assertThrows(
                 RuntimeException.class,
-                () -> {
-                    reverificationResultService.sendTokenRequest(tokenRequest);
-                });
+                () -> reverificationResultService.sendTokenRequest(tokenRequest));
     }
 
     @Test
@@ -199,9 +268,7 @@ class ReverificationResultServiceTest {
 
         assertThrows(
                 RuntimeException.class,
-                () -> {
-                    reverificationResultService.sendTokenRequest(tokenRequest);
-                });
+                () -> reverificationResultService.sendTokenRequest(tokenRequest));
     }
 
     private void signJWTWithKMS() throws JOSEException {

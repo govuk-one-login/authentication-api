@@ -88,17 +88,25 @@ public class ReverificationResultService {
             int count = 0;
             int maxTries = 2;
             TokenResponse tokenResponse;
+
             do {
-                if (count > 0) LOG.warn("Retrying IPV access token request");
+                if (count > 0) {
+                    LOG.warn("Retrying IPV access token request");
+                }
+
                 count++;
                 var httpRequest = tokenRequest.toHTTPRequest();
                 var httpResponse = httpRequest.send();
+
                 tokenResponse = TokenResponse.parse(httpResponse);
+
                 if (!tokenResponse.indicatesSuccess()) {
-                    HTTPResponse response = tokenResponse.toHTTPResponse();
+                    var response = tokenResponse.toErrorResponse();
                     LOG.warn(
-                            "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
-                            response.getStatusCode(), count, response.getContent());
+                            "Unsuccessful {} response from IPV token endpoint on attempt: {}; error: {}",
+                            response.toHTTPResponse().getStatusCode(),
+                            count,
+                            httpResponse.getContent());
                 }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
@@ -125,8 +133,10 @@ public class ReverificationResultService {
                 response = userInfoRequest.toHTTPRequest().send();
                 if (!response.indicatesSuccess()) {
                     LOG.warn(
-                            "Unsuccessful %s response from IPV reverification endpoint on attempt %d: %s ",
-                            response.getStatusCode(), count, response.getContent());
+                            "Unsuccessful {} response from IPV reverification endpoint on attempt{}: {} ",
+                            response.getStatusCode(),
+                            count,
+                            response.getContent());
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
