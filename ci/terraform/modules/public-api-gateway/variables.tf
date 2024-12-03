@@ -51,3 +51,8 @@ variable "waf_arns" {
   description = "The ARNs of any WAFs to attach to the API Gateway"
   type        = list(string)
 }
+
+variable "domain_name" {
+  description = "The domain name to bind to the API Gateway"
+  type        = string
+}
