@@ -383,6 +383,10 @@ public class AuthenticationCallbackHandler
                 LOG.info(
                         "is uplift_required attached to auth-external-api userinfo response: {}",
                         userInfo.getClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()) != null);
+                LOG.info(
+                        "is rpPairwiseId attached to auth-external-api userinfo response: {}",
+                        userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue())
+                                != null);
                 //
 
                 Boolean newAccount =
