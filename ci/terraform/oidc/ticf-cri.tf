@@ -73,6 +73,14 @@ resource "aws_iam_policy" "ticf_cri_lambda_invocation_policy" {
   policy = data.aws_iam_policy_document.ticf_cri_lambda_invocation_policy_document[count.index].json
 }
 
+resource "aws_lambda_alias" "ticf_cri_lambda_alias" {
+  count            = local.deploy_ticf_cri_count
+  name             = "${var.environment}-ticf-cri-lambda-active"
+  description      = "Alias pointing at active version of Lambda"
+  function_name    = aws_lambda_function.ticf_cri_lambda[0].arn
+  function_version = aws_lambda_function.ticf_cri_lambda[0].version
+}
+
 data "aws_iam_policy_document" "ticf_cri_lambda_invocation_policy_document" {
   count = local.deploy_ticf_cri_count
   statement {
@@ -84,7 +92,7 @@ data "aws_iam_policy_document" "ticf_cri_lambda_invocation_policy_document" {
     ]
 
     resources = [
-      aws_lambda_function.ticf_cri_lambda[0].arn,
+      aws_lambda_alias.ticf_cri_lambda_alias[0].arn,
     ]
   }
 }
