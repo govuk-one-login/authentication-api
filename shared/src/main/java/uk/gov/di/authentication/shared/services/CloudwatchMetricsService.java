@@ -4,6 +4,7 @@ import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.metrics.MetricValidationWarningLogger;
 
 import java.util.Map;
 
@@ -40,11 +41,17 @@ public class CloudwatchMetricsService {
                     var metrics = new MetricsLogger();
                     var dimensionsSet = new DimensionSet();
 
+                    String namespace = "Authentication";
                     dimensions.forEach(dimensionsSet::addDimension);
+                    Unit unit = Unit.NONE;
 
-                    metrics.setNamespace("Authentication");
+                    MetricValidationWarningLogger.validateNamespace(namespace);
+                    MetricValidationWarningLogger.validateMetric(name, value, unit);
+                    dimensions.forEach(MetricValidationWarningLogger::validateDimensionSet);
+
+                    metrics.setNamespace(namespace);
                     metrics.putDimensions(dimensionsSet);
-                    metrics.putMetric(name, value, Unit.NONE);
+                    metrics.putMetric(name, value, unit);
                     metrics.flush();
                 });
     }
