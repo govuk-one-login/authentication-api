@@ -9,69 +9,56 @@ module "frontend_api_ticf_cri_role" {
   }
 }
 
-resource "aws_lambda_function" "ticf_cri_lambda" {
-  count         = local.deploy_ticf_cri_count
-  function_name = "${var.environment}-ticf-cri-lambda"
-  role          = module.frontend_api_ticf_cri_role[count.index].arn
-  handler       = "uk.gov.di.authentication.frontendapi.lambda.TicfCriHandler::handleRequest"
-  runtime       = "java17"
-  publish       = true
-  timeout       = 60
+module "ticf_cri_lambda" {
+  count  = local.deploy_ticf_cri_count
+  source = "../modules/endpoint-lambda"
 
-  memory_size                    = lookup(var.performance_tuning, "ticf-cri", local.default_performance_parameters).memory
-  reserved_concurrent_executions = 1
+  endpoint_name = "ticf-cri"
 
-  tracing_config {
-    mode = "Active"
-  }
+  environment = var.environment
 
-  s3_bucket         = aws_s3_bucket.source_bucket.bucket
-  s3_key            = aws_s3_object.frontend_api_release_zip.key
-  s3_object_version = aws_s3_object.frontend_api_release_zip.version_id
+  handler_environment_variables = merge(var.notify_template_map, {
+    ENVIRONMENT                   = var.environment
+    TICF_CRI_SERVICE_CALL_TIMEOUT = var.ticf_cri_service_call_timeout
+    TICF_CRI_SERVICE_URI          = var.ticf_cri_service_uri
+  })
+  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.TicfCriHandler::handleRequest"
+  handler_runtime       = "java17"
 
-  kms_key_arn             = local.lambda_env_vars_encryption_kms_key_arn
+  source_bucket           = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file         = aws_s3_object.frontend_api_release_zip.key
+  lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  vpc_config {
-    security_group_ids = [local.authentication_egress_security_group_id]
-    subnet_ids         = local.authentication_private_subnet_ids
-  }
-
-  environment {
-    variables = merge(var.notify_template_map, {
-      ENVIRONMENT                   = var.environment
-      TICF_CRI_SERVICE_CALL_TIMEOUT = var.ticf_cri_service_call_timeout
-      TICF_CRI_SERVICE_URI          = var.ticf_cri_service_uri
-    })
-  }
-  # checkov:skip=CKV_AWS_116:Adding a DLQ would not be useful as we're not adding a retry policy.
-  tags = {
-    Service = "ticf-cri"
-  }
+  authentication_vpc_arn = local.authentication_vpc_arn
+  security_group_ids = [
+    local.authentication_security_group_id,
+  ]
+  subnet_id                              = local.authentication_private_subnet_ids
+  lambda_role_arn                        = module.frontend_api_ticf_cri_role[count.index].arn
+  logging_endpoint_arns                  = var.logging_endpoint_arns
+  cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  cloudwatch_log_retention               = var.cloudwatch_log_retention
+  lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
+  account_alias                          = data.aws_iam_account_alias.current.account_alias
+  slack_event_topic_arn                  = data.aws_sns_topic.slack_events.arn
+  dynatrace_secret                       = local.dynatrace_secret
 }
-
-resource "aws_cloudwatch_log_group" "ticf_cri_lambda_log_group" {
-  count = local.deploy_ticf_cri_count # only create log group if lambda is deployed
-
-  name              = "/aws/lambda/${aws_lambda_function.ticf_cri_lambda[count.index].function_name}"
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-  retention_in_days = var.cloudwatch_log_retention
-  tags = {
-    Service = "ticf-cri"
-  }
+moved {
+  from = aws_lambda_function.ticf_cri_lambda[0]
+  to   = module.ticf_cri_lambda[0].aws_lambda_function.endpoint_lambda
 }
-
-resource "aws_cloudwatch_log_subscription_filter" "ticf_cri_lambda_log_subscription" {
-  count = local.deploy_ticf_cri_count == 1 ? length(var.logging_endpoint_arns) : 0 # only create log subscription(s) if lambda is deployed
-
-  name            = "${aws_lambda_function.ticf_cri_lambda[count.index].function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.ticf_cri_lambda_log_group[count.index].name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
-
-  lifecycle {
-    create_before_destroy = false
-  }
+moved {
+  from = aws_cloudwatch_log_group.ticf_cri_lambda_log_group[0]
+  to   = module.ticf_cri_lambda[0].aws_cloudwatch_log_group.lambda_log_group
+}
+moved {
+  from = aws_cloudwatch_log_subscription_filter.ticf_cri_lambda_log_subscription[0]
+  to   = module.ticf_cri_lambda[0].aws_cloudwatch_log_subscription_filter.log_subscription
+}
+moved {
+  from = aws_lambda_alias.ticf_cri_lambda_alias[0]
+  to   = module.ticf_cri_lambda[0].aws_lambda_alias.endpoint_lambda
 }
 
 resource "aws_iam_policy" "ticf_cri_lambda_invocation_policy" {
@@ -85,14 +72,6 @@ resource "aws_iam_policy" "ticf_cri_lambda_invocation_policy" {
   }
 }
 
-resource "aws_lambda_alias" "ticf_cri_lambda_alias" {
-  count            = local.deploy_ticf_cri_count
-  name             = "${var.environment}-ticf-cri-lambda-active"
-  description      = "Alias pointing at active version of Lambda"
-  function_name    = aws_lambda_function.ticf_cri_lambda[0].arn
-  function_version = aws_lambda_function.ticf_cri_lambda[0].version
-}
-
 data "aws_iam_policy_document" "ticf_cri_lambda_invocation_policy_document" {
   count = local.deploy_ticf_cri_count
   statement {
@@ -104,7 +83,7 @@ data "aws_iam_policy_document" "ticf_cri_lambda_invocation_policy_document" {
     ]
 
     resources = [
-      aws_lambda_alias.ticf_cri_lambda_alias[0].arn,
+      module.ticf_cri_lambda[count.index].endpoint_lambda_alias.arn,
     ]
   }
 }
