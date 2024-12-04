@@ -515,9 +515,9 @@ class AuthorisationHandlerTest {
         @Test
         void shouldPassCurrentCredentialStrengthClaimToAuthFromSession() {
             var currentCredentialStrength = CredentialTrustLevel.MEDIUM_LEVEL;
-            withExistingSession(
-                    new Session(NEW_SESSION_ID)
-                            .setCurrentCredentialStrength(currentCredentialStrength));
+            withExistingOrchSession(
+                    new OrchSessionItem(NEW_SESSION_ID)
+                            .withCurrentCredentialStrength(currentCredentialStrength));
 
             var requestParams =
                     buildRequestParams(
