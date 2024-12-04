@@ -77,5 +77,6 @@ locals {
   email_check_results_encryption_policy_arn           = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
   experian_phone_check_sqs_queue_id                   = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_id
   experian_phone_check_sqs_queue_policy_arn           = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_policy_arn
+  id_reverification_state_key_arn                     = data.terraform_remote_state.shared.outputs.id_reverification_state_key_arn
   secure_pipelines_environment                        = var.environment == "sandpit" ? "dev" : var.environment
 }
