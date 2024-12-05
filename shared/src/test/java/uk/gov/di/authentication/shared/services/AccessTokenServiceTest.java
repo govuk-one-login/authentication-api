@@ -8,7 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 
-import java.util.Map;
+import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -59,17 +59,14 @@ class AccessTokenServiceTest {
         accessTokenService.get(TEST_PARTITION);
 
         verify(cloudwatchMetricsService, times(1))
-                .incrementCounter(
-                        "AccessTokenServiceInitialQueryAttempt",
-                        Map.of("Environment", "test-environment"));
+                .incrementCounter("AccessTokenServiceInitialQueryAttempt", Collections.emptyMap());
         verify(cloudwatchMetricsService, times(1))
                 .incrementCounter(
-                        "AccessTokenServiceConsistentReadQueryAttempt",
-                        Map.of("Environment", "test-environment"));
+                        "AccessTokenServiceConsistentReadQueryAttempt", Collections.emptyMap());
         verify(cloudwatchMetricsService, times(1))
                 .incrementCounter(
                         "AccessTokenServiceConsistentReadQueryAttemptSuccess",
-                        Map.of("Environment", "test-environment"));
+                        Collections.emptyMap());
     }
 
     @Test
@@ -79,12 +76,8 @@ class AccessTokenServiceTest {
         accessTokenService.get(TEST_PARTITION);
 
         verify(cloudwatchMetricsService, times(1))
-                .incrementCounter(
-                        "AccessTokenServiceInitialQueryAttempt",
-                        Map.of("Environment", "test-environment"));
+                .incrementCounter("AccessTokenServiceInitialQueryAttempt", Collections.emptyMap());
         verify(cloudwatchMetricsService, times(1))
-                .incrementCounter(
-                        "AccessTokenServiceInitialQuerySuccess",
-                        Map.of("Environment", "test-environment"));
+                .incrementCounter("AccessTokenServiceInitialQuerySuccess", Collections.emptyMap());
     }
 }

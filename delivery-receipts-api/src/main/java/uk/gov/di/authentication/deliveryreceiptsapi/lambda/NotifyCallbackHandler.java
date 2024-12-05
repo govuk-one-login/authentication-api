@@ -140,7 +140,6 @@ public class NotifyCallbackHandler
             Map<String, String> additionalContext,
             NotifyDeliveryReceipt deliveryReceipt) {
         var sentMetricsMap = new HashMap<String, String>();
-        sentMetricsMap.put("Environment", configurationService.getEnvironment());
         sentMetricsMap.put("NotifyStatus", deliveryReceipt.status());
         sentMetricsMap.putAll(additionalContext);
 
@@ -162,7 +161,6 @@ public class NotifyCallbackHandler
             double duration = Duration.between(createdAt, completedAt).toMillis();
             var metricsContext =
                     Map.ofEntries(
-                            Map.entry("Environment", configurationService.getEnvironment()),
                             Map.entry("NotificationType", deliveryReceipt.notificationType()));
             cloudwatchMetricsService.putEmbeddedValue(
                     "NotifyDeliveryDuration", duration, metricsContext);
