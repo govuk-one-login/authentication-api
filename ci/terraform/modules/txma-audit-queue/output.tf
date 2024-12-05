@@ -13,3 +13,7 @@ output "kms_key_arn" {
 output "access_policy_arn" {
   value = aws_iam_policy.txma_audit_queue_access_policy.arn
 }
+
+output "access_policy_document" {
+  value = data.aws_iam_policy_document.txma_audit_queue_access_policy_document
+}
