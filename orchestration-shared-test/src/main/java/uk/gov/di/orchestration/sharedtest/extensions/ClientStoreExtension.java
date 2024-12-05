@@ -121,7 +121,43 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientType,
                 emptyList(),
                 jarValidationRequired,
-                clientLoCs);
+                clientLoCs,
+                false);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            ClientType clientType,
+            boolean jarValidationRequired,
+            List<String> clientLoCs,
+            boolean maxAgeEnabled) {
+        registerClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                clientType,
+                emptyList(),
+                jarValidationRequired,
+                clientLoCs,
+                maxAgeEnabled);
     }
 
     public void registerClient(
@@ -180,7 +216,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             ClientType clientType,
             List<String> claims,
             boolean jarValidationRequired,
-            List<String> clientLoCs) {
+            List<String> clientLoCs,
+            boolean maxAgeEnabled) {
         dynamoClientService.addClient(
                 clientID,
                 clientName,
@@ -204,7 +241,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 null,
                 clientLoCs,
                 Channel.WEB.getValue(),
-                false);
+                maxAgeEnabled);
     }
 
     public void registerClient(
