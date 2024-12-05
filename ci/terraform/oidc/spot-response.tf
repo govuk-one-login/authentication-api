@@ -18,6 +18,9 @@ module "ipv_spot_response_role" {
   depends_on = [
     aws_iam_policy.spot_response_sqs_read_policy
   ]
+  extra_tags = {
+    Service = "spot-response"
+  }
 }
 
 data "aws_iam_policy_document" "spot_response_policy_document" {
@@ -58,6 +61,9 @@ resource "aws_iam_policy" "spot_response_sqs_read_policy" {
   policy      = data.aws_iam_policy_document.spot_response_policy_document.json
   path        = "/${var.environment}/sqs/"
   name_prefix = "spot-response-sqs-read-policy-policy"
+  tags = {
+    Service = "spot-response"
+  }
 }
 
 resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
@@ -71,6 +77,9 @@ resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
     aws_lambda_function.spot_response_lambda,
     aws_iam_policy.spot_response_sqs_read_policy
   ]
+  tags = {
+    Service = "spot-response"
+  }
 }
 
 resource "aws_lambda_function" "spot_response_lambda" {
@@ -103,6 +112,9 @@ resource "aws_lambda_function" "spot_response_lambda" {
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
+  tags = {
+    Service = "spot-response"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {

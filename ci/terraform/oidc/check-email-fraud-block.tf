@@ -15,6 +15,9 @@ module "frontend_api_check_email_fraud_block_role" {
     local.client_registry_encryption_policy_arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
   ]
+  extra_tags = {
+    Service = "check-email-fraud-block"
+  }
 }
 
 module "check_email_fraud_block" {

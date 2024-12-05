@@ -22,6 +22,9 @@ module "ipv_callback_role" {
     local.user_profile_encryption_policy_arn,
     aws_iam_policy.spot_queue_write_access_policy.arn
   ]
+  extra_tags = {
+    Service = "ipv-callback"
+  }
 }
 
 module "ipv-callback" {

@@ -15,6 +15,9 @@ module "oidc_auth_code_role" {
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "auth-code"
+  }
 }
 
 module "auth-code" {

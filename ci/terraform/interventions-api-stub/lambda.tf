@@ -4,6 +4,9 @@ module "account_interventions_stub_role" {
   role_name          = "account_interventions_stub-role"
   vpc_arn            = local.authentication_vpc_arn
   policies_to_attach = [aws_iam_policy.stub_interventions_dynamo_read_access.arn]
+  extra_tags = {
+    Service = "account-interventions-stub"
+  }
 }
 
 module "account_interventions_stub_lambda" {

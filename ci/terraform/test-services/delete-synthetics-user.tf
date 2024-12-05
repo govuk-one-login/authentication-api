@@ -1,3 +1,6 @@
+locals {
+  test_services_api_delete-synthetics_endpoint_name = "synthetics-user"
+}
 module "test_services_api_delete-synthetics-user_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -9,12 +12,15 @@ module "test_services_api_delete-synthetics-user_role" {
     aws_iam_policy.dynamo_test_services_user_delete_access_policy.arn,
     module.test_services_txma_audit.access_policy_arn,
   ]
+  extra_tags = {
+    Service = local.test_services_api_delete-synthetics_endpoint_name
+  }
 }
 
 module "delete-synthetics-user" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "synthetics-user"
+  endpoint_name   = local.test_services_api_delete-synthetics_endpoint_name
   path_part       = "synthetics-user"
   endpoint_method = ["DELETE"]
   environment     = var.environment

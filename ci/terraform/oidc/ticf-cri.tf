@@ -4,6 +4,9 @@ module "frontend_api_ticf_cri_role" {
   role_name   = "frontend-api-ticf-cri-role"
   vpc_arn     = local.authentication_vpc_arn
   count       = local.deploy_ticf_cri_count
+  extra_tags = {
+    Service = "ticf-cri"
+  }
 }
 
 resource "aws_lambda_function" "ticf_cri_lambda" {
@@ -42,6 +45,9 @@ resource "aws_lambda_function" "ticf_cri_lambda" {
     })
   }
   # checkov:skip=CKV_AWS_116:Adding a DLQ would not be useful as we're not adding a retry policy.
+  tags = {
+    Service = "ticf-cri"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "ticf_cri_lambda_log_group" {
@@ -50,6 +56,9 @@ resource "aws_cloudwatch_log_group" "ticf_cri_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.ticf_cri_lambda[count.index].function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
+  tags = {
+    Service = "ticf-cri"
+  }
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "ticf_cri_lambda_log_subscription" {
@@ -71,6 +80,9 @@ resource "aws_iam_policy" "ticf_cri_lambda_invocation_policy" {
   description = "IAM policy managing lambda invocation access for the TICF CRI lambda."
 
   policy = data.aws_iam_policy_document.ticf_cri_lambda_invocation_policy_document[count.index].json
+  tags = {
+    Service = "ticf-cri"
+  }
 }
 
 resource "aws_lambda_alias" "ticf_cri_lambda_alias" {

@@ -13,6 +13,9 @@ module "account_management_api_remove_account_role" {
     aws_iam_policy.dynamo_am_account_modifiers_delete_access_policy.arn,
     local.account_modifiers_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "delete-account"
+  }
 }
 
 module "delete_account" {

@@ -7,7 +7,7 @@ resource "aws_kms_key" "txma_audit_queue_encryption_key" {
 
   policy = data.aws_iam_policy_document.txma_audit_queue_encryption_key_access_policy.json
 
-  tags = var.extra_tags
+  tags = local.extra_tags
 }
 
 resource "aws_kms_alias" "txma_audit_queue_encryption_key_alias" {

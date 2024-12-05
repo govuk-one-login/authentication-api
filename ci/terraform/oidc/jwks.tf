@@ -9,6 +9,9 @@ module "oidc_jwks_role" {
     aws_iam_policy.doc_app_auth_kms_policy.arn,
     local.doc_app_credential_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "jwks.json"
+  }
 }
 
 module "jwks" {

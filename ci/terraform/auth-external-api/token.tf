@@ -16,6 +16,9 @@ module "auth_token_role" {
     aws_iam_policy.access_token_store_signing_key_kms_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn
   ]
+  extra_tags = {
+    Service = "auth-token"
+  }
 }
 
 module "auth_token" {

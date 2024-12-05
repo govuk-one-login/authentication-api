@@ -7,6 +7,9 @@ module "oidc_storage_token_jwk_role" {
   policies_to_attach = [
     aws_iam_policy.storage_token_kms_signing_policy.arn
   ]
+  extra_tags = {
+    Service = "storage-token-jwk.json"
+  }
 }
 
 module "storage_token_jwk" {

@@ -16,6 +16,9 @@ module "frontend_api_update_profile_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "update-profile"
+  }
 }
 
 module "update_profile" {

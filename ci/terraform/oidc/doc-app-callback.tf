@@ -15,6 +15,9 @@ module "doc_app_callback_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.doc_app_credential_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "doc-app-callback"
+  }
 }
 
 module "doc-app-callback" {

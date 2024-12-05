@@ -12,6 +12,9 @@ module "client_update_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "update-client-info"
+  }
 }
 
 module "update" {

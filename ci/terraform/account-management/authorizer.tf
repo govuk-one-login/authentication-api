@@ -10,6 +10,9 @@ module "account_management_api_authorizer_role" {
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     local.client_registry_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "authorizer"
+  }
 }
 
 locals {

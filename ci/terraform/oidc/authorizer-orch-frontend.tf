@@ -3,6 +3,9 @@ module "orch_frontend_authorizer_role" {
   environment = var.environment
   role_name   = "orch-fe-authorizer-role"
   vpc_arn     = local.authentication_vpc_arn
+  extra_tags = {
+    Service = "orch-frontend-authorizer"
+  }
 }
 
 locals {
@@ -42,6 +45,9 @@ resource "aws_lambda_function" "orch_frontend_authorizer" {
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+  tags = {
+    Service = "orch-frontend-authorizer"
+  }
 }
 
 resource "aws_iam_role" "orch_frontend_authorizer_invocation_role" {
@@ -49,6 +55,9 @@ resource "aws_iam_role" "orch_frontend_authorizer_invocation_role" {
   path = "/"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
+  tags = {
+    Service = "orch-frontend-authorizer"
+  }
 }
 
 
@@ -107,6 +116,9 @@ resource "aws_appautoscaling_target" "orch_frontend_authorizer_lambda_target" {
   resource_id        = "function:${aws_lambda_function.orch_frontend_authorizer.function_name}:${aws_lambda_alias.orch_frontend_authorizer_alias.name}"
   scalable_dimension = "lambda:function:ProvisionedConcurrency"
   service_namespace  = "lambda"
+  tags = {
+    Service = "orch-frontend-authorizer"
+  }
 }
 
 resource "aws_appautoscaling_policy" "orch_frontend_authorizer_concurrency_policy" {
@@ -149,6 +161,9 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_cloudwatch_alarm
   threshold           = local.alert_error_threshold
   alarm_description   = "${local.alert_error_threshold} or more errors have occurred in the ${var.environment} ${aws_lambda_function.orch_frontend_authorizer.function_name} lambda. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions       = [data.aws_sns_topic.slack_events.arn]
+  tags = {
+    Service = "orch-frontend-authorizer"
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_alarm" {
@@ -194,4 +209,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_
     }
   }
   alarm_actions = [data.aws_sns_topic.slack_events.arn]
+  tags = {
+    Service = "orch-frontend-authorizer"
+  }
 }

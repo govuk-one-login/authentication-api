@@ -16,6 +16,9 @@ module "oidc_logout_role" {
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.back_channel_logout_queue_write_access_policy.arn
   ]
+  extra_tags = {
+    Service = "logout"
+  }
 }
 
 module "logout" {

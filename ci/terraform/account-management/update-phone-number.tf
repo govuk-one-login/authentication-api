@@ -12,6 +12,9 @@ module "account_management_api_update_phone_number_role" {
     module.account_management_txma_audit.access_policy_arn,
     local.user_profile_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "update-phone-number"
+  }
 }
 
 module "update_phone_number" {

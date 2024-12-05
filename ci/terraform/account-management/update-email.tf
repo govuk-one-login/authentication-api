@@ -15,6 +15,9 @@ module "account_management_api_update_email_role" {
     local.user_profile_encryption_policy_arn,
     local.email_check_results_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "update-email"
+  }
 }
 
 module "update_email" {

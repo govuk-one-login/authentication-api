@@ -12,6 +12,9 @@ module "reverification_result_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
   ]
+  extra_tags = {
+    Service = "reverification-result"
+  }
 }
 
 module "reverification_result" {

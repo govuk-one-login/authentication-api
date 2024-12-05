@@ -19,6 +19,9 @@ module "frontend_api_start_role" {
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn
   ]
+  extra_tags = {
+    Service = "start"
+  }
 }
 
 module "start" {

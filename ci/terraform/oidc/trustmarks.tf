@@ -4,6 +4,9 @@ module "oidc_trustmarks_role" {
   role_name   = "oidc-trustmarks-role"
   environment = var.environment
   vpc_arn     = local.authentication_vpc_arn
+  extra_tags = {
+    Service = "trustmarks"
+  }
 }
 
 module "trustmarks" {

@@ -117,6 +117,16 @@ variable "extra_tags" {
   description = "Extra tags to apply to resources"
 }
 
+locals {
+  extra_tags = merge(
+    var.extra_tags,
+    {
+      Service = var.endpoint_name
+    }
+  )
+}
+
+
 variable "authorizer_id" {
   type    = string
   default = null

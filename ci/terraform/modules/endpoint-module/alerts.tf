@@ -30,6 +30,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
   threshold           = var.lambda_log_alarm_threshold
   alarm_description   = local.error_alarm_description
   alarm_actions       = [data.aws_sns_topic.slack_events.arn]
+
+  tags = local.extra_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
@@ -76,6 +78,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
     }
   }
   alarm_actions = [data.aws_sns_topic.slack_events.arn]
+
+  tags = local.extra_tags
 }
 
 data "aws_sns_topic" "slack_events" {

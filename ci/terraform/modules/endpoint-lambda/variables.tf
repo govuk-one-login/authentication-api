@@ -74,6 +74,15 @@ variable "extra_tags" {
   description = "Extra tags to apply to resources"
 }
 
+locals {
+  extra_tags = merge(
+    var.extra_tags,
+    {
+      Service = var.endpoint_name
+    }
+  )
+}
+
 variable "cloudwatch_key_arn" {
   type        = string
   description = "The ARN of the KMS key to use log encryption"
