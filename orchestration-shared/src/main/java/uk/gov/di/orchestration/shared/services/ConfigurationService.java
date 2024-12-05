@@ -405,10 +405,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("USE_ORCH_SESSION_FOR_AUTHENTICATED_CLAIM");
     }
 
-    public boolean isCurrentCredentialStrengthInOrchSessionEnabled() {
-        return getFlagOrFalse("CURRENT_CREDENTIAL_STRENGTH_IN_ORCH_SESSION");
-    }
-
     public Optional<String> getIPVCapacity() {
         try {
             var request =
