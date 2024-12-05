@@ -462,12 +462,9 @@ class StartServiceTest {
                         Optional.of(userProfile),
                         Optional.of(userCredentials),
                         false);
-        userContext
-                .getSession()
-                .setCurrentCredentialStrength(credentialTrustLevel)
-                .setEmailAddress(EMAIL);
+        userContext.getSession().setEmailAddress(EMAIL);
 
-        var upliftRequired = startService.isUpliftRequired(userContext);
+        var upliftRequired = startService.isUpliftRequired(userContext, credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,

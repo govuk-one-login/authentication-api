@@ -205,12 +205,16 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
-            boolean upliftRequired = startService.isUpliftRequired(userContext);
+            CredentialTrustLevel currentCredentialStrength =
+                    startRequest.currentCredentialStrength();
+
+            boolean upliftRequired =
+                    startService.isUpliftRequired(userContext, currentCredentialStrength);
 
             authSessionService.addOrUpdateSessionIncludingSessionId(
                     Optional.ofNullable(startRequest.previousSessionId()),
                     session.getSessionId(),
-                    startRequest.currentCredentialStrength(),
+                    currentCredentialStrength,
                     upliftRequired);
 
             var clientSessionId =

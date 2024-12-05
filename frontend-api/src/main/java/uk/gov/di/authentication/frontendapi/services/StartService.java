@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -224,19 +225,17 @@ public class StartService {
                 .isEmpty();
     }
 
-    public boolean isUpliftRequired(UserContext userContext) {
+    public boolean isUpliftRequired(
+            UserContext userContext, CredentialTrustLevel currentCredentialStrength) {
         if (DocAppUserHelper.isDocCheckingAppUser(userContext)
-                || Objects.isNull(userContext.getSession().getCurrentCredentialStrength())) {
+                || Objects.isNull(currentCredentialStrength)) {
             return false;
         }
-        return (userContext
-                        .getSession()
-                        .getCurrentCredentialStrength()
-                        .compareTo(
-                                userContext
-                                        .getClientSession()
-                                        .getEffectiveVectorOfTrust()
-                                        .getCredentialTrustLevel())
+        return (currentCredentialStrength.compareTo(
+                        userContext
+                                .getClientSession()
+                                .getEffectiveVectorOfTrust()
+                                .getCredentialTrustLevel())
                 < 0);
     }
 
