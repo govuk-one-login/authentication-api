@@ -197,7 +197,7 @@ class ConfigurationServiceTest {
 
     @Test
     void getTicfCRILambdaNameShouldDefault() {
-        assertEquals("", configurationService.getTicfCRILambdaName());
+        assertEquals("", configurationService.getTicfCRILambdaIdentifier());
     }
 
     @Test

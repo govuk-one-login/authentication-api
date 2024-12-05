@@ -238,7 +238,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             return;
         }
 
-        lambdaInvoker.invokeAsyncWithPayload(payload, configurationService.getTicfCRILambdaName());
+        lambdaInvoker.invokeAsyncWithPayload(
+                payload, configurationService.getTicfCRILambdaIdentifier());
     }
 
     private AccountInterventionsResponse getAccountInterventionsResponse(
