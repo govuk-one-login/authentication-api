@@ -207,7 +207,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
       currentCredentialStrengthInOrchSession: true
-      getAuthenticatedFromOrchSession: false
+      getAuthenticatedFromOrchSession: true
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -240,7 +240,7 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
       currentCredentialStrengthInOrchSession: true
-      getAuthenticatedFromOrchSession: false
+      getAuthenticatedFromOrchSession: true
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
