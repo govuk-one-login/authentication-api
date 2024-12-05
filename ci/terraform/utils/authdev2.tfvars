@@ -15,3 +15,5 @@ performance_tuning = {
     timeout = 300
   }
 }
+
+email_check_results_writer_provisioned_concurrency = 0

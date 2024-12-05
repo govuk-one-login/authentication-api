@@ -38,7 +38,7 @@ enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
 lambda_max_concurrency = 0
-lambda_min_concurrency = 1
+lambda_min_concurrency = 0
 endpoint_memory_size   = 1536
 
 
