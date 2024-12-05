@@ -627,7 +627,7 @@ public class AuthorisationHandler
         String newSessionId = session.getSessionId();
         var orchSession =
                 existingOrchSessionOptional.isPresent()
-                        ? updateExistingOrchSession(newSessionId, existingOrchSessionOptional.get())
+                        ? updateOrchSession(newSessionId, existingOrchSessionOptional.get())
                         : createNewOrchSession(newSessionId);
         attachOrchSessionIdToLogs(newSessionId);
 
@@ -659,19 +659,19 @@ public class AuthorisationHandler
                 orchSession);
     }
 
-    private OrchSessionItem updateExistingOrchSession(
-            String newSessionId, OrchSessionItem existingOrchSession) {
-        OrchSessionItem updatedOrchSession =
-                new OrchSessionItem(existingOrchSession)
+    private OrchSessionItem updateOrchSession(
+            String newSessionId, OrchSessionItem previousSession) {
+        OrchSessionItem updatedSession =
+                new OrchSessionItem(previousSession)
                         .withSessionId(newSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry());
-        orchSessionService.addSession(updatedOrchSession);
-        orchSessionService.deleteSession(existingOrchSession.getSessionId());
+        orchSessionService.addSession(updatedSession);
+        orchSessionService.deleteSession(previousSession.getSessionId());
         LOG.info(
                 "Updated existing Orch session ID from {} to {}",
-                existingOrchSession.getSessionId(),
+                previousSession.getSessionId(),
                 newSessionId);
-        return updatedOrchSession;
+        return updatedSession;
     }
 
     private OrchSessionItem createNewOrchSession(String sessionId) {
