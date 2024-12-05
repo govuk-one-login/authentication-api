@@ -627,9 +627,18 @@ public class AuthorisationHandler
         String newSessionId = session.getSessionId();
         OrchSessionItem orchSession;
         if (existingOrchSessionOptional.isEmpty()) {
+            LOG.info("existingOrchSessionOptional.isEmpty(): true");
             orchSession = createNewOrchSession(newSessionId);
         } else {
             OrchSessionItem previousOrchSession = existingOrchSessionOptional.get();
+            LOG.info(
+                    "configurationService.supportMaxAgeEnabled(): {}",
+                    configurationService.supportMaxAgeEnabled());
+            LOG.info("client.getMaxAgeEnabled(): {}", client.getMaxAgeEnabled());
+            LOG.info(
+                    "maxAgeExpired: {}",
+                    maxAgeExpired(
+                            previousOrchSession.getAuthTime(), getMaxAge(authenticationRequest)));
             if (configurationService.supportMaxAgeEnabled()
                     && client.getMaxAgeEnabled()
                     && maxAgeExpired(
@@ -735,7 +744,10 @@ public class AuthorisationHandler
     }
 
     private boolean maxAgeExpired(Long authTime, Optional<Long> maxAge) {
+        LOG.info("authTime: {}", authTime);
         if (maxAge.isEmpty()) return false;
+        LOG.info("maxAge: {}", maxAge.get());
+        LOG.info("timeNow: {}", timeNow);
         if (authTime == null) {
             LOG.error(
                     "Auth time expected to be set in Orch session but is null. Assuming that max age has not expired.");
