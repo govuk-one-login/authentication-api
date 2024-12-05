@@ -135,6 +135,7 @@ public class AuthorisationHandler
     private final TokenValidationService tokenValidationService;
     private final AuthFrontend authFrontend;
     private final AuthorisationService authorisationService;
+    private final long timeNow = NowHelper.now().toInstant().getEpochSecond();
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -663,12 +664,7 @@ public class AuthorisationHandler
         OrchSessionItem updatedOrchSession =
                 new OrchSessionItem(existingOrchSession)
                         .withSessionId(newSessionId)
-                        .withTimeToLive(
-                                NowHelper.nowPlus(
-                                                configurationService.getSessionExpiry(),
-                                                ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
+                        .withTimeToLive(timeNow + configurationService.getSessionExpiry());
         orchSessionService.addSession(updatedOrchSession);
         orchSessionService.deleteSession(existingOrchSession.getSessionId());
         LOG.info(
