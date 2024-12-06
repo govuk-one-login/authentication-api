@@ -511,6 +511,7 @@ public class AuthenticationCallbackHandler
                             authenticationRequest,
                             userInfo,
                             userSession,
+                            orchSession,
                             client,
                             clientId,
                             clientSessionId,
