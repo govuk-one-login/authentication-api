@@ -2597,7 +2597,7 @@ class AuthorisationHandlerTest {
 
         @ParameterizedTest
         @MethodSource("authTimeAndMaxAgeParams")
-        void shouldUpdateOrchSessionCorrectly(
+        void shouldUpdateOrchSessionCorrectlyForQueryParametersRequest(
                 Long authTime, String maxAgeParam, boolean maxAgeExpired) {
             when(clientService.getClient(anyString()))
                     .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
@@ -2616,6 +2616,87 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            var response = makeHandlerRequest(event);
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            var newSessionId = sessionCookie.get().getValue().split("\\.")[0];
+
+            ArgumentCaptor<OrchSessionItem> addSessionCaptor =
+                    ArgumentCaptor.forClass(OrchSessionItem.class);
+            if (maxAgeExpired) {
+                verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
+                OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
+                OrchSessionItem newSession = addSessionCaptor.getAllValues().get(1);
+
+                assertNotEquals(updatedPreviousSession.getSessionId(), orchSession.getSessionId());
+                assertNotEquals(updatedPreviousSession.getSessionId(), newSession.getSessionId());
+                assertTrue(
+                        updatedPreviousSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        updatedPreviousSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+                assertTrue(updatedPreviousSession.getAuthenticated());
+                assertEquals(updatedPreviousSession.getAuthTime(), authTime);
+
+                verify(orchSessionService).deleteSession(orchSession.getSessionId());
+
+                assertEquals(newSession.getSessionId(), newSessionId);
+                assertTrue(
+                        newSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        newSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+                assertFalse(newSession.getAuthenticated());
+                assertEquals(
+                        newSession.getPreviousSessionId(), updatedPreviousSession.getSessionId());
+            } else {
+                verify(orchSessionService, times(1)).addSession(addSessionCaptor.capture());
+                OrchSessionItem updatedSession = addSessionCaptor.getAllValues().get(0);
+
+                assertEquals(updatedSession.getSessionId(), newSessionId);
+                assertTrue(updatedSession.getAuthenticated());
+                assertEquals(updatedSession.getAuthTime(), authTime);
+                assertTrue(
+                        updatedSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        updatedSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+
+                verify(orchSessionService).deleteSession(orchSession.getSessionId());
+            }
+        }
+
+        @ParameterizedTest
+        @MethodSource("authTimeAndMaxAgeParams")
+        void shouldUpdateOrchSessionCorrectlyForRequestObjectRequest(
+                Long authTime, String maxAgeParam, boolean maxAgeExpired) throws JOSEException {
+            when(clientService.getClient(anyString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
+            when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
+
+            var event = new APIGatewayProxyRequestEvent();
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var jwtClaimsSet =
+                    buildJwtClaimsSet("https://localhost/authorize", null, null, maxAgeParam);
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+            event.setHttpMethod("GET");
 
             var response = makeHandlerRequest(event);
             var sessionCookie =
@@ -2860,6 +2941,25 @@ class AuthorisationHandlerTest {
                 .claim("client_id", CLIENT_ID.getValue())
                 .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
+                .claim("max_age", "1000")
+                .build();
+    }
+
+    private static JWTClaimsSet buildJwtClaimsSet(
+            String audience, String prompt, String idToken, String maxAge) {
+        return new JWTClaimsSet.Builder()
+                .audience(audience)
+                .claim("prompt", prompt)
+                .claim("id_token_hint", idToken)
+                .claim("redirect_uri", REDIRECT_URI)
+                .claim("response_type", ResponseType.CODE.toString())
+                .claim("scope", SCOPE)
+                .claim("state", STATE.getValue())
+                .claim("nonce", null)
+                .claim("client_id", CLIENT_ID.getValue())
+                .claim("claims", CLAIMS)
+                .issuer(CLIENT_ID.getValue())
+                .claim("max_age", maxAge)
                 .build();
     }
 

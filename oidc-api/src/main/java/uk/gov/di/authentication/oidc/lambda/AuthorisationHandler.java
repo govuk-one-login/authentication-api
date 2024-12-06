@@ -723,19 +723,33 @@ public class AuthorisationHandler
     }
 
     private Optional<Long> getMaxAge(AuthenticationRequest authRequest) {
-        Optional<Long> maxAge = Optional.empty();
+        int maxAgeParam;
         try {
-            var maxAgeParam = authRequest.getMaxAge();
-            // Nimbus returns -1 if max age parameter is not present
-            if (authRequest.getMaxAge() > -1) {
-                maxAge = Optional.of((long) maxAgeParam);
+            if (Objects.isNull(authRequest.getRequestObject())) {
+                maxAgeParam = authRequest.getMaxAge();
+                // Nimbus returns -1 if max age parameter is not present
+                if (maxAgeParam == -1) {
+                    return Optional.empty();
+                }
+            } else {
+                String maxAgeClaim =
+                        authRequest.getRequestObject().getJWTClaimsSet().getStringClaim("max_age");
+                if (Objects.isNull(maxAgeClaim)) {
+                    return Optional.empty();
+                }
+                maxAgeParam = Integer.parseInt(maxAgeClaim);
             }
+            if (maxAgeParam < 0) {
+                LOG.error("Max age parameter is negative in auth request");
+                return Optional.empty();
+            }
+            return Optional.of((long) maxAgeParam);
         } catch (Exception e) {
             LOG.error(
-                    "Failed to parse max age param form Auth request, assuming no max age parameter ");
+                    "Failed to parse max age param from auth request, assuming no max age parameter. Error: {}",
+                    e.getMessage());
             return Optional.empty();
         }
-        return maxAge;
     }
 
     private boolean maxAgeExpired(Long authTime, Optional<Long> maxAge, long timeNow) {
