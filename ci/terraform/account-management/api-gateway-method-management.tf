@@ -74,5 +74,4 @@ resource "aws_lambda_permission" "account-management-method_management_openapi_e
 module "dashboard_account-management-method_management_openapi" {
   source           = "../modules/dashboards"
   api_gateway_name = module.account-management-method_management_gateway.api_gateway_name
-  use_localstack   = false
 }

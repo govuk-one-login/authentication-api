@@ -71,17 +71,19 @@ resource "aws_lambda_function" "account_metrics_lambda" {
 
 
 resource "aws_cloudwatch_log_group" "account_metrics_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "/aws/lambda/${aws_lambda_function.account_metrics_lambda.function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
+}
+moved {
+  from = aws_cloudwatch_log_group.account_metrics_lambda_log_group[0]
+  to   = aws_cloudwatch_log_group.account_metrics_lambda_log_group
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_metrics_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${aws_lambda_function.account_metrics_lambda.function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.account_metrics_lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.account_metrics_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

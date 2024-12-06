@@ -39,7 +39,6 @@ module "send_notification" {
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
     PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
     TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                              = local.redis_key
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
@@ -76,8 +75,6 @@ module "send_notification" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,

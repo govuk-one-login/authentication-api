@@ -3,10 +3,12 @@ locals {
 }
 
 resource "aws_elasticache_subnet_group" "sessions_store" {
-  count = var.use_localstack ? 0 : 1
-
   name       = "${var.environment}-session-store-cache-subnet"
   subnet_ids = local.private_subnet_ids
+}
+moved {
+  from = aws_elasticache_subnet_group.sessions_store[0]
+  to   = aws_elasticache_subnet_group.sessions_store
 }
 
 resource "random_password" "redis_password" {
@@ -20,8 +22,6 @@ resource "random_password" "redis_password" {
 }
 
 resource "aws_elasticache_replication_group" "sessions_store" {
-  count = var.use_localstack ? 0 : 1
-
   automatic_failover_enabled  = true
   preferred_cache_cluster_azs = data.aws_availability_zones.available.names
   replication_group_id        = "${var.environment}-sessions-store"
@@ -41,7 +41,7 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   auth_token                 = random_password.redis_password.result
   apply_immediately          = true
 
-  subnet_group_name = aws_elasticache_subnet_group.sessions_store[0].name
+  subnet_group_name = aws_elasticache_subnet_group.sessions_store.name
   security_group_ids = [
     aws_security_group.redis_security_group.id,
   ]
@@ -55,4 +55,8 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   depends_on = [
     aws_sns_topic.slack_events,
   ]
+}
+moved {
+  from = aws_elasticache_replication_group.sessions_store[0]
+  to   = aws_elasticache_replication_group.sessions_store
 }

@@ -107,10 +107,6 @@ variable "logging_endpoint_arns" {
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
 
-variable "use_localstack" {
-  type = bool
-}
-
 variable "extra_tags" {
   default     = {}
   type        = map(string)
