@@ -10,7 +10,10 @@ module "frontend_api_ticf_cri_role" {
 }
 
 locals {
-  provisioned_concurrency = lookup(var.performance_tuning, "ticf-cri", local.default_performance_parameters).concurrency
+  # All the tuning parameters in here specifically point to any overrides for account interventions
+  # This is deliberate - for now we want to scale up this lambda in tandem with account interventions, since
+  # they are called in roughly the same number of places
+  provisioned_concurrency = lookup(var.performance_tuning, "account-interventions", local.default_performance_parameters).concurrency
 }
 
 resource "aws_lambda_function" "ticf_cri_lambda" {
@@ -32,7 +35,7 @@ resource "aws_lambda_function" "ticf_cri_lambda" {
   s3_key            = aws_s3_object.frontend_api_release_zip.key
   s3_object_version = aws_s3_object.frontend_api_release_zip.version_id
 
-  memory_size = lookup(var.performance_tuning, "ticf", local.default_performance_parameters).memory
+  memory_size = lookup(var.performance_tuning, "account-interventions", local.default_performance_parameters).memory
 
   kms_key_arn             = local.lambda_env_vars_encryption_kms_key_arn
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
@@ -71,8 +74,8 @@ resource "aws_lambda_provisioned_concurrency_config" "ticf_lambda_concurrency_co
 resource "aws_appautoscaling_target" "ticf_lambda_target" {
   count = local.deploy_ticf_cri_count
 
-  max_capacity       = lookup(var.performance_tuning, "ticf-cri", local.default_performance_parameters).max_concurrency
-  min_capacity       = lookup(var.performance_tuning, "ticf-cri", local.default_performance_parameters).concurrency
+  max_capacity       = lookup(var.performance_tuning, "account-interventions", local.default_performance_parameters).max_concurrency
+  min_capacity       = lookup(var.performance_tuning, "account-interventions", local.default_performance_parameters).concurrency
   resource_id        = "function:${aws_lambda_function.ticf_cri_lambda[0].function_name}:${aws_lambda_alias.ticf_cri_lambda_alias[0].name}"
   scalable_dimension = "lambda:function:ProvisionedConcurrency"
   service_namespace  = "lambda"
@@ -88,7 +91,7 @@ resource "aws_appautoscaling_policy" "ticf_provisioned_concurrency_policy" {
   policy_type        = "TargetTrackingScaling"
 
   target_tracking_scaling_policy_configuration {
-    target_value = lookup(var.performance_tuning, "ticf-cri", local.default_performance_parameters).scaling_trigger
+    target_value = lookup(var.performance_tuning, "account-interventions", local.default_performance_parameters).scaling_trigger
     predefined_metric_specification {
       predefined_metric_type = "LambdaProvisionedConcurrencyUtilization"
     }
