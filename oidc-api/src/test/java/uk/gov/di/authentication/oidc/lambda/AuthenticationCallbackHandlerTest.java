@@ -94,6 +94,10 @@ class AuthenticationCallbackHandlerTest {
                     .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
                     .setAuthenticated(false)
                     .setCurrentCredentialStrength(null);
+    private static final OrchSessionItem ORCH_SESSION =
+            new OrchSessionItem(SESSION_ID)
+                    .withAuthenticated(false)
+                    .withCurrentCredentialStrength(null);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -786,6 +790,7 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 any(),
+                                any(),
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
@@ -831,6 +836,7 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 any(),
+                                any(),
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
@@ -866,6 +872,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(initiateIPVAuthorisationService)
                         .sendRequestToIPV(
+                                any(),
                                 any(),
                                 any(),
                                 any(),
@@ -926,12 +933,7 @@ class AuthenticationCallbackHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
-        when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchSessionItem(SESSION_ID)
-                                        .withAuthenticated(false)
-                                        .withCurrentCredentialStrength(null)));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(ORCH_SESSION));
     }
 
     private void usingValidClientSession() {
