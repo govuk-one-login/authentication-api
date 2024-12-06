@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 2c9f875913ee60ca25ce70243dc24d5b6415598c # v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -8,10 +8,10 @@ repos:
       - id: mixed-line-ending
       - id: check-executables-have-shebangs
 
-  - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v1.11.1
+  - repo: https://github.com/aws-cloudformation/cfn-lint
+    rev: v1.21.0
     hooks:
-      - id: cfn-python-lint
+      - id: cfn-lint
         exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml|orchestration-canary-alarms.template.yaml|.*.approved.json|checkov-policies.*|.terraform-docs.yml$
         files: ^.*\.(json|yml|yaml)$
 
@@ -28,12 +28,12 @@ repos:
         require_serial: true
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: debe478691c6711d19679b9973309e19368e79b6 # v1.92.1
+    rev: v1.96.2
     hooks:
       - id: terraform_fmt
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 1ee2e387938ec90ec10a64f85fc0b4be527ade6a # v0.5.5
+    rev: v0.8.2
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -100,16 +100,16 @@ repos:
         exclude: ^gradlew$
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: a23f6b85d0fdd5bb9d564e2579e678033debbdff # v0.10.0.1
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         exclude: ^gradlew$
 
   - repo: https://github.com/lalten/check-gha-pinning
-    rev: 225deee5dff16fae532978007ce6e37045e14c68 # v1.3.0
+    rev: v1.3.0
     hooks:
       - id: check-gha-pinning
   - repo: https://github.com/rhysd/actionlint
-    rev: 62dc61a45fc95efe8c800af7a557ab0b9165d63b # v1.7.1
+    rev: v1.7.4
     hooks:
       - id: actionlint
