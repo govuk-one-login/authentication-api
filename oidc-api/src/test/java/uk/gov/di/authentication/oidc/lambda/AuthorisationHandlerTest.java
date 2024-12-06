@@ -2860,6 +2860,7 @@ class AuthorisationHandlerTest {
                 .claim("client_id", CLIENT_ID.getValue())
                 .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
+                .claim("max_age", "1000")
                 .build();
     }
 
