@@ -66,7 +66,7 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Build
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck --info
 
   style-checks:
     runs-on: ubuntu-latest
