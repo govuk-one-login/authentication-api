@@ -30,8 +30,8 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
   vpc_id       = data.aws_vpc.auth_shared_vpc.id
   service_name = "com.amazonaws.eu-west-2.execute-api"
   tags = {
-    environment = var.environment
-    terraform   = "core"
+    Environment = var.environment
+    terraform   = "di-infrastructure/core"
   }
 }
 
