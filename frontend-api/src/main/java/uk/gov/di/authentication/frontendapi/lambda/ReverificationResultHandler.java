@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -41,6 +42,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
     public ReverificationResultHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            AuthSessionService authSessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -50,6 +52,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                 ReverificationResultRequest.class,
                 configurationService,
                 sessionService,
+                authSessionService,
                 clientSessionService,
                 clientService,
                 authenticationService);

@@ -5,11 +5,13 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -49,6 +51,7 @@ class AccountRecoveryHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoAccountModifiersService dynamoAccountModifiersService =
             mock(DynamoAccountModifiersService.class);
@@ -60,6 +63,7 @@ class AccountRecoveryHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -84,6 +88,7 @@ class AccountRecoveryHandlerTest {
                 new AccountRecoveryHandler(
                         configurationService,
                         sessionService,
+                        authSessionService,
                         clientSessionService,
                         clientService,
                         authenticationService,
@@ -144,6 +149,8 @@ class AccountRecoveryHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
     }
 
     private UserProfile generateUserProfile() {
