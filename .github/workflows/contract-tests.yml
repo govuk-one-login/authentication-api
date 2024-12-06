@@ -56,16 +56,16 @@ jobs:
           cache-read-only: false
 
       - name: Run consumer contract tests
-        run: ./gradlew pactConsumerTests
+        run: ./gradlew pactConsumerTests --no-build-cache
 
       - name: Upload pacts to broker
         if: github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' && github.event_name != 'push'
-        run: ./gradlew pactPublish
+        run: ./gradlew pactPublish --no-build-cache
 
       - name: Upload pacts to broker on push to main
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
         env:
           CONSUMER_APP_VERSION: ${{ github.sha }}
-        run: ./gradlew pactPublish
+        run: ./gradlew pactPublish --no-build-cache
 #      - name: Verify pacts
 #        run: ./gradlew pactProviderTests
