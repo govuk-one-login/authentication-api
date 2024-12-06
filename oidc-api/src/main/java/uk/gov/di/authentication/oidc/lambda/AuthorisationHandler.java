@@ -738,22 +738,28 @@ public class AuthorisationHandler
         try {
             if (Objects.isNull(authRequest.getRequestObject())) {
                 maxAgeParam = authRequest.getMaxAge();
+                LOG.info("max age param: {}", maxAgeParam);
                 // Nimbus returns -1 if max age parameter is not present
                 if (maxAgeParam == -1) {
+                    LOG.info("maxAgeParam is -1");
                     return Optional.empty();
                 }
             } else {
                 String maxAgeClaim =
                         authRequest.getRequestObject().getJWTClaimsSet().getStringClaim("max_age");
+                LOG.info("max age claim: {}", maxAgeClaim);
                 if (Objects.isNull(maxAgeClaim)) {
+                    LOG.info("maxAgeClaim is null");
                     return Optional.empty();
                 }
                 maxAgeParam = Integer.parseInt(maxAgeClaim);
+                LOG.info("max age param after parsing to int: {}", maxAgeParam);
             }
             if (maxAgeParam < 0) {
                 LOG.error("Max age parameter is negative in auth request");
                 return Optional.empty();
             }
+            LOG.info("returning {}", maxAgeParam);
             return Optional.of((long) maxAgeParam);
         } catch (Exception e) {
             LOG.error(
@@ -765,6 +771,7 @@ public class AuthorisationHandler
 
     private boolean maxAgeExpired(Long authTime, Optional<Long> maxAge, long timeNow) {
         LOG.info("authTime: {}", authTime);
+        LOG.info("maxAge.isEmpty(): {}", maxAge.isEmpty());
         if (maxAge.isEmpty()) return false;
         LOG.info("maxAge: {}", maxAge.get());
         LOG.info("timeNow: {}", timeNow);
