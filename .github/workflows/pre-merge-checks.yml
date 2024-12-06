@@ -77,23 +77,21 @@ jobs:
       RATCHET_FROM: ${{ github.event.action == 'checks_requested' && github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
     steps:
       - name: Check out repository code
-        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
       - name: Set up JDK 17
-        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
-        if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
-        if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
             .gradle/
@@ -103,7 +101,6 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
 
       - name: Run Spotless
-        if: needs.check-changed-files.outputs.java_changed == 'true'
         run: ./gradlew --no-daemon :spotlessCheck -PratchetFrom=${{ github.event.pull_request.base.sha }}
 
   run-unit-tests:
