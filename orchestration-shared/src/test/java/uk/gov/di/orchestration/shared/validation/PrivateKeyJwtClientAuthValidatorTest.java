@@ -174,6 +174,26 @@ class PrivateKeyJwtClientAuthValidatorTest {
     }
 
     @Test
+    void shouldSuccessfullyValidatePrivateKeyJWTIfExpiredButWithinClockSkew()
+            throws JOSEException, TokenAuthInvalidException {
+        var publicKey =
+                Base64.getMimeEncoder().encodeToString(RSA_KEY_PAIR.getPublic().getEncoded());
+        var expectedClientRegistry = generateClientRegistry(publicKey, null);
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(expectedClientRegistry));
+        var requestString =
+                generateSerialisedPrivateKeyJWT(
+                        JWSAlgorithm.RS256, NowHelper.nowMinus(15, ChronoUnit.SECONDS).getTime());
+
+        var clientRegistryOutput =
+                privateKeyJwtClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        requestString, emptyMap());
+
+        assertThat(
+                clientRegistryOutput.getClientID(), equalTo(expectedClientRegistry.getClientID()));
+    }
+
+    @Test
     void shouldThrowIfUnableToValidatePrivateKeyJWTSignature()
             throws JOSEException, ClientSignatureValidationException, JwksException {
         var invalidKeyPair = generateRsaKeyPair();
