@@ -186,6 +186,22 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                             state);
                 }
             }
+            int maxAge = Integer.parseInt(jwtClaimsSet.getStringClaim("max_age"));
+            if (!client.getMaxAgeEnabled() && maxAge != -1) {
+                LOG.warn(
+                        "Max age present in request object but not enabled for client, so max age will be ignored. Client ID: {}",
+                        client.getClientID());
+            }
+            if (maxAge < -1) {
+                LOG.error("Value of max age cannot be lower than -1");
+                return Optional.of(
+                        new AuthRequestError(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Value of max age cannot be lower than -1"),
+                                redirectURI,
+                                state));
+            }
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
         } catch (ParseException e) {

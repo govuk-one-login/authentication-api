@@ -624,10 +624,38 @@ public class AuthorisationHandler
         }
 
         String newSessionId = session.getSessionId();
-        var orchSession =
-                existingOrchSessionOptional.isPresent()
-                        ? updateExistingOrchSession(newSessionId, existingOrchSessionOptional.get())
-                        : createNewOrchSession(newSessionId);
+        final long timeNow = NowHelper.now().toInstant().getEpochSecond();
+        OrchSessionItem orchSession;
+        if (existingOrchSessionOptional.isEmpty()) {
+            LOG.info("existingOrchSessionOptional.isEmpty(): true");
+            orchSession = createNewOrchSession(newSessionId);
+        } else {
+            OrchSessionItem previousOrchSession = existingOrchSessionOptional.get();
+            LOG.info(
+                    "configurationService.supportMaxAgeEnabled(): {}",
+                    configurationService.supportMaxAgeEnabled());
+            LOG.info("client.getMaxAgeEnabled(): {}", client.getMaxAgeEnabled());
+            LOG.info(
+                    "maxAgeExpired: {}",
+                    maxAgeExpired(
+                            previousOrchSession.getAuthTime(),
+                            getMaxAge(authenticationRequest),
+                            timeNow));
+            if (configurationService.supportMaxAgeEnabled()
+                    && client.getMaxAgeEnabled()
+                    && maxAgeExpired(
+                            previousOrchSession.getAuthTime(),
+                            getMaxAge(authenticationRequest),
+                            timeNow)) {
+                LOG.info("Orch session expired due to max age");
+                orchSession =
+                        updateOrchSessionDueToMaxAgeExpiry(
+                                newSessionId, previousOrchSession, timeNow);
+            } else {
+                orchSession = updateOrchSession(newSessionId, previousOrchSession, timeNow);
+            }
+        }
+
         attachOrchSessionIdToLogs(newSessionId);
 
         user = user.withSessionId(session.getSessionId());
@@ -658,31 +686,106 @@ public class AuthorisationHandler
                 orchSession);
     }
 
-    private OrchSessionItem updateExistingOrchSession(
-            String newSessionId, OrchSessionItem existingOrchSession) {
-        OrchSessionItem updatedOrchSession =
-                new OrchSessionItem(existingOrchSession)
-                        .withSessionId(newSessionId)
-                        .withTimeToLive(
-                                NowHelper.nowPlus(
-                                                configurationService.getSessionExpiry(),
-                                                ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
-        orchSessionService.addSession(updatedOrchSession);
-        orchSessionService.deleteSession(existingOrchSession.getSessionId());
-        LOG.info(
-                "Updated existing Orch session ID from {} to {}",
-                existingOrchSession.getSessionId(),
-                newSessionId);
-        return updatedOrchSession;
-    }
-
     private OrchSessionItem createNewOrchSession(String sessionId) {
         var newOrchSessionItem = new OrchSessionItem(sessionId);
         orchSessionService.addSession(newOrchSessionItem);
         LOG.info("Created new Orch session with session ID: {}", sessionId);
         return newOrchSessionItem;
+    }
+
+    private OrchSessionItem updateOrchSession(
+            String newSessionId, OrchSessionItem previousSession, long timeNow) {
+        OrchSessionItem updatedSession =
+                new OrchSessionItem(previousSession)
+                        .withSessionId(newSessionId)
+                        .withTimeToLive(timeNow + configurationService.getSessionExpiry());
+        orchSessionService.addSession(updatedSession);
+        orchSessionService.deleteSession(previousSession.getSessionId());
+        LOG.info(
+                "Updated existing Orch session ID from {} to {}",
+                previousSession.getSessionId(),
+                newSessionId);
+        return updatedSession;
+    }
+
+    private OrchSessionItem updateOrchSessionDueToMaxAgeExpiry(
+            String newSessionId, OrchSessionItem previousSession, long timeNow) {
+        String newSessionIdForPreviousSession = IdGenerator.generate();
+        OrchSessionItem updatedPreviousSession =
+                new OrchSessionItem(previousSession)
+                        .withSessionId(newSessionIdForPreviousSession)
+                        .withTimeToLive(timeNow + configurationService.getSessionExpiry());
+        orchSessionService.addSession(updatedPreviousSession);
+        orchSessionService.deleteSession(previousSession.getSessionId());
+        LOG.info(
+                "Updated previous Orch session due to max age expiry. Session ID updated from {} to {}",
+                previousSession.getSessionId(),
+                newSessionIdForPreviousSession);
+
+        OrchSessionItem newSession =
+                new OrchSessionItem(previousSession)
+                        .withSessionId(newSessionId)
+                        .withTimeToLive(timeNow + configurationService.getSessionExpiry())
+                        .withAuthenticated(false)
+                        .withPreviousSessionId(newSessionIdForPreviousSession);
+        orchSessionService.addSession(newSession);
+        LOG.info("Created new Orch session with session ID {} due to max age expiry", newSessionId);
+        return newSession;
+    }
+
+    private Optional<Long> getMaxAge(AuthenticationRequest authRequest) {
+        int maxAgeParam;
+        try {
+            if (Objects.isNull(authRequest.getRequestObject())) {
+                maxAgeParam = authRequest.getMaxAge();
+                LOG.info("max age param: {}", maxAgeParam);
+                // Nimbus returns -1 if max age parameter is not present
+                if (maxAgeParam == -1) {
+                    LOG.info("maxAgeParam is -1");
+                    return Optional.empty();
+                }
+            } else {
+                String maxAgeClaim =
+                        authRequest.getRequestObject().getJWTClaimsSet().getStringClaim("max_age");
+                LOG.info("max age claim: {}", maxAgeClaim);
+                if (Objects.isNull(maxAgeClaim)) {
+                    LOG.info("maxAgeClaim is null");
+                    return Optional.empty();
+                }
+                maxAgeParam = Integer.parseInt(maxAgeClaim);
+                LOG.info("max age param after parsing to int: {}", maxAgeParam);
+            }
+            if (maxAgeParam < 0) {
+                LOG.error("Max age parameter is negative in auth request");
+                return Optional.empty();
+            }
+            LOG.info("returning {}", maxAgeParam);
+            return Optional.of((long) maxAgeParam);
+        } catch (Exception e) {
+            LOG.error(
+                    "Failed to parse max age param from auth request, assuming no max age parameter. Error: {}",
+                    e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private boolean maxAgeExpired(Long authTime, Optional<Long> maxAge, long timeNow) {
+        LOG.info("authTime: {}", authTime);
+        LOG.info("maxAge.isEmpty(): {}", maxAge.isEmpty());
+        if (maxAge.isEmpty()) return false;
+        LOG.info("maxAge: {}", maxAge.get());
+        LOG.info("timeNow: {}", timeNow);
+        if (authTime == null) {
+            LOG.error(
+                    "Auth time expected to be set in Orch session but is null. Assuming that max age has not expired.");
+            return false;
+        }
+        if (authTime > timeNow || authTime < 0) {
+            LOG.error(
+                    "Auth time is negative or greater than current time which implies auth time has been set incorrectly. Assuming that max age has not expired.");
+            return false;
+        }
+        return authTime + maxAge.get() < timeNow;
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
