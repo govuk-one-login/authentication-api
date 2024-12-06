@@ -6,6 +6,8 @@ updates:
       interval: daily
       time: "03:00"
     open-pull-requests-limit: 100
+    ignore:
+      - dependency-name: "com.nimbusds:oauth2-oidc-sdk"
     groups:
       gradle-security-updates:
         applies-to: security-updates
