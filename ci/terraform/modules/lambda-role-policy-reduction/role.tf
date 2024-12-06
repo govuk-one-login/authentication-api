@@ -34,3 +34,7 @@ resource "aws_iam_role_policy_attachment" "provided_policies" {
     aws_iam_role.lambda_role
   ]
 }
+resource "aws_iam_role_policy_attachments_exclusive" "exclusively_managed_policies" {
+  role_name   = aws_iam_role.lambda_role.name
+  policy_arns = aws_iam_policy.iam-policy[*].arn
+}
