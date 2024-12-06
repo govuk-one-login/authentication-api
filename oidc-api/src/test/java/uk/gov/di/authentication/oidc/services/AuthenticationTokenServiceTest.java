@@ -19,6 +19,7 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,19 +95,16 @@ class AuthenticationTokenServiceTest {
                 .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
         TokenRequest tokenRequest =
                 authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue());
+        var parameters = URLUtils.parseParameters(tokenRequest.toHTTPRequest().getBody());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(AUTH_BACKEND_URI + "token"));
         assertThat(
                 tokenRequest.getClientAuthentication().getMethod().getValue(),
                 equalTo("private_key_jwt"));
+        assertThat(parameters.get("redirect_uri").get(0), equalTo(ORCH_CALLBACK_URI.toString()));
         assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
-                equalTo(ORCH_CALLBACK_URI.toString()));
-        assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                parameters.get("grant_type").get(0),
                 equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
-        assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
-                equalTo(CLIENT_ID.getValue()));
+        assertThat(parameters.get("client_id").get(0), equalTo(CLIENT_ID.getValue()));
     }
 
     @Test
@@ -158,7 +156,7 @@ class AuthenticationTokenServiceTest {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
         when(httpRequest.send()).thenReturn(httpResponse);
         when(httpResponse.indicatesSuccess()).thenReturn(true);
-        when(httpResponse.getContent()).thenReturn(userInfoJson);
+        when(httpResponse.getBody()).thenReturn(userInfoJson);
 
         Map<String, List<String>> headers = new HashMap<>();
         headers.put("Content-Type", Collections.singletonList("application/json"));
@@ -178,7 +176,7 @@ class AuthenticationTokenServiceTest {
         int failureStatusCode = 503;
         String failureErrorMessage = "Error content";
         when(httpResponse.getStatusCode()).thenReturn(failureStatusCode);
-        when(httpResponse.getContent()).thenReturn(failureErrorMessage);
+        when(httpResponse.getBody()).thenReturn(failureErrorMessage);
 
         UnsuccessfulCredentialResponseException exception =
                 assertThrows(
@@ -199,7 +197,7 @@ class AuthenticationTokenServiceTest {
     @Test
     void shouldThrowUnsuccessfulCredentialResponseExceptionWhenHttpContentIsNull() {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
-        when(httpResponse.getContent()).thenReturn(null);
+        when(httpResponse.getBody()).thenReturn(null);
 
         UnsuccessfulCredentialResponseException thrown =
                 assertThrows(
@@ -214,7 +212,7 @@ class AuthenticationTokenServiceTest {
     @Test
     void shouldThrowUnsuccessfulCredentialResponseExceptionWhenObjectMapperThrowsException() {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
-        when(httpResponse.getContent()).thenReturn("{}");
+        when(httpResponse.getBody()).thenReturn("{}");
 
         UnsuccessfulCredentialResponseException thrown =
                 assertThrows(
@@ -278,7 +276,7 @@ class AuthenticationTokenServiceTest {
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
+        tokenHTTPResponse.setBody(tokenResponseContent);
 
         return tokenHTTPResponse;
     }

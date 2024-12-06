@@ -19,6 +19,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
+import com.nimbusds.oauth2.sdk.util.URLUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -94,19 +95,16 @@ class DocAppCriServiceTest {
                     .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
             TokenRequest tokenRequest =
                     docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
+            var parameters = URLUtils.parseParameters(tokenRequest.toHTTPRequest().getBody());
             assertThat(tokenRequest.getEndpointURI().toString(), equalTo(TOKEN_URI.toString()));
             assertThat(
                     tokenRequest.getClientAuthentication().getMethod().getValue(),
                     equalTo("private_key_jwt"));
+            assertThat(parameters.get("redirect_uri").get(0), equalTo(REDIRECT_URI.toString()));
             assertThat(
-                    tokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
-                    equalTo(REDIRECT_URI.toString()));
-            assertThat(
-                    tokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                    parameters.get("grant_type").get(0),
                     equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
-            assertThat(
-                    tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
-                    equalTo(CLIENT_ID.getValue()));
+            assertThat(parameters.get("client_id").get(0), equalTo(CLIENT_ID.getValue()));
         }
 
         @Test
@@ -212,7 +210,7 @@ class DocAppCriServiceTest {
                             + "}";
             var tokenHTTPResponse = new HTTPResponse(200);
             tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            tokenHTTPResponse.setContent(tokenResponseContent);
+            tokenHTTPResponse.setBody(tokenResponseContent);
 
             return tokenHTTPResponse;
         }
@@ -246,7 +244,7 @@ class DocAppCriServiceTest {
                 throws IOException, UnsuccessfulCredentialResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
             var response = docAppCriService.sendCriDataRequest(httpRequest, DOC_APP_SUBJECT_ID);
@@ -261,7 +259,7 @@ class DocAppCriServiceTest {
                 throws IOException, UnsuccessfulCredentialResponseException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send())
                     .thenReturn(new HTTPResponse(500))
                     .thenReturn(userInfoHTTPResponse);
@@ -279,7 +277,7 @@ class DocAppCriServiceTest {
                 throws IOException {
             var userInfoHTTPResponse = new HTTPResponse(200);
             userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-            userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+            userInfoHTTPResponse.setBody(userInfoHTTPResponseContent);
             when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
             UnsuccessfulCredentialResponseException thrown =

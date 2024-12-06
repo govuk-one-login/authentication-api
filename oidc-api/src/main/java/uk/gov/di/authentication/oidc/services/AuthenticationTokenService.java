@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -73,15 +72,10 @@ public class AuthenticationTokenService {
                         NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
-        return new TokenRequest(
-                tokenURI,
-                generatePrivateKeyJwt(claimsSet),
-                codeGrant,
-                null,
-                singletonList(tokenURI),
-                Map.of(
-                        "client_id",
-                        singletonList(configurationService.getOrchestrationClientId())));
+        return new TokenRequest.Builder(tokenURI, generatePrivateKeyJwt(claimsSet), codeGrant)
+                .resource(tokenURI)
+                .customParameter("client_id", configurationService.getOrchestrationClientId())
+                .build();
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
@@ -99,7 +93,7 @@ public class AuthenticationTokenService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from Authentication token endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
             return tokenResponse;
@@ -127,14 +121,14 @@ public class AuthenticationTokenService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from Authentication userinfo endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call Authentication userinfo endpoint: %s",
-                                response.getStatusCode(), response.getContent()));
+                                response.getStatusCode(), response.getBody()));
             }
 
             LOG.info("Received successful userinfo response");
@@ -148,7 +142,7 @@ public class AuthenticationTokenService {
     UserInfo parseUserInfoFromResponse(HTTPResponse response)
             throws UnsuccessfulCredentialResponseException {
         try {
-            String content = response.getContent();
+            String content = response.getBody();
             if (content == null) {
                 throw new UnsuccessfulCredentialResponseException("No content in HTTP response");
             }

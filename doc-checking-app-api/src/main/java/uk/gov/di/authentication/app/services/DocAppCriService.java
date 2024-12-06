@@ -37,7 +37,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -83,15 +82,10 @@ public class DocAppCriService {
                         NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
-        return new TokenRequest(
-                tokenURI,
-                generatePrivateKeyJwt(claimsSet),
-                codeGrant,
-                null,
-                singletonList(tokenURI),
-                Map.of(
-                        "client_id",
-                        singletonList(configurationService.getDocAppAuthorisationClientId())));
+        return new TokenRequest.Builder(tokenURI, generatePrivateKeyJwt(claimsSet), codeGrant)
+                .resource(tokenURI)
+                .customParameter("client_id", configurationService.getDocAppAuthorisationClientId())
+                .build();
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
@@ -132,11 +126,11 @@ public class DocAppCriService {
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call CRI data endpoint: %s",
-                                response.getStatusCode(), response.getContent()),
+                                response.getStatusCode(), response.getBody()),
                         response.getStatusCode());
             }
 
-            if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
+            if (!response.getBodyAsJSONObject().get("sub").equals(docAppSubjectId)
                     && !configurationService.getEnvironment().equals("build")) {
                 throw new UnsuccessfulCredentialResponseException(
                         "Sub in CRI response does not match docAppSubjectId in client session");
@@ -156,7 +150,7 @@ public class DocAppCriService {
     private List<SignedJWT> parseResponse(HTTPResponse response)
             throws UnsuccessfulCredentialResponseException {
         try {
-            var contentAsJSONObject = response.getContentAsJSONObject();
+            var contentAsJSONObject = response.getBodyAsJSONObject();
             if (Objects.isNull(contentAsJSONObject.get(CREDENTIAL_JWT.getValue()))) {
                 throw new UnsuccessfulCredentialResponseException(
                         "No Credential JWT claim present");
