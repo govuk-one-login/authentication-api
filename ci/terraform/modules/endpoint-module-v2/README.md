@@ -40,8 +40,10 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_account_alias"></a> [account\_alias](#input\_account\_alias) | The 'friendly-name' of the AWS account, eg. di-auth-development | `string` | n/a | yes |
 | <a name="input_authentication_vpc_arn"></a> [authentication\_vpc\_arn](#input\_authentication\_vpc\_arn) | n/a | `string` | n/a | yes |
 | <a name="input_cloudwatch_key_arn"></a> [cloudwatch\_key\_arn](#input\_cloudwatch\_key\_arn) | The ARN of the KMS key to use log encryption | `string` | n/a | yes |
+| <a name="input_dynatrace_secret"></a> [dynatrace\_secret](#input\_dynatrace\_secret) | JSON decoded dynatrace secret | <pre>object({<br/>    JAVA_LAYER = string<br/><br/>    DT_CONNECTION_AUTH_TOKEN     = string<br/>    DT_CONNECTION_BASE_URL       = string<br/>    DT_CLUSTER_ID                = string<br/>    DT_TENANT                    = string<br/>    DT_LOG_COLLECTION_AUTH_TOKEN = string<br/>  })</pre> | n/a | yes |
 | <a name="input_endpoint_method"></a> [endpoint\_method](#input\_endpoint\_method) | n/a | `list(string)` | n/a | yes |
 | <a name="input_endpoint_name"></a> [endpoint\_name](#input\_endpoint\_name) | n/a | `string` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | n/a | `string` | n/a | yes |
@@ -57,15 +59,14 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_rest_api_id"></a> [rest\_api\_id](#input\_rest\_api\_id) | n/a | `string` | n/a | yes |
 | <a name="input_root_resource_id"></a> [root\_resource\_id](#input\_root\_resource\_id) | n/a | `string` | n/a | yes |
 | <a name="input_security_group_ids"></a> [security\_group\_ids](#input\_security\_group\_ids) | The list of security group IDs to apply to the lambda | `list(string)` | n/a | yes |
+| <a name="input_slack_event_topic_arn"></a> [slack\_event\_topic\_arn](#input\_slack\_event\_topic\_arn) | The ARN of the slack event topic | `string` | n/a | yes |
 | <a name="input_source_bucket"></a> [source\_bucket](#input\_source\_bucket) | n/a | `string` | n/a | yes |
 | <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | The id of the subnets for the lambda | `list(string)` | n/a | yes |
-| <a name="input_account_alias"></a> [account\_alias](#input\_account\_alias) | The 'friendly-name' of the AWS account, eg. di-auth-development | `string` | `null` | no |
 | <a name="input_api_key_required"></a> [api\_key\_required](#input\_api\_key\_required) | n/a | `bool` | `false` | no |
 | <a name="input_authorizer_id"></a> [authorizer\_id](#input\_authorizer\_id) | n/a | `string` | `null` | no |
 | <a name="input_cloudwatch_log_retention"></a> [cloudwatch\_log\_retention](#input\_cloudwatch\_log\_retention) | The number of day to retain Cloudwatch logs for | `number` | `30` | no |
 | <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `any` | `null` | no |
 | <a name="input_create_endpoint"></a> [create\_endpoint](#input\_create\_endpoint) | n/a | `bool` | `true` | no |
-| <a name="input_dynatrace_secret"></a> [dynatrace\_secret](#input\_dynatrace\_secret) | JSON decoded dynatrace secret | <pre>object({<br/>    JAVA_LAYER = string<br/><br/>    DT_CONNECTION_AUTH_TOKEN     = string<br/>    DT_CONNECTION_BASE_URL       = string<br/>    DT_CLUSTER_ID                = string<br/>    DT_TENANT                    = string<br/>    DT_LOG_COLLECTION_AUTH_TOKEN = string<br/>  })</pre> | `null` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
 | <a name="input_handler_runtime"></a> [handler\_runtime](#input\_handler\_runtime) | n/a | `string` | `"java17"` | no |
 | <a name="input_integration_request_parameters"></a> [integration\_request\_parameters](#input\_integration\_request\_parameters) | n/a | `map(string)` | `{}` | no |
@@ -79,7 +80,6 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_method_request_parameters"></a> [method\_request\_parameters](#input\_method\_request\_parameters) | n/a | `map(bool)` | `{}` | no |
 | <a name="input_provisioned_concurrency"></a> [provisioned\_concurrency](#input\_provisioned\_concurrency) | n/a | `number` | `0` | no |
 | <a name="input_scaling_trigger"></a> [scaling\_trigger](#input\_scaling\_trigger) | n/a | `number` | `0.7` | no |
-| <a name="input_slack_event_topic_arn"></a> [slack\_event\_topic\_arn](#input\_slack\_event\_topic\_arn) | The ARN of the slack event topic | `string` | `null` | no |
 
 ## Outputs
 
