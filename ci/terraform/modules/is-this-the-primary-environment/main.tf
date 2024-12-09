@@ -23,5 +23,5 @@ locals {
 
 output "is_primary_environment" {
   value       = contains(local.primary_environment_names, var.environment)
-  description = "True if this environment is the primary environment in this account:region else false"
+  description = "true if this environment is the primary environment in this account:region else false"
 }

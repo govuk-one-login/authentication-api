@@ -11,22 +11,6 @@ This module is intended to standardize the way we determine if an environment is
 Some resources are only deployed to the primary environment, and this module can be used to conditionally deploy those resources without recreating the check everywhere,
 which could lead to inconsistencies.
 
-## Requirements
-
-No requirements.
-
-## Providers
-
-No providers.
-
-## Modules
-
-No modules.
-
-## Resources
-
-No resources.
-
 ## Inputs
 
 | Name | Description | Type | Default | Required |
@@ -37,5 +21,5 @@ No resources.
 
 | Name | Description |
 |------|-------------|
-| <a name="output_is_primary_environment"></a> [is\_primary\_environment](#output\_is\_primary\_environment) | True if this environment is the primary environment in this account:region else false |
+| <a name="output_is_primary_environment"></a> [is\_primary\_environment](#output\_is\_primary\_environment) | true if this environment is the primary environment in this account:region else false |
 <!-- END_TF_DOCS -->
