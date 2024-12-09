@@ -18,6 +18,7 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -67,6 +68,7 @@ public class InitiateIPVAuthorisationService {
             AuthenticationRequest authRequest,
             UserInfo userInfo,
             Session session,
+            OrchSessionItem orchSession,
             ClientRegistry client,
             String rpClientID,
             String clientSessionId,
@@ -115,7 +117,7 @@ public class InitiateIPVAuthorisationService {
                 TxmaAuditUser.user()
                         .withGovukSigninJourneyId(clientSessionId)
                         .withSessionId(session.getSessionId())
-                        .withUserId(session.getInternalCommonSubjectIdentifier())
+                        .withUserId(orchSession.getInternalCommonSubjectId())
                         .withEmail(userInfo.getEmailAddress())
                         .withIpAddress(IpAddressHelper.extractIpAddress(input))
                         .withPersistentSessionId(persistentSessionCookieId),

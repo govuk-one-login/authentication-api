@@ -38,6 +38,7 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
@@ -126,6 +127,10 @@ public class InitiateIPVAuthorisationServiceTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(expectedCommonSubject);
     private final ClientRegistry client = generateClientRegistry();
 
     public InitiateIPVAuthorisationServiceTest() throws com.nimbusds.oauth2.sdk.ParseException {}
@@ -167,6 +172,7 @@ public class InitiateIPVAuthorisationServiceTest {
                                         authenticationRequest,
                                         userInfo,
                                         session,
+                                        orchSession,
                                         client,
                                         CLIENT_ID,
                                         CLIENT_SESSION_ID,
@@ -200,6 +206,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         authRequest,
                         userInfo,
                         session,
+                        orchSession,
                         client,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
@@ -254,6 +261,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         authRequestWithStorageClaim,
                         userInfo,
                         session,
+                        orchSession,
                         client,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
