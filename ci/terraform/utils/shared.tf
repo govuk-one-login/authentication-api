@@ -25,4 +25,7 @@ locals {
   }
   common_passwords_encryption_policy_arn = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
   user_profile_kms_key_arn               = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
+
+  slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
+  aws_account_alias         = data.terraform_remote_state.shared.outputs.aws_account_alias
 }
