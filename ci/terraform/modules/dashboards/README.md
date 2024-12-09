@@ -15,10 +15,6 @@
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
 
-## Modules
-
-No modules.
-
 ## Resources
 
 | Name | Type |
@@ -30,8 +26,4 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_api_gateway_name"></a> [api\_gateway\_name](#input\_api\_gateway\_name) | The endpoint that will be monitored by the dashboard | `string` | n/a | yes |
-
-## Outputs
-
-No outputs.
 <!-- END_TF_DOCS -->
