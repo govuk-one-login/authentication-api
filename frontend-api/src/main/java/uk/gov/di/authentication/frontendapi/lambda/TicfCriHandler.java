@@ -60,29 +60,23 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                     "TicfCriResponseReceived",
                     Map.ofEntries(environmentForMetrics, Map.entry("StatusCode", statusCode)));
         } catch (HttpTimeoutException e) {
-            var errorDescription =
+            LOG.error(
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
-                            configurationService.getTicfCriServiceCallTimeout());
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceTimeout", true);
+                            configurationService.getTicfCriServiceCallTimeout()));
+            sendMetricsForInterventionsError("TicfCriServiceTimeout");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError", true);
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            sendMetricsForInterventionsError("TicfCriServiceError");
         } catch (IOException e) {
-            var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError", true);
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            sendMetricsForInterventionsError("TicfCriServiceError");
         }
         return null;
     }
 
-    private void logAndSendMetricsForInterventionsError(
-            String errorDescription, String metric, Boolean raiseErrorLog) {
-        if (Boolean.TRUE.equals(raiseErrorLog)) {
-            LOG.error(errorDescription);
-        } else {
-            LOG.warn(errorDescription);
-        }
+    private void sendMetricsForInterventionsError(String metric) {
         cloudwatchMetricsService.incrementCounter(
                 metric, Map.of("Environment", configurationService.getEnvironment()));
     }
