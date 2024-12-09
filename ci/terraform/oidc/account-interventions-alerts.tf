@@ -40,6 +40,10 @@ resource "aws_cloudwatch_metric_alarm" "account_interventions_p1_cloudwatch_alar
   threshold           = var.account_interventions_p1_alarm_error_threshold
   alarm_description   = "${var.account_interventions_p1_alarm_error_threshold} or more Account Interventions errors have occurred in ${var.environment}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions       = data.aws_sns_topic.pagerduty_p1_alerts[0].arn
+
+  tags = {
+    Service = "account-interventions"
+  }
 }
 moved {
   from = aws_cloudwatch_metric_alarm.account_interventions_p1_cloudwatch_alarm[0]

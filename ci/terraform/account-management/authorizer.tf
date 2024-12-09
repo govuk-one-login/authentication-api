@@ -95,6 +95,10 @@ resource "aws_appautoscaling_target" "lambda_target" {
   resource_id        = "function:${aws_lambda_function.authorizer.function_name}:${aws_lambda_alias.authorizer_alias.name}"
   scalable_dimension = "lambda:function:ProvisionedConcurrency"
   service_namespace  = "lambda"
+
+  tags = {
+    Service = "authorizer"
+  }
 }
 
 resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
@@ -137,6 +141,10 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_cloudwatch_alarm
   threshold           = local.alert_error_threshold
   alarm_description   = "${local.alert_error_threshold} or more errors have occurred in the ${var.environment} ${aws_lambda_function.authorizer.function_name} lambda. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions       = [data.aws_sns_topic.slack_events.arn]
+
+  tags = {
+    Service = "authorizer"
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_alarm" {
@@ -182,4 +190,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_
     }
   }
   alarm_actions = [data.aws_sns_topic.slack_events.arn]
+
+  tags = {
+    Service = "authorizer"
+  }
 }
