@@ -40,6 +40,10 @@ resource "aws_cloudwatch_metric_alarm" "account_interventions_p1_cloudwatch_alar
   threshold           = var.account_interventions_p1_alarm_error_threshold
   alarm_description   = "${var.account_interventions_p1_alarm_error_threshold} or more Account Interventions errors have occurred in ${var.environment}.ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/GwCXEwE"
   alarm_actions       = [local.isP1Alarm ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
+
+  tags = {
+    Service = "account-interventions"
+  }
 }
 moved {
   from = aws_cloudwatch_metric_alarm.account_interventions_p1_cloudwatch_alarm[0]
