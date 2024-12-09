@@ -64,8 +64,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
                             configurationService.getTicfCriServiceCallTimeout());
-            logAndSendMetricsForInterventionsError(
-                    errorDescription, "TicfCriServiceTimeout", false);
+            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceTimeout", true);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
