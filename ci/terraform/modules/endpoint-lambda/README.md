@@ -79,6 +79,7 @@ No modules.
 | <a name="input_logging_endpoint_enabled"></a> [logging\_endpoint\_enabled](#input\_logging\_endpoint\_enabled) | Whether the Lambda should ship its logs to the `logging_endpoint_arn` | `bool` | `false` | no |
 | <a name="input_max_provisioned_concurrency"></a> [max\_provisioned\_concurrency](#input\_max\_provisioned\_concurrency) | n/a | `number` | `5` | no |
 | <a name="input_provisioned_concurrency"></a> [provisioned\_concurrency](#input\_provisioned\_concurrency) | n/a | `number` | `0` | no |
+| <a name="input_runbook_link"></a> [runbook\_link](#input\_runbook\_link) | A link that is appended to alarm descriptions that should open a page describing how to triage and handle the alarm | `string` | `""` | no |
 | <a name="input_scaling_trigger"></a> [scaling\_trigger](#input\_scaling\_trigger) | n/a | `number` | `0.7` | no |
 | <a name="input_snapstart"></a> [snapstart](#input\_snapstart) | n/a | `bool` | `false` | no |
 | <a name="input_wait_for_alias_timeout"></a> [wait\_for\_alias\_timeout](#input\_wait\_for\_alias\_timeout) | The number of seconds to wait for the alias to be created | `number` | `300` | no |
