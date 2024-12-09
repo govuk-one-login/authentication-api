@@ -69,6 +69,7 @@ class IPVReverificationServiceTest {
     private static final String TEST_MFA_RESET_SCOPE = "reverification";
     private static final String TEST_STATE_STORAGE_PREFIX = "mfaReset:state:";
     private static final String TEST_STATE_VALUE = "testState";
+    public static final State STATE = State.parse(TEST_STATE_VALUE);
     private static final Session TEST_SESSION = new Session(SESSION_ID);
     private static final String TEST_CLIENT_SESSION_ID = "journeyId";
     private static final Subject TEST_SUBJECT = new Subject(COMMON_SUBJECT_ID);
@@ -158,7 +159,7 @@ class IPVReverificationServiceTest {
 
             String redirectUri =
                     ipvReverificationService.buildIpvReverificationRedirectUri(
-                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION);
+                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION, STATE);
 
             RSAPublicKey expectedPublicKey =
                     new RSAKey.Builder(
@@ -201,7 +202,7 @@ class IPVReverificationServiceTest {
                         IPVReverificationServiceException.class,
                         () ->
                                 ipvReverificationService.buildIpvReverificationRedirectUri(
-                                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION));
+                                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION, STATE));
 
         assertEquals(
                 "Missing required environment variable: IPV_AUTHORIZATION_PUBLIC_KEY",
