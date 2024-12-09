@@ -109,7 +109,7 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
         try {
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             Date currentDateTime = NowHelper.now();
-            if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 30)) {
+            if (!DateUtils.isAfter(claimsSet.getExpirationTime(), currentDateTime, 30)) {
                 LOG.warn(
                         "private_key_jwt has expired. Expiration time: {}. Current time: {}",
                         claimsSet.getExpirationTime(),
