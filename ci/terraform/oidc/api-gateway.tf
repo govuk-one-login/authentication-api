@@ -16,46 +16,6 @@ data "aws_iam_policy_document" "api_gateway_can_assume_policy" {
   }
 }
 
-resource "aws_iam_role" "api_gateway_logging_iam_role" {
-  name = "${var.environment}-api-gateway-logging-lambda-role"
-
-  assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
-}
-
-data "aws_iam_policy_document" "api_gateway_logging_policy" {
-  version = "2012-10-17"
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:DescribeLogGroups",
-      "logs:DescribeLogStreams",
-      "logs:PutLogEvents",
-      "logs:GetLogEvents",
-      "logs:FilterLogEvents",
-    ]
-
-    resources = [
-      "arn:aws:logs:*:*:*",
-    ]
-  }
-}
-
-resource "aws_iam_policy" "api_gateway_logging_policy" {
-  name        = "${var.environment}-api-gateway-logging"
-  path        = "/"
-  description = "IAM policy for logging for API Gateway"
-
-  policy = data.aws_iam_policy_document.api_gateway_logging_policy.json
-}
-
-resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
-  role       = aws_iam_role.api_gateway_logging_iam_role.name
-  policy_arn = aws_iam_policy.api_gateway_logging_policy.arn
-}
-
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
   name           = "${var.environment}-di-authentication-api"
   api_key_source = "HEADER"
@@ -320,12 +280,6 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.authentication_callback,
     aws_api_gateway_deployment.deployment,
   ]
-}
-
-# TODO: Investigate if this can be done better in multi-env aws accounts
-resource "aws_api_gateway_account" "api_gateway_logging_role" {
-  cloudwatch_role_arn = aws_iam_role.api_gateway_logging_iam_role.arn
-
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
