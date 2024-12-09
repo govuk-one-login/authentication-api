@@ -16,12 +16,6 @@ data "aws_iam_policy_document" "api_gateway_can_assume_policy" {
   }
 }
 
-resource "aws_iam_role" "api_gateway_logging_iam_role" {
-  name = "${var.environment}-api-gateway-logging-lambda-role"
-
-  assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
-}
-
 data "aws_iam_policy_document" "api_gateway_logging_policy" {
   version = "2012-10-17"
 
@@ -52,7 +46,7 @@ resource "aws_iam_policy" "api_gateway_logging_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
-  role       = aws_iam_role.api_gateway_logging_iam_role.name
+  role       = local.api_gateway_logging_role_name
   policy_arn = aws_iam_policy.api_gateway_logging_policy.arn
 }
 
@@ -316,12 +310,6 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.authentication_callback,
     aws_api_gateway_deployment.deployment,
   ]
-}
-
-# TODO: Investigate if this can be done better in multi-env aws accounts
-resource "aws_api_gateway_account" "api_gateway_logging_role" {
-  cloudwatch_role_arn = aws_iam_role.api_gateway_logging_iam_role.arn
-
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {

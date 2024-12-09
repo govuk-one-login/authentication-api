@@ -19,4 +19,5 @@ locals {
   client_registry_encryption_key_arn          = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn
   user_profile_kms_key_arn                    = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
   email_check_results_encryption_policy_arn   = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
+  api_gateway_logging_role_name               = data.terraform_remote_state.shared.outputs.api_gateway_logging_role_name
 }
