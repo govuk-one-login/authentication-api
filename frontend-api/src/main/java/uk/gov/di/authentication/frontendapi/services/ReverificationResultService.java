@@ -33,6 +33,7 @@ import java.util.Map;
 import static java.util.Collections.singletonList;
 
 public class ReverificationResultService {
+    public static final int MAX_RETRIES = 2;
     private static final Logger LOG = LogManager.getLogger(ReverificationResultService.class);
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
@@ -83,24 +84,32 @@ public class ReverificationResultService {
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
-        try {
-            LOG.info("Sending IPV token request");
-            int count = 0;
-            int maxTries = 2;
-            TokenResponse tokenResponse;
+        LOG.info("Sending IPV token request");
+        int count = 0;
+        TokenResponse tokenResponse =
+                new TokenResponse() {
+                    @Override
+                    public boolean indicatesSuccess() {
+                        return false;
+                    }
 
-            do {
-                if (count > 0) {
-                    LOG.warn("Retrying IPV access token request");
-                }
+                    @Override
+                    public HTTPResponse toHTTPResponse() {
+                        return null;
+                    }
+                };
 
-                count++;
+        while (count < MAX_RETRIES) {
+            count++;
+            try {
                 var httpRequest = tokenRequest.toHTTPRequest();
                 var httpResponse = httpRequest.send();
 
                 tokenResponse = TokenResponse.parse(httpResponse);
 
-                if (!tokenResponse.indicatesSuccess()) {
+                if (tokenResponse.indicatesSuccess()) {
+                    return tokenResponse;
+                } else {
                     var response = tokenResponse.toErrorResponse();
                     LOG.warn(
                             "Unsuccessful {} response from IPV token endpoint on attempt: {}; error: {}",
@@ -108,16 +117,17 @@ public class ReverificationResultService {
                             count,
                             httpResponse.getContent());
                 }
-            } while (!tokenResponse.indicatesSuccess() && count < maxTries);
-
-            return tokenResponse;
-        } catch (IOException e) {
-            LOG.error("Error whilst sending TokenRequest", e);
-            throw new RuntimeException(e);
-        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.error("Error whilst parsing TokenResponse", e);
-            throw new RuntimeException(e);
+            } catch (IOException e) {
+                LOG.error("Error whilst sending TokenRequest", e);
+            } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+                LOG.error("Error whilst parsing TokenResponse", e);
+            } catch (Exception e) {
+                LOG.error("Unexpected error", e);
+            }
         }
+
+        // return all retries failed error
+        return tokenResponse;
     }
 
     public HTTPResponse sendIpvReverificationRequest(UserInfoRequest userInfoRequest)

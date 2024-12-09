@@ -19,6 +19,8 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -88,187 +90,203 @@ class ReverificationResultServiceTest {
         when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
     }
 
-    @Test
-    void shouldConstructTokenRequest() throws JOSEException {
-        signJWTWithKMS();
-        TokenRequest newTokenRequest =
-                reverificationResultService.constructTokenRequest(AUTH_CODE.getValue());
-        assertThat(newTokenRequest.getEndpointURI().toString(), equalTo(IPV_URI + "token"));
-        assertThat(
-                newTokenRequest.getClientAuthentication().getMethod().getValue(),
-                equalTo("private_key_jwt"));
-        assertThat(
-                newTokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
-                equalTo(REDIRECT_URI.toString()));
-        assertThat(
-                newTokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
-                equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
-        assertThat(
-                newTokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
-                equalTo(CLIENT_ID.getValue()));
-    }
+    @Nested
+    @DisplayName("Tests for the sendTokenRequest method.")
+    class TokenRequestTests {
 
-    @Test
-    void shouldCallTokenEndpointAndReturn200() throws IOException {
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        when(tokenRequest.toHTTPRequest().send()).thenReturn(getSuccessfulTokenHttpResponse());
+        @Test
+        void shouldConstructTokenRequest() throws JOSEException {
+            signJWTWithKMS();
+            TokenRequest newTokenRequest =
+                    reverificationResultService.constructTokenRequest(AUTH_CODE.getValue());
+            assertThat(newTokenRequest.getEndpointURI().toString(), equalTo(IPV_URI + "token"));
+            assertThat(
+                    newTokenRequest.getClientAuthentication().getMethod().getValue(),
+                    equalTo("private_key_jwt"));
+            assertThat(
+                    newTokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
+                    equalTo(REDIRECT_URI.toString()));
+            assertThat(
+                    newTokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
+                    equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
+            assertThat(
+                    newTokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
+                    equalTo(CLIENT_ID.getValue()));
+        }
 
-        var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+        @Test
+        void shouldCallTokenEndpointAndReturn200() throws IOException {
+            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+            when(tokenRequest.toHTTPRequest().send()).thenReturn(getSuccessfulTokenHttpResponse());
 
-        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
-    }
+            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
 
-    @Test
-    void shouldRetryTokenEndpointOnceAndParseSuccessFulSecondResponse() throws IOException {
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        when(tokenRequest.toHTTPRequest().send())
-                .thenReturn(new HTTPResponse(500))
-                .thenReturn(getSuccessfulTokenHttpResponse());
+            assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+        }
 
-        var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+        @Test
+        void shouldRetryTokenEndpointOnceAndParseSuccessFulSecondResponse() throws IOException {
+            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+            when(tokenRequest.toHTTPRequest().send())
+                    .thenReturn(new HTTPResponse(500))
+                    .thenReturn(getSuccessfulTokenHttpResponse());
 
-        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
-    }
+            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
 
-    static Stream<Arguments> errorResponseArgumentProvider() {
-        return Stream.of(
-                Arguments.of(
-                        "Well formatted error response",
-                        """
+            assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+        }
+
+        static Stream<Arguments> errorResponseArgumentProvider() {
+            return Stream.of(
+                    Arguments.of(
+                            "Well formatted error response",
+                            """
                         {
                             "error": "server_error",
                             "error_description": "server_error_description"
                         }
                         """
-                                .strip()
-                                .replace("\n", "")),
-                Arguments.of(
-                        "Not a JSON error response",
-                        """
+                                    .strip()
+                                    .replace("\n", "")),
+                    Arguments.of(
+                            "Not a JSON error response",
+                            """
                         {
                             "error": "server_error,
                             "error_description": "server_error_description"
                         }
                         """
-                                .strip()
-                                .replace("\n", "")),
-                Arguments.of("Empty error response", ""),
-                Arguments.of(
-                        "Unexpected JSON error response",
-                        """
+                                    .strip()
+                                    .replace("\n", "")),
+                    Arguments.of("Empty error response", ""),
+                    Arguments.of(
+                            "Unexpected JSON error response",
+                            """
                         {   "unknown": "unexpected",
                             "error": "server_error,
                             "error_description": "server_error_description"
                         }
                         """
-                                .strip()
-                                .replace("\n", "")));
+                                    .strip()
+                                    .replace("\n", "")));
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("errorResponseArgumentProvider")
+        void shouldRetryTokenEndpointIfErrorResponse(String scenario, String error)
+                throws IOException, com.nimbusds.oauth2.sdk.ParseException {
+            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+            var responseWithInvalidError = new HTTPResponse(500);
+            responseWithInvalidError.setContentType("application/json");
+            responseWithInvalidError.setContent(error);
+            responseWithInvalidError.setStatusMessage("client error");
+
+            when(tokenRequest.toHTTPRequest().send())
+                    .thenReturn(responseWithInvalidError)
+                    .thenReturn(getSuccessfulTokenHttpResponse());
+
+            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+
+            assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+
+            var template =
+                    "Unsuccessful {} response from IPV token endpoint on attempt: {}; error: {}";
+            template = template.replaceFirst("\\{}", "500");
+            template = template.replaceFirst("\\{}", "1");
+            template = template.replaceFirst("\\{}", error);
+
+            assertThat(logging.events(), hasItem(withMessageContaining(template)));
+        }
+
+        @Test
+        void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail() throws IOException {
+            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+            when(tokenRequest.toHTTPRequest().send()).thenReturn(new HTTPResponse(500));
+
+            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+
+            assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+            verify(tokenRequest.toHTTPRequest(), times(2)).send();
+        }
+
+        @Test
+        void shouldThrowRTEWhenSendToIPVFails() throws IOException {
+            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+            when(tokenRequest.toHTTPRequest().send()).thenThrow(new IOException());
+
+            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+        }
+
+        @Test
+        void shouldThrowRTEWhenTokenParsingFails() throws IOException {
+            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+
+            HTTPResponse badResponse = new HTTPResponse(200);
+            badResponse.setContent("bad json");
+
+            when(tokenRequest.toHTTPRequest().send()).thenReturn(badResponse);
+
+            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+
+            assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+        }
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("errorResponseArgumentProvider")
-    void shouldRetryTokenEndpointIfErrorResponse(String scenario, String error)
-            throws IOException, com.nimbusds.oauth2.sdk.ParseException {
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        var responseWithInvalidError = new HTTPResponse(500);
-        responseWithInvalidError.setContentType("application/json");
-        responseWithInvalidError.setContent(error);
-        responseWithInvalidError.setStatusMessage("client error");
+    @Nested
+    @DisplayName("Tests for the sendIpvReverificationRequest method.")
+    class ReverificationRequestTests {
 
-        when(tokenRequest.toHTTPRequest().send())
-                .thenReturn(responseWithInvalidError)
-                .thenReturn(getSuccessfulTokenHttpResponse());
+        @Test
+        void shouldCallIPVReverificationRequest()
+                throws IOException, UnsuccessfulReverificationResponseException {
+            var userInfoHTTPResponse = new HTTPResponse(200);
+            userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
-        var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            var reverificationResult =
+                    reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
+            assertThat(
+                    reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
+        }
 
-        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+        @Test
+        void shouldRetryCallToIPVUserIdentity()
+                throws IOException, UnsuccessfulReverificationResponseException {
+            var userInfoHTTPResponse = new HTTPResponse(200);
+            userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
-        var template = "Unsuccessful {} response from IPV token endpoint on attempt: {}; error: {}";
-        template = template.replaceFirst("\\{}", "500");
-        template = template.replaceFirst("\\{}", "1");
-        template = template.replaceFirst("\\{}", error);
+            when(httpRequest.send())
+                    .thenReturn(new HTTPResponse(500))
+                    .thenReturn(userInfoHTTPResponse);
 
-        assertThat(logging.events(), hasItem(withMessageContaining(template)));
-    }
+            var reverificationResult =
+                    reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
+            assertThat(
+                    reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
+        }
 
-    @Test
-    void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail() throws IOException {
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        when(tokenRequest.toHTTPRequest().send()).thenReturn(new HTTPResponse(500));
+        @Test
+        void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
+            var userInfoHTTPResponse = new HTTPResponse(200);
+            userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+            userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+            when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
-        var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            when(httpRequest.send()).thenReturn(new HTTPResponse(500));
 
-        assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
-        verify(tokenRequest.toHTTPRequest(), times(2)).send();
-    }
+            assertThrows(
+                    UnsuccessfulReverificationResponseException.class,
+                    () ->
+                            reverificationResultService.sendIpvReverificationRequest(
+                                    userInfoRequest));
 
-    @Test
-    void shouldCallIPVReverificationRequest()
-            throws IOException, UnsuccessfulReverificationResponseException {
-        var userInfoHTTPResponse = new HTTPResponse(200);
-        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
-        when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
-        when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
-
-        var reverificationResult =
-                reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
-        assertThat(reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
-    }
-
-    @Test
-    void shouldRetryCallToIPVUserIdentity()
-            throws IOException, UnsuccessfulReverificationResponseException {
-        var userInfoHTTPResponse = new HTTPResponse(200);
-        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
-        when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
-
-        when(httpRequest.send()).thenReturn(new HTTPResponse(500)).thenReturn(userInfoHTTPResponse);
-
-        var reverificationResult =
-                reverificationResultService.sendIpvReverificationRequest(userInfoRequest);
-        assertThat(reverificationResult.getContent(), equalTo(userInfoHTTPResponse.getContent()));
-    }
-
-    @Test
-    void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
-        var userInfoHTTPResponse = new HTTPResponse(200);
-        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
-        when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
-
-        when(httpRequest.send()).thenReturn(new HTTPResponse(500));
-
-        assertThrows(
-                UnsuccessfulReverificationResponseException.class,
-                () -> reverificationResultService.sendIpvReverificationRequest(userInfoRequest));
-
-        verify(userInfoRequest.toHTTPRequest(), times(2)).send();
-    }
-
-    @Test
-    void shouldThrowRTEWhenSendToIPVFails() throws IOException {
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-        when(tokenRequest.toHTTPRequest().send()).thenThrow(new IOException());
-
-        assertThrows(
-                RuntimeException.class,
-                () -> reverificationResultService.sendTokenRequest(tokenRequest));
-    }
-
-    @Test
-    void shouldThrowRTEWhenTokenParsingFails() throws IOException {
-        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-
-        HTTPResponse badResponse = new HTTPResponse(200);
-        badResponse.setContent("bad json");
-
-        when(tokenRequest.toHTTPRequest().send()).thenReturn(badResponse);
-
-        assertThrows(
-                RuntimeException.class,
-                () -> reverificationResultService.sendTokenRequest(tokenRequest));
+            verify(userInfoRequest.toHTTPRequest(), times(2)).send();
+        }
     }
 
     private void signJWTWithKMS() throws JOSEException {
@@ -302,7 +320,7 @@ class ReverificationResultServiceTest {
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
 
-    public HTTPResponse getSuccessfulTokenHttpResponse() {
+    private HTTPResponse getSuccessfulTokenHttpResponse() {
         var tokenResponseContent =
                 "{"
                         + "  \"access_token\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
