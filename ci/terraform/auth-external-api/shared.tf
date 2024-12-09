@@ -32,4 +32,7 @@ locals {
   redis_ssm_parameter_policy                  = data.terraform_remote_state.shared.outputs.redis_ssm_parameter_policy
   authentication_oidc_redis_security_group_id = data.terraform_remote_state.shared.outputs.authentication_oidc_redis_security_group_id
   redis_key                                   = "session"
+
+  slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
+  aws_account_alias         = data.terraform_remote_state.shared.outputs.aws_account_alias
 }
