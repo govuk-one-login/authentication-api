@@ -194,3 +194,9 @@ variable "dynatrace_secret" {
   })
   sensitive = true
 }
+
+variable "runbook_link" {
+  description = "URL for the runbook for this lambda"
+  type        = string
+  default     = null
+}
