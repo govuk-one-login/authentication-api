@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -52,13 +53,15 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
             var response = sendRequest(input);
-            var statusCode = String.valueOf(response.statusCode());
+            var statusCode = response.statusCode();
             var logMessage =
                     format("Response received from TICF CRI Service with status %s", statusCode);
-            LOG.info(logMessage);
+            LOG.log(statusCode >= 400 && statusCode < 500 ? Level.ERROR : Level.INFO, logMessage);
             cloudwatchMetricsService.incrementCounter(
                     "TicfCriResponseReceived",
-                    Map.ofEntries(environmentForMetrics, Map.entry("StatusCode", statusCode)));
+                    Map.ofEntries(
+                            environmentForMetrics,
+                            Map.entry("StatusCode", String.valueOf(statusCode))));
         } catch (HttpTimeoutException e) {
             LOG.error(
                     format(
