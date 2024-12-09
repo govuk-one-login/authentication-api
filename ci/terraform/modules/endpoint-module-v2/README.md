@@ -79,6 +79,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_max_provisioned_concurrency"></a> [max\_provisioned\_concurrency](#input\_max\_provisioned\_concurrency) | n/a | `number` | `5` | no |
 | <a name="input_method_request_parameters"></a> [method\_request\_parameters](#input\_method\_request\_parameters) | n/a | `map(bool)` | `{}` | no |
 | <a name="input_provisioned_concurrency"></a> [provisioned\_concurrency](#input\_provisioned\_concurrency) | n/a | `number` | `0` | no |
+| <a name="input_runbook_link"></a> [runbook\_link](#input\_runbook\_link) | URL for the runbook for this lambda | `string` | `null` | no |
 | <a name="input_scaling_trigger"></a> [scaling\_trigger](#input\_scaling\_trigger) | n/a | `number` | `0.7` | no |
 
 ## Outputs

@@ -4,7 +4,7 @@ moved {
 }
 
 moved {
-  from = aws_cloudwatch_log_group.lambda_log_group[0]
+  from = aws_cloudwatch_log_group.lambda_log_group
   to   = module.endpoint_lambda.aws_cloudwatch_log_group.lambda_log_group
 }
 
@@ -31,4 +31,9 @@ moved {
 moved {
   from = aws_appautoscaling_policy.provisioned-concurrency-policy
   to   = module.endpoint_lambda.aws_appautoscaling_policy.provisioned-concurrency-policy
+}
+
+moved {
+  from = terraform_data.wait_for_alias
+  to   = module.endpoint_lambda.terraform_data.wait_for_alias
 }
