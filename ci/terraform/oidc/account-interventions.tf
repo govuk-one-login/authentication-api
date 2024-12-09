@@ -41,7 +41,7 @@ module "account_interventions" {
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
-    TICF_CRI_LAMBDA_IDENTIFIER                  = local.deploy_ticf_cri_count == 1 ? aws_lambda_alias.ticf_cri_lambda_alias[0].arn : null
+    TICF_CRI_LAMBDA_IDENTIFIER                  = local.deploy_ticf_cri_count == 1 ? module.ticf_cri_lambda[0].endpoint_lambda_alias.arn : null
     INVOKE_TICF_CRI_LAMBDA                      = var.call_ticf_cri
   }
 
