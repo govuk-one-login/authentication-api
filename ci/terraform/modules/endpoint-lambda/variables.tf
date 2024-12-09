@@ -173,3 +173,9 @@ variable "wait_for_alias_timeout" {
   description = "The number of seconds to wait for the alias to be created"
   default     = 300
 }
+
+variable "runbook_link" {
+  type        = string
+  description = "A link that is appended to alarm descriptions that should open a page describing how to triage and handle the alarm"
+  default     = ""
+}
