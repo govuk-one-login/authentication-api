@@ -173,3 +173,9 @@ variable "wait_for_alias_timeout" {
   description = "The number of seconds to wait for the alias to be created"
   default     = 300
 }
+
+variable "runbook_link" {
+  description = "URL for the runbook for this lambda"
+  type        = string
+  default     = null
+}

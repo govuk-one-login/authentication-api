@@ -11,8 +11,8 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   dimensions = {
     QueueName = aws_sqs_queue.email_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/4164649233/BAU+Daytime+Support+Hygiene+and+Optimisation+Rota#SUP-7%3A-Resolve-DLQ-messages"
-  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/4164649233/BAU+Daytime+Support+Hygiene+and+Optimisation+Rota#SUP-7%3A-Resolve-DLQ-messages"
+  alarm_actions     = [local.slack_event_sns_topic_arn]
 }
 moved {
   from = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm[0]
@@ -32,8 +32,8 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   dimensions = {
     QueueName = aws_sqs_queue.spot_request_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/DYDMBgE"
-  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/DYDMBgE"
+  alarm_actions     = [local.slack_event_sns_topic_arn]
 }
 moved {
   from = aws_cloudwatch_metric_alarm.spot_request_sqs_dlq_cloudwatch_alarm[0]
@@ -53,8 +53,8 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_alarm" {
   dimensions = {
     QueueName = aws_sqs_queue.spot_request_queue.name
   }
-  alarm_description = "Age of the oldest message on ${aws_sqs_queue.spot_request_queue.name} exceeds 10 seconds. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
-  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+  alarm_description = "Age of the oldest message on ${aws_sqs_queue.spot_request_queue.name} exceeds 10 seconds. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
+  alarm_actions     = [local.slack_event_sns_topic_arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
@@ -70,8 +70,8 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
   dimensions = {
     QueueName = aws_sqs_queue.spot_request_queue.name
   }
-  alarm_description = "Age of the oldest message on ${aws_sqs_queue.spot_request_queue.name} exceeds 60 seconds. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
-  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : data.aws_sns_topic.slack_events.arn]
+  alarm_description = "Age of the oldest message on ${aws_sqs_queue.spot_request_queue.name} exceeds 60 seconds. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
+  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
 }
 
 
@@ -93,7 +93,7 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
 #  }
 #
 #  alarm_description = "${var.waf_alarm_blocked_reqeuest_threshold} or more blocked requests have been received by the ${aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].name} in the last 5 minutes"
-#  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+#  alarm_actions     = [local.slack_event_sns_topic_arn]
 #}
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
@@ -114,5 +114,5 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
 #  }
 #
 #  alarm_description = "${var.waf_alarm_blocked_reqeuest_threshold} or more blocked requests have been received by the ${aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].name} in the last 5 minutes"
-#  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+#  alarm_actions     = [local.slack_event_sns_topic_arn]
 #}

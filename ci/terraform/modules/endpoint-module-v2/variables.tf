@@ -173,13 +173,11 @@ variable "scaling_trigger" {
 variable "slack_event_topic_arn" {
   description = "The ARN of the slack event topic"
   type        = string
-  default     = null
 }
 
 variable "account_alias" {
   description = "The 'friendly-name' of the AWS account, eg. di-auth-development"
   type        = string
-  default     = null
 }
 
 variable "dynatrace_secret" {
@@ -195,5 +193,10 @@ variable "dynatrace_secret" {
     DT_LOG_COLLECTION_AUTH_TOKEN = string
   })
   sensitive = true
-  default   = null
+}
+
+variable "runbook_link" {
+  description = "URL for the runbook for this lambda"
+  type        = string
+  default     = null
 }

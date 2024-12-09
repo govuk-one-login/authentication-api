@@ -3,6 +3,11 @@ resource "aws_sns_topic" "slack_events" {
   lambda_failure_feedback_role_arn = aws_iam_role.sns_logging_iam_role.arn
 }
 
+output "slack_event_sns_topic_arn" {
+  description = "The ARN of the SNS topic for Slack events"
+  value       = aws_sns_topic.slack_events.arn
+}
+
 data "aws_iam_policy_document" "sns_topic_policy" {
   version = "2012-10-17"
 

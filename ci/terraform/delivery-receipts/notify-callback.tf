@@ -15,7 +15,7 @@ module "delivery_receipts_api_notify_callback_role" {
 }
 
 module "notify_callback" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "notify-callback"
   path_part       = "notify-callback"
@@ -49,6 +49,10 @@ module "notify_callback" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = false
+
+  dynatrace_secret      = local.dynatrace_secret
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  account_alias         = local.aws_account_alias
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
