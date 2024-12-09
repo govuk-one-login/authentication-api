@@ -4,7 +4,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   threshold           = var.lambda_log_alarm_error_rate_threshold
-  alarm_description   = "Lambda error rate of ${var.lambda_log_alarm_error_rate_threshold} has been reached in the ${aws_lambda_function.bulk_user_email_send_lambda[0].function_name} lambda.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
+  alarm_description   = "Lambda error rate of ${var.lambda_log_alarm_error_rate_threshold} has been reached in the ${aws_lambda_function.bulk_user_email_send_lambda[0].function_name} lambda.ACCOUNT: ${local.aws_account_alias}"
 
   metric_query {
     id          = "e1"
@@ -41,9 +41,5 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
       }
     }
   }
-  alarm_actions = [data.aws_sns_topic.slack_events.arn]
-}
-
-data "aws_sns_topic" "slack_events" {
-  name = "${var.environment}-slack-events"
+  alarm_actions = [local.slack_event_sns_topic_arn]
 }
