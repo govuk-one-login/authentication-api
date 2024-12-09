@@ -21,7 +21,7 @@ module "doc_app_callback_role" {
 }
 
 module "doc-app-callback" {
-  source          = "../modules/endpoint-module"
+  source          = "../modules/endpoint-module-v2"
   endpoint_name   = "doc-app-callback"
   path_part       = var.orch_doc_app_callback_enabled ? "doc-app-callback-auth" : "doc-app-callback"
   endpoint_method = ["GET"]
@@ -71,6 +71,10 @@ module "doc-app-callback" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = false
   lambda_log_alarm_threshold             = 10
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
