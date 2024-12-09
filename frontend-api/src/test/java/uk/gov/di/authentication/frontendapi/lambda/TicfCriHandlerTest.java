@@ -2,8 +2,10 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.google.gson.JsonArray;
+import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -14,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,11 +32,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.entity.TICFCRIRequest.basicTicfCriRequest;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withLevelAndMessageContaining;
 
 class TicfCriHandlerTest {
 
@@ -53,6 +59,10 @@ class TicfCriHandlerTest {
     private AutoCloseable mocks;
     private static final Map<String, String> METRICS_CONTEXT =
             Map.of("Environment", "test-environment");
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(TicfCriHandler.class);
 
     @BeforeEach
     void setUp() {
@@ -99,8 +109,8 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {200, 404, 500})
-    void sendsMetricsBasedOnTheHttpStatusCode(Integer statusCode)
+    @MethodSource("statusCodes")
+    void sendsMetricsAndLogsBasedOnTheHttpStatusCode(Integer statusCode, Level expectedLogLevel)
             throws IOException, InterruptedException {
         var ticfRequest =
                 basicTicfCriRequest(
@@ -116,11 +126,26 @@ class TicfCriHandlerTest {
                         Map.ofEntries(
                                 Map.entry("Environment", "test-environment"),
                                 Map.entry("StatusCode", statusCode.toString())));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withLevelAndMessageContaining(
+                                expectedLogLevel,
+                                format(
+                                        "Response received from TICF CRI Service with status %d",
+                                        statusCode))));
+    }
+
+    private static List<Arguments> statusCodes() {
+        return List.of(
+                Arguments.of(200, Level.INFO),
+                Arguments.of(404, Level.ERROR),
+                Arguments.of(500, Level.INFO));
     }
 
     @ParameterizedTest
     @MethodSource("exceptions")
-    void testIncrementsMetricWhenAnExceptionOccurs(Exception e, String metricName)
+    void testIncrementsMetricAndSendsLogsWhenAnExceptionOccurs(Exception e, String metricName)
             throws Exception {
         when(httpClient.send(any(), any())).thenThrow(e);
 
@@ -130,6 +155,9 @@ class TicfCriHandlerTest {
                 context);
 
         verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);
+        assertThat(
+                logging.events(),
+                hasItem(withLevelAndMessageContaining(Level.ERROR, format(e.getMessage()))));
     }
 
     private static List<Arguments> exceptions() {
@@ -138,8 +166,7 @@ class TicfCriHandlerTest {
                 Arguments.of(
                         new InterruptedException("an Interrputed exception"),
                         "TicfCriServiceError"),
-                Arguments.of(
-                        new HttpTimeoutException("request timed out"), "TicfCriServiceTimeout"));
+                Arguments.of(new HttpTimeoutException("timed out"), "TicfCriServiceTimeout"));
     }
 
     private JsonArray jsonArrayFrom(List<String> elements) {

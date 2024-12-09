@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -52,40 +53,33 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
             var response = sendRequest(input);
-            var statusCode = String.valueOf(response.statusCode());
+            var statusCode = response.statusCode();
             var logMessage =
-                    format(
-                            "Response received from TICF CRI Service with status %s and body %s",
-                            statusCode, response.body());
-            LOG.info(logMessage);
+                    format("Response received from TICF CRI Service with status %s", statusCode);
+            LOG.log(statusCode >= 400 && statusCode < 500 ? Level.ERROR : Level.INFO, logMessage);
             cloudwatchMetricsService.incrementCounter(
                     "TicfCriResponseReceived",
-                    Map.ofEntries(environmentForMetrics, Map.entry("StatusCode", statusCode)));
+                    Map.ofEntries(
+                            environmentForMetrics,
+                            Map.entry("StatusCode", String.valueOf(statusCode))));
         } catch (HttpTimeoutException e) {
-            var errorDescription =
+            LOG.error(
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
-                            configurationService.getTicfCriServiceCallTimeout());
-            logAndSendMetricsForInterventionsError(
-                    errorDescription, "TicfCriServiceTimeout", false);
+                            configurationService.getTicfCriServiceCallTimeout()));
+            sendMetricsForInterventionsError("TicfCriServiceTimeout");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError", true);
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            sendMetricsForInterventionsError("TicfCriServiceError");
         } catch (IOException e) {
-            var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError", true);
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            sendMetricsForInterventionsError("TicfCriServiceError");
         }
         return null;
     }
 
-    private void logAndSendMetricsForInterventionsError(
-            String errorDescription, String metric, Boolean raiseErrorLog) {
-        if (Boolean.TRUE.equals(raiseErrorLog)) {
-            LOG.error(errorDescription);
-        } else {
-            LOG.warn(errorDescription);
-        }
+    private void sendMetricsForInterventionsError(String metric) {
         cloudwatchMetricsService.incrementCounter(
                 metric, Map.of("Environment", configurationService.getEnvironment()));
     }
