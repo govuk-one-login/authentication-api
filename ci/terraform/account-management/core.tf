@@ -5,13 +5,6 @@ data "terraform_remote_state" "core" {
     key         = "${var.environment}-core-terraform.tfstate"
     assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
     region      = var.aws_region
-
-    endpoint                    = var.use_localstack ? "http://localhost:45678" : null
-    iam_endpoint                = var.use_localstack ? "http://localhost:45678" : null
-    sts_endpoint                = var.use_localstack ? "http://localhost:45678" : null
-    skip_credentials_validation = var.use_localstack
-    skip_metadata_api_check     = var.use_localstack
-    use_path_style              = var.use_localstack
   }
 }
 

@@ -24,7 +24,6 @@ module "notify_callback" {
 
   handler_environment_variables = merge(var.notify_template_map, {
     ENVIRONMENT             = var.environment
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     BULK_USER_EMAIL_ENABLED = local.deploy_bulk_email_users_count
   })
   handler_function_name = "uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler::handleRequest"
@@ -50,8 +49,6 @@ module "notify_callback" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = false
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,

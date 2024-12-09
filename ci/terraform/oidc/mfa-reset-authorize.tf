@@ -70,8 +70,6 @@ module "mfa_reset_authorize" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
 
-  use_localstack = false
-
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api
   ]

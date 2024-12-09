@@ -38,11 +38,6 @@ variable "aws_region" {
   default = "eu-west-2"
 }
 
-variable "use_localstack" {
-  type    = bool
-  default = false
-}
-
 variable "aws_endpoint" {
   type    = string
   default = null
@@ -149,11 +144,6 @@ variable "lambda_min_concurrency" {
 variable "contact_us_link_route" {
   type    = string
   default = "contact-gov-uk-one-login"
-}
-
-variable "localstack_endpoint" {
-  type    = string
-  default = "http://localhost:45678/"
 }
 
 variable "endpoint_memory_size" {
