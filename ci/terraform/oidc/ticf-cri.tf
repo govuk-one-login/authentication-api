@@ -9,6 +9,13 @@ module "frontend_api_ticf_cri_role" {
   }
 }
 
+locals {
+  # All the tuning parameters in here specifically point to any overrides for account interventions
+  # This is deliberate - for now we want to scale up this lambda in tandem with account interventions, since
+  # they are called in roughly the same number of places
+  ticf_cri_performance_parameters = lookup(var.performance_tuning, "account-interventions", local.default_performance_parameters)
+}
+
 module "ticf_cri_lambda" {
   count  = local.deploy_ticf_cri_count
   source = "../modules/endpoint-lambda"
@@ -24,6 +31,11 @@ module "ticf_cri_lambda" {
   })
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.TicfCriHandler::handleRequest"
   handler_runtime       = "java17"
+
+  memory_size                 = local.ticf_cri_performance_parameters.memory
+  provisioned_concurrency     = local.ticf_cri_performance_parameters.concurrency
+  max_provisioned_concurrency = local.ticf_cri_performance_parameters.max_concurrency
+  scaling_trigger             = local.ticf_cri_performance_parameters.scaling_trigger
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file         = aws_s3_object.frontend_api_release_zip.key
