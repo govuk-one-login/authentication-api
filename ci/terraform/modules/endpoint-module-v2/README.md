@@ -63,6 +63,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_source_bucket"></a> [source\_bucket](#input\_source\_bucket) | n/a | `string` | n/a | yes |
 | <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | The id of the subnets for the lambda | `list(string)` | n/a | yes |
 | <a name="input_api_key_required"></a> [api\_key\_required](#input\_api\_key\_required) | n/a | `bool` | `false` | no |
+| <a name="input_architectures"></a> [architectures](#input\_architectures) | n/a | `list(string)` | <pre>[<br/>  "x86_64"<br/>]</pre> | no |
 | <a name="input_authorizer_id"></a> [authorizer\_id](#input\_authorizer\_id) | n/a | `string` | `null` | no |
 | <a name="input_cloudwatch_log_retention"></a> [cloudwatch\_log\_retention](#input\_cloudwatch\_log\_retention) | The number of day to retain Cloudwatch logs for | `number` | `30` | no |
 | <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `any` | `null` | no |
@@ -79,7 +80,10 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_max_provisioned_concurrency"></a> [max\_provisioned\_concurrency](#input\_max\_provisioned\_concurrency) | n/a | `number` | `5` | no |
 | <a name="input_method_request_parameters"></a> [method\_request\_parameters](#input\_method\_request\_parameters) | n/a | `map(bool)` | `{}` | no |
 | <a name="input_provisioned_concurrency"></a> [provisioned\_concurrency](#input\_provisioned\_concurrency) | n/a | `number` | `0` | no |
+| <a name="input_runbook_link"></a> [runbook\_link](#input\_runbook\_link) | A link that is appended to alarm descriptions that should open a page describing how to triage and handle the alarm | `string` | `null` | no |
 | <a name="input_scaling_trigger"></a> [scaling\_trigger](#input\_scaling\_trigger) | n/a | `number` | `0.7` | no |
+| <a name="input_snapstart"></a> [snapstart](#input\_snapstart) | n/a | `bool` | `false` | no |
+| <a name="input_wait_for_alias_timeout"></a> [wait\_for\_alias\_timeout](#input\_wait\_for\_alias\_timeout) | The number of seconds to wait for the alias to be created | `number` | `300` | no |
 
 ## Outputs
 
