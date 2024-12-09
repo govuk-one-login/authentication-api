@@ -36,6 +36,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
@@ -67,6 +68,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_INITIATED;
@@ -339,7 +343,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRedirectToLoginUriForAccountManagementClient() {
         setupForAuthJourney();
         registerClient(
-                AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), ClientType.WEB, false);
+                AM_CLIENT_ID,
+                "am-client-name",
+                List.of("openid", "am"),
+                ClientType.WEB,
+                false,
+                false);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -713,7 +722,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
-        withExistingOrchSession(previousSessionId);
 
         var response =
                 makeRequest(
@@ -813,6 +821,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "test-client",
                 List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
                 ClientType.APP,
+                false,
                 false);
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
@@ -928,7 +937,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void
             shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
 
@@ -954,7 +964,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void
             shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
 
@@ -977,20 +988,65 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
+    @Test
+    void shouldUpdateOrchSessionWhenMaxAgeHasExpired() throws Exception {
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        var previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(previousSessionId)
+                        .withAuthenticated(true)
+                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var previousSession = orchSessionExtension.getSession(previousSessionId);
+        assertTrue(previousSession.isPresent());
+        assertTrue(previousSession.get().getAuthenticated());
+        assertNull(previousSession.get().getPreviousSessionId());
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
+                        Optional.of("GET"));
+        var sessionCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        var newSessionId = sessionCookie.get().getValue().split("\\.")[0];
+
+        var newSession = orchSessionExtension.getSession(newSessionId);
+        assertTrue(newSession.isPresent());
+        assertFalse(newSession.get().getAuthenticated());
+        assertEquals(newSession.get().getSessionId(), newSessionId);
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
-        return constructQueryStringParameters(clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI);
+        return constructQueryStringParameters(
+                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, null);
+    }
+
+    private Map<String, String> constructQueryStringParameters(
+            String clientId, String prompt, String scopes, String vtr, Long maxAge) {
+        return constructQueryStringParameters(
+                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, maxAge);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, String uiLocales) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, uiLocales, RP_REDIRECT_URI);
+                clientId, prompt, scopes, vtr, uiLocales, RP_REDIRECT_URI, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, URI redirectUri) {
-        return constructQueryStringParameters(clientId, prompt, scopes, vtr, null, redirectUri);
+        return constructQueryStringParameters(
+                clientId, prompt, scopes, vtr, null, redirectUri, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
@@ -999,7 +1055,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             String scopes,
             String vtr,
             String uiLocales,
-            URI redirectUri) {
+            URI redirectUri,
+            Long maxAge) {
         final Map<String, String> queryStringParameters =
                 new HashMap<>(
                         Map.of(
@@ -1019,12 +1076,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Optional.ofNullable(prompt).ifPresent(s -> queryStringParameters.put("prompt", s));
         Optional.ofNullable(vtr).ifPresent(s -> queryStringParameters.put("vtr", jsonArrayOf(vtr)));
         Optional.ofNullable(uiLocales).ifPresent(s -> queryStringParameters.put("ui_locales", s));
+        Optional.ofNullable(maxAge)
+                .ifPresent(s -> queryStringParameters.put("max_age", s.toString()));
 
         return queryStringParameters;
     }
 
     private void setupForAuthJourney() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false);
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, false);
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
@@ -1035,6 +1095,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "test-client",
                 List.of("openid", "doc-checking-app"),
                 ClientType.APP,
+                false,
                 false);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
@@ -1067,7 +1128,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             String clientName,
             List<String> scopes,
             ClientType clientType,
-            boolean jarValidationRequired) {
+            boolean jarValidationRequired,
+            boolean maxAgeEnabled) {
         clientStore.registerClient(
                 clientId,
                 clientName,
@@ -1084,7 +1146,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 jarValidationRequired,
                 List.of(
                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue()));
+                        LevelOfConfidence.HMRC200.getValue()),
+                maxAgeEnabled);
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
@@ -1125,7 +1188,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void withExistingOrchSession(String sessionId) {
-        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
+        orchSessionExtension.addSession(new OrchSessionItem(sessionId).withAuthenticated(true));
         assertTrue(orchSessionExtension.getSession(sessionId).isPresent());
     }
 
