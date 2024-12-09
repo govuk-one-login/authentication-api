@@ -17,7 +17,7 @@ jobs:
 
       - name: Get changed Java files
         id: changed-java-files
-        uses: tj-actions/changed-files@4edd678ac3f81e2dc578756871e4d00c19191daf # v45.0.4
+        uses: tj-actions/changed-files@bab30c2299617f6615ec02a68b9a40d10bd21366 # v45.0.5
         with:
           # If you change the paths here, ensure they are synchronised with the paths in the other jobs.
           # Find these by searching for "Ensure these are synchronized with the paths in the check-changed-files job"
