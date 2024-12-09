@@ -903,6 +903,201 @@ class AuthenticationCallbackHandlerTest {
         }
     }
 
+    @Nested
+    class MaxAgeSessionHandling {
+        private static final String PREVIOUS_SESSION_ID = "9a3f2708-2bf1-40d8-9c25-7b94145ef535";
+        private static final String INTERNAL_COMMON_SUBJECT_ID =
+                "urn:fdc:gov:245469fb-7b5a-495c-84ec-c2b5b65c2fbd";
+        private static final String DIFFERENT_INTERNAL_COMMON_SUBJECT_ID =
+                "urn:fdc:gov:cebb94a1-3ee7-44ed-963b-f3befee65487";
+        private static final List<String> PREVIOUS_CLIENT_SESSIONS =
+                List.of(
+                        "623f860d-1bce-43ea-8f82-446fc894160b",
+                        "3eee3869-abf1-41c1-bdb5-c25f68d0a54d",
+                        "aef54391-95d8-4d3b-ac30-cbe1e3e2f0d4");
+
+        @BeforeEach
+        void setup() {
+            usingValidClientSession();
+            usingValidClient();
+            when(configurationService.supportMaxAgeEnabled()).thenReturn(true);
+        }
+
+        @Test
+        void itCopiesThePreviousClientSessionsToTheCurrentSessionIfInternalCommonSubjectIdsMatch()
+                throws UnsuccessfulCredentialResponseException {
+            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            var sharedSession = withMaxAgeSharedSession();
+            withPreviousOrchSessionDueToMaxAge();
+            withPreviousSharedSessionDueToMaxAge();
+
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(USER_INFO.getSubject()).thenReturn(new Subject(INTERNAL_COMMON_SUBJECT_ID));
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+            var response = handler.handleRequest(event, null);
+
+            assertThat(response, hasStatus(302));
+            String redirectLocation = response.getHeaders().get("Location");
+            assertThat(
+                    redirectLocation,
+                    equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
+
+            assertEquals(PREVIOUS_CLIENT_SESSIONS, sharedSession.getClientSessions());
+            assertNull(orchSession.getPreviousSessionId());
+            verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(orchSessionService, times(3))
+                    .updateSession(argThat(s -> s.getPreviousSessionId() == null));
+            verify(sessionService, times(2))
+                    .storeOrUpdateSession(
+                            argThat(s -> s.getClientSessions().equals(PREVIOUS_CLIENT_SESSIONS)));
+        }
+
+        @Test
+        void itDoesNotAssignClientSessionsIfItCannotFindThePreviousOrchSession()
+                throws UnsuccessfulCredentialResponseException {
+            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            var sharedSession = withMaxAgeSharedSession();
+            withNoPreviousOrchSession();
+            withPreviousSharedSessionDueToMaxAge();
+
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(USER_INFO.getSubject()).thenReturn(new Subject(INTERNAL_COMMON_SUBJECT_ID));
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+            var response = handler.handleRequest(event, null);
+
+            assertThat(response, hasStatus(302));
+            String redirectLocation = response.getHeaders().get("Location");
+            assertThat(
+                    redirectLocation,
+                    equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
+
+            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertNull(orchSession.getPreviousSessionId());
+            verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(orchSessionService, times(3))
+                    .updateSession(argThat(s -> s.getPreviousSessionId() == null));
+            verify(sessionService, times(2))
+                    .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
+        }
+
+        @Test
+        void itDoesNotAssignClientSessionsIfItCannotFindThePreviousSharedSession()
+                throws UnsuccessfulCredentialResponseException {
+            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            var sharedSession = withMaxAgeSharedSession();
+            withPreviousOrchSessionDueToMaxAge();
+            withNoPreviousSharedSession();
+
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(USER_INFO.getSubject()).thenReturn(new Subject(INTERNAL_COMMON_SUBJECT_ID));
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+            var response = handler.handleRequest(event, null);
+
+            assertThat(response, hasStatus(302));
+            String redirectLocation = response.getHeaders().get("Location");
+            assertThat(
+                    redirectLocation,
+                    equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
+
+            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertNull(orchSession.getPreviousSessionId());
+            verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(orchSessionService, times(3))
+                    .updateSession(argThat(s -> s.getPreviousSessionId() == null));
+            verify(sessionService, times(2))
+                    .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
+        }
+
+        @Test
+        void itDoesNotAttatchThePreviousClientSessionsIfTheInternalCommonSubjectIdsDoNotMatch()
+                throws UnsuccessfulCredentialResponseException {
+            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            var sharedSession = withMaxAgeSharedSession();
+            withPreviousOrchSessionDueToMaxAge();
+            withPreviousSharedSessionDueToMaxAge();
+
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(USER_INFO.getSubject())
+                    .thenReturn(new Subject(DIFFERENT_INTERNAL_COMMON_SUBJECT_ID));
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+            var response = handler.handleRequest(event, null);
+
+            assertThat(response, hasStatus(302));
+            String redirectLocation = response.getHeaders().get("Location");
+            assertThat(
+                    redirectLocation,
+                    equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
+
+            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertNull(orchSession.getPreviousSessionId());
+            verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
+            verify(orchSessionService, times(3))
+                    .updateSession(argThat(s -> s.getPreviousSessionId() == null));
+            verify(sessionService, times(2))
+                    .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
+            // TODO: ATO-1101: Send backchannel logouts + audit events
+        }
+
+        private void withPreviousOrchSessionDueToMaxAge() {
+            when(orchSessionService.getSession(PREVIOUS_SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new OrchSessionItem(PREVIOUS_SESSION_ID)
+                                            .withInternalCommonSubjectId(
+                                                    INTERNAL_COMMON_SUBJECT_ID)));
+        }
+
+        private void withPreviousSharedSessionDueToMaxAge() {
+            var previousSharedSession = new Session(PREVIOUS_SESSION_ID);
+            PREVIOUS_CLIENT_SESSIONS.forEach(previousSharedSession::addClientSession);
+            when(sessionService.getSession(PREVIOUS_SESSION_ID))
+                    .thenReturn(Optional.of(previousSharedSession));
+        }
+
+        private void withNoPreviousSharedSession() {
+            when(sessionService.getSession(PREVIOUS_SESSION_ID)).thenReturn(Optional.empty());
+        }
+
+        private void withNoPreviousOrchSession() {
+            when(orchSessionService.getSession(PREVIOUS_SESSION_ID)).thenReturn(Optional.empty());
+        }
+
+        private OrchSessionItem withMaxAgeOrchSession(String internalCommonSubjectId) {
+            var orchSession =
+                    new OrchSessionItem(SESSION_ID)
+                            .withPreviousSessionId(PREVIOUS_SESSION_ID)
+                            .withInternalCommonSubjectId(internalCommonSubjectId);
+            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
+            return orchSession;
+        }
+
+        private Session withMaxAgeSharedSession() {
+            var session = new Session(SESSION_ID);
+            when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+            return session;
+        }
+    }
+
     private AccountIntervention setUpIntervention(
             boolean blocked, boolean suspended, boolean reproveIdentity, boolean resetPassword) {
         AccountIntervention intervention =

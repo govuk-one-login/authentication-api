@@ -400,6 +400,12 @@ public class AuthenticationCallbackHandler
                     orchSession.setAuthTime(NowHelper.now().toInstant().getEpochSecond());
                 }
 
+                if (configurationService.supportMaxAgeEnabled()
+                        && Objects.nonNull(orchSession.getPreviousSessionId())) {
+                    LOG.info("Previous session id is present - handling max age");
+                    handleMaxAgeSession(orchSession, userSession);
+                }
+
                 userSession.setAuthenticated(true);
                 orchSession.setAuthenticated(true);
                 clientSession.setRpPairwiseId(
@@ -791,5 +797,39 @@ public class AuthenticationCallbackHandler
                 orchSession.getInternalCommonSubjectId() != null);
         //
         orchSessionService.updateSession(updatedOrchSession);
+    }
+
+    private void handleMaxAgeSession(
+            OrchSessionItem currentOrchSession, Session currentSharedSession) {
+        var previousSessionId = currentOrchSession.getPreviousSessionId();
+        var previousSharedSession = sessionService.getSession(previousSessionId);
+        var previousOrchSession = orchSessionService.getSession(previousSessionId);
+
+        if (previousSharedSession.isEmpty() || previousOrchSession.isEmpty()) {
+            LOG.warn(
+                    "Cannot retrieve previous OrchSession or previous shared session required for to handle max_age");
+            currentOrchSession.setPreviousSessionId(null);
+            return;
+        }
+
+        var previousInternalCommonSubjectId =
+                previousOrchSession.get().getInternalCommonSubjectId();
+
+        if (currentOrchSession
+                .getInternalCommonSubjectId()
+                .equals(previousInternalCommonSubjectId)) {
+            LOG.info("Previous OrchSession InternalCommonSubjectId matches Auth UserInfo response");
+            previousSharedSession
+                    .get()
+                    .getClientSessions()
+                    .forEach(currentSharedSession::addClientSession);
+
+        } else {
+            LOG.info(
+                    "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
+            // TODO: ATO-1101: Send backchannel logouts + audit events
+
+        }
+        currentOrchSession.setPreviousSessionId(null);
     }
 }
