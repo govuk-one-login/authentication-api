@@ -21,10 +21,6 @@ It is designed to be used to create the lambda role passed to a lambda via endpo
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
 
-## Modules
-
-No modules.
-
 ## Resources
 
 | Name | Type |

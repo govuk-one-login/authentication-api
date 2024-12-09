@@ -25,10 +25,6 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
-## Modules
-
-No modules.
-
 ## Resources
 
 | Name | Type |

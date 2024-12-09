@@ -23,10 +23,6 @@ This module is intended to be used alongside multiple [endpoint-lambdas](../endp
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
 
-## Modules
-
-No modules.
-
 ## Resources
 
 | Name | Type |

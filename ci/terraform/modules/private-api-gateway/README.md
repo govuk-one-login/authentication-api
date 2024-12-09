@@ -15,19 +15,11 @@ it's immediately obvious that this provisions a **_private_** gateway (as oppose
 | <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
 
-## Providers
-
-No providers.
-
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_api-gateway"></a> [api-gateway](#module\_api-gateway) | ../api-gateway | n/a |
-
-## Resources
-
-No resources.
 
 ## Inputs
 

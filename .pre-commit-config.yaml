@@ -54,8 +54,9 @@ repos:
         types_or:
           - hcl
           - terraform
+          - yaml
         types: []
-        files: ^ci/terraform/modules/
+        files: ^ci/terraform/modules/|ci/terraform/.terraform-docs.yml$
         args:
           - ci/terraform
 
