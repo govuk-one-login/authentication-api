@@ -78,4 +78,5 @@ locals {
   experian_phone_check_sqs_queue_id                   = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_id
   experian_phone_check_sqs_queue_policy_arn           = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_policy_arn
   secure_pipelines_environment                        = var.environment == "sandpit" ? "dev" : var.environment
+  api_gateway_logging_role_name                       = data.terraform_remote_state.shared.outputs.api_gateway_logging_role_name
 }
