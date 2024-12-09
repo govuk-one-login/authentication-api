@@ -21,4 +21,7 @@ locals {
   authentication_security_group_id       = data.terraform_remote_state.shared.outputs.authentication_security_group_id
   authentication_private_subnet_ids      = data.terraform_remote_state.shared.outputs.authentication_private_subnet_ids
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+
+  slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
+  aws_account_alias         = data.terraform_remote_state.shared.outputs.aws_account_alias
 }
