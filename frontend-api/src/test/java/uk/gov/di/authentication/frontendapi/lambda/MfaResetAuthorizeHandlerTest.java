@@ -3,10 +3,12 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
@@ -21,6 +23,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -29,7 +32,9 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,6 +68,8 @@ class MfaResetAuthorizeHandlerTest {
     private static final AuditService auditService = mock(AuditService.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private static final IDReverificationStateService idReverificationStateService =
+            mock(IDReverificationStateService.class);
     private static final AuditContext testAuditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
@@ -74,9 +81,13 @@ class MfaResetAuthorizeHandlerTest {
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
+    private static final String ORCHESTRATION_STATE = "ORCHESTRATION_STATE";
     private static final APIGatewayProxyRequestEvent TEST_INVOKE_EVENT =
             ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(
-                    CommonTestVariables.VALID_HEADERS, format("{ \"email\": \"%s\" }", EMAIL));
+                    CommonTestVariables.VALID_HEADERS,
+                    format(
+                            "{ \"email\": \"%s\", \"orchestrationRedirectUrl\": \"%s\" }",
+                            EMAIL, ORCHESTRATION_STATE));
     private static MfaResetAuthorizeHandler handler;
 
     @BeforeAll
@@ -100,7 +111,8 @@ class MfaResetAuthorizeHandlerTest {
                         authenticationService,
                         ipvReverificationService,
                         auditService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        idReverificationStateService);
     }
 
     @Test
@@ -109,7 +121,10 @@ class MfaResetAuthorizeHandlerTest {
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
+                        eq(new Subject(COMMON_SUBJECT_ID)),
+                        eq(CLIENT_SESSION_ID),
+                        eq(session),
+                        any()))
                 .thenReturn(TEST_REDIRECT_URI);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
@@ -123,9 +138,27 @@ class MfaResetAuthorizeHandlerTest {
     }
 
     @Test
+    void storesTheStateValuesForCrossBrowserIssue() {
+        handler.handleRequest(TEST_INVOKE_EVENT, context);
+
+        ArgumentCaptor<State> authenticationStateCaptor = ArgumentCaptor.forClass(State.class);
+        verify(ipvReverificationService)
+                .buildIpvReverificationRedirectUri(
+                        any(), any(), any(), authenticationStateCaptor.capture());
+        verify(idReverificationStateService)
+                .store(
+                        authenticationStateCaptor.getValue().getValue(),
+                        ORCHESTRATION_STATE,
+                        CLIENT_SESSION_ID);
+    }
+
+    @Test
     void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
+                        eq(new Subject(COMMON_SUBJECT_ID)),
+                        eq(CLIENT_SESSION_ID),
+                        eq(session),
+                        any()))
                 .thenThrow(new JwtServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
@@ -137,7 +170,10 @@ class MfaResetAuthorizeHandlerTest {
     @Test
     void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        new Subject(COMMON_SUBJECT_ID), CLIENT_SESSION_ID, session))
+                        eq(new Subject(COMMON_SUBJECT_ID)),
+                        eq(CLIENT_SESSION_ID),
+                        eq(session),
+                        any()))
                 .thenThrow(new IPVReverificationServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);

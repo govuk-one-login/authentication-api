@@ -74,8 +74,8 @@ public class IPVReverificationService {
     }
 
     public String buildIpvReverificationRedirectUri(
-            Subject subject, String clientSessionId, Session session) throws JwtServiceException {
-        State state = new State();
+            Subject subject, String clientSessionId, Session session, State state)
+            throws JwtServiceException {
         ClaimsSetRequest claims = buildMfaResetClaimsRequest(subject);
         EncryptedJWT requestJWT =
                 constructMfaResetAuthorizationJWT(state, subject, claims, clientSessionId);
