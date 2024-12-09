@@ -92,8 +92,7 @@ public class IdentityProgressHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final Session session =
-            new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_SUBJECT_ID);
+    private final Session session = new Session(SESSION_ID);
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(INTERNAL_SUBJECT_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

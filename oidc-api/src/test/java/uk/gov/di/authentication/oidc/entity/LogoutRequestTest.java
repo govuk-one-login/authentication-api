@@ -109,10 +109,7 @@ class LogoutRequestTest {
 
     @BeforeEach
     void sessionExistsSetup() throws ParseException {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(INTERNL_COMMON_SUBJECT_ID.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         orchSession =
                 new OrchSessionItem()
                         .withSessionId(SESSION_ID)

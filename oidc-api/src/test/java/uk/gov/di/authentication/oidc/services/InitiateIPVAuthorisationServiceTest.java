@@ -123,10 +123,7 @@ public class InitiateIPVAuthorisationServiceTest {
                     SUBJECT_ID, "test.account.gov.uk", SaltHelper.generateNewSalt());
     private final AuthenticationRequest authenticationRequest = mock(AuthenticationRequest.class);
     private final UserInfo userInfo = generateUserInfo();
-    private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(EMAIL_ADDRESS)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL_ADDRESS);
     private final OrchSessionItem orchSession =
             new OrchSessionItem()
                     .withSessionId(SESSION_ID)

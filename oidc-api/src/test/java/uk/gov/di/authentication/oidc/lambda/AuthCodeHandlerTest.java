@@ -253,7 +253,6 @@ class AuthCodeHandlerTest {
         var expectedCommonSubject =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
-        session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
         orchSession.setInternalCommonSubjectId(expectedCommonSubject);
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
