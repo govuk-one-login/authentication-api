@@ -1,5 +1,5 @@
 resource "aws_lambda_function" "endpoint_lambda" {
-  function_name = replace("${var.environment}-${var.endpoint_name}-lambda", ".", "")
+  function_name = "${var.environment}-${local.endpoint_name_sanitized}-lambda"
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
   timeout       = 30
@@ -69,7 +69,7 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
 }
 
 resource "aws_lambda_alias" "endpoint_lambda" {
-  name             = replace("${var.environment}-${var.endpoint_name}-lambda-active", ".", "")
+  name             = "${var.environment}-${local.endpoint_name_sanitized}-lambda-active"
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.endpoint_lambda.arn
   function_version = aws_lambda_function.endpoint_lambda.version
