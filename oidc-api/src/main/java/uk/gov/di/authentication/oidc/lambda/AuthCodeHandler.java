@@ -386,10 +386,8 @@ public class AuthCodeHandler
         }
         CredentialTrustLevel currentCredentialStrength = orchSession.getCurrentCredentialStrength();
 
-        if (configurationService.isCurrentCredentialStrengthInOrchSessionEnabled()
-                && (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength)
-                                > 0)) {
+        if (isNull(currentCredentialStrength)
+                || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength) > 0) {
             orchSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
         return authorisationCodeService.generateAndSaveAuthorisationCode(
