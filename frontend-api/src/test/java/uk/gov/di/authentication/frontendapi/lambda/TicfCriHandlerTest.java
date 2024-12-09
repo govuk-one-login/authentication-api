@@ -99,7 +99,7 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {200, 404, 500})
+    @MethodSource("statusCodes")
     void sendsMetricsBasedOnTheHttpStatusCode(Integer statusCode)
             throws IOException, InterruptedException {
         var ticfRequest =
@@ -116,6 +116,10 @@ class TicfCriHandlerTest {
                         Map.ofEntries(
                                 Map.entry("Environment", "test-environment"),
                                 Map.entry("StatusCode", statusCode.toString())));
+    }
+
+    private static List<Arguments> statusCodes() {
+        return List.of(Arguments.of(200), Arguments.of(404), Arguments.of(500));
     }
 
     @ParameterizedTest
