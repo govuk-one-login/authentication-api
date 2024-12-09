@@ -194,3 +194,24 @@ variable "dynatrace_secret" {
   })
   sensitive = true
 }
+
+variable "snapstart" {
+  type    = bool
+  default = false
+}
+variable "architectures" {
+  type    = list(string)
+  default = ["x86_64"]
+}
+
+variable "wait_for_alias_timeout" {
+  type        = number
+  description = "The number of seconds to wait for the alias to be created"
+  default     = 300
+}
+
+variable "runbook_link" {
+  description = "A link that is appended to alarm descriptions that should open a page describing how to triage and handle the alarm"
+  type        = string
+  default     = null
+}
