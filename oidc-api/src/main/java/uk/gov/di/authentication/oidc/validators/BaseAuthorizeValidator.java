@@ -44,4 +44,12 @@ public abstract class BaseAuthorizeValidator {
         }
         return client;
     }
+
+    protected void logErrorInProdElseWarn(String logMessage) {
+        if (configurationService.getEnvironment().equals("production")) {
+            LOG.error(logMessage);
+        } else {
+            LOG.warn(logMessage);
+        }
+    }
 }

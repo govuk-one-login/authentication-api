@@ -47,7 +47,9 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         ClientRegistry client = getClientFromDynamo(clientId);
 
         if (!client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
-            LOG.warn("Invalid Redirect URI in request {}", authRequest.getRedirectionURI());
+            logErrorInProdElseWarn(
+                    String.format(
+                            "Invalid Redirect URI in request %s", authRequest.getRedirectionURI()));
             throw new ClientRedirectUriValidationException(
                     format(
                             "Invalid Redirect in request %s",
@@ -56,7 +58,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         var redirectURI = authRequest.getRedirectionURI();
 
         if (authRequest.getState() == null) {
-            LOG.error("State is missing from authRequest");
+            logErrorInProdElseWarn("State is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -68,13 +70,13 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         var state = authRequest.getState();
 
         if (authRequest.getRequestURI() != null) {
-            LOG.error("Request URI is not supported");
+            logErrorInProdElseWarn("Request URI is not supported");
             return Optional.of(
                     new AuthRequestError(
                             OAuth2Error.REQUEST_URI_NOT_SUPPORTED, redirectURI, state));
         }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
-            LOG.error(
+            logErrorInProdElseWarn(
                     "Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(
                     new AuthRequestError(
@@ -93,7 +95,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
         if (authRequest.getNonce() == null && !client.permitMissingNonce()) {
-            LOG.error("Nonce is missing from authRequest");
+            logErrorInProdElseWarn("Nonce is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -107,9 +109,10 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
             if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
-                LOG.error(
-                        "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
-                        levelOfConfidenceValues);
+                logErrorInProdElseWarn(
+                        String.format(
+                                "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: %s",
+                                levelOfConfidenceValues));
                 return Optional.of(
                         new AuthRequestError(
                                 new ErrorObject(
@@ -126,10 +129,10 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                 OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI, state));
             }
         } catch (IllegalArgumentException e) {
-            LOG.error(
-                    "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
-                    authRequestVtr,
-                    e);
+            logErrorInProdElseWarn(
+                    String.format(
+                            "vtr in AuthRequest is not valid. vtr in request: %s. IllegalArgumentException: %s",
+                            authRequestVtr, e));
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -143,16 +146,18 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
         for (String scope : scopes) {
             if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
-                LOG.error(
-                        "Scopes have been requested which are not yet supported. Scopes in request: {}",
-                        scopes);
+                logErrorInProdElseWarn(
+                        String.format(
+                                "Scopes have been requested which are not yet supported. Scopes in request: %s",
+                                scopes));
                 return false;
             }
         }
         if (!clientRegistry.getScopes().containsAll(scopes)) {
-            LOG.error(
-                    "Scopes have been requested which this client is not supported to request. Scopes in request: {}",
-                    scopes);
+            logErrorInProdElseWarn(
+                    String.format(
+                            "Scopes have been requested which this client is not supported to request. Scopes in request: %s",
+                            scopes));
             return false;
         }
         return true;
@@ -175,19 +180,19 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                         ValidClaims.getAllValidClaims().stream()
                                                 .noneMatch(t -> t.equals(claim)));
         if (containsUnsupportedClaims) {
-            LOG.error(
-                    () ->
-                            "Claims have been requested which are not yet supported. Claims in request: "
-                                    + claimsRequest.toJSONString());
+            logErrorInProdElseWarn(
+                    String.format(
+                            "Claims have been requested which are not yet supported. Claims in request: %s",
+                            claimsRequest.toJSONString()));
             return false;
         }
 
         boolean hasUnsupportedClaims = !clientRegistry.getClaims().containsAll(claimNames);
         if (hasUnsupportedClaims) {
-            LOG.error(
-                    () ->
-                            "Claims have been requested which this client is not supported to request. Claims in request: {}"
-                                    + claimsRequest.toJSONString());
+            logErrorInProdElseWarn(
+                    String.format(
+                            "Claims have been requested which this client is not supported to request. Claims in request: %s",
+                            claimsRequest.toJSONString()));
             return false;
         }
         LOG.info("Claims are present AND valid in auth request");
