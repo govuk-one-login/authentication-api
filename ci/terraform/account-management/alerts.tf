@@ -12,7 +12,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
     QueueName = aws_sqs_queue.email_dead_letter_queue.name
   }
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}"
-  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+  alarm_actions     = [local.slack_event_sns_topic_arn]
 }
 moved {
   from = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm[0]
@@ -37,9 +37,5 @@ moved {
 #  }
 #
 #  alarm_description = "${var.waf_alarm_blocked_reqeuest_threshold} or more blocked requests have been received by the ${aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].name} in the last 5 minutes"
-#  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+#  alarm_actions     = [local.slack_event_sns_topic_arn]
 #}
-
-data "aws_sns_topic" "slack_events" {
-  name = "${var.environment}-slack-events"
-}
