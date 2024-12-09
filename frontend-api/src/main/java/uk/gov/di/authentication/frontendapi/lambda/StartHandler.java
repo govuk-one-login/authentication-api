@@ -133,6 +133,7 @@ public class StartHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         LOG.info("Start request received");
+
         var session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
         if (Objects.isNull(session)) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
@@ -140,6 +141,7 @@ public class StartHandler
             attachSessionIdToLogs(session);
             LOG.info("Start session retrieved");
         }
+
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
 
@@ -174,7 +176,8 @@ public class StartHandler
                                         configurationService.getHeadersCaseInsensitive()));
             }
 
-            var userContext = startService.buildUserContext(session, clientSession.get());
+            var userContext =
+                    startService.buildUserContext(session, Optional.empty(), clientSession.get());
 
             attachLogFieldToLogs(
                     CLIENT_ID,
