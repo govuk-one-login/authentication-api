@@ -15,7 +15,9 @@ module "mfa_reset_storage_token_jwk_role" {
 module "mfa_reset_storage_token_jwk" {
   source = "../modules/endpoint-module-v2"
 
-  endpoint_name   = "mfa-reset-jwk.json"
+  endpoint_name           = "mfa-reset-jwk.json"
+  endpoint_name_sanitized = "mfa-reset-jwkjson"
+
   path_part       = "mfa-reset-jwk.json"
   endpoint_method = ["GET"]
   environment     = var.environment

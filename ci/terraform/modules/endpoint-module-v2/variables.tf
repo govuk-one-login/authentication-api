@@ -1,6 +1,15 @@
 variable "endpoint_name" {
-  type = string
+  description = "The name of the endpoint, used for naming resources"
+  type        = string
 }
+
+
+variable "endpoint_name_sanitized" {
+  description = "The name of the endpoint, required if endpoint_name contains a period"
+  type        = string
+  default     = null
+}
+
 
 variable "path_part" {
   type = string

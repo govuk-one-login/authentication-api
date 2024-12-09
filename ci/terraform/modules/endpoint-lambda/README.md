@@ -50,7 +50,7 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 | <a name="input_cloudwatch_key_arn"></a> [cloudwatch\_key\_arn](#input\_cloudwatch\_key\_arn) | The ARN of the KMS key to use log encryption | `string` | n/a | yes |
 | <a name="input_cloudwatch_log_retention"></a> [cloudwatch\_log\_retention](#input\_cloudwatch\_log\_retention) | The number of day to retain Cloudwatch logs for | `number` | n/a | yes |
 | <a name="input_dynatrace_secret"></a> [dynatrace\_secret](#input\_dynatrace\_secret) | JSON decoded dynatrace secret | <pre>object({<br/>    JAVA_LAYER = string<br/><br/>    DT_CONNECTION_AUTH_TOKEN     = string<br/>    DT_CONNECTION_BASE_URL       = string<br/>    DT_CLUSTER_ID                = string<br/>    DT_TENANT                    = string<br/>    DT_LOG_COLLECTION_AUTH_TOKEN = string<br/>  })</pre> | n/a | yes |
-| <a name="input_endpoint_name"></a> [endpoint\_name](#input\_endpoint\_name) | n/a | `string` | n/a | yes |
+| <a name="input_endpoint_name"></a> [endpoint\_name](#input\_endpoint\_name) | The name of the endpoint, used for naming resources | `string` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | n/a | `string` | n/a | yes |
 | <a name="input_handler_environment_variables"></a> [handler\_environment\_variables](#input\_handler\_environment\_variables) | n/a | `map(string)` | n/a | yes |
 | <a name="input_handler_function_name"></a> [handler\_function\_name](#input\_handler\_function\_name) | n/a | `string` | n/a | yes |
@@ -65,6 +65,7 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 | <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | The id of the subnets for the lambda | `list(string)` | n/a | yes |
 | <a name="input_architectures"></a> [architectures](#input\_architectures) | n/a | `list(string)` | <pre>[<br/>  "x86_64"<br/>]</pre> | no |
 | <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `any` | `null` | no |
+| <a name="input_endpoint_name_sanitized"></a> [endpoint\_name\_sanitized](#input\_endpoint\_name\_sanitized) | A sanitized version of endpoint\_name, required if endpoint\_name contains a dot. | `string` | `null` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
 | <a name="input_handler_runtime"></a> [handler\_runtime](#input\_handler\_runtime) | n/a | `string` | `"java17"` | no |
 | <a name="input_lambda_error_rate_alarm_disabled"></a> [lambda\_error\_rate\_alarm\_disabled](#input\_lambda\_error\_rate\_alarm\_disabled) | n/a | `bool` | `false` | no |

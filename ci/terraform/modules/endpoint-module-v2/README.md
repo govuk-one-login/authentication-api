@@ -45,7 +45,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_cloudwatch_key_arn"></a> [cloudwatch\_key\_arn](#input\_cloudwatch\_key\_arn) | The ARN of the KMS key to use log encryption | `string` | n/a | yes |
 | <a name="input_dynatrace_secret"></a> [dynatrace\_secret](#input\_dynatrace\_secret) | JSON decoded dynatrace secret | <pre>object({<br/>    JAVA_LAYER = string<br/><br/>    DT_CONNECTION_AUTH_TOKEN     = string<br/>    DT_CONNECTION_BASE_URL       = string<br/>    DT_CLUSTER_ID                = string<br/>    DT_TENANT                    = string<br/>    DT_LOG_COLLECTION_AUTH_TOKEN = string<br/>  })</pre> | n/a | yes |
 | <a name="input_endpoint_method"></a> [endpoint\_method](#input\_endpoint\_method) | n/a | `list(string)` | n/a | yes |
-| <a name="input_endpoint_name"></a> [endpoint\_name](#input\_endpoint\_name) | n/a | `string` | n/a | yes |
+| <a name="input_endpoint_name"></a> [endpoint\_name](#input\_endpoint\_name) | The name of the endpoint, used for naming resources | `string` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | n/a | `string` | n/a | yes |
 | <a name="input_execution_arn"></a> [execution\_arn](#input\_execution\_arn) | n/a | `string` | n/a | yes |
 | <a name="input_handler_environment_variables"></a> [handler\_environment\_variables](#input\_handler\_environment\_variables) | n/a | `map(string)` | n/a | yes |
@@ -68,6 +68,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_cloudwatch_log_retention"></a> [cloudwatch\_log\_retention](#input\_cloudwatch\_log\_retention) | The number of day to retain Cloudwatch logs for | `number` | `30` | no |
 | <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `any` | `null` | no |
 | <a name="input_create_endpoint"></a> [create\_endpoint](#input\_create\_endpoint) | n/a | `bool` | `true` | no |
+| <a name="input_endpoint_name_sanitized"></a> [endpoint\_name\_sanitized](#input\_endpoint\_name\_sanitized) | The name of the endpoint, required if endpoint\_name contains a period | `string` | `null` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
 | <a name="input_handler_runtime"></a> [handler\_runtime](#input\_handler\_runtime) | n/a | `string` | `"java17"` | no |
 | <a name="input_integration_request_parameters"></a> [integration\_request\_parameters](#input\_integration\_request\_parameters) | n/a | `map(string)` | `{}` | no |
