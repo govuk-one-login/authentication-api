@@ -96,7 +96,7 @@ resource "aws_api_gateway_stage" "endpoint_test_services_stage" {
   xray_tracing_enabled = true
 
   access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.test_services_api_stage_execution_logs.arn
+    destination_arn = aws_cloudwatch_log_group.test_services_stage_access_logs.arn
     format          = local.access_logging_template
   }
 
