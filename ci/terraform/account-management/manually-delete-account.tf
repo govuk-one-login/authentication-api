@@ -161,7 +161,7 @@ data "aws_iam_policy_document" "invoke_account_deletion_lambda" {
 
 resource "aws_iam_policy" "invoke_account_deletion_lambda" {
   count       = local.should_create_account_deletion_policy ? 1 : 0
-  name_prefix = "manual-account-deletion-user-policy"
+  name        = "manual-account-deletion-user-policy"
   path        = "/control-tower/am/"
   description = "Policy for use in Control Tower to be attached to the role assumed by support users to perform account deletions"
   policy      = data.aws_iam_policy_document.invoke_account_deletion_lambda.json
