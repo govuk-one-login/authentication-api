@@ -2,20 +2,17 @@ package uk.gov.di.authentication.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
@@ -69,82 +66,6 @@ class AuthSessionServiceTest {
         assertThrows(
                 AuthSessionException.class,
                 () -> authSessionService.updateSession(sessionToBeUpdated));
-    }
-
-    @Test
-    void shouldAddNewSessionWhenNoPreviousSessionGiven() {
-        authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.empty(), NEW_SESSION_ID, null, false);
-
-        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-        verify(table).putItem(captor.capture());
-        AuthSessionItem savedItem = captor.getValue();
-
-        assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertTrue(savedItem.getTimeToLive() > Instant.now().getEpochSecond());
-    }
-
-    @Test
-    void shouldAddNewSessionWhenNoPreviousSessionExists() {
-        withNoSession();
-
-        authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.of(SESSION_ID), NEW_SESSION_ID, null, false);
-
-        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-        verify(table).putItem(captor.capture());
-        AuthSessionItem savedItem = captor.getValue();
-
-        assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertTrue(savedItem.getTimeToLive() > Instant.now().getEpochSecond());
-    }
-
-    @Test
-    void shouldPutAndDeleteSessionWhenUpdatingSessionId() {
-        AuthSessionItem existingSession = withValidSession();
-
-        authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.of(SESSION_ID), NEW_SESSION_ID, null, false);
-
-        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-        verify(table).putItem(captor.capture());
-        AuthSessionItem updatedItem = captor.getValue();
-
-        assertThat(updatedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertTrue(updatedItem.getTimeToLive() > Instant.now().getEpochSecond());
-        verify(table).deleteItem(existingSession);
-    }
-
-    @Test
-    void shouldAddFieldsToSessionWhenUpdating() {
-        withValidSession();
-
-        authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.of(SESSION_ID), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL, true);
-
-        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-        verify(table).putItem(captor.capture());
-        AuthSessionItem savedItem = captor.getValue();
-
-        assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertThat(savedItem.getCurrentCredentialStrength(), is(CredentialTrustLevel.MEDIUM_LEVEL));
-        assertTrue(savedItem.getUpliftRequired());
-    }
-
-    @Test
-    void shouldAddFieldsToSessionWhenNewSession() {
-        withNoSession();
-
-        authSessionService.addOrUpdateSessionIncludingSessionId(
-                Optional.empty(), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL, false);
-
-        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-        verify(table).putItem(captor.capture());
-        AuthSessionItem savedItem = captor.getValue();
-
-        assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
-        assertThat(savedItem.getCurrentCredentialStrength(), is(CredentialTrustLevel.MEDIUM_LEVEL));
-        assertFalse(savedItem.getUpliftRequired());
     }
 
     @Test

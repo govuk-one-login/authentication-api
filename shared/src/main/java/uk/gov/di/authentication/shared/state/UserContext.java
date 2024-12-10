@@ -12,7 +12,7 @@ import java.util.Optional;
 
 public class UserContext {
     private final Session session;
-    private final Optional<AuthSessionItem> authSession;
+    private final AuthSessionItem authSession;
     private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
@@ -24,7 +24,7 @@ public class UserContext {
 
     protected UserContext(
             Session session,
-            Optional<AuthSessionItem> authSession,
+            AuthSessionItem authSession,
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
             boolean userAuthenticated,
@@ -50,7 +50,7 @@ public class UserContext {
     }
 
     public AuthSessionItem getAuthSession() {
-        return authSession.orElseThrow(() -> new RuntimeException("Auth session not set."));
+        return authSession;
     }
 
     public Optional<UserProfile> getUserProfile() {
@@ -93,13 +93,13 @@ public class UserContext {
         return txmaAuditEncoded;
     }
 
-    public static Builder builder(Session session, Optional<AuthSessionItem> authSession) {
+    public static Builder builder(Session session, AuthSessionItem authSession) {
         return new Builder(session, authSession);
     }
 
     public static class Builder {
         private Session session;
-        private Optional<AuthSessionItem> authSession;
+        private AuthSessionItem authSession;
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
@@ -109,7 +109,7 @@ public class UserContext {
         private String clientSessionId;
         private String txmaAuditEncoded;
 
-        protected Builder(Session session, Optional<AuthSessionItem> authSession) {
+        protected Builder(Session session, AuthSessionItem authSession) {
             this.session = session;
             this.authSession = authSession;
         }

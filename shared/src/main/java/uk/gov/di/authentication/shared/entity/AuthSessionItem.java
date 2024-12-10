@@ -31,6 +31,16 @@ public class AuthSessionItem {
 
     public AuthSessionItem() {}
 
+    public AuthSessionItem(AuthSessionItem authSession) {
+        this.sessionId = authSession.sessionId;
+        this.verifiedMfaMethodType = authSession.verifiedMfaMethodType;
+        this.timeToLive = authSession.timeToLive;
+        this.isNewAccount = authSession.isNewAccount;
+        this.currentCredentialStrength = authSession.currentCredentialStrength;
+        this.internalCommonSubjectId = authSession.internalCommonSubjectId;
+        this.upliftRequired = authSession.upliftRequired;
+    }
+
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_SESSION_ID)
     public String getSessionId() {

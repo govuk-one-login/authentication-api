@@ -67,7 +67,7 @@ public class StartService {
     }
 
     public UserContext buildUserContext(
-            Session session, Optional<AuthSessionItem> authSession, ClientSession clientSession) {
+            Session session, AuthSessionItem authSession, ClientSession clientSession) {
         var builder = UserContext.builder(session, authSession).withClientSession(clientSession);
         UserContext userContext;
         try {

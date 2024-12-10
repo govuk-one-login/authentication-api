@@ -175,8 +175,23 @@ public class StartHandler
                                         configurationService.getHeadersCaseInsensitive()));
             }
 
+            CredentialTrustLevel currentCredentialStrength =
+                    startRequest.currentCredentialStrength();
+            Optional<String> previousSessionId =
+                    Optional.ofNullable(startRequest.previousSessionId());
+
+            var authSession =
+                    getPreviousSessionOrCreateNew(
+                            session.getSessionId(), previousSessionId, startRequest);
+
             var userContext =
-                    startService.buildUserContext(session, Optional.empty(), clientSession.get());
+                    startService.buildUserContext(session, authSession, clientSession.get());
+
+            boolean upliftRequired =
+                    startService.isUpliftRequired(userContext, currentCredentialStrength);
+
+            authSession.setUpliftRequired(upliftRequired);
+            authSessionService.addSessionWithUpdatedExpiry(authSession);
 
             attachLogFieldToLogs(
                     CLIENT_ID,
@@ -206,18 +221,6 @@ public class StartHandler
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
-
-            CredentialTrustLevel currentCredentialStrength =
-                    startRequest.currentCredentialStrength();
-
-            boolean upliftRequired =
-                    startService.isUpliftRequired(userContext, currentCredentialStrength);
-
-            authSessionService.addOrUpdateSessionIncludingSessionId(
-                    Optional.ofNullable(startRequest.previousSessionId()),
-                    session.getSessionId(),
-                    currentCredentialStrength,
-                    upliftRequired);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
@@ -364,5 +367,38 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+    }
+
+    private AuthSessionItem getPreviousSessionOrCreateNew(
+            String newSessionId, Optional<String> previousSessionId, StartRequest startRequest) {
+        Optional<AuthSessionItem> previousAuthSession = Optional.empty();
+        AuthSessionItem currentAuthSession;
+
+        if (previousSessionId.isPresent()) {
+            previousAuthSession = authSessionService.getSession(previousSessionId.get());
+        }
+
+        if (previousAuthSession.isPresent()) {
+            currentAuthSession =
+                    new AuthSessionItem(previousAuthSession.get())
+                            .withSessionId(newSessionId)
+                            .withCurrentCredentialStrength(
+                                    startRequest.currentCredentialStrength());
+
+            authSessionService.delete(previousSessionId.get());
+            LOG.info(
+                    "Auth session Id updated. previousSessionId: {}, sessionId: {}",
+                    previousSessionId.get(),
+                    newSessionId);
+        } else {
+            LOG.info("New Auth session created with sessionId: {}", newSessionId);
+            currentAuthSession =
+                    new AuthSessionItem()
+                            .withSessionId(newSessionId)
+                            .withCurrentCredentialStrength(
+                                    startRequest.currentCredentialStrength());
+        }
+
+        return currentAuthSession;
     }
 }

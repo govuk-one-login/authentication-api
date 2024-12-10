@@ -186,8 +186,7 @@ public abstract class BaseFrontendHandler<T>
             attachAuthSessionIdToLogs(authSession);
         }
 
-        UserContext.Builder userContextBuilder =
-                UserContext.builder(session.get(), Optional.of(authSession));
+        UserContext.Builder userContextBuilder = UserContext.builder(session.get(), authSession);
         userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
