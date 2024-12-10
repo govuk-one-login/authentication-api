@@ -3,6 +3,18 @@ terraform {
   }
 }
 
+locals {
+  shared_default_tags = {
+    Environment = var.environment
+    Owner       = "di-authentication@digital.cabinet-office.gov.uk"
+    Product     = "GOV.UK Sign In"
+    System      = "Authentication"
+    Service     = "shared"
+
+    application = "shared"
+  }
+}
+
 provider "aws" {
   region = var.aws_region
 
@@ -30,15 +42,7 @@ provider "aws" {
   }
 
   default_tags {
-    tags = {
-      Environment = var.environment
-      Owner       = "di-authentication@digital.cabinet-office.gov.uk"
-      Product     = "GOV.UK Sign In"
-      System      = "shared"
-      # Don't set `Service` by default as it's not always applicable
-
-      application = "shared"
-    }
+    tags = local.shared_default_tags
   }
 }
 
@@ -56,15 +60,7 @@ provider "aws" {
   }
 
   default_tags {
-    tags = {
-      Environment = var.environment
-      Owner       = "di-authentication@digital.cabinet-office.gov.uk"
-      Product     = "GOV.UK Sign In"
-      System      = "shared"
-      # Don't set `Service` by default as it's not always applicable
-
-      application = "shared"
-    }
+    tags = local.shared_default_tags
   }
 }
 

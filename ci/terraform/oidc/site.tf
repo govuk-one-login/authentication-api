@@ -33,8 +33,8 @@ provider "aws" {
       Environment = var.environment
       Owner       = "di-authentication@digital.cabinet-office.gov.uk"
       Product     = "GOV.UK Sign In"
-      System      = "oidc-api"
-      # Don't set `Service` by default as it's not always applicable
+      System      = "Authentication"
+      Service     = "oidc"
 
       application = "oidc-api"
     }

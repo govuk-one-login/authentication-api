@@ -23,8 +23,8 @@ provider "aws" {
       Environment = var.environment
       Owner       = "di-authentication@digital.cabinet-office.gov.uk"
       Product     = "GOV.UK Sign In"
-      System      = "interventions-api-stub"
-      # Don't set `Service` by default as it's not always applicable
+      System      = "Authentication"
+      Service     = "interventions-api-stub"
 
       application = "interventions-api-stub"
     }
