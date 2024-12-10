@@ -160,13 +160,15 @@ data "aws_iam_policy_document" "invoke_account_deletion_lambda" {
 }
 
 resource "aws_iam_policy" "invoke_account_deletion_lambda" {
+  count       = local.should_create_account_deletion_policy ? 1 : 0
   name_prefix = "manual-account-deletion-user-policy"
-  path        = "/${var.environment}/am/"
+  path        = "/control-tower/am/"
   description = "Policy for use in Control Tower to be attached to the role assumed by support users to perform account deletions"
   policy      = data.aws_iam_policy_document.invoke_account_deletion_lambda.json
 }
 
 locals {
-  mock_topic_arn             = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
-  account_deletion_topic_arn = coalesce(var.legacy_account_deletion_topic_arn, local.mock_topic_arn)
+  mock_topic_arn                        = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
+  account_deletion_topic_arn            = coalesce(var.legacy_account_deletion_topic_arn, local.mock_topic_arn)
+  should_create_account_deletion_policy = contains(["production", "integration", "staging"], var.environment)
 }
