@@ -421,7 +421,7 @@ jobs:
             delivery-receipts-integration-tests/build/jacoco/
             delivery-receipts-integration-tests/build/reports/
       - name: Run SonarCloud Analysis
-        if: github.actor != 'dependabot[bot]'  && needs.check-changed-files.outputs.java_changed == 'true'
+        if: github.actor != 'dependabot[bot]'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
