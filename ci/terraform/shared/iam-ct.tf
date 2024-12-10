@@ -60,7 +60,7 @@ locals {
 
 resource "aws_iam_policy" "client_registry_read_only" {
   count       = local.should_create_client_registry_policy ? 1 : 0
-  name_prefix = "client-registry-read-only-user-policy"
+  name        = "client-registry-read-only-user-policy"
   path        = "/control-tower/shared/"
   description = "Policy for use in Control Tower to be attached to the role assumed by support users to view the Client Registry"
   policy      = data.aws_iam_policy_document.client_registry_read_only.json
