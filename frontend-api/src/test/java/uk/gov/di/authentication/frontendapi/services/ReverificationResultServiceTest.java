@@ -1,5 +1,9 @@
 package uk.gov.di.authentication.frontendapi.services;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -41,6 +45,10 @@ import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -57,23 +65,47 @@ import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class ReverificationResultServiceTest {
-
+    public static final String TOKEN_REQUEST_ERROR_RESPONSE =
+            """
+        {
+            "error": "server_error",
+            "error_description": "server_error_description"
+        }
+        """;
+    public static final String CORRUPT_ERROR_RESPONSE =
+            """
+        {
+            "error": "server_error",
+            "error_desc}
+        """;
+    private WireMockServer wireMockServer;
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
     private final UserInfoRequest userInfoRequest = mock(UserInfoRequest.class);
     private final HTTPRequest httpRequest = mock(HTTPRequest.class);
-    private final TokenRequest tokenRequest = mock(TokenRequest.class);
 
-    private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String KEY_ID = "14342354354353";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT =
-            "{"
-                    + " \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\","
-                    + "\"success\": true"
-                    + "}";
+            """
+            {
+                "sub": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+                "success": true"
+            }
+            """;
+    public static final String SUCCESSFUL_TOKEN_RESPONSE =
+            """
+            {
+                "access_token": "access-token",
+                "token_type": "bearer",
+                "expires_in": 3600,
+                "scope": "openid"
+            }
+            """;
+
+    private URI ipvUri;
     private ReverificationResultService reverificationResultService;
 
     @RegisterExtension
@@ -82,12 +114,19 @@ class ReverificationResultServiceTest {
 
     @BeforeEach
     void setUp() {
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        wireMockServer.start();
+        configureFor("localhost", wireMockServer.port());
+        ipvUri = URI.create("http://localhost:" + wireMockServer.port());
+
         reverificationResultService = new ReverificationResultService(configService, kmsService);
-        when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
+
+        when(configService.getIPVBackendURI()).thenReturn(URI.create(ipvUri.toString()));
+
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
-        when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
+        when(configService.getIPVAudience()).thenReturn(ipvUri.toString());
     }
 
     @Nested
@@ -99,7 +138,7 @@ class ReverificationResultServiceTest {
             signJWTWithKMS();
             TokenRequest newTokenRequest =
                     reverificationResultService.constructTokenRequest(AUTH_CODE.getValue());
-            assertThat(newTokenRequest.getEndpointURI().toString(), equalTo(IPV_URI + "token"));
+            assertThat(newTokenRequest.getEndpointURI().toString(), equalTo(ipvUri + "/token"));
             assertThat(
                     newTokenRequest.getClientAuthentication().getMethod().getValue(),
                     equalTo("private_key_jwt"));
@@ -115,23 +154,44 @@ class ReverificationResultServiceTest {
         }
 
         @Test
-        void shouldCallTokenEndpointAndReturn200() throws IOException {
-            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-            when(tokenRequest.toHTTPRequest().send()).thenReturn(getSuccessfulTokenHttpResponse());
+        void shouldCallTokenEndpointAndReturn200() throws JOSEException {
+            signJWTWithKMS();
 
-            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .willReturn(
+                                    aResponse()
+                                            .withStatus(200)
+                                            .withHeader("Content-Type", "application/json")
+                                            .withBody(SUCCESSFUL_TOKEN_RESPONSE)));
+
+            var tokenResponse = reverificationResultService.getToken("an auth code");
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
         }
 
         @Test
-        void shouldRetryTokenEndpointOnceAndParseSuccessFulSecondResponse() throws IOException {
-            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-            when(tokenRequest.toHTTPRequest().send())
-                    .thenReturn(new HTTPResponse(500))
-                    .thenReturn(getSuccessfulTokenHttpResponse());
+        void shouldRetryTokenEndpointOnceAndParseSuccessFulSecondResponse() throws JOSEException {
+            signJWTWithKMS();
 
-            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .inScenario("temp fail")
+                            .whenScenarioStateIs(STARTED)
+                            .willReturn(aResponse().withStatus(500))
+                            .willSetStateTo("success call"));
+
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .inScenario("temp fail")
+                            .whenScenarioStateIs("success call")
+                            .willReturn(
+                                    aResponse()
+                                            .withStatus(200)
+                                            .withHeader("Content-Type", "application/json")
+                                            .withBody(SUCCESSFUL_TOKEN_RESPONSE)));
+
+            var tokenResponse = reverificationResultService.getToken("an auth code");
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
         }
@@ -174,18 +234,28 @@ class ReverificationResultServiceTest {
         @ParameterizedTest(name = "{0}")
         @MethodSource("errorResponseArgumentProvider")
         void shouldRetryTokenEndpointIfErrorResponse(String scenario, String error)
-                throws IOException, com.nimbusds.oauth2.sdk.ParseException {
-            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-            var responseWithInvalidError = new HTTPResponse(500);
-            responseWithInvalidError.setContentType("application/json");
-            responseWithInvalidError.setContent(error);
-            responseWithInvalidError.setStatusMessage("client error");
+                throws JOSEException {
 
-            when(tokenRequest.toHTTPRequest().send())
-                    .thenReturn(responseWithInvalidError)
-                    .thenReturn(getSuccessfulTokenHttpResponse());
+            signJWTWithKMS();
 
-            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .inScenario("temp fail")
+                            .whenScenarioStateIs(STARTED)
+                            .willReturn(aResponse().withStatus(500).withBody(error))
+                            .willSetStateTo("success call"));
+
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .inScenario("temp fail")
+                            .whenScenarioStateIs("success call")
+                            .willReturn(
+                                    aResponse()
+                                            .withStatus(200)
+                                            .withHeader("Content-Type", "application/json")
+                                            .withBody(SUCCESSFUL_TOKEN_RESPONSE)));
+
+            var tokenResponse = reverificationResultService.getToken("an auth code");
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
 
@@ -199,35 +269,46 @@ class ReverificationResultServiceTest {
         }
 
         @Test
-        void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail() throws IOException {
-            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-            when(tokenRequest.toHTTPRequest().send()).thenReturn(new HTTPResponse(500));
+        void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail()
+                throws JOSEException {
+            signJWTWithKMS();
 
-            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .willReturn(
+                                    aResponse()
+                                            .withStatus(500)
+                                            .withBody(TOKEN_REQUEST_ERROR_RESPONSE)));
+
+            var tokenResponse = reverificationResultService.getToken("an auth code");
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
-            verify(tokenRequest.toHTTPRequest(), times(2)).send();
+            WireMock.verify(2, postRequestedFor(urlPathMatching("/token")));
         }
 
         @Test
-        void shouldThrowRTEWhenSendToIPVFails() throws IOException {
-            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
-            when(tokenRequest.toHTTPRequest().send()).thenThrow(new IOException());
+        void shouldThrowRTEWhenSendToIPVFails() throws JOSEException {
+            signJWTWithKMS();
 
-            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+
+            var tokenResponse = reverificationResultService.getToken("an auth code");
+
             assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
         }
 
         @Test
-        void shouldThrowRTEWhenTokenParsingFails() throws IOException {
-            when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        void shouldThrowRTEWhenTokenParsingFails() throws JOSEException {
+            signJWTWithKMS();
 
-            HTTPResponse badResponse = new HTTPResponse(200);
-            badResponse.setContent("bad json");
+            stubFor(
+                    post(urlPathMatching("/token"))
+                            .willReturn(
+                                    aResponse().withStatus(500).withBody(CORRUPT_ERROR_RESPONSE)));
 
-            when(tokenRequest.toHTTPRequest().send()).thenReturn(badResponse);
-
-            var tokenResponse = reverificationResultService.sendTokenRequest(tokenRequest);
+            var tokenResponse = reverificationResultService.getToken("an auth code");
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
         }
@@ -298,7 +379,7 @@ class ReverificationResultServiceTest {
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(CLIENT_ID),
-                        singletonList(new Audience(buildURI(IPV_URI.toString(), "token"))),
+                        singletonList(new Audience(buildURI(ipvUri.toString(), "/token"))),
                         NowHelper.nowPlus(5, ChronoUnit.MINUTES),
                         null,
                         NowHelper.now(),
@@ -318,19 +399,5 @@ class ReverificationResultServiceTest {
                         .build();
 
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
-    }
-
-    private HTTPResponse getSuccessfulTokenHttpResponse() {
-        var tokenResponseContent =
-                "{"
-                        + "  \"access_token\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
-                        + "  \"token_type\": \"bearer\","
-                        + "  \"expires_in\": \"3600\""
-                        + "}";
-        var tokenHTTPResponse = new HTTPResponse(200);
-        tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        tokenHTTPResponse.setContent(tokenResponseContent);
-
-        return tokenHTTPResponse;
     }
 }

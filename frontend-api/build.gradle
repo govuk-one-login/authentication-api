@@ -36,7 +36,8 @@ dependencies {
             configurations.s3,
             configurations.kms,
             configurations.dynamodb,
-            configurations.pact_consumer
+            configurations.pact_consumer,
+            'org.wiremock:wiremock:3.9.1'
 
     testRuntimeOnly configurations.test_runtime
 }

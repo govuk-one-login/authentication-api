@@ -83,7 +83,7 @@ public class ReverificationResultService {
                         singletonList(configurationService.getIPVAuthorisationClientId())));
     }
 
-    public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
+    private TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         LOG.info("Sending IPV token request");
         int count = 0;
         TokenResponse tokenResponse =
