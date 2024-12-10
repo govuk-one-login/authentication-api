@@ -1853,6 +1853,10 @@ Resources:
             - IsDestroySessionOnSignOutEnabled
             - true
             - false
+          SUPPORT_MAX_AGE_ENABLED: !If
+            - SupportMaxAgeEnabled
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
