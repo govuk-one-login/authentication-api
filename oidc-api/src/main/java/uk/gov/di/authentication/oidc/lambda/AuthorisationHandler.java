@@ -612,6 +612,18 @@ public class AuthorisationHandler
         var session = existingSession.orElseGet(sessionService::generateSession);
         attachSessionIdToLogs(session);
 
+        final long timeNow = NowHelper.now().toInstant().getEpochSecond();
+        String newSessionIdForPreviousSession = IdGenerator.generate();
+        boolean maxAgeSessionUpdateRequired = false;
+        if (existingOrchSessionOptional.isPresent()) {
+            maxAgeSessionUpdateRequired =
+                    configurationService.supportMaxAgeEnabled()
+                            && client.getMaxAgeEnabled()
+                            && maxAgeExpired(
+                                    existingOrchSessionOptional.get().getAuthTime(),
+                                    getMaxAge(authenticationRequest),
+                                    timeNow);
+        }
         Optional<String> existingSessionId = existingSession.map(Session::getSessionId);
         if (existingSession.isEmpty()) {
             updateAttachedSessionIdToLogs(session.getSessionId());
@@ -624,22 +636,19 @@ public class AuthorisationHandler
         }
 
         String newSessionId = session.getSessionId();
-        final long timeNow = NowHelper.now().toInstant().getEpochSecond();
         OrchSessionItem orchSession;
         if (existingOrchSessionOptional.isEmpty()) {
             orchSession = createNewOrchSession(newSessionId);
         } else {
             OrchSessionItem previousOrchSession = existingOrchSessionOptional.get();
-            if (configurationService.supportMaxAgeEnabled()
-                    && client.getMaxAgeEnabled()
-                    && maxAgeExpired(
-                            previousOrchSession.getAuthTime(),
-                            getMaxAge(authenticationRequest),
-                            timeNow)) {
+            if (maxAgeSessionUpdateRequired) {
                 LOG.info("Orch session expired due to max age");
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
-                                newSessionId, previousOrchSession, timeNow);
+                                newSessionId,
+                                previousOrchSession,
+                                timeNow,
+                                newSessionIdForPreviousSession);
             } else {
                 orchSession = updateOrchSession(newSessionId, previousOrchSession, timeNow);
             }
@@ -698,8 +707,10 @@ public class AuthorisationHandler
     }
 
     private OrchSessionItem updateOrchSessionDueToMaxAgeExpiry(
-            String newSessionId, OrchSessionItem previousSession, long timeNow) {
-        String newSessionIdForPreviousSession = IdGenerator.generate();
+            String newSessionId,
+            OrchSessionItem previousSession,
+            long timeNow,
+            String newSessionIdForPreviousSession) {
         OrchSessionItem updatedPreviousSession =
                 new OrchSessionItem(previousSession)
                         .withSessionId(newSessionIdForPreviousSession)
