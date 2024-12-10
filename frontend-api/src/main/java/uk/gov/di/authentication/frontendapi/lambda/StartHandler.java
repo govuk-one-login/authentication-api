@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -208,14 +210,16 @@ public class StartHandler
             CredentialTrustLevel currentCredentialStrength =
                     startRequest.currentCredentialStrength();
 
+            var authSession =
+                    getUpdatedPreviousSessionOrReturnNew(
+                            Optional.ofNullable(startRequest.previousSessionId()),
+                            session.getSessionId(),
+                            currentCredentialStrength);
+
             boolean upliftRequired =
                     startService.isUpliftRequired(userContext, currentCredentialStrength);
 
-            authSessionService.addOrUpdateSessionIncludingSessionId(
-                    Optional.ofNullable(startRequest.previousSessionId()),
-                    session.getSessionId(),
-                    currentCredentialStrength,
-                    upliftRequired);
+            authSessionService.put(authSession.withUpliftRequired(upliftRequired));
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
@@ -364,5 +368,45 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+    }
+
+    private AuthSessionItem getUpdatedPreviousSessionOrReturnNew(
+            Optional<String> previousSessionId,
+            String newSessionId,
+            CredentialTrustLevel currentCredentialStrength) {
+        var timeToLive = configurationService.getSessionExpiry();
+        Optional<AuthSessionItem> previousAuthSession = Optional.empty();
+        if (previousSessionId.isPresent()) {
+            previousAuthSession = authSessionService.getSession(previousSessionId.get());
+        }
+
+        if (previousAuthSession.isPresent()) {
+            var updatedSession =
+                    previousAuthSession
+                            .get()
+                            .withSessionId(newSessionId)
+                            .withCurrentCredentialStrength(currentCredentialStrength)
+                            .withTimeToLive(
+                                    NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond());
+
+            authSessionService.delete(previousSessionId.get());
+            LOG.info(
+                    "Existing Auth session updated from previousSessionId: {}, sessionId: {}",
+                    previousSessionId,
+                    newSessionId);
+
+            return updatedSession;
+        } else {
+            LOG.info("New Auth session item created with sessionId: {}", newSessionId);
+            return new AuthSessionItem()
+                    .withSessionId(newSessionId)
+                    .withCurrentCredentialStrength(currentCredentialStrength)
+                    .withTimeToLive(
+                            NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                    .toInstant()
+                                    .getEpochSecond());
+        }
     }
 }
