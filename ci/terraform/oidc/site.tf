@@ -44,7 +44,7 @@ provider "aws" {
 locals {
   request_tracing_allowed              = contains(["build", "sandpit"], var.environment)
   deploy_account_interventions_count   = 1
-  deploy_ticf_cri_count                = contains(["sandpit", "authdev1", "authdev2", "dev", "build", "staging", "integration"], var.environment) ? 1 : 0
+  deploy_ticf_cri_count                = 1
   deploy_reauth_user_count             = 1
   deploy_check_email_fraud_block_count = 1
 
