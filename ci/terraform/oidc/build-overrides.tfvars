@@ -20,7 +20,13 @@ account_intervention_service_action_enabled = true
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
 send_storage_token_to_ipv_enabled       = true
-auth_frontend_public_encryption_key     = <<-EOT
+ipv_authorisation_uri                   = "https://identity.build.account.gov.uk/oauth2/authorize"
+ipv_backend_uri                         = "https://api.identity.build.account.gov.uk"
+ipv_audience                            = "https://identity.staging.account.gov.uk"
+ipv_authorisation_client_id             = "authOrchestrator"
+
+
+auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLJWOHz7uHLinSJr8XM0
 fhyq0aLm8HP06lCT7csGUoRav2xybsCsypufvJHbuD5SLkg25/VGFt21KH2g60u8
