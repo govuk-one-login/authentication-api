@@ -12,9 +12,6 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.GrantType;
-import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
@@ -22,6 +19,7 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -78,7 +76,6 @@ class ReverificationResultServiceTest {
             "error": "server_error",
             "error_desc}
         """;
-    private WireMockServer wireMockServer;
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
     private final UserInfoRequest userInfoRequest = mock(UserInfoRequest.class);
@@ -87,7 +84,6 @@ class ReverificationResultServiceTest {
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String KEY_ID = "14342354354353";
-    private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT =
             """
             {
@@ -112,6 +108,8 @@ class ReverificationResultServiceTest {
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(ReverificationResultService.class);
 
+    private WireMockServer wireMockServer;
+
     @BeforeEach
     void setUp() {
         wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
@@ -129,29 +127,14 @@ class ReverificationResultServiceTest {
         when(configService.getIPVAudience()).thenReturn(ipvUri.toString());
     }
 
+    @AfterEach
+    void tearDown() {
+        wireMockServer.stop();
+    }
+
     @Nested
     @DisplayName("Tests for the sendTokenRequest method.")
     class TokenRequestTests {
-
-        @Test
-        void shouldConstructTokenRequest() throws JOSEException {
-            signJWTWithKMS();
-            TokenRequest newTokenRequest =
-                    reverificationResultService.constructTokenRequest(AUTH_CODE.getValue());
-            assertThat(newTokenRequest.getEndpointURI().toString(), equalTo(ipvUri + "/token"));
-            assertThat(
-                    newTokenRequest.getClientAuthentication().getMethod().getValue(),
-                    equalTo("private_key_jwt"));
-            assertThat(
-                    newTokenRequest.toHTTPRequest().getQueryParameters().get("redirect_uri").get(0),
-                    equalTo(REDIRECT_URI.toString()));
-            assertThat(
-                    newTokenRequest.toHTTPRequest().getQueryParameters().get("grant_type").get(0),
-                    equalTo(GrantType.AUTHORIZATION_CODE.getValue()));
-            assertThat(
-                    newTokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
-                    equalTo(CLIENT_ID.getValue()));
-        }
 
         @Test
         void shouldCallTokenEndpointAndReturn200() throws JOSEException {

@@ -56,7 +56,7 @@ public class ReverificationResultService {
         return sendTokenRequest(tokenRequest);
     }
 
-    public TokenRequest constructTokenRequest(String authCode) {
+    private TokenRequest constructTokenRequest(String authCode) {
         LOG.info("Constructing IPV token request");
         var codeGrant =
                 new AuthorizationCodeGrant(
