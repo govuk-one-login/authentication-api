@@ -53,6 +53,7 @@ import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -90,8 +91,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
 import static uk.gov.di.orchestration.shared.entity.CustomScopeValue.DOC_CHECKING_APP;
 import static uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper.generateIDToken;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -150,6 +156,8 @@ public class TokenHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private TokenHandler handler;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -157,6 +165,7 @@ public class TokenHandlerTest {
     void setUp() {
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();
         handler =
                 new TokenHandler(
@@ -167,7 +176,8 @@ public class TokenHandlerTest {
                         clientSessionService,
                         tokenValidationService,
                         redisConnectionService,
-                        tokenClientAuthValidatorFactory);
+                        tokenClientAuthValidatorFactory,
+                        cloudwatchMetricsService);
     }
 
     private static Stream<Arguments> validVectorValues() {
@@ -242,6 +252,14 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @ParameterizedTest
@@ -311,6 +329,14 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @ParameterizedTest
@@ -363,6 +389,14 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @ParameterizedTest
@@ -418,6 +452,14 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @Test
@@ -441,6 +483,14 @@ public class TokenHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @Test
@@ -489,6 +539,14 @@ public class TokenHandlerTest {
                                         "Invalid signature in private_key_jwt")
                                 .toJSONObject()
                                 .toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @Test
@@ -511,6 +569,14 @@ public class TokenHandlerTest {
                 generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @Test
@@ -544,6 +610,14 @@ public class TokenHandlerTest {
                         privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
     }
 
     @Test
@@ -611,6 +685,14 @@ public class TokenHandlerTest {
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                DOC_APP_CLIENT_ID.getValue()));
     }
 
     private UserProfile generateUserProfile() {

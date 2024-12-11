@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -55,6 +56,9 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -76,6 +80,7 @@ public class TokenHandler
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Json objectMapper = SerializationService.getInstance();
 
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
@@ -88,7 +93,8 @@ public class TokenHandler
             ClientSessionService clientSessionService,
             TokenValidationService tokenValidationService,
             RedisConnectionService redisConnectionService,
-            TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory) {
+            TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.tokenService = tokenService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
@@ -97,6 +103,7 @@ public class TokenHandler
         this.tokenValidationService = tokenValidationService;
         this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public TokenHandler(ConfigurationService configurationService) {
@@ -120,6 +127,7 @@ public class TokenHandler
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -143,6 +151,7 @@ public class TokenHandler
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public TokenHandler() {
@@ -242,6 +251,14 @@ public class TokenHandler
                 authCodeExchangeData.getClientSessionId(),
                 clientSession.setIdTokenHint(
                         tokenResponse.getOIDCTokens().getIDToken().serialize()));
+
+        var dimensions =
+                new HashMap<>(
+                        Map.of(
+                                ENVIRONMENT.getValue(), configurationService.getEnvironment(),
+                                CLIENT.getValue(), clientRegistry.getClientID()));
+        cloudwatchMetricsService.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
+
         LOG.info("Successfully generated tokens");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
