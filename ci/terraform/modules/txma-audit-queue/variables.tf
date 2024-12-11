@@ -20,6 +20,6 @@ variable "service_name" {
 
 locals {
   extra_tags = merge(var.extra_tags, {
-    ServiceName = var.service_name
+    Service = var.service_name
   })
 }
