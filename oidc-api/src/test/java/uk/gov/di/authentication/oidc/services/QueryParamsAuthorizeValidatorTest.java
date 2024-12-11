@@ -89,6 +89,7 @@ class QueryParamsAuthorizeValidatorTest {
                         + "\n-----END PUBLIC KEY-----\n";
         when(configurationService.getOrchestrationToAuthenticationEncryptionPublicKey())
                 .thenReturn(publicCertificateAsPem);
+        when(configurationService.getEnvironment()).thenReturn("test");
     }
 
     @AfterEach
