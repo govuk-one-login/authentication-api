@@ -31,7 +31,13 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.USER_INFO_RETURNED;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -51,16 +57,19 @@ public class UserInfoHandler
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public UserInfoHandler() {
@@ -88,6 +97,7 @@ public class UserInfoHandler
                                         new KmsConnectionService(configurationService)),
                                 configurationService));
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public UserInfoHandler(
@@ -112,6 +122,7 @@ public class UserInfoHandler
                                         new KmsConnectionService(configurationService)),
                                 configurationService));
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -178,6 +189,13 @@ public class UserInfoHandler
                         .withUserId(subjectForAudit)
                         .withGovukSigninJourneyId(journeyId),
                 metadataPairs);
+
+        var dimensions =
+                new HashMap<>(
+                        Map.of(
+                                ENVIRONMENT.getValue(), configurationService.getEnvironment(),
+                                CLIENT.getValue(), accessTokenInfo.getClientID()));
+        cloudwatchMetricsService.incrementCounter(USER_INFO_RETURNED.getValue(), dimensions);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
