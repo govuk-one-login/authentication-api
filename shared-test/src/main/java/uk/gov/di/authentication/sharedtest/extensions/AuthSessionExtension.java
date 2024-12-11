@@ -9,10 +9,12 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
@@ -72,8 +74,22 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
     }
 
     public void addSession(Optional<String> previousSessionId, String sessionId) {
-        authSessionService.addOrUpdateSessionIncludingSessionId(
-                previousSessionId, sessionId, null, false);
+        var ttl =
+                NowHelper.nowPlus(configuration.getSessionExpiry(), ChronoUnit.SECONDS)
+                        .toInstant()
+                        .getEpochSecond();
+        if (previousSessionId.isEmpty()) {
+            authSessionService.put(
+                    new AuthSessionItem().withSessionId(sessionId).withTimeToLive(ttl));
+        } else {
+            var previousSession = authSessionService.getSession(previousSessionId.get());
+            authSessionService.put(
+                    previousSession
+                            .orElseGet(AuthSessionItem::new)
+                            .withSessionId(sessionId)
+                            .withTimeToLive(ttl));
+            authSessionService.delete(previousSessionId.get());
+        }
     }
 
     public void updateSession(AuthSessionItem sessionItem) {
