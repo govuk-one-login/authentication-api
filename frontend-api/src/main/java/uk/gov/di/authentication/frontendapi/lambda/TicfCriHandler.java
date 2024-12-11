@@ -63,7 +63,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                             environmentForMetrics,
                             Map.entry("StatusCode", String.valueOf(statusCode))));
         } catch (HttpTimeoutException e) {
-            LOG.error(
+            LOG.warn(
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
                             configurationService.getTicfCriServiceCallTimeout()));

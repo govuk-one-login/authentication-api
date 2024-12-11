@@ -145,8 +145,8 @@ class TicfCriHandlerTest {
 
     @ParameterizedTest
     @MethodSource("exceptions")
-    void testIncrementsMetricAndSendsLogsWhenAnExceptionOccurs(Exception e, String metricName)
-            throws Exception {
+    void testIncrementsMetricAndSendsLogsWhenAnExceptionOccurs(
+            Exception e, String metricName, Level expectedLogLevel) throws Exception {
         when(httpClient.send(any(), any())).thenThrow(e);
 
         handler.handleRequest(
@@ -157,16 +157,21 @@ class TicfCriHandlerTest {
         verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);
         assertThat(
                 logging.events(),
-                hasItem(withLevelAndMessageContaining(Level.ERROR, format(e.getMessage()))));
+                hasItem(withLevelAndMessageContaining(expectedLogLevel, format(e.getMessage()))));
     }
 
     private static List<Arguments> exceptions() {
         return List.of(
-                Arguments.of(new IOException("an IO Exception"), "TicfCriServiceError"),
+                Arguments.of(
+                        new IOException("an IO Exception"), "TicfCriServiceError", Level.ERROR),
                 Arguments.of(
                         new InterruptedException("an Interrputed exception"),
-                        "TicfCriServiceError"),
-                Arguments.of(new HttpTimeoutException("timed out"), "TicfCriServiceTimeout"));
+                        "TicfCriServiceError",
+                        Level.ERROR),
+                Arguments.of(
+                        new HttpTimeoutException("timed out"),
+                        "TicfCriServiceTimeout",
+                        Level.WARN));
     }
 
     private JsonArray jsonArrayFrom(List<String> elements) {
