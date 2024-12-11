@@ -19,7 +19,9 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -101,22 +103,30 @@ class ReverificationResultServiceTest {
             }
             """;
 
-    private URI ipvUri;
     private ReverificationResultService reverificationResultService;
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(ReverificationResultService.class);
 
-    private WireMockServer wireMockServer;
+    private static URI ipvUri;
+    private static WireMockServer wireMockServer;
 
-    @BeforeEach
-    void setUp() {
+    @BeforeAll
+    static void setUpWireMock() {
         wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         wireMockServer.start();
         configureFor("localhost", wireMockServer.port());
         ipvUri = URI.create("http://localhost:" + wireMockServer.port());
+    }
 
+    @AfterAll
+    static void afterAll() {
+        wireMockServer.stop();
+    }
+
+    @BeforeEach
+    void beforeEach() {
         reverificationResultService = new ReverificationResultService(configService, kmsService);
 
         when(configService.getIPVBackendURI()).thenReturn(URI.create(ipvUri.toString()));
@@ -128,8 +138,8 @@ class ReverificationResultServiceTest {
     }
 
     @AfterEach
-    void tearDown() {
-        wireMockServer.stop();
+    void afterEach() {
+        wireMockServer.resetAll();
     }
 
     @Nested
