@@ -33,6 +33,7 @@ import java.util.Map;
 import static java.util.Collections.singletonList;
 
 public class ReverificationResultService {
+    public static final int MAX_RETRIES = 2;
     private static final Logger LOG = LogManager.getLogger(ReverificationResultService.class);
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
@@ -55,7 +56,7 @@ public class ReverificationResultService {
         return sendTokenRequest(tokenRequest);
     }
 
-    public TokenRequest constructTokenRequest(String authCode) {
+    private TokenRequest constructTokenRequest(String authCode) {
         LOG.info("Constructing IPV token request");
         var codeGrant =
                 new AuthorizationCodeGrant(
@@ -82,32 +83,51 @@ public class ReverificationResultService {
                         singletonList(configurationService.getIPVAuthorisationClientId())));
     }
 
-    public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
-        try {
-            LOG.info("Sending IPV token request");
-            int count = 0;
-            int maxTries = 2;
-            TokenResponse tokenResponse;
-            do {
-                if (count > 0) LOG.warn("Retrying IPV access token request");
-                count++;
-                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
-                if (!tokenResponse.indicatesSuccess()) {
-                    HTTPResponse response = tokenResponse.toHTTPResponse();
-                    LOG.warn(
-                            "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
-                            response.getStatusCode(), count, response.getContent());
-                }
-            } while (!tokenResponse.indicatesSuccess() && count < maxTries);
+    private TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
+        LOG.info("Sending IPV token request");
+        int count = 0;
+        TokenResponse tokenResponse =
+                new TokenResponse() {
+                    @Override
+                    public boolean indicatesSuccess() {
+                        return false;
+                    }
 
-            return tokenResponse;
-        } catch (IOException e) {
-            LOG.error("Error whilst sending TokenRequest", e);
-            throw new RuntimeException(e);
-        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.error("Error whilst parsing TokenResponse", e);
-            throw new RuntimeException(e);
+                    @Override
+                    public HTTPResponse toHTTPResponse() {
+                        return null;
+                    }
+                };
+
+        while (count < MAX_RETRIES) {
+            count++;
+            try {
+                var httpRequest = tokenRequest.toHTTPRequest();
+                var httpResponse = httpRequest.send();
+
+                tokenResponse = TokenResponse.parse(httpResponse);
+
+                if (tokenResponse.indicatesSuccess()) {
+                    return tokenResponse;
+                } else {
+                    var response = tokenResponse.toErrorResponse();
+                    LOG.warn(
+                            "Unsuccessful {} response from IPV token endpoint on attempt: {}; error: {}",
+                            response.toHTTPResponse().getStatusCode(),
+                            count,
+                            httpResponse.getContent());
+                }
+            } catch (IOException e) {
+                LOG.error("Error whilst sending TokenRequest", e);
+            } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+                LOG.error("Error whilst parsing TokenResponse", e);
+            } catch (Exception e) {
+                LOG.error("Unexpected error", e);
+            }
         }
+
+        // return all retries failed error
+        return tokenResponse;
     }
 
     public HTTPResponse sendIpvReverificationRequest(UserInfoRequest userInfoRequest)
@@ -123,8 +143,10 @@ public class ReverificationResultService {
                 response = userInfoRequest.toHTTPRequest().send();
                 if (!response.indicatesSuccess()) {
                     LOG.warn(
-                            "Unsuccessful %s response from IPV reverification endpoint on attempt %d: %s ",
-                            response.getStatusCode(), count, response.getContent());
+                            "Unsuccessful {} response from IPV reverification endpoint on attempt{}: {} ",
+                            response.getStatusCode(),
+                            count,
+                            response.getContent());
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
