@@ -2,6 +2,7 @@ module "endpoint_lambda" {
   source = "../endpoint-lambda"
 
   endpoint_name                          = var.endpoint_name
+  endpoint_name_sanitized                = var.endpoint_name_sanitized
   source_bucket                          = var.source_bucket
   lambda_zip_file                        = var.lambda_zip_file
   lambda_zip_file_version                = var.lambda_zip_file_version
