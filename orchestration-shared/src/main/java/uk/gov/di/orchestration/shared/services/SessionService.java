@@ -51,6 +51,13 @@ public class SessionService {
         return session;
     }
 
+    public Session createNewSessionWithId(String sessionId) {
+        Session session = new Session(sessionId);
+        session.setBrowserSessionId(IdGenerator.generate());
+
+        return session;
+    }
+
     public void storeOrUpdateSession(Session session) {
         storeOrUpdateSession(session, session.getSessionId());
     }
@@ -65,6 +72,19 @@ public class SessionService {
 
             redisConnectionService.saveWithExpiry(
                     session.getSessionId(), newSession, configurationService.getSessionExpiry());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Session updateWithNewSessionId(Session session, String newSessionId) {
+        try {
+            String oldSessionId = session.getSessionId();
+            session.setSessionId(newSessionId);
+            session.resetProcessingIdentityAttempts();
+            storeOrUpdateSession(session, oldSessionId);
+            redisConnectionService.deleteValue(oldSessionId);
+            return session;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

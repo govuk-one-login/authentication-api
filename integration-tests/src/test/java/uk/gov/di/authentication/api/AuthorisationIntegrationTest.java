@@ -722,6 +722,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
+        withExistingOrchSession(previousSessionId);
 
         var response =
                 makeRequest(
