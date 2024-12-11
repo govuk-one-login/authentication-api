@@ -8,7 +8,8 @@ public enum CloudwatchMetrics {
     LOGOUT_SUCCESS("LogoutSuccess"),
     SIGN_IN_NEW_ACCOUNT_BY_CLIENT("SignInNewAccountByClient"),
     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT("SignInExistingAccountByClient"),
-    SUCCESSFUL_TOKEN_ISSUED("SuccessfulTokenIssued");
+    SUCCESSFUL_TOKEN_ISSUED("SuccessfulTokenIssued"),
+    USER_INFO_RETURNED("UserInfoReturned");
     private String value;
 
     CloudwatchMetrics(String value) {

@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -33,8 +34,12 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.USER_INFO_RETURNED;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.RETURN_CODE;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -54,6 +59,8 @@ class UserInfoHandlerTest {
     private final AccessTokenInfo accessTokenInfo = mock(AccessTokenInfo.class);
     private final AccessTokenService accessTokenService = mock(AccessTokenService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
@@ -63,7 +70,11 @@ class UserInfoHandlerTest {
     void setUp() {
         handler =
                 new UserInfoHandler(
-                        configurationService, userInfoService, accessTokenService, auditService);
+                        configurationService,
+                        userInfoService,
+                        accessTokenService,
+                        auditService,
+                        cloudwatchMetricsService);
         when(context.getAwsRequestId()).thenReturn("aws-request-id");
         when(accessTokenInfo.getClientID()).thenReturn("client-id");
         when(accessTokenInfo.getSubject()).thenReturn(SUBJECT.getValue());
@@ -74,6 +85,7 @@ class UserInfoHandlerTest {
                                 INTERNAL_SUBJECT_ID,
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 JOURNEY_ID));
+        when(configurationService.getEnvironment()).thenReturn("test");
     }
 
     @Test
@@ -110,6 +122,15 @@ class UserInfoHandlerTest {
                         TxmaAuditUser.user()
                                 .withUserId(AUDIT_SUBJECT_ID.getValue())
                                 .withGovukSigninJourneyId(JOURNEY_ID));
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        USER_INFO_RETURNED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                "client-id"));
     }
 
     @Test
@@ -151,6 +172,15 @@ class UserInfoHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertEquals(INVALID_TOKEN_RESPONSE, result.getMultiValueHeaders());
+
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        USER_INFO_RETURNED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                "client-id"));
     }
 
     @Test
@@ -162,5 +192,14 @@ class UserInfoHandlerTest {
         Map<String, List<String>> missingTokenExpectedResponse =
                 new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap();
         assertEquals(missingTokenExpectedResponse, result.getMultiValueHeaders());
+
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        USER_INFO_RETURNED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                "client-id"));
     }
 }
