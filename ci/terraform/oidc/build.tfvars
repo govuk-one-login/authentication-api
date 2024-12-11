@@ -9,7 +9,6 @@ shared_state_bucket                  = "digital-identity-dev-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.build.account.gov.uk"
 ipv_api_enabled                      = true
-call_ticf_cri                        = true
 
 # lockout config
 lockout_duration                          = 60

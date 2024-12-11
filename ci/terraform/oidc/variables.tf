@@ -720,7 +720,7 @@ variable "authentication_attempts_service_enabled" {
 
 variable "call_ticf_cri" {
   type        = bool
-  default     = false
+  default     = true
   description = "Feature flag to switch on invoking TICF CRI lambda."
 }
 

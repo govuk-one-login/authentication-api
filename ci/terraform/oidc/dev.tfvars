@@ -8,7 +8,6 @@ logging_endpoint_arns                = []
 shared_state_bucket                  = "di-auth-development-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.dev.account.gov.uk"
-call_ticf_cri                        = true
 ipv_authorisation_callback_uri       = "https://signin.dev.account.gov.uk/ipv/callback/authorize"
 ipv_authorisation_client_id          = "authTestClient"
 ipv_authorisation_uri                = "https://ipvstub.signin.dev.account.gov.uk/authorize/"
