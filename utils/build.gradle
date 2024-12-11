@@ -46,8 +46,6 @@ task buildZip(type: Zip) {
 
 build.dependsOn buildZip
 
-clean.dependsOn ":composeDown"
-
 jacocoTestReport {
     reports {
         xml.enabled true
