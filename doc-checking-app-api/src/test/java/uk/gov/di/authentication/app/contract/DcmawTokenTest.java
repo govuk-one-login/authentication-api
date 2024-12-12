@@ -151,8 +151,7 @@ public class DcmawTokenTest {
         TokenResponse response = docAppCriService.sendTokenRequest(tokenRequest);
 
         assertThat(response.indicatesSuccess(), equalTo(true));
-        assertThat(
-                response.toHTTPResponse().getContent(), equalTo(getSuccessfulTokenHttpResponse()));
+        assertThat(response.toHTTPResponse().getBody(), equalTo(getSuccessfulTokenHttpResponse()));
     }
 
     @Pact(consumer = "OrchTokenConsumer")
