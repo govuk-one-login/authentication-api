@@ -13,8 +13,11 @@ public class TableNameHelper {
             ConfigurationService configurationService,
             boolean isTableInOrchAccount) {
         Optional<String> authDynamoArnPrefix = configurationService.getDynamoArnPrefix();
+        Optional<String> orchDynamoArnPrefix = configurationService.getOrchDynamoArnPrefix();
         if (authDynamoArnPrefix.isPresent() && !isTableInOrchAccount) {
             return authDynamoArnPrefix.get() + tableName;
+        } else if (orchDynamoArnPrefix.isPresent() && isTableInOrchAccount) {
+            return orchDynamoArnPrefix.get() + tableName;
         }
         return configurationService.getEnvironment() + "-" + tableName;
     }

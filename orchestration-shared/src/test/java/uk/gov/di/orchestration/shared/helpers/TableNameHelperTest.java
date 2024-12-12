@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 class TableNameHelperTest {
     private static final String TEST_AUTH_DYNAMO_ARN_PREFIX =
             "arn:aws:dynamodb:eu-west-2:12345:table/test-";
+    private static final String TEST_ORCH_DYNAMO_ARN_PREFIX =
+            "arn:aws:dynamodb:eu-west-2:56789:table/test-";
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @Test
@@ -23,6 +25,17 @@ class TableNameHelperTest {
                 TableNameHelper.getFullTableName("auth-table", configurationService, false);
 
         assertEquals(TEST_AUTH_DYNAMO_ARN_PREFIX + "auth-table", fullTableName);
+    }
+
+    @Test
+    void shouldReturnTableArnForOrchTableWhenCalledInAuthAccount() {
+        when(configurationService.getOrchDynamoArnPrefix())
+                .thenReturn(Optional.of(TEST_ORCH_DYNAMO_ARN_PREFIX));
+
+        String fullTableName =
+                TableNameHelper.getFullTableName("orch-table", configurationService, true);
+
+        assertEquals(TEST_ORCH_DYNAMO_ARN_PREFIX + "orch-table", fullTableName);
     }
 
     @Test
