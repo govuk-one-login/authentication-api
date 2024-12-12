@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -32,6 +33,16 @@ public class AuthenticationUserInfoStorageService
                                         .getEpochSecond());
 
         put(userInfoDbObject);
+    }
+
+    public Optional<UserInfo> getAuthenticationUserInfo(String subjectID)
+            throws com.nimbusds.oauth2.sdk.ParseException {
+        var userInfoData = getAuthenticationUserInfoData(subjectID);
+        if (userInfoData.isEmpty()) {
+            return Optional.empty();
+        }
+        var userInfo = new UserInfo(JSONObjectUtils.parse(userInfoData.get().getUserInfo()));
+        return Optional.ofNullable(userInfo);
     }
 
     public Optional<AuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
