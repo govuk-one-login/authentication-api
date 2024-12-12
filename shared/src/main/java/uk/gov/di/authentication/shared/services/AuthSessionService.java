@@ -5,12 +5,10 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
-import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
@@ -38,53 +36,6 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
-    }
-
-    public void addOrUpdateSessionIncludingSessionId(
-            Optional<String> previousSessionId,
-            String newSessionId,
-            CredentialTrustLevel currentCredentialStrength,
-            boolean upliftRequired) {
-        try {
-            Optional<AuthSessionItem> oldItem = Optional.empty();
-            if (previousSessionId.isPresent()) {
-                LOG.info("previousSessionId is present");
-                oldItem = getSession(previousSessionId.get());
-            }
-            if (oldItem.isPresent()) {
-                AuthSessionItem newItem =
-                        oldItem.get()
-                                .withSessionId(newSessionId)
-                                .withCurrentCredentialStrength(currentCredentialStrength)
-                                .withUpliftRequired(upliftRequired)
-                                .withTimeToLive(
-                                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
-                                                .toInstant()
-                                                .getEpochSecond());
-                put(newItem);
-                delete(previousSessionId.get());
-                LOG.info(
-                        "Session ID updated in Auth session table. previousSessionId: {}, sessionId: {}",
-                        previousSessionId,
-                        newSessionId);
-            } else {
-                AuthSessionItem newItem =
-                        new AuthSessionItem()
-                                .withSessionId(newSessionId)
-                                .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                .withCurrentCredentialStrength(currentCredentialStrength)
-                                .withUpliftRequired(upliftRequired)
-                                .withTimeToLive(
-                                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
-                                                .toInstant()
-                                                .getEpochSecond());
-                put(newItem);
-                LOG.info("New item added to Auth session table. sessionId: {}", newSessionId);
-            }
-        } catch (Exception e) {
-            logAndThrowAuthSessionException(
-                    "Failed to add or update session ID of Auth session item", newSessionId, e);
-        }
     }
 
     public Optional<AuthSessionItem> getSession(String sessionId) {
