@@ -1,17 +1,18 @@
 package uk.gov.di.authentication.sharedtest.httpstub;
 
+import org.eclipse.jetty.http.HttpURI;
+import org.eclipse.jetty.io.content.ContentSourceInputStream;
 import org.eclipse.jetty.server.Request;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 public class RecordedRequest {
     private final String requestURI;
-    private final Map<String, List<String>> headers;
     private final String querystring;
     private final String method;
     private final String url;
@@ -19,11 +20,11 @@ public class RecordedRequest {
 
     public RecordedRequest(Request request) {
         this.method = request.getMethod();
-        this.requestURI = request.getRequestURI();
-        this.querystring = request.getQueryString();
-        this.headers = getHeaders(request);
+        this.requestURI = request.getHttpURI().getPath();
+        this.querystring = request.getHttpURI().getQuery();
         this.entity = readEntity(request);
-        this.url = request.getRequestURL().toString();
+        HttpURI httpURI = HttpURI.build(request.getHttpURI()).query(null);
+        this.url = httpURI.asString();
     }
 
     public String getQuerystring() {
@@ -46,24 +47,13 @@ public class RecordedRequest {
         return url;
     }
 
-    public String getHeader(String name) {
-        List<String> values = headers.get(name.toLowerCase());
-        return values == null ? null : values.get(0);
-    }
-
     private static String readEntity(Request request) {
-        try (BufferedReader in = request.getReader()) {
-            return in.lines().collect(Collectors.joining());
+        try (InputStream stream = new ContentSourceInputStream(request)) {
+            InputStreamReader in = new InputStreamReader(stream, StandardCharsets.UTF_8);
+            BufferedReader reader = new BufferedReader(in);
+            return reader.lines().collect(Collectors.joining());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static Map<String, List<String>> getHeaders(Request request) {
-        return Collections.list(request.getHeaderNames()).stream()
-                .collect(
-                        Collectors.toUnmodifiableMap(
-                                String::toLowerCase,
-                                n -> List.copyOf(Collections.list(request.getHeaders(n)))));
     }
 }
