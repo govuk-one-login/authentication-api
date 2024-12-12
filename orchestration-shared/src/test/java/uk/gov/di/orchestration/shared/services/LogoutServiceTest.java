@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -100,9 +101,10 @@ class LogoutServiceTest {
             URI.create("https://signin.test.account.gov.uk/unavailable-permanent");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
     private static final String CLIENT_ID = "client-id";
-    private static final Subject SUBJECT = new Subject();
+    private static final Subject INTERNAL_COMMON_SUBJECT_ID = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
     private static Session session;
+    private static OrchSessionItem orchSession;
 
     private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
     private static final URI REAUTH_FAILURE_URI =
@@ -119,7 +121,7 @@ class LogoutServiceTest {
                     .withIpAddress(IP_ADDRESS)
                     .withSessionId(SESSION_ID)
                     .withPersistentSessionId(PERSISTENT_SESSION_ID)
-                    .withUserId(SUBJECT.getValue());
+                    .withUserId(INTERNAL_COMMON_SUBJECT_ID.getValue());
     private final TxmaAuditUser auditUserWhenNoCookie =
             TxmaAuditUser.user()
                     .withIpAddress(IP_ADDRESS)
@@ -161,7 +163,7 @@ class LogoutServiceTest {
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
-                        CLIENT_ID, SUBJECT, "http://localhost-rp", ecSigningKey);
+                        CLIENT_ID, INTERNAL_COMMON_SUBJECT_ID, "http://localhost-rp", ecSigningKey);
         SignedJWT idToken = SignedJWT.parse(signedIDToken.serialize());
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
         rpPairwiseId = Optional.of(idToken.getJWTClaimsSet().getSubject());
@@ -169,7 +171,10 @@ class LogoutServiceTest {
         session =
                 new Session(SESSION_ID)
                         .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+                        .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID.getValue());
+        orchSession =
+                new OrchSessionItem(SESSION_ID)
+                        .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID.getValue());
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID);
         when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
     }
@@ -186,6 +191,7 @@ class LogoutServiceTest {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
                         Optional.of(session),
+                        Optional.of(orchSession),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.getValue()),
@@ -206,7 +212,7 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID), Optional.empty());
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -219,6 +225,7 @@ class LogoutServiceTest {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
                         Optional.of(session),
+                        Optional.of(orchSession),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -239,7 +246,7 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID), Optional.empty());
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -252,6 +259,7 @@ class LogoutServiceTest {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
                         Optional.of(session),
+                        Optional.of(orchSession),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(STATE.getValue()),
@@ -272,7 +280,7 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID), Optional.empty());
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -286,6 +294,7 @@ class LogoutServiceTest {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
                         Optional.of(session),
+                        Optional.of(orchSession),
                         Optional.of(errorObject),
                         Optional.empty(),
                         Optional.empty(),
@@ -306,7 +315,7 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID), Optional.empty());
 
         assertThat(response, hasStatus(302));
 
@@ -318,6 +327,7 @@ class LogoutServiceTest {
     @Test
     void doseNotIncrementLogoutMetricIfSessionNotPresent() {
         logoutService.handleLogout(
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.of(CLIENT_LOGOUT_URI),
@@ -335,7 +345,7 @@ class LogoutServiceTest {
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, intervention);
+                        session, orchSession, event, CLIENT_ID, intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
@@ -365,7 +375,7 @@ class LogoutServiceTest {
 
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, intervention);
+                        session, orchSession, event, CLIENT_ID, intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
@@ -401,6 +411,7 @@ class LogoutServiceTest {
 
         logoutService.handleLogout(
                 Optional.of(session),
+                Optional.of(orchSession),
                 Optional.empty(),
                 Optional.of(CLIENT_LOGOUT_URI),
                 Optional.of(STATE.getValue()),
@@ -414,7 +425,7 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
+        verify(cloudwatchMetricsService).incrementLogout(Optional.empty(), Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -434,7 +445,7 @@ class LogoutServiceTest {
                         RuntimeException.class,
                         () ->
                                 logoutService.handleAccountInterventionLogout(
-                                        session, event, CLIENT_ID, intervention),
+                                        session, orchSession, event, CLIENT_ID, intervention),
                         "Expected to throw exception");
 
         assertEquals("Account status must be blocked or suspended", exception.getMessage());
@@ -445,6 +456,7 @@ class LogoutServiceTest {
 
         logoutService.handleLogout(
                 Optional.of(session),
+                Optional.of(orchSession),
                 Optional.empty(),
                 Optional.of(CLIENT_LOGOUT_URI),
                 Optional.of(STATE.getValue()),
@@ -468,6 +480,7 @@ class LogoutServiceTest {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
                         Optional.of(session),
+                        Optional.of(orchSession),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.getValue()),
@@ -496,7 +509,7 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id-3")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID), Optional.empty());
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -522,7 +535,7 @@ class LogoutServiceTest {
     void successfullyLogsOutAndGeneratesRedirectResponseForeReauthenticationFailure() {
         var response =
                 logoutService.handleReauthenticationFailureLogout(
-                        session, event, CLIENT_ID, REAUTH_FAILURE_URI);
+                        session, orchSession, event, CLIENT_ID, REAUTH_FAILURE_URI);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
@@ -530,7 +543,7 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID), Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,

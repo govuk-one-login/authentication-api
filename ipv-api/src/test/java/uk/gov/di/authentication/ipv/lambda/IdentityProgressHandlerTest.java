@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -30,6 +31,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -82,6 +84,7 @@ public class IdentityProgressHandlerTest {
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -89,8 +92,9 @@ public class IdentityProgressHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final Session session =
-            new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_SUBJECT_ID);
+    private final Session session = new Session(SESSION_ID);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(INTERNAL_SUBJECT_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private IdentityProgressFrontendHandler handler;
@@ -112,6 +116,7 @@ public class IdentityProgressHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         sessionService,
+                        orchSessionService,
                         userInfoStorageService,
                         clientSessionService);
     }
@@ -305,5 +310,7 @@ public class IdentityProgressHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchSession));
     }
 }

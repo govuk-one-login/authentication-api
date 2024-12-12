@@ -20,6 +20,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -36,6 +37,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -96,6 +98,7 @@ class ProcessingIdentityHandlerTest {
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
@@ -107,6 +110,7 @@ class ProcessingIdentityHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
     private final Session session = new Session(SESSION_ID);
+    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private ProcessingIdentityHandler handler;
@@ -132,6 +136,7 @@ class ProcessingIdentityHandlerTest {
                         dynamoIdentityService,
                         accountInterventionService,
                         sessionService,
+                        orchSessionService,
                         clientSessionService,
                         dynamoClientService,
                         dynamoService,
@@ -230,7 +235,7 @@ class ProcessingIdentityHandlerTest {
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(intervention);
         String redirectUrl = "https://example.com/intervention";
-        when(logoutService.handleAccountInterventionLogout(any(), any(), any(), any()))
+        when(logoutService.handleAccountInterventionLogout(any(), any(), any(), any(), any()))
                 .thenReturn(
                         generateApiGatewayProxyResponse(
                                 302, "", Map.of(ResponseHeaders.LOCATION, redirectUrl), null));
@@ -238,7 +243,8 @@ class ProcessingIdentityHandlerTest {
         var result = handler.handleRequest(event, context);
 
         verify(logoutService)
-                .handleAccountInterventionLogout(session, event, CLIENT_ID, intervention);
+                .handleAccountInterventionLogout(
+                        session, orchSession, event, CLIENT_ID, intervention);
         assertThat(result, hasStatus(200));
         assertThat(
                 result,
@@ -364,6 +370,8 @@ class ProcessingIdentityHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchSession));
     }
 
     private ClientRegistry generateClientRegistry() {
