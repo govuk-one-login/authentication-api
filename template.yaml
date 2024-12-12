@@ -73,6 +73,12 @@ Conditions:
       !Equals [staging, !Ref Environment],
     ]
   IsIntegration: !Equals [!Ref Environment, integration]
+  SupportMaxAgeEnabled:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2359,6 +2365,10 @@ Resources:
               !Ref Environment,
               getAuthenticatedFromOrchSession,
             ]
+          SUPPORT_MAX_AGE_ENABLED: !If
+            - SupportMaxAgeEnabled
+            - true
+            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
