@@ -256,3 +256,33 @@ output "authentication_attempt_kms_key_arn" {
 output "auth_session_table_encryption_key_arn" {
   value = aws_kms_key.auth_session_table_encryption_key.arn
 }
+
+
+output "parameter_policy_phone_check_arn" {
+  value = aws_iam_policy.parameter_policy_phone_check.arn
+}
+
+output "txma_audit_queue_access_policy_arn" {
+  value = aws_iam_policy.txma_audit_queue_access_policy.arn
+}
+
+output "experian_phone_check_sqs_lambda_role_arn" {
+  value = module.experian_phone_check_sqs_lambda_role.arn
+}
+
+
+output "experian_phone_check_sqs_queue_arn" {
+  value = aws_sqs_queue.experian_phone_check_sqs_queue.arn
+}
+
+output "experian_phone_check_sqs_dead_letter_queue_arn" {
+  value = aws_sqs_queue.experian_phone_check_sqs_dead_letter_queue.arn
+}
+
+output "experian_phone_check_sqs_queue_id" {
+  value = aws_sqs_queue.experian_phone_check_sqs_queue.id
+}
+
+output "experian_phone_check_sqs_dead_letter_queue_id" {
+  value = aws_sqs_queue.experian_phone_check_sqs_dead_letter_queue.id
+}
