@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+import uk.gov.di.orchestration.shared.helpers.TableNameHelper;
 
 import java.util.Optional;
 
@@ -30,12 +31,8 @@ public class BaseDynamoService<T> {
             ConfigurationService configurationService,
             boolean isTableInOrchAccount) {
 
-        var tableName = table;
-        if (configurationService.getDynamoArnPrefix().isPresent() && !isTableInOrchAccount) {
-            tableName = configurationService.getDynamoArnPrefix().get() + tableName;
-        } else {
-            tableName = configurationService.getEnvironment() + "-" + tableName;
-        }
+        var tableName =
+                TableNameHelper.getFullTableName(table, configurationService, isTableInOrchAccount);
 
         client = createDynamoClient(configurationService);
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
