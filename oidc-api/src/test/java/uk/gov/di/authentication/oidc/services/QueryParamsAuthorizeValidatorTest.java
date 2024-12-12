@@ -66,6 +66,7 @@ class QueryParamsAuthorizeValidatorTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
+    private static final int MAX_AGE = 1800;
     private QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -392,6 +393,7 @@ class QueryParamsAuthorizeValidatorTest {
         AuthenticationRequest authenticationRequest =
                 new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
+                        .maxAge(MAX_AGE)
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authenticationRequest);
 
@@ -520,6 +522,7 @@ class QueryParamsAuthorizeValidatorTest {
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                         .state(new State())
                         .nonce(new Nonce())
+                        .maxAge(MAX_AGE)
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
@@ -577,6 +580,33 @@ class QueryParamsAuthorizeValidatorTest {
         assertEquals(STATE, authRequestError.get().state());
     }
 
+    @Test
+    void shouldReturnErrorWhenMaxAgeIsInvalid() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(NONCE)
+                        .maxAge(-5);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequestBuilder.build());
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().errorObject(),
+                equalTo(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Value of max age cannot be lower than -1")));
+        assertEquals(STATE, errorObject.get().state());
+    }
+
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
         return generateClientRegistry(
                 redirectURI, clientID, singletonList("openid"), false, DEFAULT_CLIENT_LOCS);
@@ -626,6 +656,7 @@ class QueryParamsAuthorizeValidatorTest {
                                 responseType, scope, CLIENT_ID, URI.create(redirectUri))
                         .state(STATE)
                         .nonce(NONCE)
+                        .maxAge(MAX_AGE)
                         .customParameter("vtr", jsonArray);
         claimsRequest.ifPresent(authRequestBuilder::claims);
 

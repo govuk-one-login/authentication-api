@@ -140,6 +140,21 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             redirectURI,
                             state));
         }
+        if (!client.getMaxAgeEnabled() && authRequest.getMaxAge() != -1) {
+            LOG.warn(
+                    "Max age present in auth request but not enabled for client. Client ID: {}",
+                    client.getClientID());
+        }
+        if (authRequest.getMaxAge() < -1) {
+            LOG.warn("Max age is negative in query params");
+            return Optional.of(
+                    new AuthRequestError(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Max age is negative in query params"),
+                            redirectURI,
+                            state));
+        }
         return Optional.empty();
     }
 
