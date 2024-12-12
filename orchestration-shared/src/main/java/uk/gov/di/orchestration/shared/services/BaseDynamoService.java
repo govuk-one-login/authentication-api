@@ -33,6 +33,9 @@ public class BaseDynamoService<T> {
         var tableName = table;
         if (configurationService.getDynamoArnPrefix().isPresent() && !isTableInOrchAccount) {
             tableName = configurationService.getDynamoArnPrefix().get() + tableName;
+        } else if (configurationService.getOrchDynamoArnPrefix().isPresent()
+                && isTableInOrchAccount) {
+            tableName = configurationService.getOrchDynamoArnPrefix().get() + tableName;
         } else {
             tableName = configurationService.getEnvironment() + "-" + tableName;
         }
