@@ -51,6 +51,15 @@ public class SessionService {
         return session;
     }
 
+    public Session copySessionForMaxAge(Session previousSession, String newSessionId) {
+        var copiedSession = new Session(previousSession);
+        copiedSession.setSessionId(newSessionId);
+        copiedSession.setBrowserSessionId(IdGenerator.generate());
+        copiedSession.setAuthenticated(false).setCurrentCredentialStrength(null);
+        copiedSession.resetClientSessions();
+        return copiedSession;
+    }
+
     public void storeOrUpdateSession(Session session) {
         storeOrUpdateSession(session, session.getSessionId());
     }
@@ -74,6 +83,18 @@ public class SessionService {
         try {
             String oldSessionId = session.getSessionId();
             session.setSessionId(IdGenerator.generate());
+            session.resetProcessingIdentityAttempts();
+            storeOrUpdateSession(session, oldSessionId);
+            redisConnectionService.deleteValue(oldSessionId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void updateWithNewSessionId(Session session, String newSessionId) {
+        try {
+            String oldSessionId = session.getSessionId();
+            session.setSessionId(newSessionId);
             session.resetProcessingIdentityAttempts();
             storeOrUpdateSession(session, oldSessionId);
             redisConnectionService.deleteValue(oldSessionId);
