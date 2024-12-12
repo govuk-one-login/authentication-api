@@ -14,7 +14,6 @@ lockout_duration                        = 7200
 reduced_lockout_duration                = 900
 incorrect_password_lockout_count_ttl    = 7200
 support_account_creation_count_ttl      = true
-call_ticf_cri                           = true
 ticf_cri_service_call_timeout           = 10000
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true

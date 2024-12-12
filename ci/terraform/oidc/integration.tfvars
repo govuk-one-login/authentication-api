@@ -8,7 +8,6 @@ logging_endpoint_arns                   = []
 shared_state_bucket                     = "digital-identity-dev-tfstate"
 test_clients_enabled                    = false
 internal_sector_uri                     = "https://identity.integration.account.gov.uk"
-call_ticf_cri                           = true
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
 
