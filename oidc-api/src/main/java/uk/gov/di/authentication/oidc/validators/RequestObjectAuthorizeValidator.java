@@ -193,6 +193,19 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                             state);
                 }
             }
+
+            String maxAgeClaim = jwtClaimsSet.getStringClaim("max_age");
+            if (Objects.nonNull(maxAgeClaim)) {
+                if (!client.getMaxAgeEnabled()) {
+                    LOG.warn(
+                            "Max age present in request object but not enabled for client. Client ID: {}",
+                            client.getClientID());
+                }
+                var maxAgeError = validateMaxAge(maxAgeClaim);
+                if (maxAgeError.isPresent()) {
+                    return errorResponse(redirectURI, maxAgeError.get(), state);
+                }
+            }
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
         } catch (ParseException e) {
@@ -246,6 +259,25 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                     String.format("Parse exception thrown when validating vtr: %s", e));
             return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+        }
+        return Optional.empty();
+    }
+
+    private Optional<ErrorObject> validateMaxAge(String maxAgeClaim) {
+        try {
+            if (Integer.parseInt(maxAgeClaim) < 0) {
+                LOG.warn("Max age is negative in request object");
+                return Optional.of(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Max age is negative in request object"));
+            }
+        } catch (NumberFormatException e) {
+            LOG.warn("Max age could not be parsed to an integer");
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Max age could not be parsed to an integer"));
         }
         return Optional.empty();
     }
