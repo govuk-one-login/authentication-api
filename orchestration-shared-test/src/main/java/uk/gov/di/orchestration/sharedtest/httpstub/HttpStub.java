@@ -174,6 +174,7 @@ class HttpStub {
                         .put(HttpHeader.CONTENT_TYPE, registeredResponse.getContentType());
                 ByteBuffer content = UTF_8.encode(registeredResponse.getBody());
                 response.write(true, content, callback);
+            } else {
                 callback.succeeded();
             }
             return true;
