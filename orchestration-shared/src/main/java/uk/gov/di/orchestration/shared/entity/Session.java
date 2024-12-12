@@ -53,6 +53,22 @@ public class Session {
         initializeCodeRequestMap();
     }
 
+    public Session(Session session, String newSessionId) {
+        this.sessionId = newSessionId;
+        this.clientSessions = new ArrayList<>();
+        this.isNewAccount = AccountState.UNKNOWN;
+        this.processingIdentityAttempts = 0;
+        this.codeRequestCountMap = new EnumMap<>(CodeRequestType.class);
+        this.browserSessionId = session.browserSessionId;
+        this.authenticated = false;
+        this.currentCredentialStrength = null;
+        this.emailAddress = session.emailAddress;
+        this.internalCommonSubjectIdentifier = session.internalCommonSubjectIdentifier;
+        this.retryCount = session.retryCount;
+        this.verifiedMfaMethodType = session.verifiedMfaMethodType;
+        initializeCodeRequestMap();
+    }
+
     public String getSessionId() {
         return sessionId;
     }
