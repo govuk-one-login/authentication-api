@@ -196,6 +196,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("DYNAMO_ARN_PREFIX"));
     }
 
+    public Optional<String> getOrchDynamoArnPrefix() {
+        return Optional.ofNullable(System.getenv("ORCH_DYNAMO_ARN_PREFIX"));
+    }
+
     public Optional<String> getDynamoEndpointURI() {
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
