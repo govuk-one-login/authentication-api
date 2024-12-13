@@ -88,6 +88,7 @@ class RequestObjectAuthorizeValidatorTest {
                                 CustomScopeValue.DOC_CHECKING_APP.getValue()));
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
+        when(configurationService.getEnvironment()).thenReturn("test");
     }
 
     @Test
