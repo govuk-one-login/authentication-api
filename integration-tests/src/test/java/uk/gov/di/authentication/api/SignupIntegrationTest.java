@@ -59,7 +59,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn200WhenValidSignUpRequest() throws Json.JsonException {
         setUpTest();
         redis.createSession(SESSION_ID);
-        withAuthSession();
+        withAuthSession(SESSION_ID);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
@@ -97,7 +97,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn400WhenCommonPassword() throws Json.JsonException {
         setUpTest();
         redis.createSession(SESSION_ID);
-        withAuthSession();
+        withAuthSession(SESSION_ID);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
@@ -166,7 +166,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
     }
 
-    private void withAuthSession() {
-        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
+    private void withAuthSession(String sessionId) {
+        authSessionStore.createSession(sessionId);
     }
 }
