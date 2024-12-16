@@ -120,8 +120,7 @@ class IPVReverificationServiceTest {
         when(configurationService.getStorageTokenClaimName()).thenReturn(TEST_STORAGE_TOKEN_CLAIM);
         when(configurationService.getMfaResetCallbackURI())
                 .thenReturn(new URI(TEST_MFA_CALLBACK_URI));
-        when(configurationService.getIPVAuthEncryptionPublicKey())
-                .thenReturn(constructTestPublicKey());
+        when(configurationService.getIPVPublicEncryptionKey()).thenReturn(constructTestPublicKey());
         when(configurationService.getIPVAuthorisationClientId())
                 .thenReturn(TEST_IPV_AUTH_CLIENT_ID);
         when(configurationService.getAuthIssuerClaim()).thenReturn(TEST_ISSUER_CLAIM);
@@ -193,8 +192,8 @@ class IPVReverificationServiceTest {
 
     @Test
     void shouldThrowIPVReverificationServiceExceptionWhenPublicKeyNotFound() {
-        when(configurationService.getIPVAuthEncryptionPublicKey())
-                .thenThrow(new MissingEnvVariableException("IPV_AUTHORIZATION_PUBLIC_KEY"));
+        when(configurationService.getIPVPublicEncryptionKey())
+                .thenThrow(new MissingEnvVariableException("IPV_PUBLIC_ENCRYPTION_KEY"));
 
         var exception =
                 assertThrows(
@@ -204,7 +203,7 @@ class IPVReverificationServiceTest {
                                         TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION));
 
         assertEquals(
-                "Missing required environment variable: IPV_AUTHORIZATION_PUBLIC_KEY",
+                "Missing required environment variable: IPV_PUBLIC_ENCRYPTION_KEY",
                 exception.getMessage());
     }
 

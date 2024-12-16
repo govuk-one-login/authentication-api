@@ -153,11 +153,10 @@ public class IPVReverificationService {
 
     private RSAPublicKey getPublicKey() {
         try {
-            LOG.info("Getting IPV Auth Encryption Public Key");
-            String ipvAuthEncryptionPublicKey =
-                    configurationService.getIPVAuthEncryptionPublicKey();
+            LOG.info("Getting IPV Public Encryption Key");
+            String ipvEncryptionPublicKey = configurationService.getIPVPublicEncryptionKey();
             return new RSAKey.Builder(
-                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
+                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvEncryptionPublicKey))
                     .build()
                     .toRSAPublicKey();
         } catch (JOSEException e) {

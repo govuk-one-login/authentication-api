@@ -655,10 +655,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrDefault("MFA_RESET_CALLBACK_URI", "");
     }
 
-    public String getIPVAuthEncryptionPublicKey() throws MissingEnvVariableException {
-        String key = System.getenv("IPV_AUTHORIZATION_PUBLIC_KEY");
+    public String getIPVPublicEncryptionKey() throws MissingEnvVariableException {
+        String key = System.getenv("IPV_PUBLIC_ENCRYPTION_KEY");
         if (key == null || key.isEmpty()) {
-            throw new MissingEnvVariableException("IPV_AUTHORIZATION_PUBLIC_KEY");
+            throw new MissingEnvVariableException("IPV_PUBLIC_ENCRYPTION_KEY");
         }
         return key;
     }

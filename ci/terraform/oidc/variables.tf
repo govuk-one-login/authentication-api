@@ -730,7 +730,7 @@ variable "oidc_cloudfront_enabled" {
   description = "Feature flag to disable cloudfront in envirometns that don't support it (authdev1 / authdev2)."
 }
 
-variable "ipv_authorization_public_key" {
+variable "ipv_public_encryption_key" {
   type        = string
   default     = ""
   description = "Public key for IPV"
