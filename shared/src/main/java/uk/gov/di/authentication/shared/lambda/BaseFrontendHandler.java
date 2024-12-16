@@ -39,14 +39,13 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
 
 public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
-    public static final String TXMA_AUDIT_ENCODED_HEADER = "txma-audit-encoded";
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
@@ -154,8 +153,7 @@ public abstract class BaseFrontendHandler<T>
                         input.getHeaders(),
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
-        String txmaAuditEncoded =
-                getHeaderValueOrElse(input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, null);
+        String txmaAuditEncoded = getTxmaAuditEncodedHeader(input).orElse(null);
 
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
 
