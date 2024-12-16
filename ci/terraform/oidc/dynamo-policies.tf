@@ -819,6 +819,30 @@ data "aws_iam_policy_document" "dynamo_id_reverification_state_write_policy_docu
   }
 }
 
+data "aws_iam_policy_document" "dynamo_id_reverification_state_read_policy_document" {
+  statement {
+    sid    = "AllowRead"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      data.aws_dynamodb_table.id_reverification_state_table.arn
+    ]
+  }
+
+  statement {
+    sid    = "AllowDecryption"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+    ]
+    resources = [local.id_reverification_state_key_arn]
+  }
+}
+
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -1094,4 +1118,13 @@ resource "aws_iam_policy" "dynamo_id_reverification_state_write_policy" {
   description = "IAM policy for managing write permissions to the ${var.environment}-id-reverification-state table"
 
   policy = data.aws_iam_policy_document.dynamo_id_reverification_state_write_policy_document.json
+}
+
+
+resource "aws_iam_policy" "dynamo_id_reverification_state_read_policy" {
+  name_prefix = "dynamo-id-reverification-state-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the ${var.environment}-id-reverification-state table"
+
+  policy = data.aws_iam_policy_document.dynamo_id_reverification_state_read_policy_document.json
 }
