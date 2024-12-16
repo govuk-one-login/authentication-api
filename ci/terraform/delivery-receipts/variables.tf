@@ -96,3 +96,9 @@ variable "notify_template_map" {
     REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID           = "2b3170b5-159e-457f-a282-f30f6006dc32"
   }
 }
+
+variable "vpc_environment" {
+  description = "The name of the environment this environment is sharing the VPC , this var is only for Authdevs env and must be overide using Authdevs.tfvars, default value should be null always."
+  type        = string
+  default     = null
+}
