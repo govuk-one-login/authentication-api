@@ -74,7 +74,7 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
     }
 
     public void createSession(String sessionId) {
-        authSessionService.put(
+        authSessionService.addSession(
                 new AuthSessionItem()
                         .withSessionId(sessionId)
                         .withTimeToLive(
