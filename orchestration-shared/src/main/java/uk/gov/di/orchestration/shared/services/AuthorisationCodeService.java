@@ -41,6 +41,11 @@ public class AuthorisationCodeService {
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
             String clientSessionId, String email, ClientSession clientSession) {
+        return generateAndSaveAuthorisationCode(clientSessionId, email, clientSession, null);
+    }
+
+    public AuthorizationCode generateAndSaveAuthorisationCode(
+            String clientSessionId, String email, ClientSession clientSession, Long authTime) {
         LOG.info("Generating and saving AuthorisationCode");
         AuthorizationCode authorizationCode = new AuthorizationCode();
         try {
@@ -50,7 +55,8 @@ public class AuthorisationCodeService {
                             new AuthCodeExchangeData()
                                     .setEmail(email)
                                     .setClientSessionId(clientSessionId)
-                                    .setClientSession(clientSession)),
+                                    .setClientSession(clientSession)
+                                    .setAuthTime(authTime)),
                     authorisationCodeExpiry);
             return authorizationCode;
         } catch (JsonException e) {

@@ -171,7 +171,7 @@ class IPVCallbackHelperTest {
                         new AccountIntervention(
                                 new AccountInterventionState(false, true, false, false)));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        anyString(), anyString(), any(ClientSession.class)))
+                        anyString(), anyString(), any(ClientSession.class), any(Long.class)))
                 .thenReturn(AUTH_CODE);
 
         when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);

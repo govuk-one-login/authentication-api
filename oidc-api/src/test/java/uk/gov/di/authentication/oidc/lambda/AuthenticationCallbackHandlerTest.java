@@ -138,7 +138,10 @@ class AuthenticationCallbackHandlerTest {
                         new AccountIntervention(
                                 new AccountInterventionState(false, false, false, false)));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        eq(clientSession),
+                        any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(UNSUCCESSFUL_TOKEN_RESPONSE.indicatesSuccess()).thenReturn(false);
@@ -468,7 +471,10 @@ class AuthenticationCallbackHandlerTest {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(mediumRequestSession));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, mediumRequestSession))
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        eq(mediumRequestSession),
+                        any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         usingValidClient();
 
@@ -1046,9 +1052,10 @@ class AuthenticationCallbackHandlerTest {
         ClientSession clientSessionWithCredentialTrustLevel =
                 createClientSession(credentialTrustLevel);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        CLIENT_SESSION_ID,
-                        TEST_EMAIL_ADDRESS,
-                        clientSessionWithCredentialTrustLevel))
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        eq(clientSessionWithCredentialTrustLevel),
+                        any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSessionWithCredentialTrustLevel));

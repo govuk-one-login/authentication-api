@@ -37,13 +37,14 @@ class AuthorisationCodeServiceTest {
                 new ClientSession(Map.of(), LocalDateTime.now(), List.of(), "test-client");
 
         authCodeService.generateAndSaveAuthorisationCode(
-                "test-client-session", "test@email.com", clientSession);
+                "test-client-session", "test@email.com", clientSession, 12345L);
 
         AuthCodeExchangeData expectedExchangeData =
                 new AuthCodeExchangeData()
                         .setClientSessionId("test-client-session")
                         .setEmail("test@email.com")
-                        .setClientSession(clientSession);
+                        .setClientSession(clientSession)
+                        .setAuthTime(12345L);
         String expectedJson = objectMapper.writeValueAsString(expectedExchangeData);
         verify(redisConnectionService)
                 .saveWithExpiry(startsWith("auth-code-"), eq(expectedJson), eq(123L));
