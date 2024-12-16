@@ -94,6 +94,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].integration_trigger_value : null,
       local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].method_trigger_value : null,
       local.account_modifiers_encryption_policy_arn,
+      module.id_reverification_state.integration_trigger_value,
+      module.id_reverification_state.method_trigger_value,
     ]))
   }
 
@@ -119,7 +121,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.mfa_reset_authorize,
     module.mfa_reset_storage_token_jwk,
     module.reverification_result,
-    module.mfa_reset_jar_signing_jwk
+    module.mfa_reset_jar_signing_jwk,
+    module.id_reverification_state
   ]
 }
 
@@ -221,6 +224,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.mfa_reset_storage_token_jwk,
     module.reverification_result,
     module.mfa_reset_authorize,
+    module.id_reverification_state,
     aws_api_gateway_deployment.deployment,
   ]
 }
