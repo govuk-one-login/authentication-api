@@ -15,9 +15,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
-import net.minidev.json.JSONObject;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +38,6 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
@@ -50,7 +47,6 @@ import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,10 +81,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
 
-    @RegisterExtension
-    protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
-            new AuthenticationCallbackUserInfoStoreExtension(180);
-
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
                     ipvStub,
@@ -102,19 +94,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final String CLIENT_ID = "test-client-id";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
-    private static final String TEST_PHONE_NUMBER = "01234567890";
+    private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final String SESSION_ID = "some-session-id";
     public static final String CLIENT_NAME = "test-client-name";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     public static final State RP_STATE = new State();
     public static final State ORCHESTRATION_STATE = new State();
-    private static final Subject TEST_SUBJECT = new Subject();
-    private static final String TEST_INTERNAL_SECTOR_ID = "test.com";
-
-    private static byte[] salt;
-    private static String internalCommonSubjectId;
 
     @BeforeEach
     void setup() {
@@ -122,16 +108,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         handler = new IPVCallbackHandler(configurationService, redisConnectionService);
         txmaAuditQueue.clear();
         spotQueue.clear();
-
-        setupUserProfileAndUserCredentials();
-        setupClientStore();
-
-        salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
-        internalCommonSubjectId =
-                calculatePairwiseIdentifier(TEST_SUBJECT.getValue(), TEST_INTERNAL_SECTOR_ID, salt);
-
-        setupOrchSession(internalCommonSubjectId);
-        setupAuthUserInfoTable(internalCommonSubjectId, salt);
+        setupOrchSession();
     }
 
     @Test
@@ -151,6 +128,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
+        setUpDynamo();
+        var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -179,7 +158,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
                         IPV_SPOT_REQUESTED));
-
+        var pairwiseIdentifier =
+                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
         SpotQueueAssertionHelper.assertSpotRequestReceived(
                 spotQueue,
                 List.of(
@@ -189,10 +169,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                                         VTM.getValue(),
                                         "/trustmark"),
-                                TEST_SUBJECT.getValue(),
+                                INTERNAL_SUBJECT.getValue(),
                                 salt,
                                 sectorId,
-                                internalCommonSubjectId,
+                                pairwiseIdentifier,
                                 new LogIds(
                                         SESSION_ID,
                                         PERSISTENT_SESSION_ID,
@@ -201,7 +181,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         CLIENT_SESSION_ID),
                                 CLIENT_ID)));
 
-        var identityCredentials = identityStore.getIdentityCredentials(internalCommonSubjectId);
+        var identityCredentials = identityStore.getIdentityCredentials(pairwiseIdentifier);
 
         assertTrue(
                 identityCredentials
@@ -380,7 +360,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
-
+        setUpDynamo();
+        var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
+        var pairwiseIdentifier =
+                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -396,7 +379,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         "code",
                                         new AuthorizationCode().getValue())));
 
-        var identityCredentials = identityStore.getIdentityCredentials(internalCommonSubjectId);
+        var identityCredentials = identityStore.getIdentityCredentials(pairwiseIdentifier);
 
         assertThat(response, hasStatus(302));
         if (validLoC) {
@@ -466,7 +449,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
-
+        setUpDynamo();
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -514,7 +497,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-
+        setUpDynamo();
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -539,12 +522,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 startsWith(REDIRECT_URI + "?error=access_denied"));
     }
 
-    private void setupUserProfileAndUserCredentials() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, "password", TEST_SUBJECT);
-        userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
-    }
-
-    private void setupClientStore() {
+    private void setUpDynamo() {
+        userStore.signUp(TEST_EMAIL_ADDRESS, "password", INTERNAL_SUBJECT);
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -560,34 +539,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
 
-    private void setupOrchSession(String internalCommonSubjectId) {
+    private void setupOrchSession() {
         orchSessionExtension.addSession(
                 new OrchSessionItem(SESSION_ID)
-                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
-                        .withInternalCommonSubjectId(internalCommonSubjectId));
-    }
-
-    private void setupAuthUserInfoTable(String internalCommonSubjectId, byte[] salt) {
-        var userInfo =
-                new UserInfo(
-                        new JSONObject(
-                                Map.of(
-                                        "sub",
-                                        internalCommonSubjectId,
-                                        "vot",
-                                        "P0",
-                                        "vtm",
-                                        OIDC_BASE_URL + "/trustmark",
-                                        "email",
-                                        TEST_EMAIL_ADDRESS,
-                                        "phone_number",
-                                        TEST_PHONE_NUMBER,
-                                        "salt",
-                                        ByteBuffer.wrap(salt).asReadOnlyBuffer(),
-                                        "local_account_id",
-                                        TEST_SUBJECT.getValue())));
-
-        userInfoStorageExtension.addAuthenticationUserInfoData(internalCommonSubjectId, userInfo);
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
     }
 
     private void assertSessionUpdatedWhenReturnCodeRequestedAndPresent() throws Json.JsonException {
