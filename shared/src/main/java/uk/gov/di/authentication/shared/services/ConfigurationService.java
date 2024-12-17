@@ -614,12 +614,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public String getMfaResetJarSigningKeyAlias() {
+    public String getIPVReverificationRequestSigningKey() {
         return System.getenv("MFA_RESET_JAR_SIGNING_KEY_ALIAS");
-    }
-
-    public String getMfaResetJarSigningKeyId() {
-        return System.getenv("MFA_RESET_JAR_SIGNING_KEY_ID");
     }
 
     public URI getCredentialStoreURI() {

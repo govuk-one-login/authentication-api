@@ -77,7 +77,7 @@ class IPVReverificationServiceTest {
     private static final String TEST_UUID = "someSuperUniqueUUID";
     private static final String TEST_IPV_AUTHORIZE_URI = "https://some.uri.gov.uk/authorize";
     private static final String TEST_IPV_AUTH_CLIENT_ID = "someClientId";
-    private static final String TEST_KEY_ID = "123456";
+    private static final String TEST_KEY_ALIAS = "alias/test-key";
     private static final String TEST_STORAGE_TOKEN =
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLmFjY291bnQuZ292LnVrIiwiaHR0cHM6Ly9pZGVudGl0eS50ZXN0LmFjY291bnQuZ292LnVrIl0sInN1YiI6InVybjpmZGM6Z292LnVrOjIwMjI6VEpMdDNXYWlHa0xoOFVxZWlzSDJ6VktHQVAwIiwic2NvcGUiOiJwcm92aW5nIiwiaXNzIjoiaHR0cHM6Ly9vaWRjLnRlc3QuYWNjb3VudC5nb3YudWsiLCJleHAiOjE3MTgxOTU3NjMsImlhdCI6MTcxODE5NTQ2MywianRpIjoiMWQyZTdmODgtYWIwNy00NWU5LThkYTAtOWEyMzIyMWFhZjM3In0.6MpC8IZbOICVjvf_97ySj6yOO6khQGhkEGHvYB6kXGMroSQgF0z0-Z1EVJi5sVXwmbe4X6eDRTIYtM07xItiMg";
     private static final String TEST_STORAGE_TOKEN_CLAIM =
@@ -85,7 +85,10 @@ class IPVReverificationServiceTest {
     private static final long TEST_SESSION_EXPIRY = 123456;
     private static final String TEST_MFA_CALLBACK_URI = "some.call.back.uri";
     private static final Base64URL TEST_ENCODED_JWS_HEADER =
-            new JWSHeader.Builder(TEST_SIGNING_ALGORITHM).keyID(TEST_KEY_ID).build().toBase64URL();
+            new JWSHeader.Builder(TEST_SIGNING_ALGORITHM)
+                    .keyID(TEST_KEY_ALIAS)
+                    .build()
+                    .toBase64URL();
     private static final Base64URL TEST_ENCODED_JWS_SIGNATURE =
             new Base64URL("someVeryLegitSignature");
     private static final KeyPair TEST_KEY_PAIR = GENERATE_RSA_KEY_PAIR();
@@ -116,7 +119,8 @@ class IPVReverificationServiceTest {
     void testSetup() throws URISyntaxException, ParseException, JOSEException {
         when(tokenService.generateStorageTokenForMfaReset(any()))
                 .thenReturn(new BearerAccessToken(TEST_STORAGE_TOKEN));
-        when(configurationService.getMfaResetJarSigningKeyId()).thenReturn(TEST_KEY_ID);
+        when(configurationService.getIPVReverificationRequestSigningKey())
+                .thenReturn(TEST_KEY_ALIAS);
         when(configurationService.getStorageTokenClaimName()).thenReturn(TEST_STORAGE_TOKEN_CLAIM);
         when(configurationService.getMfaResetCallbackURI())
                 .thenReturn(new URI(TEST_MFA_CALLBACK_URI));
@@ -168,7 +172,7 @@ class IPVReverificationServiceTest {
                             .toRSAPublicKey();
 
             verify(jwtService)
-                    .signJWT(TEST_SIGNING_ALGORITHM, constructTestClaimSet(), TEST_KEY_ID);
+                    .signJWT(TEST_SIGNING_ALGORITHM, constructTestClaimSet(), TEST_KEY_ALIAS);
             verify(jwtService).encryptJWT(testSignedJwt, expectedPublicKey);
             verify(redisConnectionService)
                     .saveWithExpiry(

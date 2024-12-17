@@ -77,7 +77,7 @@ class IpvTokenTest {
                 new ReverificationResultService(configService, kmsConnectionService);
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
-        when(configService.getMfaResetJarSigningKeyAlias()).thenReturn(KEY_ID);
+        when(configService.getIPVReverificationRequestSigningKey()).thenReturn(KEY_ID);
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockKmsReturn());
     }
 

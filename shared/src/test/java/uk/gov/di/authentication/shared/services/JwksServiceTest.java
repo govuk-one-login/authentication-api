@@ -116,7 +116,7 @@ class JwksServiceTest {
     void shouldReturnMfaResetJarSigningKeyAndParseToJwk() {
 
         String mockKeyId = "123456789";
-        when(configurationService.getMfaResetJarSigningKeyAlias()).thenReturn(mockKeyId);
+        when(configurationService.getIPVReverificationRequestSigningKey()).thenReturn(mockKeyId);
 
         byte[] publicKey =
                 Base64.getDecoder()
