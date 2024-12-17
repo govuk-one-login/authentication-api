@@ -191,7 +191,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
 
         Optional<AuthenticationUserInfo> userInfoDbEntry =
-                userInfoStoreExtension.getUserInfoDataBySubjectId(SUBJECT_ID.getValue());
+                userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
         assertFalse(userInfoDbEntry.isPresent());
     }
 
@@ -864,7 +864,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         OidcAuditableEvent.AUTH_CODE_ISSUED));
 
         Optional<AuthenticationUserInfo> userInfoDbEntry =
-                userInfoStoreExtension.getUserInfoDataBySubjectId(SUBJECT_ID.getValue());
+                userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
         assertTrue(userInfoDbEntry.isPresent());
         assertEquals(SUBJECT_ID.getValue(), userInfoDbEntry.get().getSubjectID());
         assertThat(userInfoDbEntry.get().getUserInfo(), containsString("new_account"));
