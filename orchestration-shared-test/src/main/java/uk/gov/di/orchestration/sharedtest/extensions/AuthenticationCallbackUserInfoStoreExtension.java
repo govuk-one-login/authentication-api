@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.sharedtest.extensions;
 
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -75,8 +76,12 @@ public class AuthenticationCallbackUserInfoStoreExtension extends DynamoExtensio
         dynamoDB.createTable(request);
     }
 
-    public Optional<AuthenticationUserInfo> getUserInfoBySubjectId(String subjectId) {
+    public Optional<AuthenticationUserInfo> getUserInfoDataBySubjectId(String subjectId) {
         return userInfoService.getAuthenticationUserInfoData(subjectId);
+    }
+
+    public Optional<UserInfo> getUserInfo(String subjectId) throws ParseException {
+        return userInfoService.getAuthenticationUserInfo(subjectId);
     }
 
     public void addAuthenticationUserInfoData(String subjectId, UserInfo userInfo) {
