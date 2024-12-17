@@ -190,4 +190,8 @@ public class Session {
             codeRequestCountMap.put(requestType, 0);
         }
     }
+
+    public void resetClientSessions() {
+        this.clientSessions = new ArrayList<>();
+    }
 }
