@@ -6,7 +6,7 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.sharedtest.httpstub.HttpStubExtension;
 
 import static java.lang.String.format;
-import static uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims.NEW_ACCOUNT;
+import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.NEW_ACCOUNT;
 
 public class AuthExternalApiStubExtension extends HttpStubExtension {
 

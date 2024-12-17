@@ -22,7 +22,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
-import uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;

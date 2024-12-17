@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.entity;
+package uk.gov.di.orchestration.shared.entity;
 
 import java.util.Arrays;
 import java.util.Set;
