@@ -27,6 +27,9 @@ module "mfa_reset_storage_token_jwk" {
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetStorageTokenJwkHandler::handleRequest"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_resource.auth_frontend_wellknown_resource.id
   execution_arn    = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
