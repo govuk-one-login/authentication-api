@@ -35,7 +35,6 @@ class AuthSessionServiceIntegrationTest {
     @Test
     void shouldReplaceSessionWhenPreviousSessionIdGivenAndExists() {
         withPreviousSession();
-        withUpdatedPreviousSession();
 
         Optional<AuthSessionItem> retrievedPreviousSession =
                 authSessionExtension.getSession(PREVIOUS_SESSION_ID);
@@ -48,7 +47,6 @@ class AuthSessionServiceIntegrationTest {
 
     @Test
     void shouldAddSessionWhenPreviousSessionIdGivenAndDoesNotExist() {
-        withUpdatedPreviousSession();
 
         Optional<AuthSessionItem> retrievedPreviousSession =
                 authSessionExtension.getSession(PREVIOUS_SESSION_ID);
@@ -81,7 +79,6 @@ class AuthSessionServiceIntegrationTest {
         var previousSession = authSessionExtension.getSession(PREVIOUS_SESSION_ID).get();
         previousSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         authSessionExtension.updateSession(previousSession);
-        withUpdatedPreviousSession();
 
         Optional<AuthSessionItem> retrievedPreviousSession =
                 authSessionExtension.getSession(PREVIOUS_SESSION_ID);
@@ -107,14 +104,10 @@ class AuthSessionServiceIntegrationTest {
     }
 
     private void withSession() {
-        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
+        authSessionExtension.createSession(SESSION_ID);
     }
 
     private void withPreviousSession() {
-        authSessionExtension.addSession(Optional.empty(), PREVIOUS_SESSION_ID);
-    }
-
-    private void withUpdatedPreviousSession() {
-        authSessionExtension.addSession(Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+        authSessionExtension.createSession(PREVIOUS_SESSION_ID);
     }
 }

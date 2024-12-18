@@ -144,6 +144,15 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
     }
 
+    public void addSession(AuthSessionItem sessionItem) {
+        try {
+            put(sessionItem);
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to put Auth session", sessionItem.getSessionId(), e);
+        }
+    }
+
     private void logAndThrowAuthSessionException(String message, String sessionId, Exception e) {
         LOG.error("{}. Session ID: {}. Error message: {}", message, sessionId, e.getMessage());
         throw new AuthSessionException(message);
