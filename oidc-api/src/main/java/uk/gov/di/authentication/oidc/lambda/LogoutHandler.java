@@ -15,6 +15,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -34,6 +35,7 @@ public class LogoutHandler
     private static final Logger LOG = LogManager.getLogger(LogoutHandler.class);
 
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
     private final TokenValidationService tokenValidationService;
     private final CookieHelper cookieHelper;
@@ -55,6 +57,7 @@ public class LogoutHandler
                         configurationService);
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public LogoutHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -68,14 +71,17 @@ public class LogoutHandler
                         configurationService);
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public LogoutHandler(
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
             TokenValidationService tokenValidationService,
             LogoutService logoutService) {
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
         this.tokenValidationService = tokenValidationService;
         this.cookieHelper = new CookieHelper();
@@ -96,7 +102,11 @@ public class LogoutHandler
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, input);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        input);
 
         if (logoutRequest.session().isPresent()) {
             Session session = logoutRequest.session().get();
@@ -105,6 +115,7 @@ public class LogoutHandler
 
         return logoutService.handleLogout(
                 logoutRequest.session(),
+                logoutRequest.orchSession(),
                 logoutRequest.errorObject(),
                 logoutRequest.postLogoutRedirectUri(),
                 logoutRequest.state(),
