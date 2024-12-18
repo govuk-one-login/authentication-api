@@ -120,6 +120,7 @@ class TokenServiceTest {
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
     private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
     private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
+    private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
 
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -166,7 +167,8 @@ class TokenServiceTest {
                         false,
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
-                        VOT);
+                        VOT,
+                        AUTH_TIME);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -237,7 +239,8 @@ class TokenServiceTest {
                         false,
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
-                        VOT);
+                        VOT,
+                        AUTH_TIME);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -302,7 +305,8 @@ class TokenServiceTest {
                         false,
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
-                        VOT);
+                        VOT,
+                        AUTH_TIME);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -329,7 +333,8 @@ class TokenServiceTest {
                         false,
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
-                        VOT);
+                        VOT,
+                        AUTH_TIME);
 
         var parsedAccessToken =
                 SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue())
@@ -578,5 +583,8 @@ class TokenServiceTest {
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
                 is(JOURNEY_ID));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("auth_time"),
+                is(AUTH_TIME));
     }
 }

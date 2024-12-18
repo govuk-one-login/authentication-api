@@ -50,6 +50,7 @@ import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
@@ -138,6 +139,7 @@ public class TokenHandlerTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
 
     private final BearerAccessToken accessToken = new BearerAccessToken();
     private final RefreshToken refreshToken = new RefreshToken();
@@ -231,7 +233,8 @@ public class TokenHandlerTest {
                                                         authenticationRequest.toParameters(),
                                                         LocalDateTime.now(),
                                                         vtr,
-                                                        CLIENT_NAME))));
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -244,7 +247,8 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken()))
+                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        AUTH_TIME))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -308,7 +312,8 @@ public class TokenHandlerTest {
                                                         authenticationRequest.toParameters(),
                                                         LocalDateTime.now(),
                                                         vtr,
-                                                        CLIENT_NAME))));
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -321,7 +326,8 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.RS256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken()))
+                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        AUTH_TIME))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -603,7 +609,8 @@ public class TokenHandlerTest {
                                                         generateAuthRequest().toParameters(),
                                                         LocalDateTime.now(),
                                                         List.of(mock(VectorOfTrust.class)),
-                                                        CLIENT_NAME))));
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)));
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
@@ -675,7 +682,8 @@ public class TokenHandlerTest {
                         true,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken()))
+                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        null))
                 .thenReturn(tokenResponse);
 
         var result =

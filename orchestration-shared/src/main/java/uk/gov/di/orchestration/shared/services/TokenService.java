@@ -92,7 +92,8 @@ public class TokenService {
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId,
-            String vot) {
+            String vot,
+            Long authTime) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
@@ -124,7 +125,8 @@ public class TokenService {
                                         vot,
                                         isDocAppJourney,
                                         signingAlgorithm,
-                                        journeyId));
+                                        journeyId,
+                                        authTime));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     segmentedFunctionCall(
@@ -225,7 +227,8 @@ public class TokenService {
             String vot,
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
-            String journeyId) {
+            String journeyId,
+            Long authTime) {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = oidcApi.trustmarkURI();
@@ -246,6 +249,7 @@ public class TokenService {
             idTokenClaims.setClaim("vot", vot);
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
+        idTokenClaims.setClaim("auth_time", authTime);
 
         try {
             return generateSignedJwtUsingExternalKey(
