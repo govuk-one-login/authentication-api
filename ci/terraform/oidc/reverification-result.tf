@@ -26,15 +26,15 @@ module "reverification_result" {
   environment     = var.environment
 
   handler_environment_variables = {
-    TXMA_AUDIT_QUEUE_URL            = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI             = var.internal_sector_uri
-    REDIS_KEY                       = local.redis_key
-    IPV_AUDIENCE                    = var.ipv_audience
-    IPV_AUTHORISATION_CALLBACK_URI  = var.ipv_authorisation_callback_uri
-    IPV_AUTHORISATION_CLIENT_ID     = var.ipv_authorisation_client_id
-    ENVIRONMENT                     = var.environment
-    MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.name
-    IPV_BACKEND_URI                 = var.ipv_backend_uri
+    TXMA_AUDIT_QUEUE_URL                          = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI                           = var.internal_sector_uri
+    REDIS_KEY                                     = local.redis_key
+    IPV_AUDIENCE                                  = var.ipv_audience
+    IPV_AUTHORISATION_CALLBACK_URI                = var.ipv_authorisation_callback_uri
+    IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_authorisation_client_id
+    ENVIRONMENT                                   = var.environment
+    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.target_key_id
+    IPV_BACKEND_URI                               = var.ipv_backend_uri
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler::handleRequest"

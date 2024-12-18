@@ -560,12 +560,7 @@ class ConfigurationServiceTest {
 
     @Test
     void getMfaResetJarSigningKeyAliasShouldNotDefault() {
-        assertNull(configurationService.getMfaResetJarSigningKeyAlias());
-    }
-
-    @Test
-    void getMfaResetJarSigningKeyIdShouldNotDefault() {
-        assertNull(configurationService.getMfaResetJarSigningKeyId());
+        assertNull(configurationService.getIPVReverificationRequestSigningKey());
     }
 
     @Test

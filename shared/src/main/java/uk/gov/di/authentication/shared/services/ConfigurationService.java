@@ -614,12 +614,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public String getMfaResetJarSigningKeyAlias() {
-        return System.getenv("MFA_RESET_JAR_SIGNING_KEY_ALIAS");
-    }
-
-    public String getMfaResetJarSigningKeyId() {
-        return System.getenv("MFA_RESET_JAR_SIGNING_KEY_ID");
+    public String getIPVReverificationRequestSigningKey() {
+        return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS");
     }
 
     public URI getCredentialStoreURI() {
@@ -655,10 +651,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrDefault("MFA_RESET_CALLBACK_URI", "");
     }
 
-    public String getIPVAuthEncryptionPublicKey() throws MissingEnvVariableException {
-        String key = System.getenv("IPV_AUTHORIZATION_PUBLIC_KEY");
+    public String getIPVPublicEncryptionKey() throws MissingEnvVariableException {
+        String key = System.getenv("IPV_PUBLIC_ENCRYPTION_KEY");
         if (key == null || key.isEmpty()) {
-            throw new MissingEnvVariableException("IPV_AUTHORIZATION_PUBLIC_KEY");
+            throw new MissingEnvVariableException("IPV_PUBLIC_ENCRYPTION_KEY");
         }
         return key;
     }

@@ -68,7 +68,7 @@ public class JwksService {
 
     public JWK getPublicMfaResetJarJwkWithOpaqueId() {
         LOG.info("Retrieving MFA Reset JAR signing public key");
-        return getPublicJWKWithKeyId(configurationService.getMfaResetJarSigningKeyAlias());
+        return getPublicJWKWithKeyId(configurationService.getIPVReverificationRequestSigningKey());
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {

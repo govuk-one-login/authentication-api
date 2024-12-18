@@ -167,7 +167,7 @@ public class ReverificationResultService {
         try {
             var jwsHeader =
                     new JWSHeader.Builder(TOKEN_ALGORITHM)
-                            .keyID(configurationService.getMfaResetJarSigningKeyAlias())
+                            .keyID(configurationService.getIPVReverificationRequestSigningKey())
                             .build();
             var encodedHeader = jwsHeader.toBase64URL();
             var encodedClaims = Base64URL.encode(claimsSet.toJWTClaimsSet().toString());
@@ -177,7 +177,7 @@ public class ReverificationResultService {
                             .message(
                                     SdkBytes.fromByteArray(
                                             message.getBytes(StandardCharsets.UTF_8)))
-                            .keyId(configurationService.getMfaResetJarSigningKeyAlias())
+                            .keyId(configurationService.getIPVReverificationRequestSigningKey())
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
 

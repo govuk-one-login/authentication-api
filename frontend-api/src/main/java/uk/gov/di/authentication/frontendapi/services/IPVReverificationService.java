@@ -106,7 +106,7 @@ public class IPVReverificationService {
                 jwtService.signJWT(
                         SIGNING_ALGORITHM,
                         mfaResetAuthorizationClaims,
-                        configurationService.getMfaResetJarSigningKeyId());
+                        configurationService.getIPVReverificationRequestSigningKey());
         LOG.info("Created Signed MFA Reset JWT");
 
         EncryptedJWT encryptedJWT = jwtService.encryptJWT(signedJWT, getPublicKey());
@@ -153,11 +153,10 @@ public class IPVReverificationService {
 
     private RSAPublicKey getPublicKey() {
         try {
-            LOG.info("Getting IPV Auth Encryption Public Key");
-            String ipvAuthEncryptionPublicKey =
-                    configurationService.getIPVAuthEncryptionPublicKey();
+            LOG.info("Getting IPV Public Encryption Key");
+            String ipvEncryptionPublicKey = configurationService.getIPVPublicEncryptionKey();
             return new RSAKey.Builder(
-                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
+                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvEncryptionPublicKey))
                     .build()
                     .toRSAPublicKey();
         } catch (JOSEException e) {

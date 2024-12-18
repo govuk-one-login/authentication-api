@@ -55,7 +55,7 @@ resource "aws_kms_key" "mfa_reset_token_signing_key_ecc" {
 }
 
 resource "aws_kms_alias" "mfa_reset_token_signing_key_alias" {
-  name          = "alias/${var.environment}-mfa-reset-token-signing-key-ecc-alias"
+  name          = "alias/${var.environment}-dev-auth-evcs-storage-token-signing-key-alias"
   target_key_id = aws_kms_key.mfa_reset_token_signing_key_ecc.key_id
 }
 
@@ -87,7 +87,7 @@ resource "aws_kms_key" "mfa_reset_jar_signing_key_ecc" {
 }
 
 resource "aws_kms_alias" "mfa_reset_jar_signing_key_alias" {
-  name          = "alias/${var.environment}-mfa-reset-jar-signing-key-ecc-alias"
+  name          = "alias/${var.environment}-auth-ipv-reverification-requests-signing-key"
   target_key_id = aws_kms_key.mfa_reset_jar_signing_key_ecc.key_id
 }
 

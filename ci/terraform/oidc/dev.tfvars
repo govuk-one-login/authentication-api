@@ -40,7 +40,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESgoCw5pZYyGtFpPBV2YfU3DGrDqC
 -----END PUBLIC KEY-----
 EOT
 
-ipv_authorization_public_key = <<-EOT
+ipv_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArukFibN4qI+/0SbSrMLg
 8v7Lj3KdV7tktgd+dol8VwDxMVfci0+5debd6yJFM6wgenCRI2FIxRXi+59bVgGY
