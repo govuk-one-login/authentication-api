@@ -15,7 +15,7 @@ module "oidc_jwks_role" {
 }
 
 module "jwks" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "jwks.json"
   path_part       = var.orch_jwks_enabled ? "jwks-auth.json" : "jwks.json"
@@ -30,6 +30,9 @@ module "jwks" {
     HEADERS_CASE_INSENSITIVE             = "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id = aws_api_gateway_resource.wellknown_resource.id

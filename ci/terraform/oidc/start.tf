@@ -25,7 +25,7 @@ module "frontend_api_start_role" {
 }
 
 module "start" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "start"
   path_part       = "start"
@@ -44,6 +44,9 @@ module "start" {
     AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED = var.authentication_attempts_service_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.StartHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id

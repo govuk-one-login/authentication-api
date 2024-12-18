@@ -32,7 +32,7 @@ module "frontend_api_login_role" {
 
 
 module "login" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "login"
   path_part       = "login"
@@ -54,6 +54,9 @@ module "login" {
     REAUTH_ENTER_PASSWORD_COUNT_TTL         = var.reauth_enter_password_count_ttl
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id

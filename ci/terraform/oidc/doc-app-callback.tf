@@ -21,7 +21,7 @@ module "doc_app_callback_role" {
 }
 
 module "doc-app-callback" {
-  source          = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2-snapstart"
   endpoint_name   = "doc-app-callback"
   path_part       = var.orch_doc_app_callback_enabled ? "doc-app-callback-auth" : "doc-app-callback"
   endpoint_method = ["GET"]
@@ -46,6 +46,9 @@ module "doc-app-callback" {
     OIDC_API_BASE_URL                  = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   create_endpoint  = true
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id

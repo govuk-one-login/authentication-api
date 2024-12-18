@@ -22,7 +22,7 @@ module "frontend_api_update_profile_role" {
 }
 
 module "update_profile" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "update-profile"
   path_part       = "update-profile"
@@ -38,6 +38,9 @@ module "update_profile" {
     INTERNAl_SECTOR_URI      = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id

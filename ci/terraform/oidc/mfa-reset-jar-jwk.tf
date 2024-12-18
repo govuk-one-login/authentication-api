@@ -17,7 +17,7 @@ module "mfa_reset_jar_signing_jwk_role" {
 }
 
 module "mfa_reset_jar_signing_jwk" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = local.reverification_jwk_json_endpoint_name
   path_part       = "reverification-jwk.json"
@@ -29,6 +29,9 @@ module "mfa_reset_jar_signing_jwk" {
     IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.name
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_resource.auth_frontend_wellknown_resource.id

@@ -22,7 +22,7 @@ module "oidc_logout_role" {
 }
 
 module "logout" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "logout"
   path_part       = var.orch_logout_enabled ? "logout-auth" : "logout"
@@ -41,6 +41,9 @@ module "logout" {
     AUTH_FRONTEND_BASE_URL               = "https://${local.frontend_fqdn}/"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
