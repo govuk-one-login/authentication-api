@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -71,6 +72,7 @@ import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationExcept
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
@@ -113,9 +115,11 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -126,11 +130,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
+import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -242,6 +248,8 @@ class AuthorisationHandlerTest {
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(AuthorisationHandler.class);
+
+    private final long timeNow = NowHelper.now().toInstant().getEpochSecond();
 
     @BeforeEach
     public void setUp() {
@@ -475,6 +483,7 @@ class AuthorisationHandlerTest {
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
         void shouldPassAuthenticatedClaimToAuthFromOrchSession(boolean isAuthenticated) {
+            withExistingSession(session);
             withExistingOrchSession(
                     new OrchSessionItem(NEW_SESSION_ID).withAuthenticated(isAuthenticated));
 
@@ -514,6 +523,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldPassCurrentCredentialStrengthClaimToAuthFromSession() {
+            withExistingSession(session);
             var currentCredentialStrength = CredentialTrustLevel.MEDIUM_LEVEL;
             withExistingOrchSession(
                     new OrchSessionItem(NEW_SESSION_ID)
@@ -1964,6 +1974,7 @@ class AuthorisationHandlerTest {
         class BrowserSessionId {
             @Test
             void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
+                withExistingOrchSession(orchSession);
                 ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
                 APIGatewayProxyResponseEvent response =
                         setupExistingSessionAndCookieInHeader(null, null);
@@ -1988,6 +1999,8 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
+                withExistingOrchSession(orchSession);
+
                 ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
                 APIGatewayProxyResponseEvent response =
                         setupExistingSessionAndCookieInHeader(null, BROWSER_SESSION_ID);
@@ -2012,6 +2025,8 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
+                withExistingOrchSession(orchSession);
+
                 ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
                 APIGatewayProxyResponseEvent response =
                         setupExistingSessionAndCookieInHeader(
@@ -2038,6 +2053,7 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
+                withExistingOrchSession(orchSession);
                 ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
                 APIGatewayProxyResponseEvent response =
                         setupExistingSessionAndCookieInHeader(
@@ -2068,6 +2084,7 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWhenBSIDsMatch() {
+                withExistingOrchSession(orchSession);
                 ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
                 APIGatewayProxyResponseEvent response =
                         setupExistingSessionAndCookieInHeader(
@@ -2506,6 +2523,248 @@ class AuthorisationHandlerTest {
                         pair("description", INVALID_REQUEST.getDescription()));
     }
 
+    @Nested
+    class MaxAge {
+        @BeforeEach
+        void setup() {
+            when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            when(configService.getSessionExpiry()).thenReturn(3600L);
+            withExistingSession(session);
+            when(sessionService.copySessionForMaxAge(any(Session.class), anyString()))
+                    .thenCallRealMethod();
+        }
+
+        @Test
+        void shouldNotUpdateSessionWhenThereIsNoExistingSession() {
+            withNoSession();
+            var requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "scope",
+                                    "openid profile phone",
+                                    "vtr",
+                                    "[\"Cl.Cm.P2\"]",
+                                    "max_age",
+                                    "1000"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            ArgumentCaptor<OrchSessionItem> captor = ArgumentCaptor.forClass(OrchSessionItem.class);
+            verify(orchSessionService).addSession(captor.capture());
+            OrchSessionItem updatedSession = captor.getValue();
+
+            assertFalse(updatedSession.getAuthenticated());
+            assertNull(updatedSession.getPreviousSessionId());
+            verify(orchSessionService, never()).deleteSession(anyString());
+        }
+
+        @Test
+        void shouldNotUpdateSessionDueToMaxAgeWhenMaxAgeIsNotEnabledForClient() {
+            when(clientService.getClient(anyString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(false)));
+            withExistingOrchSession(
+                    orchSession.withAuthenticated(true).withPreviousSessionId("prev-session-id"));
+            var requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "scope",
+                                    "openid profile phone",
+                                    "vtr",
+                                    "[\"Cl.Cm.P2\"]",
+                                    "max_age",
+                                    "1000"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            ArgumentCaptor<OrchSessionItem> captor = ArgumentCaptor.forClass(OrchSessionItem.class);
+            verify(orchSessionService).addSession(captor.capture());
+            OrchSessionItem updatedSession = captor.getValue();
+
+            assertTrue(updatedSession.getAuthenticated());
+            assertThat(updatedSession.getPreviousSessionId(), equalTo("prev-session-id"));
+            verify(orchSessionService).addSession(updatedSession);
+            verify(orchSessionService).deleteSession(orchSession.getSessionId());
+        }
+
+        private static Stream<Arguments> authTimeAndMaxAgeParams() {
+            var recentAuthTime = NowHelper.now().toInstant().getEpochSecond() - 1;
+            return Stream.of(
+                    arguments(recentAuthTime, "0", true),
+                    arguments(12345L, "1800", true),
+                    arguments(recentAuthTime - 1000, "800", true),
+                    arguments(recentAuthTime - 1000, "1800", false),
+                    arguments(recentAuthTime, "-1", false),
+                    arguments(recentAuthTime, "-12345", false),
+                    arguments(recentAuthTime, "-12345", false),
+                    arguments(null, "1800", false),
+                    arguments(99999999999L, "1800", false),
+                    arguments(-123L, "1800", false));
+        }
+
+        @ParameterizedTest
+        @MethodSource("authTimeAndMaxAgeParams")
+        void shouldUpdateOrchSessionCorrectlyForQueryParametersRequest(
+                Long authTime, String maxAgeParam, boolean maxAgeExpired) {
+            when(clientService.getClient(anyString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
+            when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
+            var requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "scope",
+                                    "openid profile phone",
+                                    "vtr",
+                                    "[\"Cl.Cm.P2\"]",
+                                    "max_age",
+                                    maxAgeParam));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            var response = makeHandlerRequest(event);
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            var newSessionId = sessionCookie.get().getValue().split("\\.")[0];
+
+            ArgumentCaptor<OrchSessionItem> addSessionCaptor =
+                    ArgumentCaptor.forClass(OrchSessionItem.class);
+            if (maxAgeExpired) {
+                verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
+                OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
+                OrchSessionItem newSession = addSessionCaptor.getAllValues().get(1);
+
+                assertNotEquals(updatedPreviousSession.getSessionId(), orchSession.getSessionId());
+                assertNotEquals(updatedPreviousSession.getSessionId(), newSession.getSessionId());
+                assertTrue(
+                        updatedPreviousSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        updatedPreviousSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+                assertTrue(updatedPreviousSession.getAuthenticated());
+                assertEquals(updatedPreviousSession.getAuthTime(), authTime);
+
+                verify(orchSessionService).deleteSession(orchSession.getSessionId());
+
+                assertEquals(newSession.getSessionId(), newSessionId);
+                assertTrue(
+                        newSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        newSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+                assertFalse(newSession.getAuthenticated());
+                assertEquals(
+                        newSession.getPreviousSessionId(), updatedPreviousSession.getSessionId());
+            } else {
+                verify(orchSessionService, times(1)).addSession(addSessionCaptor.capture());
+                OrchSessionItem updatedSession = addSessionCaptor.getAllValues().get(0);
+
+                assertEquals(updatedSession.getSessionId(), newSessionId);
+                assertTrue(updatedSession.getAuthenticated());
+                assertEquals(updatedSession.getAuthTime(), authTime);
+                assertTrue(
+                        updatedSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        updatedSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+
+                verify(orchSessionService).deleteSession(orchSession.getSessionId());
+            }
+        }
+
+        @ParameterizedTest
+        @MethodSource("authTimeAndMaxAgeParams")
+        void shouldUpdateOrchSessionCorrectlyForRequestObjectRequest(
+                Long authTime, String maxAgeParam, boolean maxAgeExpired) throws JOSEException {
+            when(clientService.getClient(anyString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
+            when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
+
+            var event = new APIGatewayProxyRequestEvent();
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var jwtClaimsSet =
+                    buildJwtClaimsSet("https://localhost/authorize", null, null, maxAgeParam);
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+            event.setHttpMethod("GET");
+
+            var response = makeHandlerRequest(event);
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            var newSessionId = sessionCookie.get().getValue().split("\\.")[0];
+
+            ArgumentCaptor<OrchSessionItem> addSessionCaptor =
+                    ArgumentCaptor.forClass(OrchSessionItem.class);
+            if (maxAgeExpired) {
+                verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
+                OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
+                OrchSessionItem newSession = addSessionCaptor.getAllValues().get(1);
+
+                assertNotEquals(updatedPreviousSession.getSessionId(), orchSession.getSessionId());
+                assertNotEquals(updatedPreviousSession.getSessionId(), newSession.getSessionId());
+                assertTrue(
+                        updatedPreviousSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        updatedPreviousSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+                assertTrue(updatedPreviousSession.getAuthenticated());
+                assertEquals(updatedPreviousSession.getAuthTime(), authTime);
+
+                verify(orchSessionService).deleteSession(orchSession.getSessionId());
+
+                assertEquals(newSession.getSessionId(), newSessionId);
+                assertTrue(
+                        newSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        newSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+                assertFalse(newSession.getAuthenticated());
+                assertEquals(
+                        newSession.getPreviousSessionId(), updatedPreviousSession.getSessionId());
+            } else {
+                verify(orchSessionService, times(1)).addSession(addSessionCaptor.capture());
+                OrchSessionItem updatedSession = addSessionCaptor.getAllValues().get(0);
+
+                assertEquals(updatedSession.getSessionId(), newSessionId);
+                assertTrue(updatedSession.getAuthenticated());
+                assertEquals(updatedSession.getAuthTime(), authTime);
+                assertTrue(
+                        updatedSession.getTimeToLive()
+                                < timeNow + configService.getSessionExpiry() + 100);
+                assertTrue(
+                        updatedSession.getTimeToLive()
+                                > timeNow + configService.getSessionExpiry() - 100);
+
+                verify(orchSessionService).deleteSession(orchSession.getSessionId());
+            }
+        }
+    }
+
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
@@ -2617,7 +2876,8 @@ class AuthorisationHandlerTest {
                 .withOneLoginService(IS_ONE_LOGIN)
                 .withServiceType(RP_SERVICE_TYPE)
                 .withSubjectType("public")
-                .withIdentityVerificationSupported(true);
+                .withIdentityVerificationSupported(true)
+                .withMaxAgeEnabled(false);
     }
 
     private static EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
@@ -2693,6 +2953,25 @@ class AuthorisationHandlerTest {
                 .claim("client_id", CLIENT_ID.getValue())
                 .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
+                .claim("max_age", "1000")
+                .build();
+    }
+
+    private static JWTClaimsSet buildJwtClaimsSet(
+            String audience, String prompt, String idToken, String maxAge) {
+        return new JWTClaimsSet.Builder()
+                .audience(audience)
+                .claim("prompt", prompt)
+                .claim("id_token_hint", idToken)
+                .claim("redirect_uri", REDIRECT_URI)
+                .claim("response_type", ResponseType.CODE.toString())
+                .claim("scope", SCOPE)
+                .claim("state", STATE.getValue())
+                .claim("nonce", null)
+                .claim("client_id", CLIENT_ID.getValue())
+                .claim("claims", CLAIMS)
+                .issuer(CLIENT_ID.getValue())
+                .claim("max_age", maxAge)
                 .build();
     }
 

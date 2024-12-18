@@ -53,6 +53,22 @@ public class Session {
         initializeCodeRequestMap();
     }
 
+    public Session(Session session) {
+        this.sessionId = session.sessionId;
+        this.clientSessions = session.clientSessions;
+        this.isNewAccount = session.isNewAccount;
+        this.processingIdentityAttempts = session.processingIdentityAttempts;
+        this.codeRequestCountMap = session.codeRequestCountMap;
+        this.browserSessionId = session.browserSessionId;
+        this.authenticated = session.authenticated;
+        this.currentCredentialStrength = session.currentCredentialStrength;
+        this.emailAddress = session.emailAddress;
+        this.internalCommonSubjectIdentifier = session.internalCommonSubjectIdentifier;
+        this.retryCount = session.retryCount;
+        this.verifiedMfaMethodType = session.verifiedMfaMethodType;
+        initializeCodeRequestMap();
+    }
+
     public String getSessionId() {
         return sessionId;
     }
@@ -189,5 +205,9 @@ public class Session {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
         }
+    }
+
+    public void resetClientSessions() {
+        this.clientSessions = new ArrayList<>();
     }
 }

@@ -107,6 +107,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "1800")
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -688,6 +689,30 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("ui_locales", "123456")
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidMaxAge()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "-5")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = service.validate(authRequest);
