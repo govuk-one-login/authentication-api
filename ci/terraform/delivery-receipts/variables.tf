@@ -96,3 +96,13 @@ variable "notify_template_map" {
     REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID           = "2b3170b5-159e-457f-a282-f30f6006dc32"
   }
 }
+
+variable "delivery_receipts_use_snapstart" {
+  description = "Whether to use Snapstart for the Delivery Receipts lambdas"
+  type        = bool
+  default     = false
+}
+
+locals {
+  use_snapstart = var.delivery_receipts_use_snapstart
+}
