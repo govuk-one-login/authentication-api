@@ -26,7 +26,7 @@ module "mfa_reset_jar_signing_jwk" {
 
   handler_environment_variables = {
     ENVIRONMENT                     = var.environment
-    MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.name
+    MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.target_key_id
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest"
 
