@@ -1,2 +1,3 @@
 */*_templated.yaml
 /.terraform.lock.hcl
+*/.terraform-cleanup-run
