@@ -20,6 +20,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
@@ -39,6 +40,7 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -766,6 +768,93 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 constructQueryStringParameters());
 
         assertAuthTimeHasBeenSetInOrchSessionTable();
+    }
+
+    @Nested
+    class MaxAgeSessionHandling {
+        private static final String PREVIOUS_SESSION_ID = "9a3f2708-2bf1-40d8-9c25-7b94145ef535";
+        private static final String INTERNAL_COMMON_SUBJECT_ID = SUBJECT_ID.getValue();
+        private static final String DIFFERENT_INTERNAL_COMMON_SUBJECT_ID =
+                "urn:fdc:gov:cebb94a1-3ee7-44ed-963b-f3befee65487";
+        private static final List<String> PREVIOUS_CLIENT_SESSIONS =
+                List.of(
+                        "623f860d-1bce-43ea-8f82-446fc894160b",
+                        "3eee3869-abf1-41c1-bdb5-c25f68d0a54d",
+                        "aef54391-95d8-4d3b-ac30-cbe1e3e2f0d4");
+
+        @Test
+        void
+                updatesOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdMatchesAuthUserInfoResponse()
+                        throws Json.JsonException {
+            authExternalApiStub.init(
+                    new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
+            setupMaxAgeSession();
+            setupPreviousSessions(INTERNAL_COMMON_SUBJECT_ID);
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertUserInfoStoredAndRedirectedToRp(response);
+
+            var sharedSession = redis.getSession(SESSION_ID);
+            var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
+            assertEquals(PREVIOUS_CLIENT_SESSIONS, sharedSession.getClientSessions());
+            assertNull(orchSession.getPreviousSessionId());
+        }
+
+        @Test
+        void
+                doesNotUpdateOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse()
+                        throws Json.JsonException {
+            authExternalApiStub.init(
+                    new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
+            setupMaxAgeSession();
+            setupPreviousSessions(DIFFERENT_INTERNAL_COMMON_SUBJECT_ID);
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertUserInfoStoredAndRedirectedToRp(response);
+
+            var sharedSession = redis.getSession(SESSION_ID);
+            var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
+            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertNull(orchSession.getPreviousSessionId());
+        }
+
+        private void setupMaxAgeSession() throws Json.JsonException {
+            redis.createSession(SESSION_ID);
+            redis.addStateToRedis(
+                    AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
+                    ORCH_TO_AUTH_STATE,
+                    SESSION_ID);
+            setUpClientSession();
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(SESSION_ID).withPreviousSessionId(PREVIOUS_SESSION_ID));
+        }
+
+        private void setupPreviousSessions(String internalCommonSubjectId)
+                throws Json.JsonException {
+            var session = new Session(PREVIOUS_SESSION_ID);
+            PREVIOUS_CLIENT_SESSIONS.forEach(session::addClientSession);
+            redis.addSession(session);
+            redis.addStateToRedis(
+                    AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
+                    ORCH_TO_AUTH_STATE,
+                    SESSION_ID);
+            setUpClientSession();
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(PREVIOUS_SESSION_ID)
+                            .withInternalCommonSubjectId(internalCommonSubjectId));
+        }
     }
 
     private void assertRedirectToSuspendedPage(APIGatewayProxyResponseEvent response) {
