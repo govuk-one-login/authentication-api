@@ -32,6 +32,9 @@ module "delete-synthetics-user" {
   }
   handler_function_name = "uk.gov.di.authentication.testservices.lambda.DeleteSyntheticsUserHandler::handleRequest"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_test_services_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_test_services_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_authentication_test_services_api.execution_arn
