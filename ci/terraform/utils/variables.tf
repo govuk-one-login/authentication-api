@@ -185,3 +185,13 @@ variable "support_email_check_enabled" {
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
 }
+
+variable "utils_use_snapstart" {
+  description = "Whether to use Snapstart for the Utils lambdas"
+  type        = bool
+  default     = false
+}
+
+locals {
+  use_snapstart = var.utils_use_snapstart
+}

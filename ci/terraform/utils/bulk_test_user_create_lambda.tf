@@ -26,6 +26,14 @@ resource "aws_lambda_function" "bulk_test_user_create_lambda" {
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  dynamic "snap_start" {
+    for_each = local.use_snapstart ? [1] : []
+    content {
+      apply_on = "PublishedVersions"
+    }
+  }
+
   tracing_config {
     mode = "Active"
   }

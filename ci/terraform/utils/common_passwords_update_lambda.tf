@@ -20,6 +20,14 @@ resource "aws_lambda_function" "common_passwords_dynamo_update_lambda" {
   runtime       = "java17"
   publish       = true
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  dynamic "snap_start" {
+    for_each = local.use_snapstart ? [1] : []
+    content {
+      apply_on = "PublishedVersions"
+    }
+  }
+
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
