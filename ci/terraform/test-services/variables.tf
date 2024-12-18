@@ -93,3 +93,13 @@ variable "vpc_environment" {
   type        = string
   default     = null
 }
+
+variable "test_services_use_snapstart" {
+  description = "Whether to use snapstart for the test services lambdas"
+  default     = true
+  type        = bool
+}
+
+locals {
+  use_snapstart = var.test_services_use_snapstart
+}
