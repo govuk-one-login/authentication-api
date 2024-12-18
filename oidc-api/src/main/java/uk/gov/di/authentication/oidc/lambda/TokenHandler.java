@@ -420,7 +420,8 @@ public class TokenHandler
                                             true,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            vot));
+                                            vot,
+                                            null));
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
@@ -450,7 +451,8 @@ public class TokenHandler
                                             false,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            vot));
+                                            vot,
+                                            authCodeExchangeData.getAuthTime()));
         }
         return tokenResponse;
     }

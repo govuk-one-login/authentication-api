@@ -72,6 +72,13 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  IsReturnAuthTimeInIdTokenEnabled:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+    ]
   IsIntegration: !Equals [!Ref Environment, integration]
   SupportMaxAgeEnabled:
     !Or [
@@ -1339,6 +1346,10 @@ Resources:
                 ]
           FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
             - EnableFetchJwks
+            - true
+            - false
+          RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED: !If
+            - IsReturnAuthTimeInIdTokenEnabled
             - true
             - false
 

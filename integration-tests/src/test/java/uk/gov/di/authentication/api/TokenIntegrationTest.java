@@ -92,6 +92,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String DIFFERENT_CLIENT_ID = "different-test-id";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
+    private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
 
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
@@ -238,6 +239,12 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        var idTokenClaims =
+                OIDCTokenResponse.parse(jsonResponse)
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet();
+
         assertNotNull(
                 TokenResponse.parse(jsonResponse)
                         .toSuccessResponse()
@@ -249,12 +256,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
         assertThat(
-                OIDCTokenResponse.parse(jsonResponse)
-                        .getOIDCTokens()
-                        .getIDToken()
-                        .getJWTClaimsSet()
-                        .getSubject(),
+                idTokenClaims.getSubject(),
                 equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL)));
+        assertNull(idTokenClaims.getClaim("auth_time"));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
@@ -273,8 +277,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
+
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        var idTokenClaims =
+                OIDCTokenResponse.parse(jsonResponse)
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet();
         assertNotNull(
                 TokenResponse.parse(jsonResponse)
                         .toSuccessResponse()
@@ -286,12 +296,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
         assertThat(
-                OIDCTokenResponse.parse(jsonResponse)
-                        .getOIDCTokens()
-                        .getIDToken()
-                        .getJWTClaimsSet()
-                        .getSubject(),
+                idTokenClaims.getSubject(),
                 not(equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL))));
+        assertNull(idTokenClaims.getClaim("auth_time"));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
@@ -611,7 +618,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 TEST_EMAIL,
                 generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
                 vtrList,
-                "client-name");
+                "client-name",
+                AUTH_TIME);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));

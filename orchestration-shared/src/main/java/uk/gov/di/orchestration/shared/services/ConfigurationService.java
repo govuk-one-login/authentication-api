@@ -413,6 +413,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("USE_ORCH_SESSION_FOR_AUTHENTICATED_CLAIM");
     }
 
+    public boolean isReturnAuthTimeInIdTokenEnabled() {
+        return getFlagOrFalse("RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED");
+    }
+
     public Optional<String> getIPVCapacity() {
         try {
             var request =

@@ -186,7 +186,8 @@ public class RedisExtension
             String email,
             Map<String, List<String>> authRequest,
             List<VectorOfTrust> vtrList,
-            String clientName)
+            String clientName,
+            Long authTime)
             throws Json.JsonException {
         var clientSession =
                 new ClientSession(authRequest, LocalDateTime.now(), vtrList, clientName);
@@ -196,8 +197,10 @@ public class RedisExtension
                         new AuthCodeExchangeData()
                                 .setClientSessionId(clientSessionId)
                                 .setEmail(email)
-                                .setClientSession(clientSession)),
+                                .setClientSession(clientSession)
+                                .setAuthTime(authTime)),
                 300);
+
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(clientSession),
