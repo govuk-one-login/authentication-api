@@ -8,9 +8,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
@@ -29,6 +31,7 @@ import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractP
 public class LogoutRequest {
     private static final Logger LOG = LogManager.getLogger(LogoutRequest.class);
     private final Optional<Session> session;
+    private final Optional<OrchSessionItem> orchSession;
     private final Optional<String> internalCommonSubjectId;
     private final Optional<String> sessionId;
     private final Optional<Map<String, String>> queryStringParameters;
@@ -45,6 +48,7 @@ public class LogoutRequest {
 
     public LogoutRequest(
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             TokenValidationService tokenValidationService,
             DynamoClientService dynamoClientService,
             APIGatewayProxyRequestEvent input) {
@@ -53,8 +57,12 @@ public class LogoutRequest {
                 segmentedFunctionCall(
                         "getSessionFromSessionCookie",
                         () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
+        orchSession =
+                segmentedFunctionCall(
+                        "getSessionFromSessionCookie",
+                        () -> orchSessionService.getSessionFromSessionCookie(input.getHeaders()));
+        internalCommonSubjectId = orchSession.map(OrchSessionItem::getInternalCommonSubjectId);
 
-        internalCommonSubjectId = session.map(Session::getInternalCommonSubjectIdentifier);
         sessionId = session.map(Session::getSessionId);
         Optional<String> journeyId = extractClientSessionIdFromCookieHeaders(input.getHeaders());
 
@@ -179,6 +187,10 @@ public class LogoutRequest {
 
     public Optional<Session> session() {
         return session;
+    }
+
+    public Optional<OrchSessionItem> orchSession() {
+        return orchSession;
     }
 
     public Optional<String> internalCommonSubjectId() {
