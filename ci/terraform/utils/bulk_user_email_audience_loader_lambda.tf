@@ -47,6 +47,15 @@ resource "aws_lambda_function" "bulk_user_email_audience_loader_lambda" {
   memory_size                    = lookup(var.performance_tuning, "bulk-user-email-audience-loader", local.default_performance_parameters).memory
   reserved_concurrent_executions = 3
   runtime                        = "java17"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  dynamic "snap_start" {
+    for_each = local.use_snapstart ? [1] : []
+    content {
+      apply_on = "PublishedVersions"
+    }
+  }
+
   tracing_config {
     mode = "Active"
   }

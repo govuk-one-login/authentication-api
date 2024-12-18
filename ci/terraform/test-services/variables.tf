@@ -87,3 +87,13 @@ variable "txma_account_id" {
   default = ""
   type    = string
 }
+
+variable "test_services_use_snapstart" {
+  description = "Whether to use snapstart for the test services lambdas"
+  default     = true
+  type        = bool
+}
+
+locals {
+  use_snapstart = var.test_services_use_snapstart
+}

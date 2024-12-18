@@ -70,7 +70,14 @@ variable "dynamo_deletion_protection_enabled" {
   default = false
 }
 
+variable "intervention_api_stub_use_snapstart" {
+  description = "Whether to use Snapstart for the IAS Lambdas"
+  type        = bool
+  default     = false
+}
+
 locals {
+  use_snapstart = var.intervention_api_stub_use_snapstart
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
     concurrency     = var.lambda_min_concurrency

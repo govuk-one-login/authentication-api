@@ -742,7 +742,14 @@ variable "is_destroy_orch_session_on_sign_out_enabled" {
   description = "Feature flag to destroy orch session on sign out"
 }
 
+variable "oidc_use_snapstart" {
+  type        = bool
+  description = "Whether to use Snapstart for the OIDC lambdas"
+  default     = false
+}
+
 locals {
+  use_snapstart = var.oidc_use_snapstart
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
     concurrency     = var.lambda_min_concurrency

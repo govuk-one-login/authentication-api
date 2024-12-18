@@ -19,7 +19,7 @@ module "client_registry_role" {
 
 module "register" {
   count  = var.client_registry_api_enabled ? 1 : 0
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "register"
   path_part       = var.orch_register_enabled ? "register-auth" : "register"
@@ -31,6 +31,9 @@ module "register" {
     OIDC_API_BASE_URL    = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   create_endpoint        = false
   rest_api_id            = aws_api_gateway_rest_api.di_authentication_api.id
@@ -53,6 +56,10 @@ module "register" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,

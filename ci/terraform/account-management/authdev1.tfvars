@@ -9,3 +9,5 @@ lambda_max_concurrency = 0
 lambda_min_concurrency = 0
 
 openapi_spec_filename = "openapi_v2.yaml"
+
+account_management_use_snapstart = true

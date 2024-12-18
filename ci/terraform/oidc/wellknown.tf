@@ -14,7 +14,7 @@ module "openid_configuration_role" {
 }
 
 module "openid_configuration_discovery" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = local.openid_configuration_endpoint_name
   path_part       = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
@@ -27,6 +27,9 @@ module "openid_configuration_discovery" {
     AUTH_FRONTEND_BASE_URL = "https://${local.frontend_fqdn}/"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id = aws_api_gateway_resource.wellknown_resource.id
@@ -46,6 +49,10 @@ module "openid_configuration_discovery" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,

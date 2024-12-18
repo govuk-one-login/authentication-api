@@ -29,7 +29,7 @@ module "frontend_api_verify_mfa_code_role" {
 }
 
 module "verify_mfa_code" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "verify-mfa-code"
   path_part       = "verify-mfa-code"
@@ -57,6 +57,9 @@ module "verify_mfa_code" {
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler::handleRequest"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
@@ -83,6 +86,10 @@ module "verify_mfa_code" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,

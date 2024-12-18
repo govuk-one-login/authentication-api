@@ -5,3 +5,5 @@ synthetics_users = "any.user@digital.cabinet-office.gov.uk"
 
 logging_endpoint_enabled = false
 logging_endpoint_arns    = []
+
+test_services_use_snapstart = true
