@@ -15,6 +15,10 @@ public class AuthCodeExchangeData {
     @SerializedName("clientSession")
     private ClientSession clientSession;
 
+    @Expose
+    @SerializedName("authTime")
+    private Long authTime;
+
     public String getClientSessionId() {
         return clientSessionId;
     }
@@ -39,6 +43,15 @@ public class AuthCodeExchangeData {
 
     public AuthCodeExchangeData setClientSession(ClientSession clientSession) {
         this.clientSession = clientSession;
+        return this;
+    }
+
+    public Long getAuthTime() {
+        return authTime;
+    }
+
+    public AuthCodeExchangeData setAuthTime(Long authTime) {
+        this.authTime = authTime;
         return this;
     }
 }
