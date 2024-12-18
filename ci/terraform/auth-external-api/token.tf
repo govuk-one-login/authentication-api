@@ -43,6 +43,9 @@ module "auth_token" {
   handler_function_name = "uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest"
   handler_runtime       = "java17"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   rest_api_id      = aws_api_gateway_rest_api.di_auth_ext_api.id
   root_resource_id = aws_api_gateway_rest_api.di_auth_ext_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_auth_ext_api.execution_arn
