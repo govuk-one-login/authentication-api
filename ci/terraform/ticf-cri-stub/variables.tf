@@ -64,7 +64,14 @@ variable "dynamo_deletion_protection_enabled" {
   default = false
 }
 
+variable "ticf_cri_stub_use_snapstart" {
+  description = "Whether to use Snapstart for the TICF CRI Stub lambdas"
+  type        = bool
+  default     = false
+}
+
 locals {
+  use_snapstart = var.ticf_cri_stub_use_snapstart
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
     concurrency     = var.lambda_min_concurrency
