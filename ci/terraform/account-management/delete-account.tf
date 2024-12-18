@@ -19,7 +19,7 @@ module "account_management_api_remove_account_role" {
 }
 
 module "delete_account" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "delete-account"
   path_part       = "delete-account"
@@ -31,6 +31,9 @@ module "delete_account" {
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.RemoveAccountHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id

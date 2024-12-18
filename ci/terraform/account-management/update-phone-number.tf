@@ -18,7 +18,7 @@ module "account_management_api_update_phone_number_role" {
 }
 
 module "update_phone_number" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "update-phone-number"
   path_part       = "update-phone-number"
@@ -31,6 +31,9 @@ module "update_phone_number" {
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id

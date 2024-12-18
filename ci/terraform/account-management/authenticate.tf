@@ -16,7 +16,7 @@ module "account_management_api_authenticate_role" {
 }
 
 module "authenticate" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "authenticate"
   path_part       = "authenticate"
@@ -28,6 +28,9 @@ module "authenticate" {
     REDIS_KEY            = local.redis_key
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id

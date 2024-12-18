@@ -21,7 +21,7 @@ module "account_management_api_update_email_role" {
 }
 
 module "update_email" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "update-email"
   path_part       = "update-email"
@@ -35,6 +35,9 @@ module "update_email" {
     SUPPORT_EMAIL_CHECK_ENABLED = var.support_email_check_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
