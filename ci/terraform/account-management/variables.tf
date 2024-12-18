@@ -226,7 +226,14 @@ variable "legacy_account_deletion_topic_key_arn" {
   default     = ""
 }
 
+variable "account_management_use_snapstart" {
+  type        = bool
+  description = "Whether to use Snapstart for the account management lambdas"
+  default     = false
+}
+
 locals {
+  use_snapstart = var.account_management_use_snapstart
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
     concurrency     = var.lambda_min_concurrency
