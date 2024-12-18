@@ -249,7 +249,9 @@ public class TokenService {
             idTokenClaims.setClaim("vot", vot);
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
-        idTokenClaims.setClaim("auth_time", authTime);
+        if (configService.isReturnAuthTimeInIdTokenEnabled()) {
+            idTokenClaims.setClaim("auth_time", authTime);
+        }
 
         try {
             return generateSignedJwtUsingExternalKey(

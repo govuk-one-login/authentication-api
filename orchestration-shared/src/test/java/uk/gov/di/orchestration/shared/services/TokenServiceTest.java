@@ -579,12 +579,10 @@ class TokenServiceTest {
                                         JWSAlgorithm.ES256,
                                         null)
                                 .toString()));
-
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
                 is(JOURNEY_ID));
-        assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("auth_time"),
-                is(AUTH_TIME));
+        assertNull(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("auth_time"));
     }
 }

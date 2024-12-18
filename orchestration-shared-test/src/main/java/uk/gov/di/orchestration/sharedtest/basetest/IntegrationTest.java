@@ -346,5 +346,10 @@ public class IntegrationTest {
         public boolean supportMaxAgeEnabled() {
             return true;
         }
+
+        @Override
+        public boolean isReturnAuthTimeInIdTokenEnabled() {
+            return false;
+        }
     }
 }
