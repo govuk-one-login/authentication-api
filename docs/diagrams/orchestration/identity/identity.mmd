@@ -5,6 +5,7 @@ sequenceDiagram
     participant auth as Authentication
     participant ipv as IPV Core
     participant spot as SPOT
+    participant ais as AIS
     Note over rp,orch_api: Dotted lines indicate 302 redirects of the user's browser
     rp -->> orch_api : OIDC Authentication request to /authorize
     orch_api  ->> orch_api : Validates Authentication request
@@ -17,6 +18,7 @@ sequenceDiagram
     auth ->> orch_api : Token response containing access token
     orch_api ->> auth : UserInfo request containing access token to /userinfo
     auth ->> orch_api : UserInfo response
+    orch_api -->> ais : Check for interventions
     orch_api -->> ipv : OAuth 2.0 Authorization request to /authorize
     ipv -->> orch_api : Return the user with an auth code query parameter
     orch_api ->> ipv : Token request with signed client assertion and auth code to /token
@@ -33,6 +35,7 @@ sequenceDiagram
     spot -) orch_api : Return a signed Core Identity JWT
     orch_api ->> orch_api : Store signed Core Identity JWT
     auth ->> orch_api : Poll for updates
+    orch_api -->> ais : Check for interventions
     orch_api ->> auth : COMPLETED response
     auth ->> orch_api : Request an RP auth code
 

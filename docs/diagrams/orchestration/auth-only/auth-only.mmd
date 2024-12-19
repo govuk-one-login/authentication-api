@@ -2,6 +2,7 @@ sequenceDiagram
     participant rp as Relying Party
     participant orch_api as Orchestration OIDC API
     participant auth as Authentication
+    participant ais as AIS
     rp ->> orch_api : OIDC Authentication request to /authorize via browser (AuthorisationHandler.java)
     orch_api  ->> orch_api : Validates Authentication request, creates session cookie
     orch_api ->> orch_api : Generates a signed and encrypted OAuth 2.0 Authorization request
@@ -12,6 +13,7 @@ sequenceDiagram
     auth ->> orch_api : Token response containing access token
     orch_api ->> auth : Userinfo request containing access token to /userinfo (UserInfoHandler.java)
     auth ->> orch_api : Userinfo response
+    orch_api -->> ais : Check for interventions
     orch_api ->> orch_api : Generates and store Authorization Code with 5 min TTL
     orch_api ->> rp : 302 redirect containing Authentication Response to the RPs redirect URL
     rp ->> orch_api : Token request to /token (TokenHandler.java)
@@ -19,4 +21,4 @@ sequenceDiagram
     orch_api ->> rp : Token response containing access and id tokens
     rp ->> orch_api : UserInfo request to /userinfo (UserInfoHandler.java)
     orch_api ->> orch_api : Validates Access Token
-    orch_api ->> rp : UserInfo response containing user information 
+    orch_api ->> rp : UserInfo response containing user information
