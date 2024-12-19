@@ -24,7 +24,7 @@ module "frontend_api_account_interventions_role" {
 module "account_interventions" {
   count = local.deploy_account_interventions_count
 
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "account-interventions"
   path_part       = "account-interventions"
@@ -73,4 +73,8 @@ module "account_interventions" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 }

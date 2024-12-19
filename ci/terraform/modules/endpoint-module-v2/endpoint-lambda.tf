@@ -31,4 +31,6 @@ module "endpoint_lambda" {
   slack_event_topic_arn                  = var.slack_event_topic_arn
   account_alias                          = var.account_alias
   dynatrace_secret                       = var.dynatrace_secret
+  runbook_link                           = var.runbook_link
+  snapstart                              = var.snapstart
 }
