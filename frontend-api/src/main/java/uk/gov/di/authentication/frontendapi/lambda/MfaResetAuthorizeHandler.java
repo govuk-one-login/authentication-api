@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -41,6 +43,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
     private final IPVReverificationService ipvReverificationService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final IDReverificationStateService idReverificationStateService;
 
     public MfaResetAuthorizeHandler(
             ConfigurationService configurationService,
@@ -50,7 +53,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             AuthenticationService authenticationService,
             IPVReverificationService ipvReverificationService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            IDReverificationStateService idReverificationStateService) {
         super(
                 MfaResetRequest.class,
                 configurationService,
@@ -61,6 +65,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.ipvReverificationService = ipvReverificationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.idReverificationStateService = idReverificationStateService;
     }
 
     public MfaResetAuthorizeHandler(ConfigurationService configurationService) {
@@ -77,6 +82,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.ipvReverificationService =
                 new IPVReverificationService(
                         configurationService, jwtService, tokenService, redisConnectionService);
+        this.idReverificationStateService = new IDReverificationStateService(configurationService);
     }
 
     public MfaResetAuthorizeHandler() {
@@ -113,9 +119,18 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             Subject internalCommonSubjectId =
                     new Subject(userSession.getInternalCommonSubjectIdentifier());
 
+            State authenticationState = new State();
             var ipvReverificationRequestURI =
                     ipvReverificationService.buildIpvReverificationRedirectUri(
-                            internalCommonSubjectId, clientSessionId, userSession);
+                            internalCommonSubjectId,
+                            clientSessionId,
+                            userSession,
+                            authenticationState);
+
+            idReverificationStateService.store(
+                    authenticationState.getValue(),
+                    request.orchestrationRedirectUrl(),
+                    userContext.getClientSessionId());
 
             auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
             cloudwatchMetricsService.incrementMfaResetHandoffCount();

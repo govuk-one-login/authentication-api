@@ -694,3 +694,34 @@ resource "aws_dynamodb_table" "auth_session_table" {
   }
 
 }
+
+resource "aws_dynamodb_table" "id_reverification_state" {
+  name         = "${var.environment}-id-reverification-state"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  hash_key = "AuthenticationState"
+
+  attribute {
+    name = "AuthenticationState"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.id_reverification_state_table_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+}
