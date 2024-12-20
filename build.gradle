@@ -30,7 +30,7 @@ ext {
         jetbrains_annotations: "26.0.1",
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "9.47",
-        junit: "5.11.3",
+        junit: "5.11.4",
         xray: "2.18.2",
         pact: "4.6.16"
     ]
