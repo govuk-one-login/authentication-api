@@ -28,9 +28,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    filter {
-        includeTestsMatching "*"
-    }
+
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
