@@ -17,10 +17,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
@@ -50,6 +53,7 @@ class LogoutRequestTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
@@ -65,12 +69,13 @@ class LogoutRequestTest {
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
     private SignedJWT signedIDToken;
-    private static final Subject SUBJECT = new Subject();
+    private static final Subject INTERNAL_COMMON_SUBJECT_ID = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
     private final ClientRegistry clientRegistry = createClientRegistry();
     private String idTokenHint;
     private String rpPairwiseId;
-    private uk.gov.di.orchestration.shared.entity.Session session;
+    private Session session;
+    private OrchSessionItem orchSession;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutRequest.class);
@@ -85,7 +90,7 @@ class LogoutRequestTest {
                                         SESSION_ID,
                                         CLIENT_SESSION_ID,
                                         PERSISTENT_SESSION_ID,
-                                        SUBJECT.toString()))));
+                                        INTERNAL_COMMON_SUBJECT_ID.toString()))));
     }
 
     @BeforeEach
@@ -97,7 +102,10 @@ class LogoutRequestTest {
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
-                        "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
+                        "client-id",
+                        INTERNAL_COMMON_SUBJECT_ID,
+                        "http://localhost-rp",
+                        ecSigningKey);
     }
 
     @BeforeEach
@@ -105,7 +113,11 @@ class LogoutRequestTest {
         session =
                 generateSession()
                         .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+                        .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID.getValue());
+        orchSession =
+                new OrchSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID.getValue());
         idTokenHint = signedIDToken.serialize();
         rpPairwiseId = signedIDToken.getJWTClaimsSet().getSubject();
     }
@@ -125,10 +137,16 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
+        assertEquals(
+                Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()),
+                logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -150,10 +168,16 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
+        assertEquals(
+                Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()),
+                logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(Optional.empty(), logoutRequest.queryStringParameters());
         assertEquals(Optional.empty(), logoutRequest.state());
@@ -183,7 +207,11 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.empty(), logoutRequest.session());
         assertEquals(Optional.empty(), logoutRequest.internalCommonSubjectId());
@@ -203,10 +231,6 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWithNoTokenHint() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -215,14 +239,20 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
+        assertEquals(
+                Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()),
+                logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -239,10 +269,6 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWhenSignatureIdTokenIsInvalid() throws JOSEException {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -257,14 +283,20 @@ class LogoutRequestTest {
                                 "post_logout_redirect_uri",
                                 CLIENT_LOGOUT_URI.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
+        assertEquals(
+                Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()),
+                logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -287,15 +319,14 @@ class LogoutRequestTest {
     @Test
     void shouldCorrectlyParseALogoutRequestWhenClientIsNotFoundInClientRegistry()
             throws JOSEException {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
                 TokenGeneratorHelper.generateIDToken(
-                        "invalid-client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
+                        "invalid-client-id",
+                        INTERNAL_COMMON_SUBJECT_ID,
+                        "http://localhost-rp",
+                        ecSigningKey);
         String serializedJwt = signedJWT.serialize();
         when(tokenValidationService.isTokenSignatureValid(serializedJwt)).thenReturn(true);
         APIGatewayProxyRequestEvent event =
@@ -308,14 +339,20 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
+        assertEquals(
+                Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()),
+                logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -335,13 +372,8 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenRedirectUriIsMissing() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
-
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
 
         when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
@@ -352,10 +384,16 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
+        assertEquals(
+                Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()),
+                logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -372,10 +410,6 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
@@ -389,14 +423,20 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        orchSessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
+        assertEquals(
+                Optional.of(INTERNAL_COMMON_SUBJECT_ID.getValue()),
+                logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -421,8 +461,10 @@ class LogoutRequestTest {
                 .addClientSession(CLIENT_SESSION_ID);
     }
 
-    private void generateSessionFromCookie(uk.gov.di.orchestration.shared.entity.Session session) {
+    private void generateSessionFromCookie(Session session, OrchSessionItem orchSession) {
         when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromSessionCookie(anyMap()))
+                .thenReturn(Optional.of(orchSession));
     }
 
     private ClientRegistry createClientRegistry() {
@@ -461,7 +503,7 @@ class LogoutRequestTest {
     private void setupSessions() {
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {
