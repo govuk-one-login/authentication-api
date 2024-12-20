@@ -56,14 +56,15 @@ test {
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(
-                project(":account-management-api").sourceSets.main.java,
+                project(":delivery-receipts-api").sourceSets.main.java,
                 project(":shared").sourceSets.main.java)
 
         tasks.getByName("jacocoTestReport").classDirectories.from(
-                project(":account-management-api").sourceSets.main.output,
+                project(":delivery-receipts-api").sourceSets.main.output,
                 project(":shared").sourceSets.main.output)
     }
     dependsOn ":composeUp"
+    finalizedBy ":composeDown"
 }
 
 jacocoTestReport {
