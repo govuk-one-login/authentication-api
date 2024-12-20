@@ -3,6 +3,10 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
+TMPDIR=${TMPDIR:-/tmp}
+TF_DATA_DIR_BASE=$(mktemp -d "${TMPDIR}/api_deploy_dev.XXXXXX")
+trap 'rm -r "${TF_DATA_DIR_BASE}"' EXIT
+
 environments=("authdev1" "authdev2" "sandpit")
 
 function usage() {
@@ -125,7 +129,7 @@ fi
 if [[ ${O_BUILD} -eq 1 ]]; then
   echo "Building deployment artefacts ... "
   pushd "${DIR}" > /dev/null
-  ./gradlew ${O_CLEAN} build buildZip -x test -x spotlessCheck -x composeDown
+  ./gradlew ${O_CLEAN} buildZip -x test -x spotlessCheck -x spotlessApply -x composeDown -x composeUp -x spotbugsMain
   popd > /dev/null
   echo "done!"
 fi
@@ -152,7 +156,11 @@ function run_terraform() {
   local component="${1}"
   echo "Running ${component} Terraform ..."
   pushd "${DIR}/ci/terraform/${component}" > /dev/null
-  rm -rf .terraform/
+  if [[ ! -f .terraform-cleanup-run ]] && [[ -d .terraform ]]; then
+    rm -rf .terraform/
+    touch .terraform-cleanup-run
+  fi
+  export TF_DATA_DIR="${TF_DATA_DIR_BASE}/${component}"
   terraform init -backend-config="${ENVIRONMENT}".hcl
 
   if [[ ${O_SHELL} -eq 1 ]]; then
