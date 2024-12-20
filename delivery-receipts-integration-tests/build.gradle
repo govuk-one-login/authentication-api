@@ -21,9 +21,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    filter {
-        includeTestsMatching "*"
-    }
 
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
