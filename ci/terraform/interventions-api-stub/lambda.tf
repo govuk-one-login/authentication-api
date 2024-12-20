@@ -21,13 +21,14 @@ module "account_interventions_stub_lambda" {
   }
   handler_function_name = "uk.gov.di.authentication.interventions.api.stub.lambda.AccountInterventionsApiStubHandler::handleRequest"
   handler_runtime       = "java17"
-  architectures         = ["arm64"]
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   memory_size                 = local.default_performance_parameters.memory
   provisioned_concurrency     = 0
   max_provisioned_concurrency = local.default_performance_parameters.max_concurrency
   scaling_trigger             = local.default_performance_parameters.scaling_trigger
-  snapstart                   = true
 
   source_bucket           = aws_s3_bucket.interventions_api_stub_source_bucket.bucket
   lambda_zip_file         = aws_s3_object.interventions_api_stub_release_zip.key
@@ -44,7 +45,8 @@ module "account_interventions_stub_lambda" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-  account_alias                          = data.aws_iam_account_alias.current.account_alias
-  slack_event_topic_arn                  = data.aws_sns_topic.slack_events.arn
-  dynatrace_secret                       = local.dynatrace_secret
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 }

@@ -29,6 +29,9 @@ module "authenticate" {
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
   root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
@@ -57,8 +60,8 @@ module "authenticate" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
-  account_alias         = data.aws_iam_account_alias.current.account_alias
-  slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
 

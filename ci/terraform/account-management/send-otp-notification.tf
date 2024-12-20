@@ -46,6 +46,9 @@ module "send_otp_notification" {
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
   root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
@@ -73,8 +76,8 @@ module "send_otp_notification" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
 
-  account_alias         = data.aws_iam_account_alias.current.account_alias
-  slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [

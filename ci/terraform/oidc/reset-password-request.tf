@@ -20,7 +20,7 @@ module "frontend_api_reset_password_request_role" {
 }
 
 module "reset-password-request" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "reset-password-request"
   path_part       = "reset-password-request"
@@ -40,6 +40,9 @@ module "reset-password-request" {
     INTERNAl_SECTOR_URI     = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
@@ -67,6 +70,10 @@ module "reset-password-request" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,

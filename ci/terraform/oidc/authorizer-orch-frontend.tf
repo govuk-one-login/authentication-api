@@ -159,8 +159,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_cloudwatch_alarm
   period              = "3600"
   statistic           = "Sum"
   threshold           = local.alert_error_threshold
-  alarm_description   = "${local.alert_error_threshold} or more errors have occurred in the ${var.environment} ${aws_lambda_function.orch_frontend_authorizer.function_name} lambda. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
-  alarm_actions       = [data.aws_sns_topic.slack_events.arn]
+  alarm_description   = "${local.alert_error_threshold} or more errors have occurred in the ${var.environment} ${aws_lambda_function.orch_frontend_authorizer.function_name} lambda. ACCOUNT: ${local.aws_account_alias}"
+  alarm_actions       = [local.slack_event_sns_topic_arn]
   tags = {
     Service = "orch-frontend-authorizer"
   }
@@ -171,7 +171,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   threshold           = local.alert_error_rate_threshold
-  alarm_description   = "Lambda error rate of ${local.alert_error_rate_threshold} has been reached in the ${var.environment} ${aws_lambda_function.orch_frontend_authorizer.function_name} lambda.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
+  alarm_description   = "Lambda error rate of ${local.alert_error_rate_threshold} has been reached in the ${var.environment} ${aws_lambda_function.orch_frontend_authorizer.function_name} lambda.ACCOUNT: ${local.aws_account_alias}"
 
   metric_query {
     id          = "e1"
@@ -208,7 +208,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_
       }
     }
   }
-  alarm_actions = [data.aws_sns_topic.slack_events.arn]
+  alarm_actions = [local.slack_event_sns_topic_arn]
   tags = {
     Service = "orch-frontend-authorizer"
   }

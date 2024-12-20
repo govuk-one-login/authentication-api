@@ -22,7 +22,7 @@ module "auth_token_role" {
 }
 
 module "auth_token" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "auth-token"
   path_part       = "token"
@@ -42,6 +42,9 @@ module "auth_token" {
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest"
   handler_runtime       = "java17"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_auth_ext_api.id
   root_resource_id = aws_api_gateway_rest_api.di_auth_ext_api.root_resource_id
@@ -67,6 +70,10 @@ module "auth_token" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
+
+  dynatrace_secret      = local.dynatrace_secret
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  account_alias         = local.aws_account_alias
 
   depends_on = [
     aws_api_gateway_rest_api.di_auth_ext_api,

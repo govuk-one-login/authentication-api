@@ -122,7 +122,14 @@ variable "orch_api_vpc_endpoint_id" {
   description = "The ID of the Execute API Gateway vpc endpoint in the orchestration account"
 }
 
+variable "auth_external_api_use_snapstart" {
+  description = "Whether to use Snapstart for the Auth External API Lambdas"
+  type        = bool
+  default     = false
+}
+
 locals {
+  use_snapstart = var.auth_external_api_use_snapstart
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
     concurrency     = var.lambda_min_concurrency

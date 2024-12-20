@@ -22,6 +22,9 @@ module "ticf_cri_stub_lambda" {
   handler_function_name = "uk.gov.di.authentication.ticf.cri.stub.lambda.TICFCRIStubHandler::handleRequest"
   handler_runtime       = "java17"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   memory_size                 = local.default_performance_parameters.memory
   provisioned_concurrency     = local.default_performance_parameters.concurrency
   max_provisioned_concurrency = local.default_performance_parameters.max_concurrency
@@ -42,7 +45,8 @@ module "ticf_cri_stub_lambda" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
-  account_alias                          = data.aws_iam_account_alias.current.account_alias
-  slack_event_topic_arn                  = data.aws_sns_topic.slack_events.arn
-  dynatrace_secret                       = local.dynatrace_secret
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
 }

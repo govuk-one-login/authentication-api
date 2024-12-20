@@ -23,7 +23,7 @@ module "auth_userinfo_role" {
 }
 
 module "auth_userinfo" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "auth-userinfo"
   path_part       = "userinfo"
@@ -38,6 +38,9 @@ module "auth_userinfo" {
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest"
   handler_runtime       = "java17"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_auth_ext_api.id
   root_resource_id = aws_api_gateway_rest_api.di_auth_ext_api.root_resource_id
@@ -64,6 +67,10 @@ module "auth_userinfo" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
+
+  dynatrace_secret      = local.dynatrace_secret
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  account_alias         = local.aws_account_alias
 
   depends_on = [
     aws_api_gateway_rest_api.di_auth_ext_api,
