@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -26,6 +27,7 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
@@ -35,8 +37,10 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -48,6 +52,10 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
             "alias/" + MFA_RESET_JAR_SIGNING_KEY;
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(MfaResetJarJwkHandler.class);
 
     private static String expectedKid;
 
@@ -119,6 +127,21 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertEquals(1, keys.size(), "JWKS endpoint must return a single key.");
 
         checkPublicSigningKeyResponseMeetsADR0030(keys.get(0).getAsJsonObject());
+    }
+
+    @Test
+    void shouldNotAllowExceptionsToEscape() {
+        environment.set("MFA_RESET_JAR_SIGNING_KEY_ALIAS", "wrong-key-alias");
+
+        var configurationService = new ConfigurationService();
+        handler = new MfaResetJarJwkHandler(configurationService);
+
+        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(500));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Error in MfaResetJarJwkHandler lambda")));
     }
 
     private static void checkPublicSigningKeyResponseMeetsADR0030(JsonObject key) {
