@@ -17,16 +17,13 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
-import software.amazon.awssdk.services.kms.model.CreateAliasRequest;
-import software.amazon.awssdk.services.kms.model.CreateKeyRequest;
-import software.amazon.awssdk.services.kms.model.CreateKeyResponse;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
-import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -46,58 +43,30 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 @ExtendWith(SystemStubsExtension.class)
 class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Logger LOG = LogManager.getLogger(AuthSigningKeyJWKSIntegrationTest.class);
-    public static final String MFA_RESET_JAR_SIGNING_KEY =
-            "localstack-mfa-reset-jar-signing-key-ecc-alias";
-    public static final String MFA_RESET_JAR_SIGNING_KEY_ALIAS =
-            "alias/" + MFA_RESET_JAR_SIGNING_KEY;
 
-    @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
+    @SystemStub private static final EnvironmentVariables environment = new EnvironmentVariables();
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging =
+    private static final KmsKeyExtension mfaResetJarSigningKey =
+            new KmsKeyExtension("mfa-reset-jar-signing-key", KeyUsageType.SIGN_VERIFY);
+
+    @RegisterExtension
+    private static final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(MfaResetJarJwkHandler.class);
 
     private static String expectedKid;
 
     @BeforeAll
     static void setupEnvironment() {
+        environment.set("MFA_RESET_JAR_SIGNING_KEY_ALIAS", mfaResetJarSigningKey.getKeyId());
+
         try (KmsClient kmsClient = getKmsClient()) {
-            CreateKeyRequest createKeyRequest =
-                    CreateKeyRequest.builder()
-                            .description(MFA_RESET_JAR_SIGNING_KEY)
-                            .keyUsage(KeyUsageType.SIGN_VERIFY)
-                            .keySpec(KeySpec.ECC_NIST_P256)
-                            .build();
-
-            CreateKeyResponse createKeyResponse = kmsClient.createKey(createKeyRequest);
-
-            LOG.info("KMS Key ID: {}", createKeyResponse.keyMetadata().keyId());
-            LOG.info("KMS Key arn: {}", createKeyResponse.keyMetadata().arn());
-
-            environment.set(
-                    "MFA_RESET_JAR_SIGNING_KEY_ALIAS", createKeyResponse.keyMetadata().keyId());
-
-            CreateAliasRequest createAliasRequest =
-                    CreateAliasRequest.builder()
-                            .aliasName(MFA_RESET_JAR_SIGNING_KEY_ALIAS)
-                            .targetKeyId(createKeyResponse.keyMetadata().keyId())
-                            .build();
-
-            kmsClient.createAlias(createAliasRequest);
-
-            LOG.info("KMS Key alias: {}", MFA_RESET_JAR_SIGNING_KEY_ALIAS);
-
-            // Retrieve the public key of the KMS key
             GetPublicKeyRequest getPublicKeyRequest =
-                    GetPublicKeyRequest.builder()
-                            .keyId(createKeyResponse.keyMetadata().keyId())
-                            .build();
+                    GetPublicKeyRequest.builder().keyId(mfaResetJarSigningKey.getKeyId()).build();
 
             GetPublicKeyResponse getPublicKeyResponse = kmsClient.getPublicKey(getPublicKeyRequest);
 
             expectedKid = hashSha256String(getPublicKeyResponse.keyId());
-
-            LOG.info("Retrieved kid: {}", expectedKid);
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
@@ -115,8 +84,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @Test
     void shouldReturnJWKSetContainingTheReverificationSigningKey() {
-        var configurationService = new ConfigurationService();
-        handler = new MfaResetJarJwkHandler(configurationService);
+        handler = new MfaResetJarJwkHandler(new ConfigurationService());
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -133,8 +101,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldNotAllowExceptionsToEscape() {
         environment.set("MFA_RESET_JAR_SIGNING_KEY_ALIAS", "wrong-key-alias");
 
-        var configurationService = new ConfigurationService();
-        handler = new MfaResetJarJwkHandler(configurationService);
+        handler = new MfaResetJarJwkHandler(new ConfigurationService());
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 

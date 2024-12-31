@@ -17,16 +17,13 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
-import software.amazon.awssdk.services.kms.model.CreateAliasRequest;
-import software.amazon.awssdk.services.kms.model.CreateKeyRequest;
-import software.amazon.awssdk.services.kms.model.CreateKeyResponse;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
-import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetStorageTokenJwkHandler;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -44,56 +41,32 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
-public class MfaResetStorageTokenJwkHandlerIntegrationTest
-        extends ApiGatewayHandlerIntegrationTest {
+class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Logger LOG =
             LogManager.getLogger(MfaResetStorageTokenJwkHandlerIntegrationTest.class);
-    public static final String MFA_RESET_STORAGE_TOKEN_SIGNING_KEY =
-            "localstack-mfa-reset-token-signing-key-ecc-alias";
-    public static final String MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS =
-            "alias/" + MFA_RESET_STORAGE_TOKEN_SIGNING_KEY;
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging =
+    private static final KmsKeyExtension mfaResetStorageTokenSigningKey =
+            new KmsKeyExtension("mfa-reset-storage-token-signing-key", KeyUsageType.SIGN_VERIFY);
+
+    @RegisterExtension
+    private static final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(MfaResetStorageTokenJwkHandler.class);
 
     private static String expectedKid;
 
     @BeforeAll
     static void setupEnvironment() {
+        environment.set(
+                "MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS",
+                mfaResetStorageTokenSigningKey.getKeyId());
+
         try (KmsClient kmsClient = getKmsClient()) {
-            CreateKeyRequest createKeyRequest =
-                    CreateKeyRequest.builder()
-                            .description(MFA_RESET_STORAGE_TOKEN_SIGNING_KEY)
-                            .keyUsage(KeyUsageType.SIGN_VERIFY)
-                            .keySpec(KeySpec.ECC_NIST_P256)
-                            .build();
-
-            CreateKeyResponse createKeyResponse = kmsClient.createKey(createKeyRequest);
-
-            LOG.info("KMS Key ID: {}", createKeyResponse.keyMetadata().keyId());
-            LOG.info("KMS Key arn: {}", createKeyResponse.keyMetadata().arn());
-
-            environment.set(
-                    "MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS",
-                    createKeyResponse.keyMetadata().keyId());
-
-            CreateAliasRequest createAliasRequest =
-                    CreateAliasRequest.builder()
-                            .aliasName(MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS)
-                            .targetKeyId(createKeyResponse.keyMetadata().keyId())
-                            .build();
-
-            kmsClient.createAlias(createAliasRequest);
-
-            LOG.info("KMS Key alias: {}", MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS);
-
-            // Retrieve the public key of the KMS key
             GetPublicKeyRequest getPublicKeyRequest =
                     GetPublicKeyRequest.builder()
-                            .keyId(createKeyResponse.keyMetadata().keyId())
+                            .keyId(mfaResetStorageTokenSigningKey.getKeyId())
                             .build();
 
             GetPublicKeyResponse getPublicKeyResponse = kmsClient.getPublicKey(getPublicKeyRequest);
@@ -118,8 +91,7 @@ public class MfaResetStorageTokenJwkHandlerIntegrationTest
 
     @Test
     void shouldReturnJWKSetContainingTheStorageTokenSigningKey() {
-        var configurationService = new ConfigurationService();
-        handler = new MfaResetStorageTokenJwkHandler(configurationService);
+        handler = new MfaResetStorageTokenJwkHandler(new ConfigurationService());
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -136,8 +108,7 @@ public class MfaResetStorageTokenJwkHandlerIntegrationTest
     void shouldNotAllowExceptionsToEscape() {
         environment.set("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS", "wrong-key-alias");
 
-        var configurationService = new ConfigurationService();
-        handler = new MfaResetStorageTokenJwkHandler(configurationService);
+        handler = new MfaResetStorageTokenJwkHandler(new ConfigurationService());
 
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
