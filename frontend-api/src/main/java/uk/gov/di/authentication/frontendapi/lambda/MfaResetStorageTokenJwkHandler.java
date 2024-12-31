@@ -49,7 +49,7 @@ public class MfaResetStorageTokenJwkHandler
 
     public APIGatewayProxyResponseEvent mfaResetStorageTokenJwkHandler() {
         try {
-            LOG.info("MfaResetStorageTokenJwk request received");
+            LOG.info("Request for Auth MFA storage token signature verification key received.");
 
             List<JWK> signingKeys = new ArrayList<>();
 
@@ -57,7 +57,7 @@ public class MfaResetStorageTokenJwkHandler
 
             JWKSet jwkSet = new JWKSet(signingKeys);
 
-            LOG.info("Generating MfaResetStorageTokenJwk successful response");
+            LOG.info("Served Auth MFA storage token signature verification key JWK set.");
 
             return generateApiGatewayProxyResponse(
                     200,
@@ -65,9 +65,9 @@ public class MfaResetStorageTokenJwkHandler
                     Map.of("Cache-Control", "max-age=86400"),
                     null);
         } catch (Exception e) {
-            LOG.error("Error in MfaResetStorageTokenJwk lambda", e);
+            LOG.error("Failed to serve Auth MFA storage token signature verification key.", e);
             return generateApiGatewayProxyResponse(
-                    500, "Error providing MfaResetStorageTokenJwk data");
+                    500, "Auth MFA storage token signature verification key not available.");
         }
     }
 }

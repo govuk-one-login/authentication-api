@@ -115,7 +115,9 @@ class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerInt
         assertThat(response, hasStatus(500));
         assertThat(
                 logging.events(),
-                hasItem(withMessageContaining("Error in MfaResetStorageTokenJwk lambda")));
+                hasItem(
+                        withMessageContaining(
+                                "Failed to serve Auth MFA storage token signature verification key.")));
     }
 
     private static void checkPublicSigningKeyResponseMeetsADR0030(JsonObject key) {

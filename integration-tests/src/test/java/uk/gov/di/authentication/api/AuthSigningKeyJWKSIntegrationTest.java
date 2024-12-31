@@ -108,7 +108,9 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(response, hasStatus(500));
         assertThat(
                 logging.events(),
-                hasItem(withMessageContaining("Error in MfaResetJarJwkHandler lambda")));
+                hasItem(
+                        withMessageContaining(
+                                "Failed to serve Auth reverification request JAR signature verification key.")));
     }
 
     private static void checkPublicSigningKeyResponseMeetsADR0030(JsonObject key) {

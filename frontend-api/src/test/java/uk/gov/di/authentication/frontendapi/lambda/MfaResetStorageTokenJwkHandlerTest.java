@@ -57,7 +57,9 @@ class MfaResetStorageTokenJwkHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasBody("Error providing MfaResetStorageTokenJwk data"));
+        assertThat(
+                result,
+                hasBody("Auth MFA storage token signature verification key not available."));
     }
 
     @Test
