@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
@@ -33,7 +34,11 @@ public class TokenSigningExtension extends KmsKeyExtension {
     public void beforeAll(ExtensionContext context) {
         super.beforeAll(context);
         kmsConnectionService =
-                new KmsConnectionService(Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyAlias());
+                new KmsConnectionService(
+                        Optional.of(LOCALSTACK_ENDPOINT),
+                        REGION,
+                        getKeyAlias(),
+                        ConfigurationService.getKmsAccessInterceptor());
     }
 
     public SignedJWT signJwt(JWTClaimsSet claimsSet) {

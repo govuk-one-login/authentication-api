@@ -26,6 +26,7 @@ dependencies {
     implementation project(":doc-checking-app-api")
     implementation project(":oidc-api")
     implementation project(":interventions-api-stub")
+    implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 }
 
 test {

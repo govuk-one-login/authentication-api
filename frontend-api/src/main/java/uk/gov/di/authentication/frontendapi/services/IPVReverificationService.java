@@ -39,7 +39,7 @@ public class IPVReverificationService {
     private static final Logger LOG = LogManager.getLogger(IPVReverificationService.class);
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private static final String MFA_RESET_SCOPE = "reverification";
-    private static final String STATE_STORAGE_PREFIX = "mfaReset:state:";
+    public static final String STATE_STORAGE_PREFIX = "mfaReset:state:";
     private final ConfigurationService configurationService;
     private final JwtService jwtService;
     private final NowClock nowClock;

@@ -91,6 +91,8 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
         var keyResponse = kms.createKey(keyRequest);
 
+        keyId = keyResponse.keyMetadata().keyId();
+
         CreateAliasRequest aliasRequest =
                 CreateAliasRequest.builder()
                         .aliasName(keyAlias)

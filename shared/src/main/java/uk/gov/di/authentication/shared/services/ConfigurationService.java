@@ -10,10 +10,12 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParametersRequest;
 import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
+import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
+import uk.gov.di.authentication.shared.interceptors.KmsAccessInterceptor;
 
 import java.net.URI;
 import java.time.Clock;
@@ -33,6 +35,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public static final String FEATURE_SWITCH_ON = "true";
     private static ConfigurationService configurationService;
 
+    public static KmsAccessInterceptor getKmsAccessInterceptor() {
+        return kmsAccessInterceptor;
+    }
+
+    private static final KmsAccessInterceptor kmsAccessInterceptor = new KmsAccessInterceptor();
+
     public static ConfigurationService getInstance() {
         if (configurationService == null) {
             configurationService = new ConfigurationService();
@@ -46,6 +54,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     private String notifyCallbackBearerToken;
     protected SystemService systemService;
+    private MetricsLogger metricsLoggerAdapter;
 
     public ConfigurationService() {}
 
@@ -685,5 +694,21 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getIPVAuthorisationClientId() {
         return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
+    }
+
+    public MetricsLogger getMetricsLogger() {
+        return getLocalstackEndpointUri()
+                .map(
+                        l -> {
+                            LOG.info("Localstack endpoint URI is present: {}", l);
+                            return metricsLoggerAdapter != null
+                                    ? metricsLoggerAdapter
+                                    : new MetricsLogger();
+                        })
+                .orElseGet(MetricsLogger::new);
+    }
+
+    public void setMetricsLoggerAdapter(MetricsLogger metricsLoggerAdapter) {
+        this.metricsLoggerAdapter = metricsLoggerAdapter;
     }
 }
