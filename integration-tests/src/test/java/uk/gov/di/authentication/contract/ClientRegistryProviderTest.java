@@ -17,8 +17,8 @@ import java.util.List;
 
 public class ClientRegistryProviderTest extends PactProviderTest {
 
-    private static final String CLIENT_ID = "1tfp8ZknlERfGlGd8RyLPmmgzBU";
-    private static final String CLIENT_NAME = "My test service";
+    private static final String CLIENT_ID = "testClientIdExampleText1234";
+    private static final String CLIENT_NAME = "testClientUpdateResponseName";
     private static final List<String> REDIRECT_URIS = List.of("http://localhost/");
     private static final List<String> CONTRACTS =
             List.of("pacttest.account@digital.cabinet-office.gov.uk");
@@ -65,11 +65,11 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 new LambdaHandlerConfig("PUT", "/connect/register/{clientId}", updateHandler));
     }
 
-    @State("Client not exists")
-    public void setUpClientNotExists() {}
+    @State("valid configuration to add a client")
+    public void validConfigurationToAddAClient() {}
 
-    @State("Client exists")
-    public void setUpClientExists() {
+    @State("testClientIdExampleText1234 is a valid clientId")
+    public void testClientIdExampleText1234IsAValidClientId() {
         clientService.addClient(
                 CLIENT_ID,
                 CLIENT_NAME,
