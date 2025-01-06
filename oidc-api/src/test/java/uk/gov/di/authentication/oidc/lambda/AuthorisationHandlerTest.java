@@ -305,7 +305,6 @@ class AuthorisationHandlerTest {
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
-        when(configService.isUseOrchSessionForAuthenticatedClaimEnabled()).thenReturn(true);
     }
 
     @Nested
