@@ -162,12 +162,14 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         checkCorrectKeysUsedViaIntegrationWithKms();
         checkStateIsStoredViaIntegrationWithRedis(sessionId);
         checkTxmaEventPublishedViaIntegrationWithSQS();
-        checkExectionMetricsPublishedViaIntegrationWithCloudWatch();
+        checkExecutionMetricsPublishedViaIntegrationWithCloudWatch();
     }
 
     private static void checkCorrectKeysUsedViaIntegrationWithKms() {
         var kmsAccessInterceptor = ConfigurationService.getKmsAccessInterceptor();
-        assertEquals(mfaResetJarSigningKey.getKeyId(), kmsAccessInterceptor.getAccessedKeyId());
+        assertTrue(kmsAccessInterceptor.wasKeyUsedToSign(mfaResetJarSigningKey.getKeyId()));
+        assertTrue(
+                kmsAccessInterceptor.wasKeyUsedToSign(mfaResetStorageTokenSigningKey.getKeyId()));
     }
 
     private static void checkStateIsStoredViaIntegrationWithRedis(String sessionId) {
@@ -182,7 +184,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                 .until(() -> txmaAuditQueue.getApproximateMessageCount() > 0);
     }
 
-    private static void checkExectionMetricsPublishedViaIntegrationWithCloudWatch() {
+    private static void checkExecutionMetricsPublishedViaIntegrationWithCloudWatch() {
         assertTrue(cloudwatchExtension.hasLoggedMetric(MFA_RESET_HANDOFF.getValue()));
     }
 }

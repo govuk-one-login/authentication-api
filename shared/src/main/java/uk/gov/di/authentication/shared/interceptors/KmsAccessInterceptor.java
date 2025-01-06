@@ -6,20 +6,22 @@ import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.interceptor.SdkExecutionAttribute;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 
-public class KmsAccessInterceptor implements ExecutionInterceptor {
-    public String getAccessedKeyId() {
-        return accessedKeyId;
-    }
+import java.util.HashSet;
 
-    private String accessedKeyId = "";
+public class KmsAccessInterceptor implements ExecutionInterceptor {
+    private HashSet<String> signingKeysUsed = new HashSet<>();
+
+    public boolean wasKeyUsedToSign(String keyId) {
+        return signingKeysUsed.contains(keyId);
+    }
 
     @Override
     public void beforeExecution(
             Context.BeforeExecution context, ExecutionAttributes executionAttributes) {
         String operation = executionAttributes.getAttribute(SdkExecutionAttribute.OPERATION_NAME);
         if (operation != null && (operation.equals("Sign"))) {
-            SignRequest encryptRequest = (SignRequest) context.request();
-            accessedKeyId = encryptRequest.keyId();
+            SignRequest signRequest = (SignRequest) context.request();
+            signingKeysUsed.add(signRequest.keyId());
         }
     }
 }
