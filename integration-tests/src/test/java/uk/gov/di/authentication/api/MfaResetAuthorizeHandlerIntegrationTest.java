@@ -1,21 +1,20 @@
 package uk.gov.di.authentication.api;
 
-import com.google.common.base.Splitter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.kms.KmsClient;
-import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
-import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler;
@@ -33,28 +32,32 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
-import java.net.URI;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.frontendapi.services.IPVReverificationService.STATE_STORAGE_PREFIX;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
 class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final Logger LOG =
-            LogManager.getLogger(MfaResetAuthorizeHandlerIntegrationTest.class);
-
     private static final String USER_EMAIL = "test@email.com";
     private static final String USER_PASSWORD = "Password123!";
     private static final String USER_PHONE_NUMBER = "+447712345432";
+    private static KeyPair keyPair;
     private String sessionId;
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
@@ -66,10 +69,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     @RegisterExtension
     private static final KmsKeyExtension mfaResetJarSigningKey =
             new KmsKeyExtension("mfa-reset-jar-signing-key", KeyUsageType.SIGN_VERIFY);
-
-    @RegisterExtension
-    private static final KmsKeyExtension ipvPublicEncryptionKey =
-            new KmsKeyExtension("ipv-authorization-public-key", KeyUsageType.ENCRYPT_DECRYPT);
 
     @RegisterExtension
     public static final RedisExtension redisExtension =
@@ -87,42 +86,39 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                 mfaResetStorageTokenSigningKey.getKeyId());
         environment.set("MFA_RESET_JAR_SIGNING_KEY_ID", mfaResetJarSigningKey.getKeyId());
 
-        temporarilyGetTheIPVPublicSigningKeyFromEnvironmentRatherThanIPVJWKSEndPoint();
+        createTestIPVEncryptionKeyPair();
+        putIPVPublicKeyInEnvironmentVariableUntilIPVJWKSAvailable();
     }
 
-    private static void
-            temporarilyGetTheIPVPublicSigningKeyFromEnvironmentRatherThanIPVJWKSEndPoint() {
-        try (KmsClient kmsClient = getKmsClient()) {
-            GetPublicKeyRequest getPublicKeyRequest =
-                    GetPublicKeyRequest.builder().keyId(ipvPublicEncryptionKey.getKeyId()).build();
-
-            GetPublicKeyResponse getPublicKeyResponse = kmsClient.getPublicKey(getPublicKeyRequest);
-
-            String publicKeyContent =
-                    Base64.getEncoder()
-                            .encodeToString(getPublicKeyResponse.publicKey().asByteArray());
-
-            StringBuilder publicKeyFormatted = new StringBuilder();
-            publicKeyFormatted.append("-----BEGIN PUBLIC KEY-----\n");
-            for (final String row : Splitter.fixedLength(64).split(publicKeyContent)) {
-                publicKeyFormatted.append(row).append(System.lineSeparator());
-            }
-            publicKeyFormatted.append("-----END PUBLIC KEY-----\n");
-
-            environment.set("IPV_AUTHORIZATION_PUBLIC_KEY", publicKeyFormatted);
-        } catch (Exception e) {
-            LOG.error(e.getMessage(), e);
+    private static void createTestIPVEncryptionKeyPair() {
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            keyPair = keyPairGenerator.generateKeyPair();
+        } catch (NoSuchAlgorithmException e) {
+            fail("Unable to create RSA key pair: " + e.getMessage());
         }
     }
 
-    private static KmsClient getKmsClient() {
-        return KmsClient.builder()
-                .endpointOverride(URI.create("http://localhost:45678"))
-                .credentialsProvider(
-                        StaticCredentialsProvider.create(
-                                AwsBasicCredentials.create("dummy", "dummy")))
-                .region(Region.EU_WEST_2)
-                .build();
+    private static void putIPVPublicKeyInEnvironmentVariableUntilIPVJWKSAvailable() {
+        RSAKey rsaKey =
+                new RSAKey.Builder((java.security.interfaces.RSAPublicKey) keyPair.getPublic())
+                        .privateKey(keyPair.getPrivate())
+                        .keyID("key-id")
+                        .build();
+
+        try {
+            String base64PublicKey =
+                    Base64.getEncoder().encodeToString(rsaKey.toRSAPublicKey().getEncoded());
+
+            environment.set(
+                    "IPV_AUTHORIZATION_PUBLIC_KEY",
+                    "-----BEGIN PUBLIC KEY-----\n"
+                            + base64PublicKey
+                            + "\n-----END PUBLIC KEY-----");
+        } catch (JOSEException e) {
+            fail("Unable to create IPV public key for test environment: " + e.getMessage());
+        }
     }
 
     @BeforeEach
@@ -159,17 +155,41 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         assertThat(response, hasStatus(200));
         assertEquals(1, txmaAuditQueue.getRawMessages().size());
 
-        checkCorrectKeysUsedViaIntegrationWithKms();
+        checkCorrectKeysUsedViaIntegrationWithKms(response.getBody());
         checkStateIsStoredViaIntegrationWithRedis(sessionId);
         checkTxmaEventPublishedViaIntegrationWithSQS();
         checkExecutionMetricsPublishedViaIntegrationWithCloudWatch();
     }
 
-    private static void checkCorrectKeysUsedViaIntegrationWithKms() {
+    private static void checkCorrectKeysUsedViaIntegrationWithKms(String body) {
         var kmsAccessInterceptor = ConfigurationService.getKmsAccessInterceptor();
         assertTrue(kmsAccessInterceptor.wasKeyUsedToSign(mfaResetJarSigningKey.getKeyId()));
         assertTrue(
                 kmsAccessInterceptor.wasKeyUsedToSign(mfaResetStorageTokenSigningKey.getKeyId()));
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            JsonNode rootNode = objectMapper.readTree(body);
+            String url = rootNode.get("authorize_url").asText();
+            Map<String, String> params =
+                    Arrays.stream(url.substring(1).split("&"))
+                            .map(param -> param.split("="))
+                            .collect(Collectors.toMap(param -> param[0], param -> param[1]));
+
+            String request = params.get("request");
+
+            JWEObject jweObject = JWEObject.parse(request);
+            jweObject.decrypt(new RSADecrypter(keyPair.getPrivate()));
+
+            var payload = jweObject.getPayload().toString();
+
+            SignedJWT signedJWT = SignedJWT.parse(payload);
+
+            assertNotNull(signedJWT);
+        } catch (JsonProcessingException e) {
+            fail("Body could not be parsed: " + body);
+        } catch (ParseException | JOSEException e) {
+            fail("JOSE exception processing JAR", e);
+        }
     }
 
     private static void checkStateIsStoredViaIntegrationWithRedis(String sessionId) {
