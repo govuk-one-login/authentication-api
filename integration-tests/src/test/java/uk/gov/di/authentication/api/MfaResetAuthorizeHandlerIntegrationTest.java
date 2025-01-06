@@ -9,7 +9,6 @@ import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +35,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
@@ -153,7 +151,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                         Map.of());
 
         assertThat(response, hasStatus(200));
-        assertEquals(1, txmaAuditQueue.getRawMessages().size());
 
         checkCorrectKeysUsedViaIntegrationWithKms(response.getBody());
         checkStateIsStoredViaIntegrationWithRedis(sessionId);
@@ -198,10 +195,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     }
 
     private static void checkTxmaEventPublishedViaIntegrationWithSQS() {
-        Awaitility.await()
-                .atMost(Duration.ofSeconds(60))
-                .pollInterval(Duration.ofSeconds(1))
-                .until(() -> txmaAuditQueue.getApproximateMessageCount() > 0);
+        assertEquals(1, txmaAuditQueue.getRawMessages().size());
     }
 
     private static void checkExecutionMetricsPublishedViaIntegrationWithCloudWatch() {
