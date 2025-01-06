@@ -64,6 +64,7 @@ public class VectorOfTrust {
             // which is a json list
             // The .get(0) below returns the json list - it doesn't just get the first element of
             // the Vector of Trust
+            LOG.info("VTR attribute before parsing: {}", vtr.get(0));
             vtrJsonArray = (JSONArray) parser.parse(vtr.get(0));
         } catch (net.minidev.json.parser.ParseException | ClassCastException e) {
             LOG.warn("Error when parsing vtr attribute", e);
