@@ -63,4 +63,10 @@ export AWS_REGION="${configured_region:-eu-west-2}"
 # shellcheck source=scripts/export_aws_creds.sh
 source "./export_aws_creds.sh"
 
-echo "${ENVIRONMENT} ${EMAIL}"
+INTERNAL_COMMON_SUBJECT_ID=$(./export-ics.sh "${EMAIL}" "${ENVIRONMENT}" | tail -n 1)
+if [[ ${INTERNAL_COMMON_SUBJECT_ID} == *"does not exist"* ]]; then
+  echo "${INTERNAL_COMMON_SUBJECT_ID}"
+  exit 1
+fi
+
+echo "${ENVIRONMENT} ${EMAIL} ${INTERNAL_COMMON_SUBJECT_ID}"
