@@ -47,4 +47,20 @@ fi
 ENVIRONMENT="${POSITIONAL[0]}"
 EMAIL="${POSITIONAL[1]}"
 
+if [[ ${ENVIRONMENT} == "sandpit" ]]; then
+  export AWS_PROFILE="gds-di-development-admin"
+elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+  export AWS_PROFILE="di-auth-development-admin"
+elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+  export AWS_PROFILE="di-auth-development-admin"
+elif [[ ${ENVIRONMENT} == "dev" ]]; then
+  export AWS_PROFILE="di-auth-development-admin"
+fi
+
+configured_region="$(aws configure get region --profile "${AWS_PROFILE}" 2> /dev/null || true)"
+export AWS_REGION="${configured_region:-eu-west-2}"
+
+# shellcheck source=scripts/export_aws_creds.sh
+source "./export_aws_creds.sh"
+
 echo "${ENVIRONMENT} ${EMAIL}"
