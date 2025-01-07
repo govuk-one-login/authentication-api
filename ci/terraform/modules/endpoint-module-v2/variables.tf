@@ -173,13 +173,11 @@ variable "scaling_trigger" {
 variable "slack_event_topic_arn" {
   description = "The ARN of the slack event topic"
   type        = string
-  default     = null
 }
 
 variable "account_alias" {
   description = "The 'friendly-name' of the AWS account, eg. di-auth-development"
   type        = string
-  default     = null
 }
 
 variable "dynatrace_secret" {
@@ -195,5 +193,25 @@ variable "dynatrace_secret" {
     DT_LOG_COLLECTION_AUTH_TOKEN = string
   })
   sensitive = true
-  default   = null
+}
+
+variable "snapstart" {
+  type    = bool
+  default = false
+}
+variable "architectures" {
+  type    = list(string)
+  default = ["x86_64"]
+}
+
+variable "wait_for_alias_timeout" {
+  type        = number
+  description = "The number of seconds to wait for the alias to be created"
+  default     = 300
+}
+
+variable "runbook_link" {
+  description = "A link that is appended to alarm descriptions that should open a page describing how to triage and handle the alarm"
+  type        = string
+  default     = null
 }
