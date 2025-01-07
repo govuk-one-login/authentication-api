@@ -285,6 +285,20 @@ public class IPVCallbackHandler
                             URI.create(configurationService.getInternalSectorURI()),
                             dynamoService.getOrGenerateSalt(userProfile));
 
+            // TODO: ATO-1117: temp logging
+            LOG.info(
+                    "is rpPairwiseId the same on clientSession as calculated: {}",
+                    rpPairwiseSubject.getValue().equals(clientSession.getRpPairwiseId()));
+
+            LOG.info(
+                    "is internalCommonSubjectId not blank on orchSession: {}",
+                    orchSession.getInternalCommonSubjectId() != null
+                            && !orchSession.getInternalCommonSubjectId().isBlank());
+            LOG.info(
+                    "is internalCommonSubjectId the same on orchSession as calculated: {}",
+                    internalPairwiseSubjectId.equals(orchSession.getInternalCommonSubjectId()));
+            //
+
             var ipAddress = IpAddressHelper.extractIpAddress(input);
             var user =
                     TxmaAuditUser.user()
