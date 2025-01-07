@@ -1,21 +1,21 @@
 locals {
   orch_api_vpc_endpoint = var.orch_api_vpc_endpoint_id != "" ? [var.orch_api_vpc_endpoint_id] : []
   api_vpc_endpoints     = concat(local.orch_api_vpc_endpoint, [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id])
+  vpc_environment       = var.vpc_environment == null ? var.environment : var.vpc_environment
 }
 
 data "aws_vpc" "auth_shared_vpc" {
   filter {
     name   = "tag:Name"
-    values = ["${var.environment}-shared-vpc"]
+    values = ["${local.vpc_environment}-shared-vpc"]
   }
-
 }
 
 data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
   vpc_id       = data.aws_vpc.auth_shared_vpc.id
   service_name = "com.amazonaws.eu-west-2.execute-api"
   tags = {
-    Environment = var.environment
+    Environment = local.vpc_environment
     terraform   = "di-infrastructure/core"
   }
 }
