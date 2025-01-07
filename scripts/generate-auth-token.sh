@@ -49,12 +49,20 @@ EMAIL="${POSITIONAL[1]}"
 
 if [[ ${ENVIRONMENT} == "sandpit" ]]; then
   export AWS_PROFILE="gds-di-development-admin"
+  KMS_KEY_ARN="arn:aws:kms:eu-west-2:761723964695:alias/sandpit-id-token-signing-key-alias"
+  CLIENT_ID="1Dlz5rYheTqzZASRMmSBtgFIYgZlysnQ"
 elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
   export AWS_PROFILE="di-auth-development-admin"
+  KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/authdev1-id-token-signing-key-alias"
+  CLIENT_ID="skwdHH2y6ERjJWTPSoAFbSt8lX04OgtI"
 elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
   export AWS_PROFILE="di-auth-development-admin"
+  KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/authdev2-id-token-signing-key-alias"
+  CLIENT_ID="rPEUe0hRrHqf0i0es1gYjKxE5ceGN7VK"
 elif [[ ${ENVIRONMENT} == "dev" ]]; then
   export AWS_PROFILE="di-auth-development-admin"
+  KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/dev-id-token-signing-key-alias"
+  CLIENT_ID="J3tedNRsfssnsf4STuc2NNIV1C1gdxBB"
 fi
 
 configured_region="$(aws configure get region --profile "${AWS_PROFILE}" 2> /dev/null || true)"
@@ -69,4 +77,4 @@ if [[ ${INTERNAL_COMMON_SUBJECT_ID} == *"does not exist"* ]]; then
   exit 1
 fi
 
-echo "${ENVIRONMENT} ${EMAIL} ${INTERNAL_COMMON_SUBJECT_ID}"
+echo "${ENVIRONMENT} ${EMAIL} ${INTERNAL_COMMON_SUBJECT_ID} ${KMS_KEY_ARN} ${CLIENT_ID}"
