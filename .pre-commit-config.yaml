@@ -12,7 +12,7 @@ repos:
     rev: v1.11.1
     hooks:
       - id: cfn-python-lint
-        exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml|orchestration-canary-alarms.template.yaml|.*.approved.json|checkov-policies.*|.terraform-docs.yml$
+        exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml|orchestration-canary-alarms.template.yaml|.*.approved.json|checkov-policies.*|.terraform-docs.yml|package.json|package-lock.json$
         files: ^.*\.(json|yml|yaml)$
 
   - repo: https://github.com/govuk-one-login/pre-commit-hooks.git

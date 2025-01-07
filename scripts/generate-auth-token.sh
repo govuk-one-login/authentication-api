@@ -77,4 +77,8 @@ if [[ ${INTERNAL_COMMON_SUBJECT_ID} == *"does not exist"* ]]; then
   exit 1
 fi
 
-echo "${ENVIRONMENT} ${EMAIL} ${INTERNAL_COMMON_SUBJECT_ID} ${KMS_KEY_ARN} ${CLIENT_ID}"
+echo "Checking npm dependencies"
+npm install --no-audit --no-fund
+echo
+
+./_generate-auth-token.js "${INTERNAL_COMMON_SUBJECT_ID}" "${CLIENT_ID}" "${KMS_KEY_ARN}"
