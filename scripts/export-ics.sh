@@ -31,11 +31,9 @@ up="$(
 
 if [ -n "${up}" ]; then
   ics="$(echo -n "${up}" | jq -r '.Item.SubjectID.S')"
-  salt="$(echo -n "${up}" | jq -r '.Item.salt.B' | base64 -d)"
-  digest="$(echo -n "${sector}${ics}${salt}" | openssl dgst -sha256 -binary | base64 | tr '/+' '_-' | tr -d '=')"
-  pwid="urn:fdc:gov.uk:2022:${digest}"
+  salt="$(echo -n "${up}" | jq -r '.Item.salt.B')"
 
-  echo "${pwid}"
+  node -e "const { calculatePairwiseIdentifier } = require('./utils'); console.log(calculatePairwiseIdentifier('${ics}', '${sector}', '${salt}'))"
 else
   echo "Email address $1 does not exist in $2 environment"
 fi
