@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-environments=("authdev1" "authdev2" "sandpit" "dev")
+environments=("authdev1" "authdev2" "sandpit" "dev" "build")
 
 function usage() {
   cat <<- USAGE
@@ -63,6 +63,10 @@ elif [[ ${ENVIRONMENT} == "dev" ]]; then
   export AWS_PROFILE="di-auth-development-admin"
   KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/dev-id-token-signing-key-alias"
   CLIENT_ID="J3tedNRsfssnsf4STuc2NNIV1C1gdxBB"
+elif [[ ${ENVIRONMENT} == "build" ]]; then
+  export AWS_PROFILE="gds-di-development-admin"
+  KMS_KEY_ARN="arn:aws:kms:eu-west-2:761723964695:alias/build-id-token-signing-key-alias"
+  CLIENT_ID="P5OQvWV21U0OW7U5g27d6MU2LLznYYaM"
 fi
 
 configured_region="$(aws configure get region --profile "${AWS_PROFILE}" 2> /dev/null || true)"
