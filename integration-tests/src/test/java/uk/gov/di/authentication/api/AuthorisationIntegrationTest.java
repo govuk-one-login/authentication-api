@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -56,12 +57,14 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -81,6 +84,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.ValidClaims.ADDRESS;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.CORE_IDENTITY_JWT;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
@@ -127,7 +131,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final URI AUTHORIZE_URI = URI.create("http://doc-app/authorize");
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
     private static final String CLAIMS =
-            "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
+            "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":{\"essential\":true}}}";
 
     private static final IntegrationTestConfigurationService configuration =
             new IntegrationTestConfigurationService(
@@ -876,19 +880,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
 
-        JsonElement actualClaims =
-                JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
-        JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
-        assertThat(actualClaims, equalTo(expectedClaims));
-
-        assertThat(
-                authRequest
-                        .getOIDCClaims()
-                        .getUserInfoClaimsRequest()
-                        .get(CORE_IDENTITY_JWT.getValue())
-                        .getClaimRequirement(),
-                equalTo(ClaimRequirement.ESSENTIAL));
-
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
@@ -935,6 +926,73 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         AUTHORISATION_REQUEST_RECEIVED,
                         AUTHORISATION_REQUEST_PARSED,
                         DOC_APP_AUTHORISATION_REQUESTED));
+    }
+
+    @Test
+    void shouldRedirectToLoginWithValidRequestObjectNonDocApp()
+            throws JOSEException, ParseException {
+        setupForAuthJourney();
+        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"));
+
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        signedJWT.serialize(),
+                        "scope",
+                        "openid");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        requestParams,
+                        Optional.of("GET"));
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                getLocationResponseHeader(response),
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+        var sessionCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        var clientSessionID = sessionCookie.get().getValue().split("\\.")[1];
+        var clientSession = redis.getClientSession(clientSessionID);
+        var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
+        JsonElement actualClaims =
+                JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
+        JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
+        assertThat(actualClaims, equalTo(expectedClaims));
+
+        assertThat(
+                authRequest
+                        .getOIDCClaims()
+                        .getUserInfoClaimsRequest()
+                        .get(CORE_IDENTITY_JWT.getValue())
+                        .getClaimRequirement(),
+                equalTo(ClaimRequirement.ESSENTIAL));
+
+        assertThat(
+                authRequest
+                        .getOIDCClaims()
+                        .getUserInfoClaimsRequest()
+                        .get(ADDRESS.getValue())
+                        .getClaimRequirement(),
+                equalTo(ClaimRequirement.ESSENTIAL));
     }
 
     @Test
@@ -1125,7 +1183,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void setupForAuthJourney() {
         registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, false);
+                CLIENT_ID,
+                "test-client",
+                singletonList("openid"),
+                ClientType.WEB,
+                false,
+                false,
+                List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()));
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
@@ -1177,7 +1241,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             List<String> scopes,
             ClientType clientType,
             boolean jarValidationRequired,
-            boolean maxAgeEnabled) {
+            boolean maxAgeEnabled,
+            List<String> claimsSupported) {
         clientStore.registerClient(
                 clientId,
                 clientName,
@@ -1191,6 +1256,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public",
                 clientType,
+                claimsSupported,
                 jarValidationRequired,
                 List.of(
                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),
@@ -1198,7 +1264,29 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 maxAgeEnabled);
     }
 
+    private void registerClient(
+            String clientId,
+            String clientName,
+            List<String> scopes,
+            ClientType clientType,
+            boolean jarValidationRequired,
+            boolean maxAgeEnabled) {
+        registerClient(
+                clientId,
+                clientName,
+                scopes,
+                clientType,
+                jarValidationRequired,
+                maxAgeEnabled,
+                emptyList());
+    }
+
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
+        return createSignedJWT(uiLocales, null, null);
+    }
+
+    private SignedJWT createSignedJWT(String uiLocales, String claims, List<String> scopes)
+            throws JOSEException {
         var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
                         .audience("http://localhost/authorize")
@@ -1206,14 +1294,21 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim(
                                 "scope",
-                                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP)
-                                        .toString())
+                                Objects.nonNull(scopes)
+                                        ? Scope.parse(scopes).toString()
+                                        : new Scope(
+                                                        OIDCScopeValue.OPENID,
+                                                        CustomScopeValue.DOC_CHECKING_APP)
+                                                .toString())
                         .claim("nonce", new Nonce().getValue())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State().getValue())
                         .claim("vtr", List.of("P2.Cl.Cm", "PCL200.Cl.Cm"))
-                        .claim("claims", CLAIMS)
                         .issuer(CLIENT_ID);
+
+        if (claims != null && !claims.isBlank()) {
+            jwtClaimsSetBuilder.claim("claims", claims);
+        }
         if (uiLocales != null && !uiLocales.isBlank()) {
             jwtClaimsSetBuilder.claim("ui_locales", uiLocales);
         }
