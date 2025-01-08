@@ -38,7 +38,7 @@ module "mfa_reset_authorize" {
     MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_token_signing_key_alias.arn,
     REDIS_KEY                                 = local.redis_key,
     TXMA_AUDIT_QUEUE_URL                      = module.oidc_txma_audit.queue_url
-    IPV_AUTHORIZATION_PUBLIC_KEY              = var.ipv_authorization_public_key
+    IPV_PUBLIC_ENCRYPTION_KEY                 = var.auth_frontend_api_to_ipv_public_encryption_key
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler::handleRequest"

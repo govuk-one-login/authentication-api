@@ -656,9 +656,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getIPVAuthEncryptionPublicKey() throws MissingEnvVariableException {
-        String key = System.getenv("IPV_AUTHORIZATION_PUBLIC_KEY");
+        String key = System.getenv("IPV_PUBLIC_ENCRYPTION_KEY");
         if (key == null || key.isEmpty()) {
-            throw new MissingEnvVariableException("IPV_AUTHORIZATION_PUBLIC_KEY");
+            throw new MissingEnvVariableException("IPV_PUBLIC_ENCRYPTION_KEY");
         }
         return key;
     }

@@ -40,6 +40,14 @@ RWDJd2Fit4x9bFIqpZKqc1pGLu39UEaHLzRgi0hVDQhG5A7LpErOMjWquS2lmkwa
 -----END PUBLIC KEY-----
 EOT
 
+# The IPV public encrypting key that is specific to auth.
+# Note: ipv_auth_public_encryption_key, above, is owned and used by orchestration.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+TBA
+-----END PUBLIC KEY-----
+EOT
+
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzZGTSE8TLLtQjdmD6SiF

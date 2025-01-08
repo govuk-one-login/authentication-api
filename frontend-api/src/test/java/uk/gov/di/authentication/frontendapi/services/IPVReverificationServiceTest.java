@@ -194,7 +194,7 @@ class IPVReverificationServiceTest {
     @Test
     void shouldThrowIPVReverificationServiceExceptionWhenPublicKeyNotFound() {
         when(configurationService.getIPVAuthEncryptionPublicKey())
-                .thenThrow(new MissingEnvVariableException("IPV_AUTHORIZATION_PUBLIC_KEY"));
+                .thenThrow(new MissingEnvVariableException("IPV_PUBLIC_ENCRYPTION_KEY"));
 
         var exception =
                 assertThrows(
@@ -204,7 +204,7 @@ class IPVReverificationServiceTest {
                                         TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION));
 
         assertEquals(
-                "Missing required environment variable: IPV_AUTHORIZATION_PUBLIC_KEY",
+                "Missing required environment variable: IPV_PUBLIC_ENCRYPTION_KEY",
                 exception.getMessage());
     }
 

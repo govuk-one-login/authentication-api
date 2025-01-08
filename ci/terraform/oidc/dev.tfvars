@@ -21,34 +21,10 @@ incorrect_password_lockout_count_ttl = 60
 lockout_count_ttl                    = 60
 otp_code_ttl_duration                = 60
 
-auth_frontend_public_encryption_key = <<-EOT
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0PcOHuVXOuexYZmpOlCo
-vFcGfezObHnnVTTfnCrS5TBmAEC9JNwH/YFmE/zx84I1dy5fEjll+2GIe8Hcue+W
-ubQMToFaAAeaqowqjgJYIPjgTubJ+baAP7+6GFPBWkk+LntBRQaoF7YkICT6im9h
-JTrFb5KxyDNT/j4SCCXlkMTzqmeMVM59NM66MSS7OXsUny9GinG6xhDovUswvU99
-N7GtGZBYIDmG6IrT/rS9ZosBLeLqCvRAfaYjq0/2EKHcudyeYjPDkkGpBNt7vXJJ
-A+Ud3Nx8MmuKS3kb8NoDhQJxKxg7lgjAj+Lhb9xr+Y074hdTs5ju2Jx2tmP1y9vl
-RwIDAQAB
------END PUBLIC KEY-----
-EOT
-
 auth_to_orch_token_signing_public_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESgoCw5pZYyGtFpPBV2YfU3DGrDqC
 8UKoRGN4gYTbuwAsLkOSYYY8BM7dhSEhgF4DX9i66HXjteogg6mhOZI1mA==
------END PUBLIC KEY-----
-EOT
-
-ipv_authorization_public_key = <<-EOT
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArukFibN4qI+/0SbSrMLg
-8v7Lj3KdV7tktgd+dol8VwDxMVfci0+5debd6yJFM6wgenCRI2FIxRXi+59bVgGY
-TwNENEaoaYfvb7CL6I7bYv0O5JOW6nJmA0md+7jb3zEpJk7bf8Syt2IilEZCUxv2
-MVDsk+GLTt2RHGi9pOgGAWeKb9OugsmYHEIlZ7OjKnjHnLhYDrALRFOdXN5PimSM
-Fd/HiEzFuxltuiQ7GXCmV/y1fND3SipvJOpnOJfJQuA696MrzIWgVt7GBfGbRSWF
-/45dQPPyNlvjm+VHUavcU3aB6/rtKWpLBg2oOaGnjHsgxjo62bGS6mkDBluku2NO
-gQIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
