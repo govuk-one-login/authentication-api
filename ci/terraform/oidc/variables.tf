@@ -342,6 +342,16 @@ variable "ipv_backend_uri" {
   default = "undefined"
 }
 
+variable "ipv_auth_authorize_callback_uri" {
+  type    = string
+  default = "undefined"
+}
+
+variable "ipv_auth_authorize_client_id" {
+  type    = string
+  default = "undefined"
+}
+
 variable "ipv_no_session_response_enabled" {
   type    = bool
   default = false
