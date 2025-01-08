@@ -28,17 +28,17 @@ module "mfa_reset_authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    AUTH_ISSUER_CLAIM                         = "https://${local.frontend_fqdn}/",
-    ENVIRONMENT                               = var.environment,
-    IPV_AUDIENCE                              = var.ipv_audience,
-    IPV_AUTHORISATION_CLIENT_ID               = "authReverification",
-    IPV_AUTHORIZATION_URI                     = var.ipv_authorisation_uri,
-    MFA_RESET_CALLBACK_URI                    = "${local.frontend_api_base_url}reverification-callback",
-    MFA_RESET_JAR_SIGNING_KEY_ID              = aws_kms_alias.mfa_reset_jar_signing_key_alias.target_key_id,
-    MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_token_signing_key_alias.arn,
-    REDIS_KEY                                 = local.redis_key,
-    TXMA_AUDIT_QUEUE_URL                      = module.oidc_txma_audit.queue_url
-    IPV_PUBLIC_ENCRYPTION_KEY                 = var.auth_frontend_api_to_ipv_public_encryption_key
+    AUTH_ISSUER_CLAIM                             = "https://${local.frontend_fqdn}/",
+    ENVIRONMENT                                   = var.environment,
+    IPV_AUDIENCE                                  = var.ipv_audience,
+    IPV_AUTHORISATION_CLIENT_ID                   = "authReverification",
+    IPV_AUTHORIZATION_URI                         = var.ipv_authorisation_uri,
+    MFA_RESET_CALLBACK_URI                        = "${local.frontend_api_base_url}reverification-callback",
+    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.target_key_id,
+    MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS     = aws_kms_alias.mfa_reset_token_signing_key_alias.arn,
+    REDIS_KEY                                     = local.redis_key,
+    TXMA_AUDIT_QUEUE_URL                          = module.oidc_txma_audit.queue_url
+    IPV_PUBLIC_ENCRYPTION_KEY                     = var.auth_frontend_api_to_ipv_public_encryption_key
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler::handleRequest"
