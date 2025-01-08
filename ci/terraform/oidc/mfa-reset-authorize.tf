@@ -34,7 +34,7 @@ module "mfa_reset_authorize" {
     IPV_AUTHORISATION_CLIENT_ID                   = "authReverification",
     IPV_AUTHORIZATION_URI                         = var.ipv_authorisation_uri,
     MFA_RESET_CALLBACK_URI                        = "${local.frontend_api_base_url}reverification-callback",
-    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.target_key_id,
+    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.arn,
     MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS     = aws_kms_alias.mfa_reset_token_signing_key_alias.arn,
     REDIS_KEY                                     = local.redis_key,
     TXMA_AUDIT_QUEUE_URL                          = module.oidc_txma_audit.queue_url
