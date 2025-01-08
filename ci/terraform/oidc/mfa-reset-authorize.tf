@@ -6,7 +6,7 @@ module "mfa_reset_authorize_role" {
 
   policies_to_attach = [
     aws_iam_policy.mfa_reset_token_kms_signing_policy.arn,
-    aws_iam_policy.mfa_reset_jar_kms_signing_policy.arn,
+    aws_iam_policy.ipv_reverification_request_signing_key_policy.arn,
     aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
