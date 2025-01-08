@@ -9,7 +9,11 @@ fi
 
 export AWS_REGION=eu-west-2
 
-sector="identity.$2.account.gov.uk"
+if [[ $2 == authdev* ]]; then
+  sector="identity.$2.sandpit.account.gov.uk"
+else
+  sector="identity.$2.account.gov.uk"
+fi
 
 echo -e "Exporting internalCommonSubjectId for Email = $1 Environment = $2 Sector = ${sector}"
 
