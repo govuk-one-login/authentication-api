@@ -4,12 +4,9 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
@@ -175,42 +172,6 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             scopes));
             return false;
         }
-        return true;
-    }
-
-    private boolean areClaimsValid(OIDCClaimsRequest claimsRequest, ClientRegistry clientRegistry) {
-        if (claimsRequest == null || claimsRequest.getUserInfoClaimsRequest() == null) {
-            LOG.info("No claims present in auth request");
-            return true;
-        }
-        List<String> claimNames =
-                claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
-                        .map(ClaimsSetRequest.Entry::getClaimName)
-                        .toList();
-
-        boolean containsUnsupportedClaims =
-                claimNames.stream()
-                        .anyMatch(
-                                claim ->
-                                        ValidClaims.getAllValidClaims().stream()
-                                                .noneMatch(t -> t.equals(claim)));
-        if (containsUnsupportedClaims) {
-            logErrorInProdElseWarn(
-                    String.format(
-                            "Claims have been requested which are not yet supported. Claims in request: %s",
-                            claimsRequest.toJSONString()));
-            return false;
-        }
-
-        boolean hasUnsupportedClaims = !clientRegistry.getClaims().containsAll(claimNames);
-        if (hasUnsupportedClaims) {
-            logErrorInProdElseWarn(
-                    String.format(
-                            "Claims have been requested which this client is not supported to request. Claims in request: %s",
-                            claimsRequest.toJSONString()));
-            return false;
-        }
-        LOG.info("Claims are present AND valid in auth request");
         return true;
     }
 }
