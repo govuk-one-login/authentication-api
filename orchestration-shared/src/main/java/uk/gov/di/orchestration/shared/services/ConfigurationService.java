@@ -417,6 +417,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED");
     }
 
+    public boolean isUseBrowserSessionIdStoredInOrchSessionEnabled() {
+        return getFlagOrFalse("USE_BROWSERSESSIONID_STORED_IN_ORCH_SESSION");
+    }
+
     public Optional<String> getIPVCapacity() {
         try {
             var request =

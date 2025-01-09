@@ -86,6 +86,8 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  UseBrowserSessionIdStoredInOrchSession:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2382,6 +2384,10 @@ Resources:
             ]
           SUPPORT_MAX_AGE_ENABLED: !If
             - SupportMaxAgeEnabled
+            - true
+            - false
+          USE_BROWSERSESSIONID_STORED_IN_ORCH_SESSION: !If
+            - UseBrowserSessionIdStoredInOrchSession
             - true
             - false
 
