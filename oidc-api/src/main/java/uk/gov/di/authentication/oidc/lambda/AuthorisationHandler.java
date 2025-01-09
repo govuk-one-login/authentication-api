@@ -416,11 +416,6 @@ public class AuthorisationHandler
         if (DocAppUserHelper.isDocCheckingAppUser(
                 authRequest.toParameters(), Optional.of(client))) {
 
-            // ATO-1328: Revert once we have collected enough logs
-            LOG.info(
-                    "Claims are attached to DocApp request: {}",
-                    Objects.nonNull(authRequest.getOIDCClaims()));
-
             return handleDocAppJourney(
                     session,
                     orchSessionOptional,
