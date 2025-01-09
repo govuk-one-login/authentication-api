@@ -621,9 +621,10 @@ public class AuthorisationHandler
         Optional<String> existingSessionId = existingSession.map(Session::getSessionId);
 
         if (existingSession.isEmpty() || existingOrchSessionOptional.isEmpty()) {
-            session = sessionService.generateSession();
-            var newSessionId = session.getSessionId();
-            orchSession = createNewOrchSession(newSessionId);
+            var newSessionId = IdGenerator.generate();
+            var newBrowserSessionId = IdGenerator.generate();
+            session = sessionService.generateSession(newSessionId, newBrowserSessionId);
+            orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
         } else {
             var maxAgeParam = getMaxAge(authenticationRequest);
@@ -639,14 +640,18 @@ public class AuthorisationHandler
                             timeNow)) {
                 var newSessionIdForPreviousSession = IdGenerator.generate();
                 var newSessionId = IdGenerator.generate();
+                var newBrowserSessionId = IdGenerator.generate();
                 session =
                         updateSharedSessionDueToMaxAgeExpiry(
                                 existingSession.get(),
                                 newSessionIdForPreviousSession,
-                                newSessionId);
+                                newSessionId,
+                                newBrowserSessionId);
+
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
                                 newSessionId,
+                                newBrowserSessionId,
                                 existingOrchSessionOptional.get(),
                                 timeNow,
                                 newSessionIdForPreviousSession);
@@ -707,8 +712,9 @@ public class AuthorisationHandler
                 orchSession);
     }
 
-    private OrchSessionItem createNewOrchSession(String sessionId) {
-        var newOrchSessionItem = new OrchSessionItem(sessionId);
+    private OrchSessionItem createNewOrchSession(String sessionId, String browserSessionId) {
+        var newOrchSessionItem =
+                new OrchSessionItem(sessionId).withBrowserSessionId(browserSessionId);
         orchSessionService.addSession(newOrchSessionItem);
         LOG.info("Created new Orch session with session ID: {}", sessionId);
         return newOrchSessionItem;
@@ -731,6 +737,7 @@ public class AuthorisationHandler
 
     private OrchSessionItem updateOrchSessionDueToMaxAgeExpiry(
             String newSessionId,
+            String newBrowserSessionId,
             OrchSessionItem previousSession,
             long timeNow,
             String newSessionIdForPreviousSession) {
@@ -744,6 +751,7 @@ public class AuthorisationHandler
         OrchSessionItem newSession =
                 new OrchSessionItem(previousSession)
                         .withSessionId(newSessionId)
+                        .withBrowserSessionId(newBrowserSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry())
                         .withCurrentCredentialStrength(null)
                         .withAuthenticated(false)
@@ -754,9 +762,14 @@ public class AuthorisationHandler
     }
 
     private Session updateSharedSessionDueToMaxAgeExpiry(
-            Session previousSession, String newSessionIdForPreviousSession, String newSessionId) {
+            Session previousSession,
+            String newSessionIdForPreviousSession,
+            String newSessionId,
+            String newBrowserSessionId) {
         sessionService.updateWithNewSessionId(previousSession, newSessionIdForPreviousSession);
-        var newSession = sessionService.copySessionForMaxAge(previousSession, newSessionId);
+        var newSession =
+                sessionService.copySessionForMaxAge(
+                        previousSession, newSessionId, newBrowserSessionId);
         sessionService.storeOrUpdateSession(newSession);
         return newSession;
     }
