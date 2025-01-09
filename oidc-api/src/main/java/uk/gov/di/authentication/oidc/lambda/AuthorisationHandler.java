@@ -680,6 +680,11 @@ public class AuthorisationHandler
                         session.getSessionId());
             }
         }
+        var browserSessionIdsMatch =
+                Objects.equals(session.getBrowserSessionId(), orchSession.getBrowserSessionId());
+        LOG.info(
+                "Orch session and shared session {}have the same browserSessionId",
+                !browserSessionIdsMatch ? "do not " : "");
 
         attachSessionIdToLogs(session);
         attachOrchSessionIdToLogs(orchSession.getSessionId());
