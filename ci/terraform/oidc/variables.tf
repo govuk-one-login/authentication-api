@@ -342,6 +342,16 @@ variable "ipv_backend_uri" {
   default = "undefined"
 }
 
+variable "ipv_auth_authorize_callback_uri" {
+  type    = string
+  default = "undefined"
+}
+
+variable "ipv_auth_authorize_client_id" {
+  type    = string
+  default = "undefined"
+}
+
 variable "ipv_no_session_response_enabled" {
   type    = bool
   default = false
@@ -730,7 +740,7 @@ variable "oidc_cloudfront_enabled" {
   description = "Feature flag to disable cloudfront in envirometns that don't support it (authdev1 / authdev2)."
 }
 
-variable "ipv_authorization_public_key" {
+variable "auth_frontend_api_to_ipv_public_encryption_key" {
   type        = string
   default     = ""
   description = "Public key for IPV"

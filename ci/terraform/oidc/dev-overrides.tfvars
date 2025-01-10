@@ -32,6 +32,19 @@ RwIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
+# The IPV public encrypting key that is specific to auth.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArukFibN4qI+/0SbSrMLg
+8v7Lj3KdV7tktgd+dol8VwDxMVfci0+5debd6yJFM6wgenCRI2FIxRXi+59bVgGY
+TwNENEaoaYfvb7CL6I7bYv0O5JOW6nJmA0md+7jb3zEpJk7bf8Syt2IilEZCUxv2
+MVDsk+GLTt2RHGi9pOgGAWeKb9OugsmYHEIlZ7OjKnjHnLhYDrALRFOdXN5PimSM
+Fd/HiEzFuxltuiQ7GXCmV/y1fND3SipvJOpnOJfJQuA696MrzIWgVt7GBfGbRSWF
+/45dQPPyNlvjm+VHUavcU3aB6/rtKWpLBg2oOaGnjHsgxjo62bGS6mkDBluku2NO
+gQIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
 performance_tuning = {
   register = {
     memory          = 512

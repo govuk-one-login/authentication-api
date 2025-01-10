@@ -233,9 +233,8 @@ resource "aws_iam_policy" "mfa_reset_token_kms_signing_policy" {
   policy = data.aws_iam_policy_document.mfa_reset_token_kms_signing_policy_document.json
 }
 
-
 # Policy for mfa-reset-authorize lambda to access the key used to sign the MFA reset JAR
-data "aws_iam_policy_document" "mfa_reset_jar_signing_policy_document" {
+data "aws_iam_policy_document" "ipv_reverification_request_signing_key_policy_document" {
   statement {
     sid    = "AllowAccessToKmsSigningKey"
     effect = "Allow"
@@ -245,17 +244,22 @@ data "aws_iam_policy_document" "mfa_reset_jar_signing_policy_document" {
       "kms:GetPublicKey" #JWT Service calls GetPublicKey to derive KeyId
     ]
     resources = [
-      aws_kms_key.mfa_reset_jar_signing_key_ecc.arn
+      aws_kms_key.ipv_reverification_request_signing_key.arn
     ]
   }
 }
 
-resource "aws_iam_policy" "mfa_reset_jar_kms_signing_policy" {
+moved {
+  from = aws_iam_policy.mfa_reset_jar_kms_signing_policy
+  to   = aws_iam_policy.ipv_reverification_request_signing_key_policy
+}
+
+resource "aws_iam_policy" "ipv_reverification_request_signing_key_policy" {
   name_prefix = "kms-mfa-reset-jar-signing-policy"
   path        = "/${var.environment}/mfa-reset-jar/"
   description = "IAM policy for manging KMS connection for a lambda which allows signing of the JARs sent from Auth to IPV when re-authenticating for MFA reset"
 
-  policy = data.aws_iam_policy_document.mfa_reset_jar_signing_policy_document.json
+  policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_policy_document.json
 }
 
 
@@ -270,7 +274,7 @@ data "aws_iam_policy_document" "mfa_reset_jar_jwk_document" {
       "kms:GetPublicKey",
     ]
     resources = [
-      aws_kms_key.mfa_reset_jar_signing_key_ecc.arn
+      aws_kms_key.ipv_reverification_request_signing_key.arn
     ]
   }
 }

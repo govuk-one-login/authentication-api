@@ -22,7 +22,6 @@ test_clients_enabled                        = "true"
 ipv_no_session_response_enabled             = true
 doc_app_cri_data_v2_endpoint                = "userinfo/v2"
 orch_client_id                              = "orchestrationAuth"
-auth_audience                               = "https://auth.staging.account.gov.uk"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
@@ -37,6 +36,20 @@ yGCV108TgoqDvD50dtqNOw1wBsfbq4rUaRTxhpJLIo8tujmGpf1YVWymQEk+FlyN
 LlZL4UE/eEyp+qztIsVXJfyhcC/ezrr5e0FnZ1U0iJavhdmBqmIaLi3SjNawNdEQ
 RWDJd2Fit4x9bFIqpZKqc1pGLu39UEaHLzRgi0hVDQhG5A7LpErOMjWquS2lmkwa
 3wIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+# The IPV public encrypting key that is specific to auth.
+# Note: ipv_auth_public_encryption_key, above, is owned and used by orchestration.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4K/6GH//FQSD6Yk/5nKY
+zRCwrYcQy7wGHH2cZ7EXo/9+SNRcbQlzd+NVTplIk9x7+t7g8U36z/I8CM/woGgJ
+zM8DNREecxH/4YEYKOqbqHSnK7iICJ18Wfb+mNr20Dt+Ik1oQja6aKPqIj4Jl4WW
+0vHMhDfUNP/iOi3zhNJsTZwYjVQWqLzmWfAqO/61d2XbLDIgubKqAtTFWnxeXuBU
+VZAbq03qmvzyekRUvZtck7JuQUa9mj2gJC0YPLoLDM+j0QDGWrPnDA2L2VmmF1wn
+rbeA0zSUxxfdffFH/L0cTgzdTQtv6iGQrkfHnTTk1TQe0+wxJEQz5FlcXYl6qSrh
+swIDAQAB
 -----END PUBLIC KEY-----
 EOT
 

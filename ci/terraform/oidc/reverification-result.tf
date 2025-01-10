@@ -7,7 +7,7 @@ module "reverification_result_role" {
   policies_to_attach = [
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
-    aws_iam_policy.mfa_reset_jar_kms_signing_policy.arn,
+    aws_iam_policy.ipv_reverification_request_signing_key_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
@@ -26,15 +26,15 @@ module "reverification_result" {
   environment     = var.environment
 
   handler_environment_variables = {
-    TXMA_AUDIT_QUEUE_URL            = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI             = var.internal_sector_uri
-    REDIS_KEY                       = local.redis_key
-    IPV_AUDIENCE                    = var.ipv_audience
-    IPV_AUTHORISATION_CALLBACK_URI  = var.ipv_authorisation_callback_uri
-    IPV_AUTHORISATION_CLIENT_ID     = var.ipv_authorisation_client_id
-    ENVIRONMENT                     = var.environment
-    MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.name
-    IPV_BACKEND_URI                 = var.ipv_backend_uri
+    TXMA_AUDIT_QUEUE_URL                          = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI                           = var.internal_sector_uri
+    REDIS_KEY                                     = local.redis_key
+    IPV_AUDIENCE                                  = var.ipv_audience
+    IPV_AUTHORISATION_CALLBACK_URI                = var.ipv_authorisation_callback_uri
+    IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_authorisation_client_id
+    ENVIRONMENT                                   = var.environment
+    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.arn
+    IPV_BACKEND_URI                               = var.ipv_backend_uri
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler::handleRequest"
