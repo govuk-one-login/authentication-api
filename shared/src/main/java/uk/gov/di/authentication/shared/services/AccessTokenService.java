@@ -33,6 +33,7 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
         super(AccessTokenStore.class, "access-token-store", configurationService);
         this.timeToExist = configurationService.getAccessTokenExpiry();
         this.configurationService = configurationService;
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public AccessTokenService(
