@@ -9,7 +9,7 @@ repos:
       - id: check-executables-have-shebangs
 
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v1.22.3
+    rev: v1.12.0
     hooks:
       - id: cfn-python-lint
         exclude: ^(ci|.github|http)/.*|docker-compose.*|.pre-commit-config.yaml|orchestration-canary-alarms.template.yaml|.*.approved.json|checkov-policies.*|.terraform-docs.yml|package.json|package-lock.json$
