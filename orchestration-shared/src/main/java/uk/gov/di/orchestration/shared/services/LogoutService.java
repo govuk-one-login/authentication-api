@@ -214,6 +214,11 @@ public class LogoutService {
                 Optional.empty());
     }
 
+    public void handleMaxAgeLogout(Session previousSession) {
+        destroySessions(previousSession);
+        cloudwatchMetricsService.incrementLogout(Optional.empty());
+    }
+
     private void sendAuditEvent(
             TxmaAuditUser auditUser,
             LogoutReason logoutReason,
