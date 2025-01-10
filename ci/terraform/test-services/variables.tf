@@ -87,3 +87,9 @@ variable "txma_account_id" {
   default = ""
   type    = string
 }
+
+variable "vpc_environment" {
+  description = "The name of the environment this environment is sharing the VPC , this var is only for Authdevs env and must be overide using Authdevs.tfvars, default value should be null always."
+  type        = string
+  default     = null
+}

@@ -1,5 +1,6 @@
 environment         = "authdev1"
 common_state_bucket = "di-auth-development-tfstate"
+vpc_environment     = "dev"
 
 logging_endpoint_enabled = false
 logging_endpoint_arns    = []

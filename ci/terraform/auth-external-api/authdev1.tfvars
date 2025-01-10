@@ -1,5 +1,6 @@
 environment         = "authdev1"
 shared_state_bucket = "di-auth-development-tfstate"
+vpc_environment     = "dev"
 
 logging_endpoint_arns  = []
 internal_sector_uri    = "https://identity.authdev1.sandpit.account.gov.uk"
