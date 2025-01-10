@@ -4,7 +4,7 @@ FetchJwksErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -38,7 +38,7 @@ FetchJwksErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-FetchJwksFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -49,7 +49,7 @@ OpenIdConfigurationErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -83,7 +83,7 @@ OpenIdConfigurationErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-OpenIdConfigurationFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -94,7 +94,7 @@ TrustmarkFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -128,7 +128,7 @@ TrustmarkFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-TrustmarkFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -138,7 +138,7 @@ BackChannelLogoutRequestErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -172,7 +172,7 @@ BackChannelLogoutRequestErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-BackChannelLogoutRequestFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -182,7 +182,7 @@ DocAppCallbackErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -216,7 +216,7 @@ DocAppCallbackErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-DocAppCallbackFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 #endregion
 
 #region Token Function Anomaly Alarms
@@ -225,7 +225,7 @@ TokenFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -259,7 +259,7 @@ TokenFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-TokenFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 #endregion
 
 #region Logout Function Anomaly Alarms
@@ -268,7 +268,7 @@ LogoutFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -302,7 +302,7 @@ LogoutFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-LogoutFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 #endregion
 
 #region Authentication Callback Anomaly Alarms
@@ -311,7 +311,7 @@ AuthenticationCallbackFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -345,7 +345,7 @@ AuthenticationCallbackFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-AuthenticationCallbackFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -355,7 +355,7 @@ JwksFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -389,7 +389,7 @@ JwksFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-JwksFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -399,7 +399,7 @@ AuthorisationFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -433,7 +433,7 @@ AuthorisationFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-AuthorisationFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -443,7 +443,7 @@ UserInfoFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -477,7 +477,7 @@ UserInfoFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-UserInfoFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -487,7 +487,7 @@ AuthCodeFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -521,7 +521,7 @@ AuthCodeFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-AuthCodeFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -532,7 +532,7 @@ UpdateClientConfigFunctionAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -567,7 +567,7 @@ UpdateClientConfigFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-UpdateClientConfigFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -578,7 +578,7 @@ ClientRegistrationFunctionAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -613,7 +613,7 @@ ClientRegistrationFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-ClientRegistrationFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -623,7 +623,7 @@ IpvCallbackFunctionAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -657,7 +657,7 @@ IpvCallbackFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-IpvCallbackFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -668,7 +668,7 @@ SpotResponseFunctionAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -703,7 +703,7 @@ SpotResponseFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-SpotResponseFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 
 #endregion
 
@@ -713,7 +713,7 @@ StorageTokenJwkFunctionErrorAnomalyDetector:
   Properties:
     MetricName: Errors
     Namespace: AWS/Lambda
-    Stat: Sum
+    Stat: Average
     Dimensions:
       - Name: FunctionName
         Value:
@@ -747,5 +747,5 @@ StorageTokenJwkFunctionErrorAnomalyAlarm:
                 Value:
                   Fn::Sub: ${Environment}-StorageTokenJwkFunction
           Period: 60
-          Stat: Sum
+          Stat: Average
 #endregion
