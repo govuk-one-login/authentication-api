@@ -11,7 +11,9 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
@@ -21,6 +23,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
@@ -723,6 +726,134 @@ class RequestObjectAuthorizeValidatorTest {
         assertEquals(STATE, requestObjectError.get().state());
     }
 
+    @Test
+    void shouldReturnErrorForAnUnknownClaimsJsonString()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var claimSet =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest()
+                                        .add(
+                                                new ClaimsSetRequest.Entry(
+                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
+                                        .add("https://vocab.example.com/v2/example-claim"));
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("claims", claimSet.toJSONString())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldReturnErrorForAnClaimsNotSupportedByClientJsonString()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var claimSet =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest()
+                                        .add(
+                                                new ClaimsSetRequest.Entry(
+                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
+                                        .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("claims", claimSet.toJSONString())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldReturnErrorForAnUnknownClaimsJsonObject()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var claimSet =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest()
+                                        .add(
+                                                new ClaimsSetRequest.Entry(
+                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
+                                        .add("https://vocab.example.com/v2/example-claim"));
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("claims", claimSet.toJSONObject())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldReturnErrorForAnClaimsNotSupportedByClientJsonObject()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var claimSet =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest()
+                                        .add(
+                                                new ClaimsSetRequest.Entry(
+                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
+                                        .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("claims", claimSet.toJSONObject())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
@@ -735,7 +866,13 @@ class RequestObjectAuthorizeValidatorTest {
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise")
                 .withClientLoCs(singletonList(LevelOfConfidence.MEDIUM_LEVEL.getValue()))
-                .withClientType(clientType);
+                .withClientType(clientType)
+                .withClaims(
+                        List.of(
+                                ValidClaims.ADDRESS.getValue(),
+                                ValidClaims.CORE_IDENTITY_JWT.getValue(),
+                                ValidClaims.PASSPORT.getValue(),
+                                ValidClaims.RETURN_CODE.getValue()));
     }
 
     private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {

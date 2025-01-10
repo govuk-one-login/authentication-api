@@ -36,6 +36,7 @@ import java.util.Optional;
 import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
+import static uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper.parseOidcClaims;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -165,6 +166,18 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 logErrorInProdElseWarn("Invalid scopes in request JWT");
                 return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE, state);
             }
+
+            if (Objects.nonNull((jwtClaimsSet.getClaim("claims")))
+                    && !areClaimsValid(parseOidcClaims(jwtClaimsSet), client)) {
+                logErrorInProdElseWarn("Invalid claims in request object");
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request contains invalid claims"),
+                        state);
+            }
+
             if (Objects.isNull(jwtClaimsSet.getClaim("nonce")) && !client.permitMissingNonce()) {
                 logErrorInProdElseWarn("Nonce is missing from authRequest");
                 return errorResponse(

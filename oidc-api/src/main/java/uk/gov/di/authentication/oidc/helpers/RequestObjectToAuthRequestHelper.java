@@ -106,7 +106,7 @@ public class RequestObjectToAuthRequestHelper {
         }
     }
 
-    private static OIDCClaimsRequest parseOidcClaims(JWTClaimsSet claimsSet) {
+    public static OIDCClaimsRequest parseOidcClaims(JWTClaimsSet claimsSet) {
         var stringClaim = claimsSet.getClaim("claims").toString();
         if (stringClaim == null || stringClaim.isEmpty()) {
             throw new IllegalArgumentException("Claims must not be null or empty");
