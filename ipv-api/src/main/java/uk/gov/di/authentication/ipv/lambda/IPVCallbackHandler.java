@@ -287,6 +287,10 @@ public class IPVCallbackHandler
 
             // TODO: ATO-1117: temp logging
             LOG.info(
+                    "is rpPairwiseId not blank on clientSession: {}",
+                    clientSession.getRpPairwiseId() != null
+                            && !clientSession.getRpPairwiseId().isBlank());
+            LOG.info(
                     "is rpPairwiseId the same on clientSession as calculated: {}",
                     rpPairwiseSubject.getValue().equals(clientSession.getRpPairwiseId()));
 
