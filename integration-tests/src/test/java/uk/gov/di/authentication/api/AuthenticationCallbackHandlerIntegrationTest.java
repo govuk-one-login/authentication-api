@@ -32,6 +32,7 @@ import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubEx
 import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
+import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -60,7 +61,9 @@ import java.net.URISyntaxException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -70,6 +73,7 @@ import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.util.Collections.singletonList;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
@@ -114,6 +118,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    public static final SqsQueueExtension backChannelLogoutQueueExtension =
+            new SqsQueueExtension("back-channel-logout-");
 
     protected static ConfigurationService configurationService;
 
@@ -782,6 +790,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         "3eee3869-abf1-41c1-bdb5-c25f68d0a54d",
                         "aef54391-95d8-4d3b-ac30-cbe1e3e2f0d4");
 
+        private static final List<String> PREVIOUS_CLIENTS_FOR_CLIENT_SESSION =
+                List.of("client-id-1", "client-id-2", "client-id-3");
+
         @Test
         void
                 updatesOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdMatchesAuthUserInfoResponse()
@@ -814,6 +825,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
             setupPreviousSessions(DIFFERENT_INTERNAL_COMMON_SUBJECT_ID);
+            setupPreviousClientsAndPreviousClientSessions();
+            // Sending back channel logouts requires a user store entry
+            userStore.signUp(TEST_EMAIL_ADDRESS, "");
 
             var response =
                     makeRequest(
@@ -822,12 +836,33 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                             constructQueryStringParameters());
 
-            assertUserInfoStoredAndRedirectedToRp(response);
+            assertThat(response, hasStatus(302));
+
+            URI redirectLocationHeader =
+                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+            assertEquals(
+                    REDIRECT_URI.getAuthority() + REDIRECT_URI.getPath(),
+                    redirectLocationHeader.getAuthority() + redirectLocationHeader.getPath());
+
+            assertThat(redirectLocationHeader.getQuery(), containsString(RP_STATE.getValue()));
+
+            assertThat(redirectLocationHeader.getQuery(), containsString("code"));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
+                            OidcAuditableEvent.AUTHENTICATION_COMPLETE,
+                            OidcAuditableEvent.AUTH_CODE_ISSUED));
 
             var sharedSession = redis.getSession(SESSION_ID);
             var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
             assertEquals(List.of(), sharedSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
+            assertBackChannelLogoutsSent(PREVIOUS_CLIENTS_FOR_CLIENT_SESSION);
         }
 
         private void setupMaxAgeSession() throws Json.JsonException {
@@ -843,7 +878,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupPreviousSessions(String internalCommonSubjectId)
                 throws Json.JsonException {
-            var session = new Session(PREVIOUS_SESSION_ID);
+            var session = new Session(PREVIOUS_SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
             PREVIOUS_CLIENT_SESSIONS.forEach(session::addClientSession);
             redis.addSession(session);
             redis.addStateToRedis(
@@ -854,6 +889,17 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             orchSessionExtension.addSession(
                     new OrchSessionItem(PREVIOUS_SESSION_ID)
                             .withInternalCommonSubjectId(internalCommonSubjectId));
+        }
+
+        private void setupPreviousClientsAndPreviousClientSessions() throws Json.JsonException {
+            PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.forEach(
+                    AuthenticationCallbackHandlerIntegrationTest.this::setupClientRegWithClientId);
+            for (String clientSessionId : PREVIOUS_CLIENT_SESSIONS) {
+                setupClientSessionWithId(
+                        clientSessionId,
+                        PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.get(
+                                PREVIOUS_CLIENT_SESSIONS.indexOf(clientSessionId)));
+            }
         }
     }
 
@@ -984,6 +1030,24 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertNull(session);
         assertTrue(orchSession.isEmpty());
+    }
+
+    private void setupClientRegWithClientId(String clientId) {
+        clientStore.registerClient(
+                clientId,
+                "test-client",
+                singletonList(REDIRECT_URI.toString()),
+                singletonList("contact@example.com"),
+                singletonList("openid"),
+                null,
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "pairwise",
+                ClientType.APP,
+                ES256.getName(),
+                false);
     }
 
     private void setupClientReg(boolean identityVerificationSupported) {
@@ -1179,9 +1243,15 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         public boolean abortOnAccountInterventionsErrorResponse() {
             return this.abortOnAisErrorResponse;
         }
+
+        @Override
+        public String getBackChannelLogoutQueueURI() {
+            return backChannelLogoutQueueExtension.getQueueUrl();
+        }
     }
 
-    private void setUpClientSession() throws Json.JsonException {
+    public void setupClientSessionWithId(String clientSessionId, String clientId)
+            throws Json.JsonException {
         String vtrStr1 =
                 LevelOfConfidence.MEDIUM_LEVEL.getValue()
                         + "."
@@ -1196,7 +1266,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
-                                ResponseType.CODE, SCOPE, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                ResponseType.CODE, SCOPE, new ClientID(clientId), REDIRECT_URI)
                         .state(RP_STATE)
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf(vtrStr1, vtrStr2));
@@ -1207,7 +1277,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         vtrList,
                         CLIENT_NAME);
 
-        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
+        redis.createClientSession(clientSessionId, clientSession);
+    }
+
+    private void setUpClientSession() throws Json.JsonException {
+        setupClientSessionWithId(CLIENT_SESSION_ID, CLIENT_ID);
     }
 
     private AuthorizationRequest validateQueryRequestToIPVAndReturnAuthRequest(
@@ -1264,5 +1338,27 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "PCL200")));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("scope"), equalTo("openid"));
         assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(ES256));
+    }
+
+    private void assertBackChannelLogoutsSent(List<String> clientIds) {
+        await().atMost(Duration.of(1, ChronoUnit.SECONDS))
+                .untilAsserted(
+                        () ->
+                                assertThat(
+                                        backChannelLogoutQueueExtension
+                                                .getApproximateMessageCount(),
+                                        equalTo(clientIds.size())));
+
+        var events = backChannelLogoutQueueExtension.getMessages(BackChannelLogoutMessage.class);
+        assertTrue(
+                clientIds.stream()
+                        .allMatch(
+                                clientId ->
+                                        events.stream()
+                                                .anyMatch(
+                                                        backChannelLogoutMessage ->
+                                                                backChannelLogoutMessage
+                                                                        .getClientId()
+                                                                        .equals(clientId))));
     }
 }

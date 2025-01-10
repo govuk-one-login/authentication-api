@@ -827,8 +827,7 @@ public class AuthenticationCallbackHandler
         } else {
             LOG.info(
                     "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
-            // TODO: ATO-1101: Send backchannel logouts + audit events
-
+            logoutService.handleMaxAgeLogout(previousSharedSession.get());
         }
         currentOrchSession.setPreviousSessionId(null);
     }
