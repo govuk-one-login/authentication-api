@@ -1745,6 +1745,7 @@ Resources:
                   authEnvironment,
                 ]
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
+          BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           CREDENTIAL_STORE_URI: !Sub
             - https://credential-store.${ServiceDomain}
             - ServiceDomain:
