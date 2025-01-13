@@ -8,6 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class OrchSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
+    public static final String ATTRIBUTE_BROWSER_SESSION_ID = "BrowserSessionId";
     public static final String ATTRIBUTE_PREVIOUS_SESSION_ID = "PreviousSessionId";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
@@ -24,6 +25,7 @@ public class OrchSessionItem {
     }
 
     private String sessionId;
+    private String browserSessionId;
     private String previousSessionId;
     private long timeToLive;
     private String verifiedMfaMethodType;
@@ -42,6 +44,7 @@ public class OrchSessionItem {
 
     public OrchSessionItem(OrchSessionItem orchSessionItem) {
         this.sessionId = orchSessionItem.sessionId;
+        this.browserSessionId = orchSessionItem.browserSessionId;
         this.previousSessionId = orchSessionItem.previousSessionId;
         this.timeToLive = orchSessionItem.timeToLive;
         this.verifiedMfaMethodType = orchSessionItem.verifiedMfaMethodType;
@@ -64,6 +67,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withSessionId(String sessionId) {
         this.sessionId = sessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_BROWSER_SESSION_ID)
+    public String getBrowserSessionId() {
+        return browserSessionId;
+    }
+
+    public void setBrowserSessionId(String browserSessionId) {
+        this.browserSessionId = browserSessionId;
+    }
+
+    public OrchSessionItem withBrowserSessionId(String browserSessionId) {
+        this.browserSessionId = browserSessionId;
         return this;
     }
 

@@ -65,7 +65,15 @@ import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
-import uk.gov.di.orchestration.shared.entity.*;
+import uk.gov.di.orchestration.shared.entity.Channel;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
+import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
@@ -299,6 +307,7 @@ class AuthorisationHandlerTest {
         session = new Session(SESSION_ID);
         orchSession = new OrchSessionItem(SESSION_ID);
         when(sessionService.generateSession()).thenReturn(session);
+        when(sessionService.generateSession(anyString(), anyString())).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
                 .thenReturn(clientSession);
@@ -1832,7 +1841,8 @@ class AuthorisationHandlerTest {
         void shouldSetTheRelevantCookiesInTheHeader() {
             Session sessionWithBrowserSessionId =
                     new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID);
-            when(sessionService.generateSession()).thenReturn(sessionWithBrowserSessionId);
+            when(sessionService.generateSession(any(), any()))
+                    .thenReturn(sessionWithBrowserSessionId);
 
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
@@ -1972,17 +1982,36 @@ class AuthorisationHandlerTest {
 
         @Nested
         class BrowserSessionId {
+            private final ArgumentCaptor<Session> sessionCaptor =
+                    ArgumentCaptor.forClass(Session.class);
+            private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
+                    ArgumentCaptor.forClass(OrchSessionItem.class);
+
+            @BeforeEach
+            void setup() {
+                when(sessionService.generateSession(anyString(), anyString()))
+                        .thenReturn(
+                                new Session(NEW_SESSION_ID)
+                                        .withBrowserSessionId(NEW_BROWSER_SESSION_ID));
+            }
+
             @Test
             void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
-                withExistingOrchSession(orchSession);
-                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-                APIGatewayProxyResponseEvent response =
-                        setupExistingSessionAndCookieInHeader(null, null);
+                withExistingSession(null);
+                withExistingOrchSession(null);
+                APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession();
+                verify(sessionService).generateSession(anyString(), anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
-                assertEquals(
-                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                var actualSession = sessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
+
+                verify(orchSessionService).addSession(orchSessionCaptor.capture());
+                var actualOrchSession = orchSessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
                 assertEquals(
                         format(
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
@@ -1999,16 +2028,22 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
-                withExistingOrchSession(orchSession);
-
-                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                withExistingSession(null);
+                withExistingOrchSession(null);
                 APIGatewayProxyResponseEvent response =
-                        setupExistingSessionAndCookieInHeader(null, BROWSER_SESSION_ID);
+                        makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession();
+                verify(sessionService).generateSession(anyString(), anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
-                assertEquals(
-                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                var actualSession = sessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
+
+                verify(orchSessionService).addSession(orchSessionCaptor.capture());
+                var actualOrchSession = orchSessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
                 assertEquals(
                         format(
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
@@ -2025,18 +2060,21 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
-                withExistingOrchSession(orchSession);
+                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
+                APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-                APIGatewayProxyResponseEvent response =
-                        setupExistingSessionAndCookieInHeader(
-                                new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
-                                null);
-
-                verify(sessionService).generateSession();
+                verify(sessionService).generateSession(anyString(), anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
-                assertEquals(
-                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                var actualSession = sessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
+
+                verify(orchSessionService).addSession(orchSessionCaptor.capture());
+                var actualOrchSession = orchSessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
                 assertEquals(
                         format(
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
@@ -2053,16 +2091,21 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
-                withExistingOrchSession(orchSession);
-                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-                APIGatewayProxyResponseEvent response =
-                        setupExistingSessionAndCookieInHeader(
-                                new Session(SESSION_ID).withBrowserSessionId(null),
-                                BROWSER_SESSION_ID);
+                withExistingSession(session.withBrowserSessionId(null));
+                withExistingOrchSession(orchSession.withBrowserSessionId(null));
+                var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService, never()).generateSession();
+                verify(sessionService, never()).generateSession(anyString(), anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
-                assertNull(sessionCaptor.getValue().getBrowserSessionId());
+                var actualSession = sessionCaptor.getValue();
+                assertEquals(SESSION_ID, actualSession.getSessionId());
+                assertNull(actualSession.getBrowserSessionId());
+
+                verify(orchSessionService).addSession(orchSessionCaptor.capture());
+                var actualOrchSession = orchSessionCaptor.getValue();
+                assertEquals(SESSION_ID, actualOrchSession.getSessionId());
+                assertNull(actualOrchSession.getBrowserSessionId());
+
                 assertEquals(
                         2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
                 assertTrue(
@@ -2084,16 +2127,22 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWhenBSIDsMatch() {
-                withExistingOrchSession(orchSession);
-                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
-                        setupExistingSessionAndCookieInHeader(
-                                new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
-                                BROWSER_SESSION_ID);
+                        makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService, never()).generateSession();
+                verify(sessionService, never()).generateSession(anyString(), anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
-                assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                var actualSession = sessionCaptor.getValue();
+                assertEquals(SESSION_ID, actualSession.getSessionId());
+                assertEquals(BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
+
+                verify(orchSessionService).addSession(orchSessionCaptor.capture());
+                var actualOrchSession = orchSessionCaptor.getValue();
+                assertEquals(SESSION_ID, actualOrchSession.getSessionId());
+                assertEquals(BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
                 assertEquals(
                         format(
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
@@ -2110,16 +2159,22 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
-                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
-                        setupExistingSessionAndCookieInHeader(
-                                new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
-                                DIFFERENT_BROWSER_SESSION_ID);
+                        makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession();
+                verify(sessionService).generateSession(anyString(), anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
-                assertEquals(
-                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                var actualSession = sessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
+
+                verify(orchSessionService).addSession(orchSessionCaptor.capture());
+                var actualOrchSession = orchSessionCaptor.getValue();
+                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
                 assertEquals(
                         format(
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
@@ -2134,15 +2189,13 @@ class AuthorisationHandlerTest {
                                 pair("new_authentication_required", true));
             }
 
-            private APIGatewayProxyResponseEvent setupExistingSessionAndCookieInHeader(
-                    Session existingSession, String browserSessionIdFromCookie) {
+            private void withExistingSession(Session session) {
                 when(sessionService.getSessionFromSessionCookie(any()))
-                        .thenReturn(Optional.ofNullable(existingSession));
-                when(sessionService.generateSession())
-                        .thenReturn(
-                                new Session(NEW_SESSION_ID)
-                                        .withBrowserSessionId(NEW_BROWSER_SESSION_ID));
+                        .thenReturn(Optional.ofNullable(session));
+            }
 
+            private APIGatewayProxyResponseEvent makeRequestWithBSIDInCookie(
+                    String browserSessionIdFromCookie) {
                 Map<String, String> requestParams = buildRequestParams(null);
                 APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
                 event.setRequestContext(
@@ -2159,7 +2212,14 @@ class AuthorisationHandlerTest {
                                             browserSessionIdFromCookie)));
                 }
 
-                return makeHandlerRequest(event);
+                APIGatewayProxyResponseEvent response;
+                try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
+                    idGenerator
+                            .when(IdGenerator::generate)
+                            .thenReturn(NEW_SESSION_ID, NEW_BROWSER_SESSION_ID);
+                    response = makeHandlerRequest(event);
+                }
+                return response;
             }
         }
     }
@@ -2530,7 +2590,7 @@ class AuthorisationHandlerTest {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
             withExistingSession(session);
-            when(sessionService.copySessionForMaxAge(any(Session.class), anyString()))
+            when(sessionService.copySessionForMaxAge(any(Session.class), anyString(), anyString()))
                     .thenCallRealMethod();
         }
 
@@ -2851,7 +2911,7 @@ class AuthorisationHandlerTest {
 
     private void withExistingOrchSession(OrchSessionItem orchSession) {
         when(orchSessionService.getSessionFromSessionCookie(any()))
-                .thenReturn(Optional.of(orchSession));
+                .thenReturn(Optional.ofNullable(orchSession));
         when(orchSessionService.addOrUpdateSessionId(any(), any())).thenReturn(orchSession);
     }
 
