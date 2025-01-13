@@ -25,8 +25,8 @@ module "mfa_reset_jar_signing_jwk" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                     = var.environment
-    MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.name
+    ENVIRONMENT                                   = var.environment
+    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.name
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest"
 

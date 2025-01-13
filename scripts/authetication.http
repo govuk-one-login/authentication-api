@@ -1,0 +1,8 @@
+### AUTH JWKS for storage token public signature verifying key
+GET https://{{jwks-host}}/.well-known/mfa-reset-jwk.json
+
+### AUTH JWKS for IPV requests public signature verifying key
+GET https://{{jwks-host}}/.well-known/reverification-jwk.json
+
+### IPV JWKS Endpoint
+GET https://api.identity.{{env}}.account.gov.uk/.well-known/jwks.json
