@@ -1,5 +1,5 @@
 locals {
-  reverification_jwk_json_endpoint_name = "reverification-jwk.json"
+  reverification_jwk_json_endpoint_name = "reverification-jwks.json"
 }
 
 module "mfa_reset_jar_signing_jwk_role" {
@@ -20,7 +20,7 @@ module "mfa_reset_jar_signing_jwk" {
   source = "../modules/endpoint-module-v2"
 
   endpoint_name   = local.reverification_jwk_json_endpoint_name
-  path_part       = "reverification-jwk.json"
+  path_part       = local.reverification_jwk_json_endpoint_name
   endpoint_method = ["GET"]
   environment     = var.environment
 
