@@ -59,4 +59,4 @@ orch_logout_enabled                         = true
 auth_spot_response_disabled                 = true
 orch_register_enabled                       = true
 orch_storage_token_jwk_enabled              = true
-is_destroy_orch_session_on_sign_out_enabled = false
+is_destroy_orch_session_on_sign_out_enabled = true
