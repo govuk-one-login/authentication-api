@@ -514,7 +514,9 @@ public class AuthorisationHandler
         OrchSessionItem orchSession;
         String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
-            orchSession = new OrchSessionItem(newSessionId);
+            orchSession =
+                    new OrchSessionItem(newSessionId)
+                            .withBrowserSessionId(session.getBrowserSessionId());
             LOG.info("Created new Orch session");
         } else {
             String previousOrchSessionId = orchSessionOptional.get().getSessionId();
