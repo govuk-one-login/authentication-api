@@ -21,8 +21,7 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
 }
 
 resource "aws_api_gateway_rest_api" "di_auth_ext_api" {
-  name   = "${var.environment}-di-auth-ext-api"
-  policy = data.aws_iam_policy_document.di_auth_ext_api_policy_document.json
+  name = "${var.environment}-di-auth-ext-api"
 
   endpoint_configuration {
     types            = ["PRIVATE"]
@@ -32,6 +31,11 @@ resource "aws_api_gateway_rest_api" "di_auth_ext_api" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_api_gateway_rest_api_policy" "di_auth_ext_api_policy" {
+  rest_api_id = aws_api_gateway_rest_api.di_auth_ext_api.id
+  policy      = data.aws_iam_policy_document.di_auth_ext_api_policy_document.json
 }
 
 data "aws_iam_policy_document" "di_auth_ext_api_policy_document" {
@@ -44,7 +48,7 @@ data "aws_iam_policy_document" "di_auth_ext_api_policy_document" {
     }
 
     actions   = ["execute-api:Invoke"]
-    resources = ["execute-api:/*"]
+    resources = ["${aws_api_gateway_rest_api.di_auth_ext_api.execution_arn}/*"]
   }
 
   statement {
@@ -56,7 +60,7 @@ data "aws_iam_policy_document" "di_auth_ext_api_policy_document" {
     }
 
     actions   = ["execute-api:Invoke"]
-    resources = ["execute-api:/*"]
+    resources = ["${aws_api_gateway_rest_api.di_auth_ext_api.execution_arn}/*"]
 
     condition {
       test     = "StringNotEquals"
