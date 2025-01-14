@@ -1087,7 +1087,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldUpdateSharedSessionWhenMaxAge() throws Exception {
+    void shouldUpdateSharedSessionWhenMaxAgeExpired() throws Exception {
         registerClient(
                 CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
         var previousClientSessionId = "a-previous-client-session";
@@ -1122,6 +1122,81 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNotNull(newSession);
         assertEquals(1, newSession.getClientSessions().size());
         assertFalse(newSession.getClientSessions().contains(previousClientSessionId));
+    }
+
+    @Test
+    void shouldReturnInvalidRequestForNegativeMaxAge() throws Exception {
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        var previousClientSessionId = "a-previous-client-session";
+        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(previousSessionId)
+                        .withAuthenticated(true)
+                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var previousSession = orchSessionExtension.getSession(previousSessionId);
+        assertTrue(previousSession.isPresent());
+        assertTrue(previousSession.get().getAuthenticated());
+        assertNull(previousSession.get().getPreviousSessionId());
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
+                        constructQueryStringParameters(
+                                CLIENT_ID, null, "openid", "P2.Cl.Cm", -100L),
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Max+age+is+negative+in+query+params"));
+    }
+
+    @Test
+    void shouldReturnInvalidRequestForNegativeMaxAgeInRequestObject() throws JOSEException {
+        setupForAuthJourney();
+        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), -100);
+
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        signedJWT.serialize(),
+                        "scope",
+                        "openid");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        requestParams,
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Max+age+is+negative+in+request+object"));
     }
 
     private Map<String, String> constructQueryStringParameters(
@@ -1287,6 +1362,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private SignedJWT createSignedJWT(String uiLocales, String claims, List<String> scopes)
             throws JOSEException {
+        return createSignedJWT(uiLocales, claims, scopes, null);
+    }
+
+    private SignedJWT createSignedJWT(
+            String uiLocales, String claims, List<String> scopes, Integer maxAge)
+            throws JOSEException {
         var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
                         .audience("http://localhost/authorize")
@@ -1311,6 +1392,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
         if (uiLocales != null && !uiLocales.isBlank()) {
             jwtClaimsSetBuilder.claim("ui_locales", uiLocales);
+        }
+
+        if (maxAge != null) {
+            jwtClaimsSetBuilder.claim("max_age", maxAge);
         }
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
