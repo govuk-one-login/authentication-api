@@ -66,14 +66,6 @@ Conditions:
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
-  IsDestroySessionOnSignOutEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   IsReturnAuthTimeInIdTokenEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -1564,10 +1556,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          IS_DESTROY_ORCH_SESSION_ON_SIGN_OUT_ENABLED: !If
-            - IsDestroySessionOnSignOutEnabled
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1864,10 +1852,6 @@ Resources:
               storageTokenKeyArn,
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
-          IS_DESTROY_ORCH_SESSION_ON_SIGN_OUT_ENABLED: !If
-            - IsDestroySessionOnSignOutEnabled
-            - true
-            - false
           SUPPORT_MAX_AGE_ENABLED: !If
             - SupportMaxAgeEnabled
             - true
@@ -3424,10 +3408,6 @@ Resources:
                     authEnvironment,
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
-          IS_DESTROY_ORCH_SESSION_ON_SIGN_OUT_ENABLED: !If
-            - IsDestroySessionOnSignOutEnabled
-            - true
-            - false
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
         - !Ref IdentityCredentialsTableWriteAccessPolicy

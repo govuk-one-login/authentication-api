@@ -494,8 +494,4 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }
-
-    public boolean isDestroyOrchSessionOnSignOutEnabled() {
-        return getFlagOrFalse("IS_DESTROY_ORCH_SESSION_ON_SIGN_OUT_ENABLED");
-    }
 }

@@ -338,11 +338,6 @@ public class IntegrationTest {
         }
 
         @Override
-        public boolean isDestroyOrchSessionOnSignOutEnabled() {
-            return true;
-        }
-
-        @Override
         public boolean supportMaxAgeEnabled() {
             return true;
         }
