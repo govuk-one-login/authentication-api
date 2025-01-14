@@ -48,7 +48,7 @@ import static java.lang.String.valueOf;
 import static java.util.Collections.singletonList;
 import static java.util.Map.entry;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 
 public abstract class HandlerIntegrationTest<Q, S> {
     private static final String REDIS_HOST = "localhost";
