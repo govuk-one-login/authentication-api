@@ -1,8 +1,8 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
-import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
@@ -28,6 +28,7 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 public class UserInfoService {
     private final AuthenticationUserInfoStorageService userInfoStorageService;
@@ -98,19 +99,19 @@ public class UserInfoService {
             throws AccessTokenException, ClientNotFoundException {
         UserInfo tmpUserInfo;
         try {
-            var authUserInfo =
-                    userInfoStorageService.getAuthenticationUserInfoData(
+            Optional<UserInfo> userInfoFromStorage =
+                    userInfoStorageService.getAuthenticationUserInfo(
                             accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId());
 
-            if (authUserInfo.isPresent()) {
-                tmpUserInfo = new UserInfo(JSONObjectUtils.parse(authUserInfo.get().getUserInfo()));
-            } else {
+            if (userInfoFromStorage.isEmpty()) {
                 throw new AccessTokenException(
-                        "Unable to find subject", BearerTokenError.INVALID_TOKEN);
+                        "Unable to find user info for subject", BearerTokenError.INVALID_TOKEN);
             }
-        } catch (Exception e) {
+
+            tmpUserInfo = userInfoFromStorage.get();
+        } catch (ParseException e) {
             throw new AccessTokenException(
-                    "Unable to get user info for Subject", BearerTokenError.INVALID_TOKEN);
+                    "Error finding user info for subject", BearerTokenError.INVALID_TOKEN);
         }
 
         // TODO-922: temporary logs for checking all is working as expected

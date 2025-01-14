@@ -6,6 +6,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -23,7 +24,6 @@ import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
@@ -133,7 +133,7 @@ class UserInfoServiceTest {
 
     @Test
     void shouldJustPopulateUserInfoWhenIdentityNotEnabled()
-            throws JOSEException, AccessTokenException, ClientNotFoundException {
+            throws JOSEException, AccessTokenException, ClientNotFoundException, ParseException {
         when(configurationService.isIdentityEnabled()).thenReturn(false);
         accessToken = createSignedAccessToken(null);
         var accessTokenStore =
@@ -162,7 +162,7 @@ class UserInfoServiceTest {
 
     @Test
     void shouldJustPopulateWalletSubjectIdClaimWhenWalletSubjectIdScopeIsPresent()
-            throws JOSEException, AccessTokenException, ClientNotFoundException {
+            throws JOSEException, AccessTokenException, ClientNotFoundException, ParseException {
         givenThereIsUserInfo();
         when(dynamoClientService.getClient(any()))
                 .thenReturn(
@@ -210,7 +210,10 @@ class UserInfoServiceTest {
 
         @Test
         void shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresent()
-                throws JOSEException, AccessTokenException, ClientNotFoundException {
+                throws JOSEException,
+                        AccessTokenException,
+                        ClientNotFoundException,
+                        ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             accessToken = createSignedAccessToken(null);
             var accessTokenStore =
@@ -240,7 +243,10 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabled()
-                throws JOSEException, AccessTokenException, ClientNotFoundException {
+                throws JOSEException,
+                        AccessTokenException,
+                        ClientNotFoundException,
+                        ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()
@@ -312,7 +318,10 @@ class UserInfoServiceTest {
 
         @Test
         void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabled()
-                throws JOSEException, AccessTokenException, ClientNotFoundException {
+                throws JOSEException,
+                        AccessTokenException,
+                        ClientNotFoundException,
+                        ParseException {
             givenThereIsUserInfo();
             when(configurationService.isIdentityEnabled()).thenReturn(false);
             accessToken = createSignedAccessToken(null);
@@ -346,7 +355,10 @@ class UserInfoServiceTest {
 
         @Test
         void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentity()
-                throws JOSEException, AccessTokenException, ClientNotFoundException {
+                throws JOSEException,
+                        AccessTokenException,
+                        ClientNotFoundException,
+                        ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(false);
             accessToken = createSignedAccessToken(null);
             var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
@@ -378,7 +390,10 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresent()
-                throws JOSEException, AccessTokenException, ClientNotFoundException {
+                throws JOSEException,
+                        AccessTokenException,
+                        ClientNotFoundException,
+                        ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()
@@ -568,12 +583,10 @@ class UserInfoServiceTest {
                         Map.of("Environment", "test", "Client", CLIENT_ID, "Claim", v3));
     }
 
-    private void givenThereIsUserInfo() {
-        var testUserInfo =
-                new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
+    private void givenThereIsUserInfo() throws ParseException {
+        var testUserInfo = generateUserInfo();
 
-        when(userInfoStorageService.getAuthenticationUserInfoData(
-                        INTERNAL_PAIRWISE_SUBJECT.getValue()))
+        when(userInfoStorageService.getAuthenticationUserInfo(INTERNAL_PAIRWISE_SUBJECT.getValue()))
                 .thenReturn(Optional.of(testUserInfo));
     }
 }
