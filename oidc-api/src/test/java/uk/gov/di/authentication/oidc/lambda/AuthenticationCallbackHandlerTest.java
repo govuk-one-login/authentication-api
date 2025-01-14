@@ -93,6 +93,10 @@ class AuthenticationCallbackHandlerTest {
                     .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
                     .setAuthenticated(false)
                     .setCurrentCredentialStrength(null);
+    private static final OrchSessionItem ORCH_SESSION =
+            new OrchSessionItem(SESSION_ID)
+                    .withAuthenticated(false)
+                    .withCurrentCredentialStrength(null);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -169,10 +173,10 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
                 .thenReturn(null);
-        when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any()))
+        when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any(), any()))
                 .thenAnswer(
                         args -> {
-                            var errorRedirectUri = (URI) args.getArgument(3);
+                            var errorRedirectUri = (URI) args.getArgument(4);
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
                                     .withHeaders(
@@ -348,7 +352,7 @@ class AuthenticationCallbackHandlerTest {
 
         verify(logoutService, times(1))
                 .handleReauthenticationFailureLogout(
-                        eq(session), eq(event), eq(CLIENT_ID.toString()), any());
+                        eq(session), eq(ORCH_SESSION), eq(event), eq(CLIENT_ID.toString()), any());
 
         verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
     }
@@ -695,7 +699,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                session, ORCH_SESSION, event, CLIENT_ID.toString(), intervention);
             }
 
             @Test
@@ -709,7 +713,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                session, ORCH_SESSION, event, CLIENT_ID.toString(), intervention);
             }
 
             @Test
@@ -723,7 +727,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                session, ORCH_SESSION, event, CLIENT_ID.toString(), intervention);
             }
 
             @Test
@@ -758,7 +762,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.getValue(), intervention);
+                                session, ORCH_SESSION, event, CLIENT_ID.getValue(), intervention);
             }
         }
 
@@ -791,6 +795,7 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 any(),
+                                any(),
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
@@ -809,7 +814,8 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                any(), any(), any(), any(), eq(intervention));
                 verifyNoInteractions(initiateIPVAuthorisationService);
                 verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
                 verify(orchSessionService, times(2))
@@ -836,6 +842,7 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 any(),
+                                any(),
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
@@ -854,7 +861,8 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                any(), any(), any(), any(), eq(intervention));
                 verifyNoInteractions(initiateIPVAuthorisationService);
                 verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
             }
@@ -871,6 +879,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(initiateIPVAuthorisationService)
                         .sendRequestToIPV(
+                                any(),
                                 any(),
                                 any(),
                                 any(),
@@ -897,7 +906,8 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                any(), any(), any(), any(), eq(intervention));
                 verifyNoInteractions(initiateIPVAuthorisationService);
             }
         }
@@ -1126,12 +1136,7 @@ class AuthenticationCallbackHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
-        when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchSessionItem(SESSION_ID)
-                                        .withAuthenticated(false)
-                                        .withCurrentCredentialStrength(null)));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(ORCH_SESSION));
     }
 
     private void usingValidClientSession() {
