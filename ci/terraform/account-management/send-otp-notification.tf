@@ -60,6 +60,10 @@ module "send_otp_notification" {
   lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  lambda_layers = local.lambda_layers
+
+  authentication_vpc_arn = local.vpc_arn
+
   security_group_ids = [
     local.allow_aws_service_access_security_group_id,
     aws_security_group.allow_access_to_am_redis.id,

@@ -37,6 +37,8 @@ resource "aws_lambda_function" "authorizer" {
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  layers = local.lambda_layers
+
   publish     = true
   timeout     = 30
   memory_size = local.authorizer_memory_size

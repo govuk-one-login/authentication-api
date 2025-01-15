@@ -63,6 +63,12 @@ variable "lambda_zip_file" {
   type        = string
 }
 
+variable "lambda_dependencies_zip_file" {
+  default     = "../../../account-management-api/build/distributions/account-management-api-dependencies.zip"
+  description = "Location of the Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "logging_endpoint_arns" {
   type        = list(string)
   default     = []
