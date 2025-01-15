@@ -5,7 +5,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 
 import java.util.Optional;
@@ -27,26 +26,18 @@ class AuthenticationUserInfoStorageServiceIntegrationTest {
 
         userInfoExtension.addAuthenticationUserInfoData(SUBJECT_ID, userInfo);
 
-        Optional<AuthenticationUserInfo> retrievedUserInfoData =
-                userInfoExtension.getUserInfoBySubjectId(SUBJECT_ID);
+        Optional<UserInfo> retrievedUserInfo =
+                userInfoExtension.getAuthenticationUserInfo(SUBJECT_ID);
 
-        UserInfo retrievedUserInfo =
-                userInfoExtension.getAuthenticationUserInfo(SUBJECT_ID).orElseThrow();
-
-        assertThat(retrievedUserInfoData.isPresent(), equalTo(true));
-        assertThat(retrievedUserInfoData.get().getSubjectID(), equalTo(SUBJECT_ID));
-
-        assertThat(retrievedUserInfo.getSubject().getValue(), equalTo(SUBJECT_ID));
+        assertThat(retrievedUserInfo.isPresent(), equalTo(true));
+        assertThat(retrievedUserInfo.get().getSubject().getValue(), equalTo(SUBJECT_ID));
     }
 
     @Test
     void shouldReturnOptionalEmptyWhenNoUserInfo() throws ParseException {
-        Optional<AuthenticationUserInfo> retrievedUserInfoData =
-                userInfoExtension.getUserInfoBySubjectId(SUBJECT_ID);
         Optional<UserInfo> retrievedUserInfo =
                 userInfoExtension.getAuthenticationUserInfo(SUBJECT_ID);
 
-        assertThat(retrievedUserInfoData.isEmpty(), equalTo(true));
         assertThat(retrievedUserInfo.isEmpty(), equalTo(true));
     }
 }

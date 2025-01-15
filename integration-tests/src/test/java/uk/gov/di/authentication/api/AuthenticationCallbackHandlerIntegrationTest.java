@@ -17,6 +17,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +32,6 @@ import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService
 import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
 import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
@@ -82,7 +82,6 @@ import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -164,7 +163,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldStoreUserInfoAndRedirectToRpWhenSuccessfullyProcessedCallbackResponse() {
+    void shouldStoreUserInfoAndRedirectToRpWhenSuccessfullyProcessedCallbackResponse()
+            throws ParseException {
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -177,7 +177,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWithErrorWhenStateIsInvalid() {
+    void shouldRedirectToRpWithErrorWhenStateIsInvalid() throws ParseException {
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -200,9 +200,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 txmaAuditQueue,
                 List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
 
-        Optional<AuthenticationUserInfo> userInfoDbEntry =
-                userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
-        assertFalse(userInfoDbEntry.isPresent());
+        Optional<UserInfo> userInfo =
+                userInfoStoreExtension.getAuthenticationUserInfo(SUBJECT_ID.getValue());
+        assertTrue(userInfo.isEmpty());
     }
 
     @Test
@@ -282,7 +282,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenAccountStatusIsNoIntervention() throws Json.JsonException {
+    void shouldRedirectToRpWhenAccountStatusIsNoIntervention()
+            throws Json.JsonException, ParseException {
         accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
@@ -377,7 +378,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity() throws Json.JsonException {
+    void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity()
+            throws Json.JsonException, ParseException {
         accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
@@ -427,7 +429,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
-                    throws Json.JsonException {
+                    throws Json.JsonException, ParseException {
         accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
@@ -453,7 +455,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
-                    throws Json.JsonException {
+                    throws Json.JsonException, ParseException {
         accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
@@ -520,7 +522,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenFieldsAreMissingInResponse() throws Json.JsonException {
+    void shouldRedirectToRpWhenFieldsAreMissingInResponse()
+            throws Json.JsonException, ParseException {
         accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithoutOptionalFields(
@@ -796,7 +799,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Test
         void
                 updatesOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdMatchesAuthUserInfoResponse()
-                        throws Json.JsonException {
+                        throws Json.JsonException, ParseException {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
@@ -820,7 +823,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Test
         void
                 doesNotUpdateOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse()
-                        throws Json.JsonException {
+                        throws Json.JsonException, ParseException {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
@@ -975,7 +978,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED));
     }
 
-    private void assertUserInfoStoredAndRedirectedToRp(APIGatewayProxyResponseEvent response) {
+    private void assertUserInfoStoredAndRedirectedToRp(APIGatewayProxyResponseEvent response)
+            throws ParseException {
         assertThat(response, hasStatus(302));
 
         URI redirectLocationHeader =
@@ -998,11 +1002,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         OidcAuditableEvent.AUTH_CODE_ISSUED));
 
-        Optional<AuthenticationUserInfo> userInfoDbEntry =
-                userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
-        assertTrue(userInfoDbEntry.isPresent());
-        assertEquals(SUBJECT_ID.getValue(), userInfoDbEntry.get().getSubjectID());
-        assertThat(userInfoDbEntry.get().getUserInfo(), containsString("new_account"));
+        Optional<UserInfo> userInfo =
+                userInfoStoreExtension.getAuthenticationUserInfo(SUBJECT_ID.getValue());
+        assertTrue(userInfo.isPresent());
+        assertEquals(SUBJECT_ID, userInfo.get().getSubject());
+        assertEquals(true, userInfo.get().getBooleanClaim("new_account"));
     }
 
     private void assertOrchSessionIsUpdatedWithUserInfoClaims() {
