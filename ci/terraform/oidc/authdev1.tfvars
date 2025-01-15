@@ -2,9 +2,6 @@ environment                                 = "authdev1"
 shared_state_bucket                         = "di-auth-development-tfstate"
 test_clients_enabled                        = "true"
 ipv_api_enabled                             = true
-ipv_authorisation_callback_uri              = ""
-ipv_authorisation_uri                       = ""
-ipv_authorisation_client_id                 = ""
 logging_endpoint_enabled                    = false
 logging_endpoint_arns                       = []
 account_intervention_service_call_enabled   = true
@@ -14,6 +11,26 @@ send_storage_token_to_ipv_enabled           = true
 call_ticf_cri                               = true
 support_reauth_signout_enabled              = true
 authentication_attempts_service_enabled     = true
+
+
+ipv_backend_uri                 = "https://ipvstub.signin.authdev1.dev.account.gov.uk"
+ipv_authorisation_uri           = "https://ipvstub.signin.authdev1.dev.account.gov.uk/authorize/"
+ipv_auth_authorize_callback_uri = "https://signin.authdev1.dev.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_client_id    = "authTestClient"
+
+# The IPV public encrypting key that is specific to auth
+
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArJ8oZkHs+ReeZcUsIeWm
+bwigustlHH8Qlsb/3SAK1wPb2muVRtQPZjF9TGnu8cof9pHdOo1blpvr8NNTKKTW
+D+gQRi9NzlPEVWS0Uo7PFNb0CJ4Vzd5Qgrc8GMc35lcgF3UBNFdcLErfr8Mi1/qO
+zld/NBsLCgG/lQ/s8uoNv9jBtwKko+vR1OPt4ziGL2+OfOU5W6U8gwGexcpNEANx
+95gokzduQTMQUAuOvM/rQMKYGjUqKbiQyB89Y9o3b6SDF32tEkNkyfJ4tiEYJmrq
+V3/gq1/DRbG7neNvo/klcojjdmBsrn7eIb310NDJhAvS3CPcWnrcYRFZMdkBNikY
+9QIDAQAB
+-----END PUBLIC KEY-----
+EOT
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
