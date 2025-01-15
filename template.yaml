@@ -89,7 +89,13 @@ Conditions:
       !Equals [staging, !Ref Environment],
     ]
   UseBrowserSessionIdStoredInOrchSession:
-    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
