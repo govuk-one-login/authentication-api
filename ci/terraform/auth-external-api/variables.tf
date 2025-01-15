@@ -19,6 +19,12 @@ variable "auth_ext_lambda_zip_file" {
   type        = string
 }
 
+variable "auth_ext_lambda_dependencies_zip_file" {
+  default     = "../../../auth-external-api/build/distributions/auth-external-api-dependencies.zip"
+  description = "Location of the Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "aws_region" {
   default = "eu-west-2"
   type    = string
