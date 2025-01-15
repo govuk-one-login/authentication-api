@@ -10,6 +10,12 @@ variable "lambda_zip_file" {
   type        = string
 }
 
+variable "lambda_dependencies_zip_file" {
+  default     = "../../../delivery-receipts-api/build/distributions/delivery-receipts-api-dependencies.zip"
+  description = "Location of the Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "common_state_bucket" {
   type    = string
   default = "digital-identity-dev-tfstate"

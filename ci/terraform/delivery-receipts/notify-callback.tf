@@ -38,6 +38,10 @@ module "notify_callback" {
   lambda_zip_file_version = aws_s3_object.delivery_receipts_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  lambda_layers = local.lambda_layers
+
+  authentication_vpc_arn = local.authentication_vpc_arn
+
   security_group_ids = [
     local.allow_aws_service_access_security_group_id,
   ]
