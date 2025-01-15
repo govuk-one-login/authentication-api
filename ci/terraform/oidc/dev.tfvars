@@ -1,15 +1,25 @@
-oidc_api_lambda_zip_file             = "./artifacts/oidc-api.zip"
-frontend_api_lambda_zip_file         = "./artifacts/frontend-api.zip"
-client_registry_api_lambda_zip_file  = "./artifacts/client-registry-api.zip"
+oidc_api_lambda_zip_file              = "./artifacts/oidc-api.zip"
+oidc_api_lambda_dependencies_zip_file = "./artifacts/oidc-api-dependencies.zip"
+
+frontend_api_lambda_zip_file              = "./artifacts/frontend-api.zip"
+frontend_api_lambda_dependencies_zip_file = "./artifacts/frontend-api-dependencies.zip"
+
+client_registry_api_lambda_zip_file              = "./artifacts/client-registry-api.zip"
+client_registry_api_lambda_dependencies_zip_file = "./artifacts/client-registry-api-dependencies.zip"
+
 ipv_api_lambda_zip_file              = "./artifacts/ipv-api.zip"
-doc_checking_app_api_lambda_zip_file = "./artifacts/doc-checking-app-api.zip"
-logging_endpoint_arn                 = ""
-logging_endpoint_arns                = []
-shared_state_bucket                  = "di-auth-development-tfstate"
-test_clients_enabled                 = true
-internal_sector_uri                  = "https://identity.dev.account.gov.uk"
-call_ticf_cri                        = true
-ipv_backend_uri                      = "https://ipvstub.signin.dev.account.gov.uk"
+ipv_api_lambda_dependencies_zip_file = "./artifacts/ipv-api-dependencies.zip"
+
+doc_checking_app_api_lambda_zip_file              = "./artifacts/doc-checking-app-api.zip"
+doc_checking_app_api_lambda_dependencies_zip_file = "./artifacts/doc-checking-app-api-dependencies.zip"
+
+logging_endpoint_arn  = ""
+logging_endpoint_arns = []
+shared_state_bucket   = "di-auth-development-tfstate"
+test_clients_enabled  = true
+internal_sector_uri   = "https://identity.dev.account.gov.uk"
+call_ticf_cri         = true
+ipv_backend_uri       = "https://ipvstub.signin.dev.account.gov.uk"
 
 # AUTH to IPV reverification
 # Shared with orch

@@ -43,6 +43,10 @@ module "register" {
   lambda_zip_file_version = aws_s3_object.client_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  lambda_layers = [
+    module.client_registry_lambda_dependencies_layer.arn
+  ]
+
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.client_registry_role.arn

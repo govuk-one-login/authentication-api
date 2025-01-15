@@ -82,6 +82,10 @@ module "token" {
   lambda_zip_file_version = aws_s3_object.oidc_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  lambda_layers = [
+    module.oidc_api_lambda_dependencies_layer.arn
+  ]
+
   security_group_ids = [
     local.authentication_security_group_id,
     local.authentication_oidc_redis_security_group_id,

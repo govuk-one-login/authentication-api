@@ -30,6 +30,10 @@ resource "aws_lambda_function" "orch_frontend_authorizer" {
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  layers = [
+    module.oidc_api_lambda_dependencies_layer.arn
+  ]
+
   publish     = true
   timeout     = 30
   memory_size = local.authorizer_memory_size

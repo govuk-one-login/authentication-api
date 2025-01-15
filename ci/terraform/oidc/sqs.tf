@@ -165,6 +165,10 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  layers = [
+    module.frontend_api_lambda_dependencies_layer.arn
+  ]
+
   vpc_config {
     security_group_ids = [local.authentication_egress_security_group_id]
     subnet_ids         = local.authentication_private_subnet_ids

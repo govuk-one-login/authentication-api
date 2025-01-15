@@ -4,9 +4,21 @@ variable "oidc_api_lambda_zip_file" {
   type        = string
 }
 
+variable "oidc_api_lambda_dependencies_zip_file" {
+  default     = "../../../oidc-api/build/distributions/oidc-api-dependencies.zip"
+  description = "Location of the OIDC API Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "frontend_api_lambda_zip_file" {
   default     = "../../../frontend-api/build/distributions/frontend-api.zip"
   description = "Location of the Frontend API Lambda ZIP file"
+  type        = string
+}
+
+variable "frontend_api_lambda_dependencies_zip_file" {
+  default     = "../../../frontend-api/build/distributions/frontend-api-dependencies.zip"
+  description = "Location of the Frontend API Lambda dependencies ZIP file"
   type        = string
 }
 
@@ -16,15 +28,33 @@ variable "client_registry_api_lambda_zip_file" {
   type        = string
 }
 
+variable "client_registry_api_lambda_dependencies_zip_file" {
+  default     = "../../../client-registry-api/build/distributions/client-registry-api-dependencies.zip"
+  description = "Location of the client registry API Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "ipv_api_lambda_zip_file" {
   default     = "../../../ipv-api/build/distributions/ipv-api.zip"
   description = "Location of the ipv API Lambda ZIP file"
   type        = string
 }
 
+variable "ipv_api_lambda_dependencies_zip_file" {
+  default     = "../../../ipv-api/build/distributions/ipv-api-dependencies.zip"
+  description = "Location of the ipv API Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "doc_checking_app_api_lambda_zip_file" {
   default     = "../../../doc-checking-app-api/build/distributions/doc-checking-app-api.zip"
   description = "Location of the doc checking app API Lambda ZIP file"
+  type        = string
+}
+
+variable "doc_checking_app_api_lambda_dependencies_zip_file" {
+  default     = "../../../doc-checking-app-api/build/distributions/doc-checking-app-api-dependencies.zip"
+  description = "Location of the doc checking app API Lambda dependencies ZIP file"
   type        = string
 }
 

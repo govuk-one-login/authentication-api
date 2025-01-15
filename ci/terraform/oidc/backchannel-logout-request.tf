@@ -27,6 +27,10 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
+  layers = [
+    module.oidc_api_lambda_dependencies_layer.arn
+  ]
+
   environment {
     variables = merge({
       ENVIRONMENT                      = var.environment
