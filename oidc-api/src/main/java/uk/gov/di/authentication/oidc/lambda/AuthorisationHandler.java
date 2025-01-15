@@ -776,37 +776,19 @@ public class AuthorisationHandler
         return newSession;
     }
 
-    private Optional<Long> getMaxAge(AuthenticationRequest authRequest) {
-        int maxAgeParam;
-        try {
-            if (Objects.isNull(authRequest.getRequestObject())) {
-                maxAgeParam = authRequest.getMaxAge();
-                // Nimbus returns -1 if max age parameter is not present
-                if (maxAgeParam == -1) {
-                    return Optional.empty();
-                }
-            } else {
-                String maxAgeClaim =
-                        authRequest.getRequestObject().getJWTClaimsSet().getStringClaim("max_age");
-                if (Objects.isNull(maxAgeClaim)) {
-                    return Optional.empty();
-                }
-                maxAgeParam = Integer.parseInt(maxAgeClaim);
-            }
-            if (maxAgeParam < 0) {
-                LOG.error("Max age parameter is negative in auth request");
-                return Optional.empty();
-            }
-            return Optional.of((long) maxAgeParam);
-        } catch (Exception e) {
-            LOG.error(
-                    "Failed to parse max age param from auth request, assuming no max age parameter. Error: {}",
-                    e.getMessage());
+    private Optional<Integer> getMaxAge(AuthenticationRequest authRequest) {
+        // We call getMaxAge on both query params and request objects as
+        // we've persisted the value to the top level when calling
+        // RequestObjectToAuthRequestHelper.transform
+        var maxAge = authRequest.getMaxAge();
+
+        if (maxAge == -1) {
+            // Nimbus returns -1 for no max_age parameter
             return Optional.empty();
-        }
+        } else return Optional.of(maxAge);
     }
 
-    private boolean maxAgeExpired(Long authTime, Optional<Long> maxAge, long timeNow) {
+    private boolean maxAgeExpired(Long authTime, Optional<Integer> maxAge, long timeNow) {
         if (maxAge.isEmpty()) return false;
         if (authTime == null) {
             LOG.error(

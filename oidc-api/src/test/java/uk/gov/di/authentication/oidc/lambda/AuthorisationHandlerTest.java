@@ -2660,8 +2660,6 @@ class AuthorisationHandlerTest {
                     arguments(recentAuthTime - 1000, "800", true),
                     arguments(recentAuthTime - 1000, "1800", false),
                     arguments(recentAuthTime, "-1", false),
-                    arguments(recentAuthTime, "-12345", false),
-                    arguments(recentAuthTime, "-12345", false),
                     arguments(null, "1800", false),
                     arguments(99999999999L, "1800", false),
                     arguments(-123L, "1800", false));

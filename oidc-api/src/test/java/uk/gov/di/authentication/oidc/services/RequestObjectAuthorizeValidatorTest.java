@@ -148,6 +148,32 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
+    void shouldSuccessfullyProcessRequestObjectWithNumericalMaxAge()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        scopes.add("doc-checking-app");
+        var scope = Scope.parse(scopes);
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", scope.toString())
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", 1800)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+
+        assertThat(requestObjectError, equalTo(Optional.empty()));
+    }
+
+    @Test
     void shouldThrowWhenRedirectUriIsInvalid() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -703,7 +729,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidMaxAge()
+    void shouldReturnErrorForNegativeMaxAgeString()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -716,6 +742,54 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("max_age", "-5")
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidMaxAgeString()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "NotANumber")
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldReturnErrorForNegativedMaxAgeInteger()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", -5)
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = service.validate(authRequest);

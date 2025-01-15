@@ -79,6 +79,11 @@ public class RequestObjectToAuthRequestHelper {
             if (Objects.nonNull(jwtClaimsSet.getClaim("nonce"))) {
                 builder.nonce(Nonce.parse(jwtClaimsSet.getStringClaim("nonce")));
             }
+
+            if (Objects.nonNull(jwtClaimsSet.getClaim("max_age"))) {
+                builder.maxAge(getMaxAge(jwtClaimsSet));
+            }
+
             return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | Json.JsonException e) {
             LOG.error("Parse exception thrown whilst converting RequestObject to Auth Request", e);
@@ -116,6 +121,23 @@ public class RequestObjectToAuthRequestHelper {
             return parseClaimsAsJson(claimsSet);
         } catch (java.text.ParseException e) {
             return parseClaimsAsString(claimsSet);
+        }
+    }
+
+    private static Integer getMaxAge(JWTClaimsSet claimsSet) {
+        try {
+            return claimsSet.getIntegerClaim("max_age");
+        } catch (java.text.ParseException e) {
+            return parseStringMaxAge(claimsSet);
+        }
+    }
+
+    private static Integer parseStringMaxAge(JWTClaimsSet claimsSet) {
+        try {
+            var stringMaxAge = claimsSet.getStringClaim("max_age");
+            return Integer.parseInt(stringMaxAge);
+        } catch (java.text.ParseException e) {
+            throw new IllegalArgumentException("Max age claim is could not be parsed to integer");
         }
     }
 
