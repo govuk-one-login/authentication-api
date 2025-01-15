@@ -260,15 +260,12 @@ public class TokenService {
 
         LOG.info("Storage token being created with JWTID: {}", jwtID);
 
-        List<String> aud =
-                List.of(
-                        configService.getCredentialStoreURI().toString(),
-                        configService.getIPVAudience());
+        List<String> aud = List.of(configService.getEVCSAudience(), configService.getIPVAudience());
 
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", "reverification")
-                        .issuer(configService.getFrontendBaseUrl())
+                        .issuer(configService.getAuthIssuerClaimForEVCS())
                         .audience(aud)
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())

@@ -1,6 +1,6 @@
 {
   "aud": [
-    "https://credential-store.account.gov.uk",
+    "https://credential-store.test.account.gov.uk",
     "https://identity.test.account.gov.uk"
   ],
   "sub": "urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0",

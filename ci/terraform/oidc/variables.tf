@@ -309,6 +309,16 @@ variable "client_registry_api_enabled" {
   default = true
 }
 
+variable "evcs_audience" {
+  type    = string
+  default = "undefined"
+}
+
+variable "auth_issuer_claim_for_evcs" {
+  type    = string
+  default = "undefined"
+}
+
 variable "ipv_api_enabled" {
   default = false
 }

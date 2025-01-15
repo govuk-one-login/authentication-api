@@ -651,6 +651,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("AUTH_ISSUER_CLAIM", "");
     }
 
+    public String getAuthIssuerClaimForEVCS() {
+        return System.getenv().getOrDefault("AUTH_ISSUER_CLAIM_FOR_EVCS", "");
+    }
+
+    public String getEVCSAudience() {
+        return System.getenv().getOrDefault("EVCS_AUDIENCE", "");
+    }
+
     public URI getMfaResetCallbackURI() {
         return getURIOrDefault("MFA_RESET_CALLBACK_URI", "");
     }
