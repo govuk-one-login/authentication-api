@@ -39,6 +39,8 @@ module "mfa_reset_authorize" {
     REDIS_KEY                                     = local.redis_key,
     TXMA_AUDIT_QUEUE_URL                          = module.oidc_txma_audit.queue_url
     IPV_PUBLIC_ENCRYPTION_KEY                     = var.auth_frontend_api_to_ipv_public_encryption_key
+    EVCS_AUDIENCE                                 = var.evcs_audience
+    AUTH_ISSUER_CLAIM_FOR_EVCS                    = var.auth_issuer_claim_for_evcs
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler::handleRequest"

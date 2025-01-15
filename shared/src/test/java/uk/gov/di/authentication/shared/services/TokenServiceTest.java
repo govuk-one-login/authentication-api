@@ -53,7 +53,6 @@ import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -117,6 +116,7 @@ public class TokenServiceTest {
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
     private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
     private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
+    private static final String EVCS_AUDIENCE = "https://credential-store.test.account.gov.uk";
 
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -190,8 +190,7 @@ public class TokenServiceTest {
 
     @Test
     void shouldGenerateWellFormedStorageTokenForMfaReset() throws JOSEException, ParseException {
-        when(configurationService.getCredentialStoreURI())
-                .thenReturn(URI.create(CREDENTIAL_STORE_URI));
+        when(configurationService.getEVCSAudience()).thenReturn(EVCS_AUDIENCE);
         when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
         createSignedToken();
 
