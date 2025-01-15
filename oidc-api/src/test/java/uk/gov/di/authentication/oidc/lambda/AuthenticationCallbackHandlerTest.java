@@ -1029,7 +1029,7 @@ class AuthenticationCallbackHandlerTest {
                         throws UnsuccessfulCredentialResponseException {
             var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
             var sharedSession = withMaxAgeSharedSession();
-            withPreviousOrchSessionDueToMaxAge();
+            var previousOrchSession = withPreviousOrchSessionDueToMaxAge();
             var previousSharedSession = withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
@@ -1057,16 +1057,20 @@ class AuthenticationCallbackHandlerTest {
             verify(sessionService, times(2))
                     .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
 
-            verify(logoutService, times(1)).handleMaxAgeLogout(previousSharedSession);
+            verify(logoutService, times(1))
+                    .handleMaxAgeLogout(
+                            eq(previousSharedSession),
+                            eq(previousOrchSession),
+                            any(TxmaAuditUser.class));
         }
 
-        private void withPreviousOrchSessionDueToMaxAge() {
+        private OrchSessionItem withPreviousOrchSessionDueToMaxAge() {
+            var previousOrchSession =
+                    new OrchSessionItem(PREVIOUS_SESSION_ID)
+                            .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
             when(orchSessionService.getSession(PREVIOUS_SESSION_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new OrchSessionItem(PREVIOUS_SESSION_ID)
-                                            .withInternalCommonSubjectId(
-                                                    INTERNAL_COMMON_SUBJECT_ID)));
+                    .thenReturn(Optional.of(previousOrchSession));
+            return previousOrchSession;
         }
 
         private Session withPreviousSharedSessionDueToMaxAge() {
