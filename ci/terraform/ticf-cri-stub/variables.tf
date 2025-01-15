@@ -63,6 +63,12 @@ variable "ticf_cri_stub_release_zip_file" {
   type        = string
 }
 
+variable "ticf_cri_stub_dependencies_zip_file" {
+  default     = "../../../ticf-cri-stub/build/distributions/ticf-cri-stub-dependencies.zip"
+  description = "Location of the Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "dynamo_deletion_protection_enabled" {
   type    = bool
   default = false
