@@ -28,7 +28,7 @@ module "mfa_reset_authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    AUTH_ISSUER_CLAIM                             = "https://${local.frontend_fqdn}/",
+    AUTH_ISSUER_CLAIM                             = "auth",
     ENVIRONMENT                                   = var.environment,
     IPV_AUDIENCE                                  = var.ipv_audience,
     IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_auth_authorize_client_id,
