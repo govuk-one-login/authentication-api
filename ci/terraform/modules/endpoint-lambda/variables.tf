@@ -195,3 +195,8 @@ variable "runbook_link" {
   type        = string
   default     = null
 }
+
+variable "lambda_layers" {
+  type    = list(string)
+  default = []
+}

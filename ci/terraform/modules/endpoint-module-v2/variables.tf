@@ -202,3 +202,9 @@ variable "runbook_link" {
   type        = string
   default     = null
 }
+
+variable "lambda_layers" {
+  description = "List of Lambda layers to attach to the Lambda function"
+  type        = list(string)
+  default     = []
+}
