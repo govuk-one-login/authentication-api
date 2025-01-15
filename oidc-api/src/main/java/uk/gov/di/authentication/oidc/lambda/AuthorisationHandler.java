@@ -393,14 +393,28 @@ public class AuthorisationHandler
         var vtrList = getVtrList(reauthRequested, authRequest);
         var requestedCredentialTrustLevel = VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
 
+        var auditEventExtensions =
+                new ArrayList<>(
+                        List.of(
+                                pair("rpSid", getRpSid(authRequest)),
+                                pair("identityRequested", identityRequested),
+                                pair("reauthRequested", reauthRequested),
+                                pair(
+                                        "credential_trust_level",
+                                        requestedCredentialTrustLevel.toString())));
+
+        var maxAgeParam = getMaxAge(authRequest);
+        if (configurationService.supportMaxAgeEnabled()
+                && client.getMaxAgeEnabled()
+                && maxAgeParam.isPresent()) {
+            auditEventExtensions.add(pair("maximumSessionAge", maxAgeParam.get()));
+        }
+
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                 authRequest.getClientID().getValue(),
                 user,
-                pair("rpSid", getRpSid(authRequest)),
-                pair("identityRequested", identityRequested),
-                pair("reauthRequested", reauthRequested),
-                pair("credential_trust_level", requestedCredentialTrustLevel.toString()));
+                auditEventExtensions.toArray(AuditService.MetadataPair[]::new));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
         Optional<OrchSessionItem> orchSessionOptional =
