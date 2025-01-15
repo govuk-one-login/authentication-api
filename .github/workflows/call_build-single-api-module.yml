@@ -48,8 +48,11 @@ jobs:
     timeout-minutes: 60
     env:
       ARTIFACT_HAS_CHANGED: true # preset to true, so that the artifact is uploaded on the first run of this workflow
+      DEPS_ARTIFACT_HAS_CHANGED: true # preset to true, so that the artifact is uploaded on the first run of this workflow
       SIGNED_OBJECT_KEY: "" # preset to empty string, so the linter doesn't complain about it being undefined
+      DEPS_SIGNED_OBJECT_KEY: "" # preset to empty string, so the linter doesn't complain about it being undefined
       ARTIFACT_COMMIT_SHA: ${{ github.sha }}
+      DEPS_ARTIFACT_COMMIT_SHA: ${{ github.sha }}
     outputs:
       code_sha: ${{ steps.create_artifacts.outputs.code_sha }}
       signed_object_key: ${{ steps.create_artifacts.outputs.signed_object_key }}
@@ -83,11 +86,14 @@ jobs:
         run: |
           ./gradlew --no-daemon :${{ inputs.module_name }}:buildZip
 
-          echo "Zip built successfully. Calculating sha256sum..."
+          echo "Zips built successfully. Calculating sha256sum..."
           sha256sum ${{ inputs.module_name }}/build/distributions/${{ inputs.module_name }}.zip
+          sha256sum ${{ inputs.module_name }}/build/distributions/${{ inputs.module_name }}-dependencies.zip
 
           SHA="$(sha256sum ${{ inputs.module_name }}/build/distributions/${{ inputs.module_name }}.zip | cut -d ' ' -f 1)"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          DEPS_SHA="$(sha256sum ${{ inputs.module_name }}/build/distributions/${{ inputs.module_name }}-dependencies.zip | cut -d ' ' -f 1)"
+          echo "deps_sha=$DEPS_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Query dynamodb for previous artifact
         id: query_dynamodb
@@ -111,6 +117,28 @@ jobs:
             echo "::warning title=${{ inputs.module_name }}::${{ inputs.module_name }} module has changed, using the new artifact"
           fi
 
+      - name: Query dynamodb for previous dependencies artifact
+        id: query_dynamodb_deps
+        run: |
+          PREVIOUS_SIGNED="$(aws dynamodb get-item \
+            --table-name ${{ inputs.lookup_table }} \
+            --key '{"module_name": {"S": "${{ inputs.module_name }}-dependencies"}, "artifact_hash": {"S": "${{ steps.build.outputs.deps_sha }}"}}')"
+
+          if [ -n "${PREVIOUS_SIGNED}" ]; then
+            PREVIOUS_KEY="$(echo "${PREVIOUS_SIGNED}" | jq '.Item.signed_object_key.S' -r)"
+            PREVIOUS_COMMIT_SHA="$(echo "${PREVIOUS_SIGNED}" | jq '.Item.commit_sha.S' -r)"
+            echo "Found previous dependencies artifact in DynamoDB table: ${PREVIOUS_COMMIT_SHA}"
+            {
+              echo "DEPS_SIGNED_OBJECT_KEY=$PREVIOUS_KEY"
+              echo "DEPS_ARTIFACT_COMMIT_SHA=$PREVIOUS_COMMIT_SHA"
+              echo "DEPS_ARTIFACT_HAS_CHANGED=false"
+            } >> "$GITHUB_ENV"
+          else
+            echo "No previous dependencies artifact found in DynamoDB table"
+            echo 'DEPS_ARTIFACT_HAS_CHANGED=true' >> "$GITHUB_ENV"
+            echo "::warning title=${{ inputs.module_name }}::${{ inputs.module_name }} module dependencies have changed, using the new artifact"
+          fi
+
       - name: Ensure previous artifact still exists
         if: env.ARTIFACT_HAS_CHANGED == 'false'
         run: |
@@ -126,6 +154,23 @@ jobs:
             echo "::warning title=${{ inputs.module_name }}::${{ inputs.module_name }} module has changed, using the new artifact"
           else
             echo "::notice title=${{ inputs.module_name }}::${{ inputs.module_name }} module has not changed, reusing artifact from commit ${{ env.ARTIFACT_COMMIT_SHA }}"
+          fi
+
+      - name: Ensure previous dependencies artifact still exists
+        if: env.DEPS_ARTIFACT_HAS_CHANGED == 'false'
+        run: |
+          if ! aws s3api head-object \
+            --bucket ${{ inputs.destination_bucket }} \
+            --key ${{ env.DEPS_SIGNED_OBJECT_KEY }}
+          then
+            echo "Previous dependencies artifact no longer exists in S3 bucket, reuploading and resigning artifact. Deleting record from DynamoDB table..."
+            aws dynamodb delete-item \
+              --table-name ${{ inputs.lookup_table }} \
+              --key '{"module_name": {"S": "${{ inputs.module_name }}-dependencies"}, "artifact_hash": {"S": "${{ steps.build.outputs.deps_sha }}"}}'
+            echo 'DEPS_ARTIFACT_HAS_CHANGED=true' >> "$GITHUB_ENV"
+            echo "::warning title=${{ inputs.module_name }}::${{ inputs.module_name }} module dependencies have changed, using the new artifact"
+          else
+            echo "::notice title=${{ inputs.module_name }}::${{ inputs.module_name }} module dependencies have not changed, reusing artifact from commit ${{ env.DEPS_ARTIFACT_COMMIT_SHA }}"
           fi
 
       - name: Upload ${{ inputs.module_name }} to source bucket
@@ -144,22 +189,59 @@ jobs:
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Run signing job for ${{ inputs.module_name }}
-        if: env.ARTIFACT_HAS_CHANGED == 'true'
+      - name: Upload ${{ inputs.module_name }}'s dependencies to source bucket
+        id: upload_unsigned_deps_artifact
+        if: env.DEPS_ARTIFACT_HAS_CHANGED == 'true'
+        working-directory: ${{ inputs.module_name }}/build/distributions
         run: |
-          JOB_ID="$(aws signer start-signing-job \
-            --profile-name "${{ inputs.signing_profile }}" \
-            --source "s3={bucketName=${{ inputs.source_bucket }},key=${{ inputs.module_name }}/${{ github.sha }}.zip,version=${{ steps.upload_unsigned_artifact.outputs.version }}}" \
-            --destination "s3={bucketName=${{ inputs.destination_bucket }},prefix=signed-${{ inputs.module_name }}-${{ github.sha }}-}" \
-            --query "jobId" --output=text)"
+          VERSION="$(aws s3api put-object \
+            --bucket ${{ inputs.source_bucket }} \
+            --key ${{ inputs.module_name }}-dependencies/${{ github.sha }}.zip \
+            --body ${{ inputs.module_name }}-dependencies.zip \
+            --metadata commitsha=${{ github.sha }} \
+            --query "VersionId" --output text)"
 
-          echo "Waiting for signing job ${JOB_ID} to complete..."
-          aws signer wait successful-signing-job --job-id "$JOB_ID"
+          echo "Uploaded unsigned ${{ inputs.module_name }}'s dependencies to S3 bucket, key: ${{ inputs.module_name }}-dependencies/${{ github.sha }}.zip"
 
-          SIGNED_OBJECT="$(aws signer describe-signing-job --job-id "${JOB_ID}" --query "signedObject.s3.key" --output=text)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-          echo "Object signed: ${SIGNED_OBJECT}"
-          echo "SIGNED_OBJECT_KEY=${SIGNED_OBJECT}" >> "$GITHUB_ENV"
+      - name: Run signing jobs for ${{ inputs.module_name }}
+        if: env.ARTIFACT_HAS_CHANGED == 'true' || env.DEPS_ARTIFACT_HAS_CHANGED == 'true'
+        run: |
+          ARTIFACT_JOB_ID=""
+          DEPS_JOB_ID=""
+
+          if [ "${ARTIFACT_HAS_CHANGED}" == "true" ]; then
+            ARTIFACT_JOB_ID="$(aws signer start-signing-job \
+              --profile-name "${{ inputs.signing_profile }}" \
+              --source "s3={bucketName=${{ inputs.source_bucket }},key=${{ inputs.module_name }}/${{ github.sha }}.zip,version=${{ steps.upload_unsigned_artifact.outputs.version }}}" \
+              --destination "s3={bucketName=${{ inputs.destination_bucket }},prefix=signed-${{ inputs.module_name }}-${{ github.sha }}-}" \
+              --query "jobId" --output=text)"
+          fi
+          if [ "${DEPS_ARTIFACT_HAS_CHANGED}" == "true" ]; then
+            DEPS_JOB_ID="$(aws signer start-signing-job \
+              --profile-name "${{ inputs.signing_profile }}" \
+              --source "s3={bucketName=${{ inputs.source_bucket }},key=${{ inputs.module_name }}-dependencies/${{ github.sha }}.zip,version=${{ steps.upload_unsigned_deps_artifact.outputs.version }}}" \
+              --destination "s3={bucketName=${{ inputs.destination_bucket }},prefix=signed-${{ inputs.module_name }}-dependencies-${{ github.sha }}-}" \
+              --query "jobId" --output=text)"
+          fi
+          if [ -n "${ARTIFACT_JOB_ID}" ]; then
+            echo "Waiting for signing job ${ARTIFACT_JOB_ID} to complete..."
+            aws signer wait successful-signing-job --job-id "${ARTIFACT_JOB_ID}"
+
+            SIGNED_OBJECT="$(aws signer describe-signing-job --job-id "${JOB_ID}" --query "signedObject.s3.key" --output=text)"
+
+            echo "Object signed: ${SIGNED_OBJECT}"
+            echo "SIGNED_OBJECT_KEY=${SIGNED_OBJECT}" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${DEPS_JOB_ID}" ]; then
+            echo "Waiting for dependencies signing job ${DEPS_JOB_ID} to complete..."
+            aws signer wait successful-signing-job --job-id "${DEPS_JOB_ID}"
+
+            DEPS_SIGNED_OBJECT="$(aws signer describe-signing-job --job-id "${DEPS_JOB_ID}" --query "signedObject.s3.key" --output=text)"
+            echo "Dependencies object signed: ${DEPS_SIGNED_OBJECT}"
+            echo "DEPS_SIGNED_OBJECT_KEY=${DEPS_SIGNED_OBJECT}" >> "$GITHUB_ENV"
+          fi
 
       - name: Record artifact in DynamoDB
         if: env.ARTIFACT_HAS_CHANGED == 'true'
@@ -167,6 +249,13 @@ jobs:
           aws dynamodb put-item \
             --table-name "${{ inputs.lookup_table }}" \
             --item '{"module_name":{"S":"${{ inputs.module_name }}"},"artifact_hash":{"S":"${{ steps.build.outputs.sha }}"},"signed_object_key":{"S":"${{ env.SIGNED_OBJECT_KEY }}"},"commit_sha":{"S":"${{ github.sha }}"}}'
+
+      - name: Record dependencies artifact in DynamoDB
+        if: env.DEPS_ARTIFACT_HAS_CHANGED == 'true'
+        run: |
+          aws dynamodb put-item \
+            --table-name "${{ inputs.lookup_table }}" \
+            --item '{"module_name":{"S":"${{ inputs.module_name }}-dependencies"},"artifact_hash":{"S":"${{ steps.build.outputs.deps_sha }}"},"signed_object_key":{"S":"${{ env.DEPS_SIGNED_OBJECT_KEY }}"},"commit_sha":{"S":"${{ github.sha }}"}}'
 
       - name: Prepare GHA artifacts
         id: create_artifacts
@@ -181,10 +270,19 @@ jobs:
             --key ${{ env.SIGNED_OBJECT_KEY }} \
             "${artifact_dir}/${{ inputs.module_name }}.zip"
 
+          echo -n "${{ env.DEPS_ARTIFACT_COMMIT_SHA }}" >> "${artifact_dir}/${{ inputs.module_name }}-dependencies_commitsha.txt"
+
+          aws s3api get-object \
+            --bucket ${{ inputs.destination_bucket }} \
+            --key ${{ env.DEPS_SIGNED_OBJECT_KEY }} \
+            "${artifact_dir}/${{ inputs.module_name }}-dependencies.zip"
+
           {
             echo "artifact_dir=${artifact_dir}"
             echo "code_sha=${{ env.ARTIFACT_COMMIT_SHA }}"
+            echo "deps_sha=${{ env.DEPS_ARTIFACT_COMMIT_SHA }}"
             echo "signed_object_key=${{ env.SIGNED_OBJECT_KEY }}"
+            echo "deps_signed_object_key=${{ env.DEPS_SIGNED_OBJECT_KEY }}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload artifacts
