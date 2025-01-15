@@ -1520,7 +1520,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenRpSidPresent() {
+        void shouldSendAuditRequestParsedWithRpSidPresent() {
             var rpSid = "test-rp-sid";
             Map<String, String> requestParams = buildRequestParams(Map.of("rp_sid", rpSid));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
@@ -1532,7 +1532,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenRpSidNotPresent() {
+        void shouldSendAuditRequestParsedWhenRpSidNotPresent() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
@@ -1545,7 +1545,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenOnAuthOnlyFlow() {
+        void shouldSendAuditRequestParsedWhenOnAuthOnlyFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
@@ -1558,7 +1558,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenOnIdentityFlow() {
+        void shouldSendAuditRequestParsedWhenOnIdentityFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"P2.Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
@@ -1571,7 +1571,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void ShouldParseAuditRequestWithMaxAgeParamWhenEnabled() {
+        void shouldSendAuditRequestParsedWithMaxAgeExtensionWhenSupportedByClient() {
             var client = generateClientRegistry();
             client.setMaxAgeEnabled(true);
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
