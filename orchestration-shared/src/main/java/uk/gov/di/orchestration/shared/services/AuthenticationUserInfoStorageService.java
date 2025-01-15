@@ -44,7 +44,7 @@ public class AuthenticationUserInfoStorageService
         return Optional.of(userInfo);
     }
 
-    public Optional<AuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
+    private Optional<AuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
         return get(subjectID)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
