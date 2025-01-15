@@ -28,13 +28,6 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
-task buildZip(type: Zip) {
-    from compileJava
-    from processResources
-    into("lib") {
-        from configurations.runtimeClasspath
-    }
-}
 
 jacocoTestReport {
     reports {

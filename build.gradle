@@ -213,6 +213,20 @@ subprojects {
     }
 }
 
+subprojects {
+    task buildZip(type: Zip) {
+        from compileJava
+        from processResources
+    }
+    task buildLayer(type: Zip) {
+        archiveAppendix.set("dependencies")
+        into ("java/lib") {
+            from configurations.runtimeClasspath
+        }
+    }
+    buildZip.dependsOn buildLayer
+}
+
 allprojects {
     gradle.projectsEvaluated {
         tasks.withType(JavaCompile) {

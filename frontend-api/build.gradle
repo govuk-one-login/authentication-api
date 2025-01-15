@@ -70,13 +70,6 @@ pact {
     }
 }
 
-task buildZip(type: Zip) {
-    from compileJava
-    from processResources
-    into("lib") {
-        from configurations.runtimeClasspath
-    }
-}
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
