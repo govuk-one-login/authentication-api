@@ -10,6 +10,12 @@ variable "test_services-api-lambda_zip_file" {
   type        = string
 }
 
+variable "test_services-api-lambda_dependencies_zip_file" {
+  default     = "../../../test-services-api/build/distributions/test-services-api-dependencies.zip"
+  description = "Location of the Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "shared_state_bucket" {
   type    = string
   default = "digital-identity-dev-tfstate"
