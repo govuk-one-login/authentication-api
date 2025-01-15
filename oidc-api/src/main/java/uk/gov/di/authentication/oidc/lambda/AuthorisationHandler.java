@@ -427,7 +427,13 @@ public class AuthorisationHandler
                     user);
         }
 
-        Optional<String> browserSessionIdFromSession = session.map(Session::getBrowserSessionId);
+        Optional<String> browserSessionIdFromSession;
+        if (configurationService.isUseBrowserSessionIdStoredInOrchSessionEnabled()) {
+            browserSessionIdFromSession =
+                    orchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
+        } else {
+            browserSessionIdFromSession = session.map(Session::getBrowserSessionId);
+        }
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
 
@@ -581,7 +587,12 @@ public class AuthorisationHandler
                 "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
 
         List<String> cookies =
-                handleCookies(session, authenticationRequest, persistentSessionId, clientSessionId);
+                handleCookies(
+                        session,
+                        orchSession,
+                        authenticationRequest,
+                        persistentSessionId,
+                        clientSessionId);
 
         return generateApiGatewayProxyResponse(
                 302,
@@ -837,7 +848,12 @@ public class AuthorisationHandler
         var redirectURI = authFrontend.authorizeURI(prompt, googleAnalytics).toString();
 
         List<String> cookies =
-                handleCookies(session, authenticationRequest, persistentSessionId, clientSessionId);
+                handleCookies(
+                        session,
+                        orchSession,
+                        authenticationRequest,
+                        persistentSessionId,
+                        clientSessionId);
 
         var jwtID = IdGenerator.generate();
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
@@ -1068,6 +1084,7 @@ public class AuthorisationHandler
 
     private List<String> handleCookies(
             Session session,
+            OrchSessionItem orchSessionItem,
             AuthenticationRequest authRequest,
             String persistentSessionId,
             String clientSessionId) {
@@ -1087,11 +1104,18 @@ public class AuthorisationHandler
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));
 
-        if (session.getBrowserSessionId() != null) {
+        String browserSessionId;
+        if (configurationService.isUseBrowserSessionIdStoredInOrchSessionEnabled()) {
+            browserSessionId = orchSessionItem.getBrowserSessionId();
+        } else {
+            browserSessionId = session.getBrowserSessionId();
+        }
+
+        if (browserSessionId != null) {
             cookies.add(
                     CookieHelper.buildCookieString(
                             CookieHelper.BROWSER_SESSION_COOKIE_NAME,
-                            session.getBrowserSessionId(),
+                            browserSessionId,
                             configurationService.getSessionCookieAttributes(),
                             configurationService.getOidcDomainName()));
         }
