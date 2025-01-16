@@ -13,6 +13,7 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -29,6 +30,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
@@ -38,6 +40,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -49,6 +52,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final LogoutService logoutService;
+    private final OrchSessionService orchSessionService;
 
     private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
 
@@ -61,6 +65,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public ProcessingIdentityHandler(
@@ -73,6 +78,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService, redis);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     public ProcessingIdentityHandler() {
@@ -83,6 +89,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             DynamoIdentityService dynamoIdentityService,
             AccountInterventionService accountInterventionService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
             DynamoService dynamoService,
@@ -102,6 +109,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.logoutService = logoutService;
+        this.orchSessionService = orchSessionService;
     }
 
     @Override
@@ -211,9 +219,20 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             ClientRegistry client,
             AccountIntervention intervention)
             throws Json.JsonException {
+        var orchSessionOptional =
+                orchSessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (orchSessionOptional.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
+        var orchSession = orchSessionOptional.get();
         var logoutResult =
                 logoutService.handleAccountInterventionLogout(
-                        userContext.getSession(), input, client.getClientID(), intervention);
+                        userContext.getSession(),
+                        orchSession,
+                        input,
+                        client.getClientID(),
+                        intervention);
         var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
         return generateApiGatewayProxyResponse(
                 200,

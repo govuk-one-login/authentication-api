@@ -336,7 +336,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, intervention);
+                            session, orchSession, input, clientId, intervention);
                 }
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -393,7 +393,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, intervention);
+                            session, orchSession, input, clientId, intervention);
                 }
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
                 if (returnCodePresentInIPVResponse(returnCode)) {
