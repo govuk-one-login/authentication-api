@@ -34,7 +34,17 @@ public class AuthenticationUserInfoStorageService
         put(userInfoDbObject);
     }
 
-    public Optional<AuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
+    public Optional<UserInfo> getAuthenticationUserInfo(String subjectID)
+            throws com.nimbusds.oauth2.sdk.ParseException {
+        var userInfoData = getAuthenticationUserInfoData(subjectID);
+        if (userInfoData.isEmpty()) {
+            return Optional.empty();
+        }
+        var userInfo = UserInfo.parse(userInfoData.get().getUserInfo());
+        return Optional.of(userInfo);
+    }
+
+    private Optional<AuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
         return get(subjectID)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }

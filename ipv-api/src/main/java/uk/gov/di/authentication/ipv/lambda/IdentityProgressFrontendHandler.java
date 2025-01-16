@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
@@ -102,23 +101,21 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
 
             UserInfo userInfo;
             try {
-                var authenticationUserInfo =
-                        userInfoStorageService.getAuthenticationUserInfoData(
+                Optional<UserInfo> userInfoFromStorage =
+                        userInfoStorageService.getAuthenticationUserInfo(
                                 internalCommonSubjectIdentifier);
 
-                if (authenticationUserInfo.isPresent()) {
-                    userInfo =
-                            new UserInfo(
-                                    JSONObjectUtils.parse(
-                                            authenticationUserInfo.get().getUserInfo()));
-                } else {
+                if (userInfoFromStorage.isEmpty()) {
                     LOG.warn("Unable to find user info for subject");
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
                 }
-            } catch (Exception e) {
+
+                userInfo = userInfoFromStorage.get();
+            } catch (ParseException e) {
                 LOG.warn("Error finding user info for subject");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
+
             var pairwiseSubjectId = (String) userInfo.getClaim("rp_pairwise_id");
 
             int processingAttempts = userSession.getSession().incrementProcessingIdentityAttempts();

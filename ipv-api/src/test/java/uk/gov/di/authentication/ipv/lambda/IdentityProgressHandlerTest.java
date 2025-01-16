@@ -3,13 +3,15 @@ package uk.gov.di.authentication.ipv.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.approvaltests.Approvals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +19,6 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressResponse;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
@@ -61,15 +62,7 @@ public class IdentityProgressHandlerTest {
     public static final String SESSION_ID = "some-session-id";
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
-    private static final Subject PAIRWISE_SUBJECT = new Subject();
     private static final String ENVIRONMENT = "test-environment";
-    private static final String INTERNAL_SUBJECT_ID = "internal-subject-id";
-    private static final AuthenticationUserInfo AUTH_USER_INFO =
-            new AuthenticationUserInfo()
-                    .withUserInfo(
-                            String.format(
-                                    "{\"rp_pairwise_id\": \"%s\", \"sub\": \"sub\"}",
-                                    PAIRWISE_SUBJECT.getValue()));
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final State STATE = new State("test-state");
     private static final TxmaAuditUser USER =
@@ -78,6 +71,15 @@ public class IdentityProgressHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withIpAddress("123.123.123.123")
                     .withPersistentSessionId("unknown");
+
+    private static final String INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
+    private static final String RP_PAIRWISE_ID = "rp_pairwise_id";
+    private static final UserInfo AUTH_USER_INFO =
+            new UserInfo(
+                    new JWTClaimsSet.Builder()
+                            .subject(INTERNAL_COMMON_SUBJECT_ID)
+                            .claim("rp_pairwise_id", RP_PAIRWISE_ID)
+                            .build());
 
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -90,16 +92,16 @@ public class IdentityProgressHandlerTest {
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
     private final Session session =
-            new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_SUBJECT_ID);
+            new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private IdentityProgressFrontendHandler handler;
 
     @BeforeEach
-    void setup() {
+    void setup() throws ParseException {
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(userInfoStorageService.getAuthenticationUserInfoData(INTERNAL_SUBJECT_ID))
-                .thenReturn(Optional.ofNullable(AUTH_USER_INFO));
+        when(userInfoStorageService.getAuthenticationUserInfo(INTERNAL_COMMON_SUBJECT_ID))
+                .thenReturn(Optional.of(AUTH_USER_INFO));
         Map<String, String> headers = new HashMap<>();
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
@@ -130,7 +132,7 @@ public class IdentityProgressHandlerTest {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
@@ -169,7 +171,7 @@ public class IdentityProgressHandlerTest {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
@@ -206,7 +208,7 @@ public class IdentityProgressHandlerTest {
             throws Json.JsonException {
         session.incrementProcessingIdentityAttempts();
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT.getValue()))
+        when(dynamoIdentityService.getIdentityCredentials(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -240,7 +242,7 @@ public class IdentityProgressHandlerTest {
     void shouldReturnNO_ENTRYStatusWhenNoEntryIsFoundInDynamoOnFirstAttempt()
             throws Json.JsonException {
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT.getValue()))
+        when(dynamoIdentityService.getIdentityCredentials(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -276,7 +278,7 @@ public class IdentityProgressHandlerTest {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))

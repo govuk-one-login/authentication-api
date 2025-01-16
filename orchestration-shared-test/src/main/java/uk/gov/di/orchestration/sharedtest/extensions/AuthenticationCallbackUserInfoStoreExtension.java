@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.sharedtest.extensions;
 
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -9,7 +10,6 @@ import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
@@ -75,8 +75,8 @@ public class AuthenticationCallbackUserInfoStoreExtension extends DynamoExtensio
         dynamoDB.createTable(request);
     }
 
-    public Optional<AuthenticationUserInfo> getUserInfoBySubjectId(String subjectId) {
-        return userInfoService.getAuthenticationUserInfoData(subjectId);
+    public Optional<UserInfo> getAuthenticationUserInfo(String subjectId) throws ParseException {
+        return userInfoService.getAuthenticationUserInfo(subjectId);
     }
 
     public void addAuthenticationUserInfoData(String subjectId, UserInfo userInfo) {
