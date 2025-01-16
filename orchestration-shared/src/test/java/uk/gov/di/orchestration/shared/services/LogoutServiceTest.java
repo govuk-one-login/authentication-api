@@ -139,7 +139,6 @@ class LogoutServiceTest {
 
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(configurationService.isDestroyOrchSessionOnSignOutEnabled()).thenReturn(true);
 
         when(authFrontend.defaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(authFrontend.errorLogoutURI(ERROR_OBJECT)).thenReturn(ERROR_LOGOUT_URI);

@@ -756,12 +756,6 @@ variable "auth_frontend_api_to_ipv_public_encryption_key" {
   description = "Public key for IPV"
 }
 
-variable "is_destroy_orch_session_on_sign_out_enabled" {
-  type        = bool
-  default     = false
-  description = "Feature flag to destroy orch session on sign out"
-}
-
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
