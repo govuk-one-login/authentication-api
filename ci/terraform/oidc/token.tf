@@ -53,7 +53,7 @@ resource "aws_iam_policy" "oidc_token_kms_signing_policy" {
 }
 
 module "token" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = local.oidc_token_endpoint_name
   path_part       = var.orch_token_enabled ? "token-auth" : "token"
@@ -71,6 +71,9 @@ module "token" {
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_api.root_resource_id

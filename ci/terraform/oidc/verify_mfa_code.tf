@@ -29,7 +29,7 @@ module "frontend_api_verify_mfa_code_role" {
 }
 
 module "verify_mfa_code" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "verify-mfa-code"
   path_part       = "verify-mfa-code"
@@ -56,6 +56,9 @@ module "verify_mfa_code" {
     REAUTH_ENTER_AUTH_APP_CODE_COUNT_TTL    = var.reauth_enter_auth_app_code_count_ttl
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id

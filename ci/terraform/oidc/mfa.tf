@@ -21,7 +21,7 @@ module "frontend_api_mfa_role" {
 }
 
 module "mfa" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "mfa"
   path_part       = "mfa"
@@ -42,6 +42,9 @@ module "mfa" {
     SUPPORT_REAUTH_SIGNOUT_ENABLED         = var.support_reauth_signout_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id

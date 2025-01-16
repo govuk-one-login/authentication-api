@@ -23,6 +23,15 @@ resource "aws_lambda_function" "bulk_user_email_send_lambda" {
   memory_size                    = lookup(var.performance_tuning, "bulk-user-email-send", local.default_performance_parameters).memory
   reserved_concurrent_executions = 1
   runtime                        = "java17"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  dynamic "snap_start" {
+    for_each = local.use_snapstart ? [1] : []
+    content {
+      apply_on = "PublishedVersions"
+    }
+  }
+
   tracing_config {
     mode = "Active"
   }

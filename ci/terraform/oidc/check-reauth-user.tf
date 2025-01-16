@@ -23,7 +23,7 @@ module "frontend_api_check_reauth_user_role" {
 
 module "check_reauth_user" {
   count  = local.deploy_reauth_user_count
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "check-reauth-user"
   path_part       = "check-reauth-user"
@@ -43,6 +43,9 @@ module "check_reauth_user" {
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id

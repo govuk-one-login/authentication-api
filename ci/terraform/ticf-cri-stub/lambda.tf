@@ -10,7 +10,7 @@ module "ticf_cri_stub_role" {
 }
 
 module "ticf_cri_stub_lambda" {
-  source = "../modules/endpoint-lambda"
+  source = "../modules/endpoint-lambda-snapstart"
 
   endpoint_name = "ticf-cri-stub"
 
@@ -21,6 +21,9 @@ module "ticf_cri_stub_lambda" {
   }
   handler_function_name = "uk.gov.di.authentication.ticf.cri.stub.lambda.TICFCRIStubHandler::handleRequest"
   handler_runtime       = "java17"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   memory_size                 = local.default_performance_parameters.memory
   provisioned_concurrency     = local.default_performance_parameters.concurrency

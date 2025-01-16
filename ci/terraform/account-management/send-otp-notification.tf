@@ -22,7 +22,7 @@ module "account_management_api_send_notification_role" {
 }
 
 module "send_otp_notification" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "send-otp-notification"
   path_part       = "send-otp-notification"
@@ -45,6 +45,9 @@ module "send_otp_notification" {
     SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
   root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id

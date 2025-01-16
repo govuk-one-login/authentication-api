@@ -102,3 +102,13 @@ variable "vpc_environment" {
   type        = string
   default     = null
 }
+
+variable "delivery_receipts_use_snapstart" {
+  description = "Whether to use Snapstart for the Delivery Receipts lambdas"
+  type        = bool
+  default     = false
+}
+
+locals {
+  use_snapstart = var.delivery_receipts_use_snapstart
+}

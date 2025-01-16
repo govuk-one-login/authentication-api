@@ -10,7 +10,7 @@ module "oidc_trustmarks_role" {
 }
 
 module "trustmarks" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "trustmark"
   path_part       = var.orch_trustmark_enabled ? "trustmark-auth" : "trustmark"
@@ -23,6 +23,9 @@ module "trustmarks" {
     HEADERS_CASE_INSENSITIVE = "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_api.root_resource_id

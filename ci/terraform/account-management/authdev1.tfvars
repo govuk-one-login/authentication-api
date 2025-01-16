@@ -6,8 +6,10 @@ vpc_environment     = "dev"
 logging_endpoint_enabled = false
 logging_endpoint_arns    = []
 
-endpoint_memory_size   = 1536
-lambda_max_concurrency = 0
-lambda_min_concurrency = 0
+endpoint_memory_size = 1536
 
 openapi_spec_filename = "openapi_v2.yaml"
+
+lambda_max_concurrency           = 0
+lambda_min_concurrency           = 0
+account_management_use_snapstart = true

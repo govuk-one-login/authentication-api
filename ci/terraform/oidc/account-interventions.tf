@@ -24,7 +24,7 @@ module "frontend_api_account_interventions_role" {
 module "account_interventions" {
   count = local.deploy_account_interventions_count
 
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "account-interventions"
   path_part       = "account-interventions"
@@ -46,6 +46,9 @@ module "account_interventions" {
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id

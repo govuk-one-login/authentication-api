@@ -15,7 +15,7 @@ module "delivery_receipts_api_notify_callback_role" {
 }
 
 module "notify_callback" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "notify-callback"
   path_part       = "notify-callback"
@@ -27,6 +27,9 @@ module "notify_callback" {
     BULK_USER_EMAIL_ENABLED = local.deploy_bulk_email_users_count
   })
   handler_function_name = "uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_delivery_receipts_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_delivery_receipts_api.root_resource_id

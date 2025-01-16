@@ -33,6 +33,9 @@ module "ticf_cri_lambda" {
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.TicfCriHandler::handleRequest"
   handler_runtime       = "java17"
 
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
+
   memory_size                 = local.ticf_cri_performance_parameters.memory
   provisioned_concurrency     = local.ticf_cri_performance_parameters.concurrency
   max_provisioned_concurrency = local.ticf_cri_performance_parameters.max_concurrency

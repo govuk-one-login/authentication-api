@@ -14,7 +14,7 @@ module "openid_configuration_role" {
 }
 
 module "openid_configuration_discovery" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = local.openid_configuration_endpoint_name
   path_part       = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
@@ -27,6 +27,9 @@ module "openid_configuration_discovery" {
     AUTH_FRONTEND_BASE_URL = "https://${local.frontend_fqdn}/"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id = aws_api_gateway_resource.wellknown_resource.id

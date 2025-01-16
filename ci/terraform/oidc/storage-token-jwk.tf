@@ -13,7 +13,7 @@ module "oidc_storage_token_jwk_role" {
 }
 
 module "storage_token_jwk" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "storage-token-jwk.json"
   path_part       = var.orch_storage_token_jwk_enabled ? "storage-token-jwk-auth.json" : "storage-token-jwk.json"
@@ -27,6 +27,9 @@ module "storage_token_jwk" {
     HEADERS_CASE_INSENSITIVE        = "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   root_resource_id = aws_api_gateway_resource.wellknown_resource.id

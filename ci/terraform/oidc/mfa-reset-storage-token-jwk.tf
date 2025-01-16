@@ -13,7 +13,7 @@ module "mfa_reset_storage_token_jwk_role" {
 }
 
 module "mfa_reset_storage_token_jwk" {
-  source = "../modules/endpoint-module-v2"
+  source = "../modules/endpoint-module-v2-snapstart"
 
   endpoint_name   = "mfa-reset-jwk.json"
   path_part       = "mfa-reset-jwk.json"
@@ -26,6 +26,9 @@ module "mfa_reset_storage_token_jwk" {
     MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_token_signing_key_alias.arn
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetStorageTokenJwkHandler::handleRequest"
+
+  architectures = [local.use_snapstart ? "arm64" : "x86_64"]
+  snapstart     = local.use_snapstart
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_resource.auth_frontend_wellknown_resource.id

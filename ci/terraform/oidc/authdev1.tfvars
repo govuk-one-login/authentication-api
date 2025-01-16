@@ -37,9 +37,7 @@ EOT
 enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
-lambda_max_concurrency = 0
-lambda_min_concurrency = 0
-endpoint_memory_size   = 1536
+endpoint_memory_size = 1536
 
 
 # lockout config
@@ -67,3 +65,8 @@ orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-
 authorize_protected_subnet_enabled = true
 
 oidc_cloudfront_enabled = false
+
+
+lambda_min_concurrency = 0
+lambda_max_concurrency = 0
+oidc_use_snapstart     = true

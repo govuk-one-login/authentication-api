@@ -1,0 +1,36 @@
+module "endpoint_lambda" {
+  source = "../endpoint-lambda-snapstart"
+
+  endpoint_name                          = var.endpoint_name
+  source_bucket                          = var.source_bucket
+  lambda_zip_file                        = var.lambda_zip_file
+  lambda_zip_file_version                = var.lambda_zip_file_version
+  handler_function_name                  = var.handler_function_name
+  handler_environment_variables          = var.handler_environment_variables
+  handler_runtime                        = var.handler_runtime
+  environment                            = var.environment
+  authentication_vpc_arn                 = var.authentication_vpc_arn
+  security_group_ids                     = var.security_group_ids
+  subnet_id                              = var.subnet_id
+  lambda_role_arn                        = var.lambda_role_arn
+  logging_endpoint_enabled               = var.logging_endpoint_enabled
+  logging_endpoint_arn                   = var.logging_endpoint_arn
+  logging_endpoint_arns                  = var.logging_endpoint_arns
+  extra_tags                             = var.extra_tags
+  cloudwatch_key_arn                     = var.cloudwatch_key_arn
+  cloudwatch_log_retention               = var.cloudwatch_log_retention
+  lambda_log_alarm_threshold             = var.lambda_log_alarm_threshold
+  lambda_log_alarm_error_rate_threshold  = var.lambda_log_alarm_error_rate_threshold
+  lambda_error_rate_alarm_disabled       = var.lambda_error_rate_alarm_disabled
+  lambda_env_vars_encryption_kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
+  code_signing_config_arn                = var.code_signing_config_arn
+  memory_size                            = var.memory_size
+  provisioned_concurrency                = var.provisioned_concurrency
+  max_provisioned_concurrency            = var.max_provisioned_concurrency
+  scaling_trigger                        = var.scaling_trigger
+  slack_event_topic_arn                  = var.slack_event_topic_arn
+  account_alias                          = var.account_alias
+  dynatrace_secret                       = var.dynatrace_secret
+  runbook_link                           = var.runbook_link
+  snapstart                              = var.snapstart
+}

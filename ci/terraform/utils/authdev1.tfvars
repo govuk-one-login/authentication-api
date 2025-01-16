@@ -17,3 +17,8 @@ performance_tuning = {
 }
 
 email_check_results_writer_provisioned_concurrency = 0
+
+
+lambda_min_concurrency = 0
+lambda_max_concurrency = 0
+utils_use_snapstart    = true
