@@ -51,6 +51,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -540,6 +541,35 @@ class LogoutServiceTest {
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 is(equalTo(REAUTH_FAILURE_URI.toString())));
+    }
+
+    @Test
+    void handlesAMaxAgeSessionExpiry() {
+        var clientSessionId1 = IdGenerator.generate();
+        var clientSessionId2 = IdGenerator.generate();
+        var clientId1 = CLIENT_ID + "1";
+        var clientId2 = CLIENT_ID + "2";
+        var prevousSession =
+                new Session(SESSION_ID)
+                        .setEmailAddress(EMAIL)
+                        .addClientSession(clientSessionId1)
+                        .addClientSession(clientSessionId2);
+        setUpClientSession(clientSessionId1, clientId1);
+        setUpClientSession(clientSessionId2, clientId2);
+
+        logoutService.handleMaxAgeLogout(prevousSession);
+
+        verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
+        verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
+        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(orchSessionService).deleteSession(SESSION_ID);
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(
+                        argThat(withClientId(clientId1)), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(
+                        argThat(withClientId(clientId2)), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
     }
 
     private void setupAdditionalClientSessions() {

@@ -1024,12 +1024,13 @@ class AuthenticationCallbackHandlerTest {
         }
 
         @Test
-        void itDoesNotAttatchThePreviousClientSessionsIfTheInternalCommonSubjectIdsDoNotMatch()
-                throws UnsuccessfulCredentialResponseException {
+        void
+                itSendsBackChannelLogoutNotificationForThePreviousSessionIfTheInternalCommonSubjectIdsDoNotMatch()
+                        throws UnsuccessfulCredentialResponseException {
             var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
             var sharedSession = withMaxAgeSharedSession();
             withPreviousOrchSessionDueToMaxAge();
-            withPreviousSharedSessionDueToMaxAge();
+            var previousSharedSession = withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1055,7 +1056,8 @@ class AuthenticationCallbackHandlerTest {
                     .updateSession(argThat(s -> s.getPreviousSessionId() == null));
             verify(sessionService, times(2))
                     .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
-            // TODO: ATO-1101: Send backchannel logouts + audit events
+
+            verify(logoutService, times(1)).handleMaxAgeLogout(previousSharedSession);
         }
 
         private void withPreviousOrchSessionDueToMaxAge() {
@@ -1067,11 +1069,12 @@ class AuthenticationCallbackHandlerTest {
                                                     INTERNAL_COMMON_SUBJECT_ID)));
         }
 
-        private void withPreviousSharedSessionDueToMaxAge() {
+        private Session withPreviousSharedSessionDueToMaxAge() {
             var previousSharedSession = new Session(PREVIOUS_SESSION_ID);
             PREVIOUS_CLIENT_SESSIONS.forEach(previousSharedSession::addClientSession);
             when(sessionService.getSession(PREVIOUS_SESSION_ID))
                     .thenReturn(Optional.of(previousSharedSession));
+            return previousSharedSession;
         }
 
         private void withNoPreviousSharedSession() {
