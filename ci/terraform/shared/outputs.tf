@@ -256,3 +256,7 @@ output "authentication_attempt_kms_key_arn" {
 output "auth_session_table_encryption_key_arn" {
   value = aws_kms_key.auth_session_table_encryption_key.arn
 }
+
+output "id_reverification_state_key_arn" {
+  value = aws_kms_key.id_reverification_state_table_encryption_key.arn
+}

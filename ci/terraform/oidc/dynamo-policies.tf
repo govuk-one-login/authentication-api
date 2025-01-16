@@ -50,6 +50,10 @@ data "aws_dynamodb_table" "auth_session_table" {
   name = "${var.environment}-auth-session"
 }
 
+data "aws_dynamodb_table" "id_reverification_state_table" {
+  name = "${var.environment}-id-reverification-state"
+}
+
 data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -788,6 +792,33 @@ moved {
   to   = data.aws_iam_policy_document.dynamo_orch_session_cross_account_delete_access_policy_document[0]
 }
 
+data "aws_iam_policy_document" "dynamo_id_reverification_state_write_policy_document" {
+  statement {
+    sid    = "AllowWrite"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.id_reverification_state_table.arn
+    ]
+  }
+
+  statement {
+    sid    = "AllowEncryption"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:GenerateDataKey",
+      "kms:Decrypt",
+    ]
+    resources = [local.id_reverification_state_key_arn]
+  }
+}
+
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -1054,4 +1085,13 @@ resource "aws_iam_policy" "dynamo_orch_session_cross_account_delete_access_polic
 moved {
   from = aws_iam_policy.dynamo_orch_session_cross_account_delete_access_policy
   to   = aws_iam_policy.dynamo_orch_session_cross_account_delete_access_policy[0]
+}
+
+
+resource "aws_iam_policy" "dynamo_id_reverification_state_write_policy" {
+  name_prefix = "dynamo-id-reverification-state-write-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing write permissions to the ${var.environment}-id-reverification-state table"
+
+  policy = data.aws_iam_policy_document.dynamo_id_reverification_state_write_policy_document.json
 }
