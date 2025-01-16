@@ -27,7 +27,6 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
-import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -61,8 +60,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -356,56 +353,6 @@ public class IPVCallbackHandler
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
-
-            // TODO: ATO-1117: temporary logs to check values are as expected
-            if (orchSession.getInternalCommonSubjectId() != null
-                    && !orchSession.getInternalCommonSubjectId().isBlank()) {
-                Optional<UserInfo> authUserInfo =
-                        getAuthUserInfo(
-                                authUserInfoStorageService,
-                                orchSession.getInternalCommonSubjectId(),
-                                clientSessionId);
-
-                if (authUserInfo.isEmpty()) {
-                    LOG.info("authUserInfo not found");
-                } else {
-                    LOG.info(
-                            "is email the same on authUserInfo as on session: {}",
-                            session.getEmailAddress().equals(authUserInfo.get().getEmailAddress()));
-                    if (userProfile.getPhoneNumber() != null) {
-                        LOG.info(
-                                "is phone number the same on authUserInfo as on UserProfile: {}",
-                                userProfile
-                                        .getPhoneNumber()
-                                        .equals(authUserInfo.get().getPhoneNumber()));
-                    }
-                    var saltFromAuthUserInfo = authUserInfo.get().getStringClaim("salt");
-                    if (saltFromAuthUserInfo != null && !saltFromAuthUserInfo.isBlank()) {
-                        var saltDecoded = Base64.getDecoder().decode(saltFromAuthUserInfo);
-                        var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
-                        LOG.info(
-                                "is salt the same on authUserInfo as on UserProfile: {}",
-                                userProfile.getSalt().equals(saltBuffer));
-                    } else {
-                        LOG.info(
-                                "salt on authUserInfo is null or blank. Is salt on UserProfile defined: {}",
-                                userProfile.getSalt() != null);
-                    }
-                    LOG.info(
-                            "is subjectId the same on authUserInfo as on UserProfile: {}",
-                            userProfile
-                                    .getSubjectID()
-                                    .equals(
-                                            authUserInfo
-                                                    .get()
-                                                    .getClaim(
-                                                            AuthUserInfoClaims.LOCAL_ACCOUNT_ID
-                                                                    .getValue())));
-                }
-            } else {
-                LOG.info("internalCommonSubjectId is empty");
-            }
-            //
 
             var tokenResponse =
                     segmentedFunctionCall(
