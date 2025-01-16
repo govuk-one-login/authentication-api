@@ -9,9 +9,11 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.LogoutReason;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.net.URI;
 import java.util.LinkedList;
@@ -95,7 +97,7 @@ public class LogoutService {
         LOG.info(
                 "Generating logout response using URI: {}",
                 logoutUri.getHost() + logoutUri.getPath());
-        sendAuditEvent(auditUser, logoutReason, clientId, rpPairwiseId);
+        sendAuditEvent(auditUser, logoutReason, clientId, rpPairwiseId, Optional.empty());
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
@@ -212,20 +214,31 @@ public class LogoutService {
                 Optional.empty());
     }
 
-    public void handleMaxAgeLogout(Session previousSession) {
+    public void handleMaxAgeLogout(
+            Session previousSession, OrchSessionItem previousOrchSession, TxmaAuditUser user) {
         destroySessions(previousSession);
         cloudwatchMetricsService.incrementLogout(Optional.empty());
+        Long sessionAge =
+                NowHelper.now().toInstant().getEpochSecond() - previousOrchSession.getAuthTime();
+        sendAuditEvent(
+                user,
+                LogoutReason.MAX_AGE_EXPIRY,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(sessionAge));
     }
 
     private void sendAuditEvent(
             TxmaAuditUser auditUser,
             LogoutReason logoutReason,
             Optional<String> clientId,
-            Optional<String> rpPairwiseId) {
+            Optional<String> rpPairwiseId,
+            Optional<Long> sessionAge) {
         String auditClientId = clientId.orElse(AuditService.UNKNOWN);
         var metadata = new LinkedList<AuditService.MetadataPair>();
         metadata.add(pair(LOGOUT_REASON, logoutReason.getValue()));
         rpPairwiseId.ifPresent(i -> metadata.add(pair("rpPairwiseId", i)));
+        sessionAge.ifPresent(age -> metadata.add(pair("sessionAge", age.intValue())));
         auditService.submitAuditEvent(
                 LOG_OUT_SUCCESS,
                 auditClientId,

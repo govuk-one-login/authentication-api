@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -859,6 +860,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                             AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                             OidcAuditableEvent.AUTHENTICATION_COMPLETE,
+                            LogoutAuditableEvent.LOG_OUT_SUCCESS,
                             OidcAuditableEvent.AUTH_CODE_ISSUED));
 
             var sharedSession = redis.getSession(SESSION_ID);
@@ -891,7 +893,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             setUpClientSession();
             orchSessionExtension.addSession(
                     new OrchSessionItem(PREVIOUS_SESSION_ID)
-                            .withInternalCommonSubjectId(internalCommonSubjectId));
+                            .withInternalCommonSubjectId(internalCommonSubjectId)
+                            .withAuthTime(
+                                    NowHelper.nowMinus(1, ChronoUnit.HOURS)
+                                            .toInstant()
+                                            .getEpochSecond()));
         }
 
         private void setupPreviousClientsAndPreviousClientSessions() throws Json.JsonException {

@@ -24,18 +24,22 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
 import java.text.ParseException;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,6 +60,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT_SUCCESS;
+import static uk.gov.di.orchestration.shared.entity.LogoutReason.MAX_AGE_EXPIRY;
+import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -201,8 +207,8 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
+                        pair("logoutReason", "front-channel"),
+                        pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -234,8 +240,8 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
+                        pair("logoutReason", "front-channel"),
+                        pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -267,8 +273,8 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
+                        pair("logoutReason", "front-channel"),
+                        pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -301,8 +307,8 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
+                        pair("logoutReason", "front-channel"),
+                        pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -345,7 +351,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "intervention"));
+                        pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -375,7 +381,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "intervention"));
+                        pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -420,8 +426,8 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         auditUserWhenNoCookie,
-                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
+                        pair("logoutReason", "front-channel"),
+                        pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
     @Test
@@ -457,8 +463,8 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
+                        pair("logoutReason", "front-channel"),
+                        pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
     @Test
@@ -485,8 +491,8 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
+                        pair("logoutReason", "front-channel"),
+                        pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -536,7 +542,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("logoutReason", "reauthentication-failure"));
+                        pair("logoutReason", "reauthentication-failure"));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 is(equalTo(REAUTH_FAILURE_URI.toString())));
@@ -553,10 +559,17 @@ class LogoutServiceTest {
                         .setEmailAddress(EMAIL)
                         .addClientSession(clientSessionId1)
                         .addClientSession(clientSessionId2);
+
+        var previousOrchSession =
+                new OrchSessionItem(SESSION_ID)
+                        .withAuthTime(
+                                NowHelper.nowMinus(1, ChronoUnit.HOURS)
+                                        .toInstant()
+                                        .getEpochSecond());
         setUpClientSession(clientSessionId1, clientId1);
         setUpClientSession(clientSessionId2, clientId2);
 
-        logoutService.handleMaxAgeLogout(prevousSession);
+        logoutService.handleMaxAgeLogout(prevousSession, previousOrchSession, auditUser);
 
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
@@ -569,6 +582,15 @@ class LogoutServiceTest {
                 .sendLogoutMessage(
                         argThat(withClientId(clientId2)), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
         verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
+        var expectedExtensions = new ArrayList<AuditService.MetadataPair>();
+        expectedExtensions.add(pair("logoutReason", MAX_AGE_EXPIRY.getValue()));
+        expectedExtensions.add(pair("sessionAge", 3600));
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        AuditService.UNKNOWN,
+                        auditUser,
+                        expectedExtensions.toArray(AuditService.MetadataPair[]::new));
     }
 
     private void setupAdditionalClientSessions() {
