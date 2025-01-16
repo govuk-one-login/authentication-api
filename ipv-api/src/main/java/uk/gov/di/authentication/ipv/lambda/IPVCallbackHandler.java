@@ -280,6 +280,13 @@ public class IPVCallbackHandler
                                             new IpvCallbackException(
                                                     "Email from session does not have a user profile"));
 
+            UserInfo authUserInfo =
+                    getAuthUserInfo(
+                                    authUserInfoStorageService,
+                                    orchSession.getInternalCommonSubjectId(),
+                                    clientSessionId)
+                            .orElseThrow(() -> new IpvCallbackException("authUserInfo not found"));
+
             var ipAddress = IpAddressHelper.extractIpAddress(input);
 
             var auditContext =
@@ -351,54 +358,34 @@ public class IPVCallbackHandler
                             rpPairwiseSubject.getValue(),
                             orchClientSession.getCorrectPairwiseIdGivenSubjectType(
                                     clientRegistry.getSubjectType())));
-            if (orchSession.getInternalCommonSubjectId() != null
-                    && !orchSession.getInternalCommonSubjectId().isBlank()) {
-                Optional<UserInfo> authUserInfo =
-                        getAuthUserInfo(
-                                authUserInfoStorageService,
-                                orchSession.getInternalCommonSubjectId(),
-                                clientSessionId);
 
-                if (authUserInfo.isEmpty()) {
-                    LOG.info("authUserInfo not found");
-                } else {
-                    LOG.info(
-                            "is email the same on authUserInfo as on session: {}",
-                            Objects.equals(
-                                    session.getEmailAddress(),
-                                    authUserInfo.get().getEmailAddress()));
-                    if (userProfile.getPhoneNumber() != null) {
-                        LOG.info(
-                                "is phone number the same on authUserInfo as on UserProfile: {}",
-                                Objects.equals(
-                                        userProfile.getPhoneNumber(),
-                                        authUserInfo.get().getPhoneNumber()));
-                    }
-                    var saltFromAuthUserInfo = authUserInfo.get().getStringClaim("salt");
-                    if (saltFromAuthUserInfo != null && !saltFromAuthUserInfo.isBlank()) {
-                        var saltDecoded = Base64.getDecoder().decode(saltFromAuthUserInfo);
-                        var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
-                        LOG.info(
-                                "is salt the same on authUserInfo as on UserProfile: {}",
-                                Objects.equals(userProfile.getSalt(), saltBuffer));
-                    } else {
-                        LOG.info(
-                                "salt on authUserInfo is null or blank. Is salt on UserProfile defined: {}",
-                                userProfile.getSalt() != null);
-                    }
-                    LOG.info(
-                            "is subjectId the same on authUserInfo as on UserProfile: {}",
-                            Objects.equals(
-                                    userProfile.getSubjectID(),
-                                    authUserInfo
-                                            .get()
-                                            .getClaim(
-                                                    AuthUserInfoClaims.LOCAL_ACCOUNT_ID
-                                                            .getValue())));
-                }
-            } else {
-                LOG.info("internalCommonSubjectId is empty");
+            LOG.info(
+                    "is email the same on authUserInfo as on session: {}",
+                    Objects.equals(session.getEmailAddress(), authUserInfo.getEmailAddress()));
+            if (userProfile.getPhoneNumber() != null) {
+                LOG.info(
+                        "is phone number the same on authUserInfo as on UserProfile: {}",
+                        Objects.equals(
+                                userProfile.getPhoneNumber(), authUserInfo.getPhoneNumber()));
             }
+            var saltFromAuthUserInfo = authUserInfo.getStringClaim("salt");
+            if (saltFromAuthUserInfo != null && !saltFromAuthUserInfo.isBlank()) {
+                var saltDecoded = Base64.getDecoder().decode(saltFromAuthUserInfo);
+                var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
+                LOG.info(
+                        "is salt the same on authUserInfo as on UserProfile: {}",
+                        Objects.equals(userProfile.getSalt(), saltBuffer));
+            } else {
+                LOG.info(
+                        "salt on authUserInfo is null or blank. Is salt on UserProfile defined: {}",
+                        userProfile.getSalt() != null);
+            }
+            LOG.info(
+                    "is subjectId the same on authUserInfo as on UserProfile: {}",
+                    Objects.equals(
+                            userProfile.getSubjectID(),
+                            authUserInfo.getClaim(AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue())));
+
             //
 
             var tokenResponse =
@@ -557,13 +544,17 @@ public class IPVCallbackHandler
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             String internalCommonSubjectId,
             String clientSessionId) {
+
+        if (internalCommonSubjectId == null || internalCommonSubjectId.isBlank()) {
+            LOG.warn("internalCommonSubjectId is null or empty");
+            return Optional.empty();
+        }
+
         try {
             return authUserInfoStorageService.getAuthenticationUserInfo(
                     internalCommonSubjectId, clientSessionId);
         } catch (ParseException e) {
-            // TODO: ATO-1117: temporary logs. authUserInfo is not essential, so we don't want this
-            // to exit the lambda yet.
-            LOG.info("error parsing authUserInfo. Message: {}", e.getMessage());
+            LOG.warn("error parsing authUserInfo. Message: {}", e.getMessage());
             return Optional.empty();
         }
     }
