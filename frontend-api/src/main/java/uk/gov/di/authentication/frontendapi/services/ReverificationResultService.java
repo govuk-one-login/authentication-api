@@ -103,6 +103,12 @@ public class ReverificationResultService {
             count++;
             try {
                 var httpRequest = tokenRequest.toHTTPRequest();
+
+                LOG.info("Sending IPV token request to {}", httpRequest.getURI());
+
+                httpRequest.setConnectTimeout(1000);
+                httpRequest.setReadTimeout(60 * 1000);
+
                 var httpResponse = httpRequest.send();
 
                 tokenResponse = TokenResponse.parse(httpResponse);
