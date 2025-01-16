@@ -290,12 +290,6 @@ public class IPVCallbackHandler
                                     () ->
                                             new IpvCallbackException(
                                                     "Email from session does not have a user profile"));
-            var rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            clientRegistry,
-                            dynamoService,
-                            configurationService.getInternalSectorURI());
 
             var internalPairwiseSubjectId =
                     ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -304,14 +298,6 @@ public class IPVCallbackHandler
                             dynamoService.getOrGenerateSalt(userProfile));
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
-            var user =
-                    TxmaAuditUser.user()
-                            .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(sessionId)
-                            .withUserId(internalPairwiseSubjectId)
-                            .withEmail(session.getEmailAddress())
-                            .withPhone(userProfile.getPhoneNumber())
-                            .withPersistentSessionId(persistentId);
 
             var auditContext =
                     new AuditContext(
@@ -350,6 +336,22 @@ public class IPVCallbackHandler
                         clientSessionId,
                         sessionId);
             }
+
+            var rpPairwiseSubject =
+                    ClientSubjectHelper.getSubject(
+                            userProfile,
+                            clientRegistry,
+                            dynamoService,
+                            configurationService.getInternalSectorURI());
+
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(sessionId)
+                            .withUserId(internalPairwiseSubjectId)
+                            .withEmail(session.getEmailAddress())
+                            .withPhone(userProfile.getPhoneNumber())
+                            .withPersistentSessionId(persistentId);
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
