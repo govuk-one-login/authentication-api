@@ -297,6 +297,13 @@ public class IPVCallbackHandler
                             URI.create(configurationService.getInternalSectorURI()),
                             dynamoService.getOrGenerateSalt(userProfile));
 
+            UserInfo authUserInfo =
+                    getAuthUserInfo(
+                                    authUserInfoStorageService,
+                                    internalPairwiseSubjectId,
+                                    clientSessionId)
+                            .orElseThrow(() -> new IpvCallbackException("authUserInfo not found"));
+
             var ipAddress = IpAddressHelper.extractIpAddress(input);
 
             var auditContext =
@@ -511,13 +518,16 @@ public class IPVCallbackHandler
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             String internalCommonSubjectId,
             String clientSessionId) {
+
+        if (internalCommonSubjectId == null || internalCommonSubjectId.isBlank()) {
+            return Optional.empty();
+        }
+
         try {
             return authUserInfoStorageService.getAuthenticationUserInfo(
                     internalCommonSubjectId, clientSessionId);
         } catch (ParseException e) {
-            // TODO: ATO-1117: temporary logs. authUserInfo is not essential, so we don't want this
-            // to exit the lambda yet.
-            LOG.info("error parsing authUserInfo. Message: {}", e.getMessage());
+            LOG.warn("error parsing authUserInfo. Message: {}", e.getMessage());
             return Optional.empty();
         }
     }
