@@ -109,6 +109,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -1519,7 +1520,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenRpSidPresent() {
+        void shouldSendAuditRequestParsedWithRpSidPresent() {
             var rpSid = "test-rp-sid";
             Map<String, String> requestParams = buildRequestParams(Map.of("rp_sid", rpSid));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
@@ -1531,7 +1532,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenRpSidNotPresent() {
+        void shouldSendAuditRequestParsedWhenRpSidNotPresent() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
@@ -1544,7 +1545,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenOnAuthOnlyFlow() {
+        void shouldSendAuditRequestParsedWhenOnAuthOnlyFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
@@ -1557,7 +1558,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAuditRequestParsedWhenOnIdentityFlow() {
+        void shouldSendAuditRequestParsedWhenOnIdentityFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"P2.Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
@@ -1567,6 +1568,24 @@ class AuthorisationHandlerTest {
 
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, true, false, "MEDIUM_LEVEL");
+        }
+
+        @Test
+        void shouldSendAuditRequestParsedWithMaxAgeExtensionWhenSupportedByClient() {
+            var client = generateClientRegistry();
+            client.setMaxAgeEnabled(true);
+            when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            when(clientService.getClient(anyString())).thenReturn(Optional.of(client));
+            Map<String, String> requestParams =
+                    buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]", "max_age", "123"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL", 123);
         }
 
         @Test
@@ -3068,15 +3087,38 @@ class AuthorisationHandlerTest {
             boolean identityRequested,
             boolean reauthRequested,
             String credentialTrustLevel) {
-        inOrder.verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                        CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER,
-                        pair("rpSid", rpSid),
-                        pair("identityRequested", identityRequested),
-                        pair("reauthRequested", reauthRequested),
-                        pair("credential_trust_level", credentialTrustLevel));
+        verifyAuthorisationRequestParsedAuditEvent(
+                rpSid, identityRequested, reauthRequested, credentialTrustLevel, null);
+    }
+
+    private void verifyAuthorisationRequestParsedAuditEvent(
+            String rpSid,
+            boolean identityRequested,
+            boolean reauthRequested,
+            String credentialTrustLevel,
+            Integer maxAge) {
+        if (Objects.isNull(maxAge)) {
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("rpSid", rpSid),
+                            pair("identityRequested", identityRequested),
+                            pair("reauthRequested", reauthRequested),
+                            pair("credential_trust_level", credentialTrustLevel));
+        } else {
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("rpSid", rpSid),
+                            pair("identityRequested", identityRequested),
+                            pair("reauthRequested", reauthRequested),
+                            pair("credential_trust_level", credentialTrustLevel),
+                            pair("maximumSessionAge", maxAge));
+        }
     }
 
     private static ECKey generateECSigningKey() {
