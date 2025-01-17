@@ -38,22 +38,25 @@ public class CloudwatchMetricsService {
         segmentedFunctionCall(
                 "Metrics::EMF",
                 () -> {
-                    var metrics = new MetricsLogger();
-                    var dimensionsSet = new DimensionSet();
-
-                    String namespace = "Authentication";
-                    dimensions.forEach(dimensionsSet::addDimension);
-                    Unit unit = Unit.NONE;
-
-                    MetricValidationWarningLogger.validateNamespace(namespace);
-                    MetricValidationWarningLogger.validateMetric(name, value, unit);
-                    dimensions.forEach(MetricValidationWarningLogger::validateDimensionSet);
-
-                    metrics.setNamespace(namespace);
-                    metrics.putDimensions(dimensionsSet);
-                    metrics.putMetric(name, value, unit);
-                    metrics.flush();
+                    emitMetric(name, value, dimensions, new MetricsLogger());
                 });
+    }
+
+    protected void emitMetric(String name, double value, Map<String, String> dimensions, MetricsLogger metrics) {
+        var dimensionsSet = new DimensionSet();
+
+        String namespace = "Authentication";
+        dimensions.forEach(dimensionsSet::addDimension);
+        Unit unit = Unit.NONE;
+
+        MetricValidationWarningLogger.validateNamespace(namespace);
+        MetricValidationWarningLogger.validateMetric(name, value, unit);
+        dimensions.forEach(MetricValidationWarningLogger::validateDimensionSet);
+
+        metrics.setNamespace(namespace);
+        metrics.putDimensions(dimensionsSet);
+        metrics.putMetric(name, value, unit);
+        metrics.flush();
     }
 
     public void incrementCounter(String name, Map<String, String> dimensions) {

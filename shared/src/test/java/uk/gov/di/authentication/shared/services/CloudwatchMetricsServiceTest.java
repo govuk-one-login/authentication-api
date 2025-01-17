@@ -3,6 +3,8 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 
 import java.util.Collections;
@@ -46,6 +48,22 @@ class CloudwatchMetricsServiceTest {
         assertThat(dimensions.getDimensionKeys().size(), is(2));
         assertThat(dimensions.getDimensionValue("Environment"), is(randomEnvironment));
         assertThat(dimensions.getDimensionValue("Key1"), is("Value1"));
+    }
+
+    @Test
+    void shouldEmitMetricWithNamespace() {
+        var metricsLogger = Mockito.mock(MetricsLogger.class);
+
+        var service = new CloudwatchMetricsService(new ConfigurationService() {
+            @Override
+            public String getEnvironment() {
+                return "test";
+            }
+        });
+
+        service.emitMetric("Metric", 1, Collections.emptyMap(), metricsLogger);
+
+        Mockito.verify(metricsLogger).setNamespace("Authentication");
     }
 
 }
