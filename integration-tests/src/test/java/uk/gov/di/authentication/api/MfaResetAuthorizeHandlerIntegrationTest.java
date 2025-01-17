@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.doubles.MetricsLoggerTestDouble;
 import uk.gov.di.authentication.sharedtest.extensions.CloudWatchExtension;
+import uk.gov.di.authentication.sharedtest.extensions.IDReverificationStateExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
@@ -65,7 +66,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
             new KmsKeyExtension("mfa-reset-storage-token-signing-key", KeyUsageType.SIGN_VERIFY);
 
     @RegisterExtension
-    private static final KmsKeyExtension mfaResetJarSigningKey =
+    private static final KmsKeyExtension ipvReverificationRequestsSigningKey =
             new KmsKeyExtension("mfa-reset-jar-signing-key", KeyUsageType.SIGN_VERIFY);
 
     @RegisterExtension
@@ -75,6 +76,10 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     @RegisterExtension
     private static final CloudWatchExtension cloudwatchExtension = new CloudWatchExtension();
 
+    @RegisterExtension
+    private static final IDReverificationStateExtension idReverificationStateExtension =
+            new IDReverificationStateExtension();
+
     @BeforeAll
     static void setupEnvironment() {
         environment.set("TXMA_AUDIT_QUEUE_URL", txmaAuditQueue.getQueueUrl());
@@ -82,7 +87,9 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         environment.set(
                 "MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS",
                 mfaResetStorageTokenSigningKey.getKeyId());
-        environment.set("MFA_RESET_JAR_SIGNING_KEY_ID", mfaResetJarSigningKey.getKeyId());
+        environment.set(
+                "IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS",
+                ipvReverificationRequestsSigningKey.getKeyId());
 
         createTestIPVEncryptionKeyPair();
         putIPVPublicKeyInEnvironmentVariableUntilIPVJWKSAvailable();
@@ -110,7 +117,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                     Base64.getEncoder().encodeToString(rsaKey.toRSAPublicKey().getEncoded());
 
             environment.set(
-                    "IPV_AUTHORIZATION_PUBLIC_KEY",
+                    "IPV_PUBLIC_ENCRYPTION_KEY",
                     "-----BEGIN PUBLIC KEY-----\n"
                             + base64PublicKey
                             + "\n-----END PUBLIC KEY-----");
@@ -144,9 +151,11 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     @Test
     void shouldAuthenticateMfaReset() {
+        idReverificationStateExtension.store("orch-redirect-url", "client-session-id");
+
         var response =
                 makeRequest(
-                        Optional.of(new MfaResetRequest(USER_EMAIL)),
+                        Optional.of(new MfaResetRequest(USER_EMAIL, "")),
                         constructFrontendHeaders(sessionId, sessionId),
                         Map.of());
 
@@ -160,7 +169,9 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     private static void checkCorrectKeysUsedViaIntegrationWithKms(String body) {
         var kmsAccessInterceptor = ConfigurationService.getKmsAccessInterceptor();
-        assertTrue(kmsAccessInterceptor.wasKeyUsedToSign(mfaResetJarSigningKey.getKeyId()));
+        assertTrue(
+                kmsAccessInterceptor.wasKeyUsedToSign(
+                        ipvReverificationRequestsSigningKey.getKeyId()));
         assertTrue(
                 kmsAccessInterceptor.wasKeyUsedToSign(mfaResetStorageTokenSigningKey.getKeyId()));
         ObjectMapper objectMapper = new ObjectMapper();

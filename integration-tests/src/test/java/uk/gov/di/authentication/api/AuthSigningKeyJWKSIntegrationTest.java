@@ -58,7 +58,8 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @BeforeAll
     static void setupEnvironment() {
-        environment.set("MFA_RESET_JAR_SIGNING_KEY_ALIAS", mfaResetJarSigningKey.getKeyId());
+        environment.set(
+                "IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS", mfaResetJarSigningKey.getKeyId());
 
         try (KmsClient kmsClient = getKmsClient()) {
             GetPublicKeyRequest getPublicKeyRequest =
@@ -99,7 +100,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @Test
     void shouldNotAllowExceptionsToEscape() {
-        environment.set("MFA_RESET_JAR_SIGNING_KEY_ALIAS", "wrong-key-alias");
+        environment.set("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS", "wrong-key-alias");
 
         handler = new MfaResetJarJwkHandler(new ConfigurationService());
 

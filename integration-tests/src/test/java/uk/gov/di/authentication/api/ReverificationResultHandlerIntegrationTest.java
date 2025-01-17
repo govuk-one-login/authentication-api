@@ -73,7 +73,8 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
 
     @BeforeAll
     static void setupEnvironment() {
-        environment.set("MFA_RESET_JAR_SIGNING_KEY_ALIAS", mfaResetJarSigningKey.getKeyId());
+        environment.set(
+                "IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS", mfaResetJarSigningKey.getKeyId());
         environment.set("IPV_AUTHORISATION_CLIENT_ID", "test-client-id");
         environment.set("IPV_AUDIENCE", "test-audience");
         environment.set("TXMA_AUDIT_QUEUE_URL", txmaAuditQueue.getQueueUrl());
