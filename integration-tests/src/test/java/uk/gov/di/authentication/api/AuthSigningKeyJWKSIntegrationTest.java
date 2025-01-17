@@ -54,7 +54,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(MfaResetJarJwkHandler.class);
 
-    private static String expectedKid;
+    private static String expectedHashKeyArn;
 
     @BeforeAll
     static void setupEnvironment() {
@@ -67,7 +67,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
             GetPublicKeyResponse getPublicKeyResponse = kmsClient.getPublicKey(getPublicKeyRequest);
 
-            expectedKid = hashSha256String(getPublicKeyResponse.keyId());
+            expectedHashKeyArn = hashSha256String(getPublicKeyResponse.keyId());
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
@@ -115,7 +115,7 @@ class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     private static void checkPublicSigningKeyResponseMeetsADR0030(JsonObject key) {
-        assertEquals(expectedKid, key.get("kid").getAsString());
+        assertEquals(expectedHashKeyArn, key.get("kid").getAsString());
         assertEquals(KeyType.EC.getValue(), key.get("kty").getAsString());
         assertEquals(KeyUse.SIGNATURE.getValue(), key.get("use").getAsString());
         assertEquals(Curve.P_256.getName(), key.get("crv").getAsString());
