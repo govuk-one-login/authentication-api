@@ -125,7 +125,7 @@ class IPVReverificationServiceTest {
                 .thenReturn(constructTestPublicKey());
         when(configurationService.getIPVAuthorisationClientId())
                 .thenReturn(TEST_IPV_AUTH_CLIENT_ID);
-        when(configurationService.getAuthIssuerClaim()).thenReturn(TEST_ISSUER_CLAIM);
+        when(configurationService.getAuthIssuerClaimForIPV()).thenReturn(TEST_ISSUER_CLAIM);
         when(configurationService.getIPVAuthorisationURI())
                 .thenReturn(new URI(TEST_IPV_AUTHORIZE_URI));
         when(configurationService.getSessionExpiry()).thenReturn(TEST_SESSION_EXPIRY);

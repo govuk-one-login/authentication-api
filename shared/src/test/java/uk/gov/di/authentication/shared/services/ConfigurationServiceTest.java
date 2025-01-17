@@ -589,7 +589,7 @@ class ConfigurationServiceTest {
 
     @Test
     void getAuthIssuerClaimShouldNotDefault() {
-        assertEquals("", configurationService.getAuthIssuerClaim());
+        assertEquals("", configurationService.getAuthIssuerClaimForIPV());
     }
 
     @Test

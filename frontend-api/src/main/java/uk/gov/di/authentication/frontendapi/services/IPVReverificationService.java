@@ -126,7 +126,7 @@ public class IPVReverificationService {
         OIDCClaimsRequest claimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claims);
         JWTClaimsSet.Builder claimsBuilder =
                 new JWTClaimsSet.Builder()
-                        .issuer(configurationService.getAuthIssuerClaim())
+                        .issuer(configurationService.getAuthIssuerClaimForIPV())
                         .audience(configurationService.getIPVAudience())
                         .expirationTime(expiryDate)
                         .subject(subject.getValue())

@@ -31,6 +31,20 @@ RwIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
+#
+# Shared with Orchestration
+#
+ipv_audience = "https://ipvstub.signin.dev.account.gov.uk"
+
+#
+# Auth specific overrides
+#
+auth_issuer_claim_for_ipv       = "auth"
+auth_issuer_claim               = "https://signin.dev.account.gov.uk"
+evcs_audience                   = "https://credential-store.dev.account.gov.uk"
+ipv_auth_authorize_callback_uri = "https://signin.dev.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_client_id    = "authTestClient"
+
 # The IPV public encrypting key that is specific to auth.
 auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----

@@ -314,7 +314,12 @@ variable "evcs_audience" {
   default = "undefined"
 }
 
-variable "auth_issuer_claim_for_evcs" {
+variable "auth_issuer_claim" {
+  type    = string
+  default = "undefined"
+}
+
+variable "auth_issuer_claim_for_ipv" {
   type    = string
   default = "undefined"
 }

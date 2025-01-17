@@ -265,7 +265,7 @@ public class TokenService {
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", "reverification")
-                        .issuer(configService.getAuthIssuerClaimForEVCS())
+                        .issuer(configService.getAuthIssuerClaim())
                         .audience(aud)
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())

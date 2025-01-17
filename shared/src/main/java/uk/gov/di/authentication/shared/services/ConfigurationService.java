@@ -647,12 +647,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                         "https://vocab.account.gov.uk/v1/storageAccessToken");
     }
 
-    public String getAuthIssuerClaim() {
-        return System.getenv().getOrDefault("AUTH_ISSUER_CLAIM", "");
+    public String getAuthIssuerClaimForIPV() {
+        return System.getenv().getOrDefault("AUTH_ISSUER_CLAIM_IPV", "");
     }
 
-    public String getAuthIssuerClaimForEVCS() {
-        return System.getenv().getOrDefault("AUTH_ISSUER_CLAIM_FOR_EVCS", "");
+    public String getAuthIssuerClaim() {
+        return System.getenv().getOrDefault("AUTH_ISSUER_CLAIM", "");
     }
 
     public String getEVCSAudience() {
