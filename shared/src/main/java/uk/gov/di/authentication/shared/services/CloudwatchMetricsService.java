@@ -36,13 +36,11 @@ public class CloudwatchMetricsService {
 
     public void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
         segmentedFunctionCall(
-                "Metrics::EMF",
-                () -> {
-                    emitMetric(name, value, dimensions, new MetricsLogger());
-                });
+                "Metrics::EMF", () -> emitMetric(name, value, dimensions, new MetricsLogger()));
     }
 
-    protected void emitMetric(String name, double value, Map<String, String> dimensions, MetricsLogger metrics) {
+    protected void emitMetric(
+            String name, double value, Map<String, String> dimensions, MetricsLogger metrics) {
         var dimensionsSet = new DimensionSet();
 
         String namespace = "Authentication";
