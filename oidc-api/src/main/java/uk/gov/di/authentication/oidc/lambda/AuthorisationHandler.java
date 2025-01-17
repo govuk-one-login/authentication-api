@@ -922,11 +922,7 @@ public class AuthorisationHandler
                         .claim("reauthenticate", reauthSub)
                         .claim("previous_govuk_signin_journey_id", reauthSid)
                         .claim("channel", client.getChannel())
-                        .claim(
-                                "authenticated",
-                                configurationService.isUseOrchSessionForAuthenticatedClaimEnabled()
-                                        ? orchSession.getAuthenticated()
-                                        : session.isAuthenticated())
+                        .claim("authenticated", orchSession.getAuthenticated())
                         .claim(
                                 "current_credential_strength",
                                 orchSession.getCurrentCredentialStrength());
