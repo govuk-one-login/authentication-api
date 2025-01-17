@@ -120,4 +120,12 @@ public class CloudwatchMetricsService {
                 MFA_RESET_HANDOFF.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
+
+    public DimensionSet getDimensions(Map<String, String> dimensions) {
+        DimensionSet dimensionSet = new DimensionSet();
+
+        dimensionSet.addDimension("Environment", configurationService.getEnvironment());
+
+        return dimensionSet;
+    }
 }
