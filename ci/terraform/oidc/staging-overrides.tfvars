@@ -12,12 +12,7 @@ doc_app_encryption_key_id                   = "ca6d5930-77a6-41a4-8192-125df996c
 doc_app_cri_data_endpoint                   = "userinfo"
 doc_app_jwks_endpoint                       = "https://api-backend-api.review-b.staging.account.gov.uk/.well-known/jwks.json"
 ipv_authorisation_client_id                 = "authOrchestrator"
-ipv_authorisation_uri                       = "https://identity.staging.account.gov.uk/oauth2/authorize"
 ipv_authorisation_callback_uri              = "https://oidc.staging.account.gov.uk/ipv-callback"
-ipv_audience                                = "https://identity.staging.account.gov.uk"
-evcs_audience                               = "https://credential-store.staging.account.gov.uk"
-auth_issuer_claim                           = "https://signin.staging.account.gov.uk"
-ipv_backend_uri                             = "https://api.identity.staging.account.gov.uk"
 internal_sector_uri                         = "https://identity.staging.account.gov.uk"
 spot_enabled                                = true
 test_clients_enabled                        = "true"
@@ -27,33 +22,7 @@ account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
 # account_intervention_service_uri is stored in AWS Secrets Manager and populated using read_secrets.sh
-send_storage_token_to_ipv_enabled = true
-ipv_auth_public_encryption_key    = <<-EOT
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyB5V0Tc9KEV5/zGUHLu0
-ZVX0xbDhCyaNwWjJILV0pJE+HmAUc8Azc42MY9mAm0D3LYF8PcWsBa1cIgJF6z7j
-LoM43PR/BZafvYeW7GwIun+pugSQO5ljKzUId42ydh0ynwEXJEoMQd3p4e/EF4Ut
-yGCV108TgoqDvD50dtqNOw1wBsfbq4rUaRTxhpJLIo8tujmGpf1YVWymQEk+FlyN
-LlZL4UE/eEyp+qztIsVXJfyhcC/ezrr5e0FnZ1U0iJavhdmBqmIaLi3SjNawNdEQ
-RWDJd2Fit4x9bFIqpZKqc1pGLu39UEaHLzRgi0hVDQhG5A7LpErOMjWquS2lmkwa
-3wIDAQAB
------END PUBLIC KEY-----
-EOT
-
-# The IPV public encrypting key that is specific to auth.
-# Note: ipv_auth_public_encryption_key, above, is owned and used by orchestration.
-auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyB5V0Tc9KEV5/zGUHLu0
-ZVX0xbDhCyaNwWjJILV0pJE+HmAUc8Azc42MY9mAm0D3LYF8PcWsBa1cIgJF6z7j
-LoM43PR/BZafvYeW7GwIun+pugSQO5ljKzUId42ydh0ynwEXJEoMQd3p4e/EF4Ut
-yGCV108TgoqDvD50dtqNOw1wBsfbq4rUaRTxhpJLIo8tujmGpf1YVWymQEk+FlyN
-LlZL4UE/eEyp+qztIsVXJfyhcC/ezrr5e0FnZ1U0iJavhdmBqmIaLi3SjNawNdEQ
-RWDJd2Fit4x9bFIqpZKqc1pGLu39UEaHLzRgi0hVDQhG5A7LpErOMjWquS2lmkwa
-3wIDAQAB
------END PUBLIC KEY-----
-EOT
-
+send_storage_token_to_ipv_enabled   = true
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzZGTSE8TLLtQjdmD6SiF
@@ -63,6 +32,34 @@ qwry65oEaUBlWmGlNTPBnUzy/d6mYMfZObsr+yI1HszZE193ABAwtPttCFhFZWov
 wEBMjmuOzy5osorLg9RCJQVN91Bp932vQS7hXirDpfBhCuQfYQMjFXv4MhCKnk42
 pi0FWWzbnn9UcbdcS/Sl5UeuTyCQ+MrunV/XGjIrPMWaFUIQomX1+pCMHkthbQ0J
 AQIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+#
+# Shared with Orchestration
+#
+ipv_audience    = "https://identity.staging.account.gov.uk"
+ipv_backend_uri = "https://api.identity.staging.account.gov.uk"
+
+#
+# Auth specific overrides
+#
+auth_issuer_claim_for_ipv       = "auth"
+auth_issuer_claim               = "https://signin.staging.account.gov.uk"
+evcs_audience                   = "https://credential-store.staging.account.gov.uk"
+ipv_auth_authorize_callback_uri = "https://signin.staging.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_client_id    = "auth"
+
+# The IPV public encrypting key that is specific to auth.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyB5V0Tc9KEV5/zGUHLu0
+ZVX0xbDhCyaNwWjJILV0pJE+HmAUc8Azc42MY9mAm0D3LYF8PcWsBa1cIgJF6z7j
+LoM43PR/BZafvYeW7GwIun+pugSQO5ljKzUId42ydh0ynwEXJEoMQd3p4e/EF4Ut
+yGCV108TgoqDvD50dtqNOw1wBsfbq4rUaRTxhpJLIo8tujmGpf1YVWymQEk+FlyN
+LlZL4UE/eEyp+qztIsVXJfyhcC/ezrr5e0FnZ1U0iJavhdmBqmIaLi3SjNawNdEQ
+RWDJd2Fit4x9bFIqpZKqc1pGLu39UEaHLzRgi0hVDQhG5A7LpErOMjWquS2lmkwa
+3wIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
@@ -112,3 +109,20 @@ logging_endpoint_arns = [
 ]
 
 shared_state_bucket = "di-auth-staging-tfstate"
+
+#
+# Possibly not needed anymore
+#
+
+# Note: this is owned (and possibly) used by orchestration.
+ipv_auth_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyB5V0Tc9KEV5/zGUHLu0
+ZVX0xbDhCyaNwWjJILV0pJE+HmAUc8Azc42MY9mAm0D3LYF8PcWsBa1cIgJF6z7j
+LoM43PR/BZafvYeW7GwIun+pugSQO5ljKzUId42ydh0ynwEXJEoMQd3p4e/EF4Ut
+yGCV108TgoqDvD50dtqNOw1wBsfbq4rUaRTxhpJLIo8tujmGpf1YVWymQEk+FlyN
+LlZL4UE/eEyp+qztIsVXJfyhcC/ezrr5e0FnZ1U0iJavhdmBqmIaLi3SjNawNdEQ
+RWDJd2Fit4x9bFIqpZKqc1pGLu39UEaHLzRgi0hVDQhG5A7LpErOMjWquS2lmkwa
+3wIDAQAB
+-----END PUBLIC KEY-----
+EOT

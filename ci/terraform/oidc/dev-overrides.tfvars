@@ -1,25 +1,30 @@
-doc_app_cri_data_endpoint                   = "credentials/issue"
-doc_app_backend_uri                         = "https://dcmaw-cri.dev.stubs.account.gov.uk"
-doc_app_domain                              = "https://dcmaw-cri.dev.stubs.account.gov.uk"
-doc_app_authorisation_client_id             = "orch-dev"
-doc_app_authorisation_callback_uri          = "https://oidc.dev.account.gov.uk/doc-app-callback"
-doc_app_authorisation_uri                   = "https://dcmaw-cri.dev.stubs.account.gov.uk/authorize"
-doc_app_jwks_endpoint                       = "https://dcmaw-cri.dev.stubs.account.gov.uk/.well-known/jwks.json"
-doc_app_aud                                 = "https://dcmaw-cri.dev.stubs.account.gov.uk"
-doc_app_new_aud_claim_enabled               = true
-doc_app_encryption_key_id                   = ""
-spot_enabled                                = false
+custom_doc_app_claim_enabled = true
+# ipv_capacity_allowed
+# ipv_api_enabled
+doc_app_authorisation_client_id    = "orch-dev"
+doc_app_authorisation_uri          = "https://dcmaw-cri.dev.stubs.account.gov.uk/authorize"
+doc_app_backend_uri                = "https://dcmaw-cri.dev.stubs.account.gov.uk"
+doc_app_domain                     = "https://dcmaw-cri.dev.stubs.account.gov.uk"
+doc_app_aud                        = "https://dcmaw-cri.dev.stubs.account.gov.uk"
+doc_app_new_aud_claim_enabled      = true
+doc_app_authorisation_callback_uri = "https://oidc.dev.account.gov.uk/doc-app-callback"
+doc_app_encryption_key_id          = ""
+doc_app_cri_data_endpoint          = "credentials/issue"
+doc_app_jwks_endpoint              = "https://dcmaw-cri.dev.stubs.account.gov.uk/.well-known/jwks.json"
+# ipv_authorisation_client_id
+# ipv_authorisation_callback_uri
 internal_sector_uri                         = "https://identity.dev.account.gov.uk"
-custom_doc_app_claim_enabled                = true
+spot_enabled                                = false
+test_clients_enabled                        = true
 ipv_audience                                = "https://ipvstub.signin.dev.account.gov.uk"
 doc_app_cri_data_v2_endpoint                = "credentials/issue"
 orch_client_id                              = "orchestrationAuth"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
-# account_intervention_service_uri is stored in AWS Secrets Manager and populated using read_secrets.sh
 account_intervention_service_abort_on_error = true
-send_storage_token_to_ipv_enabled           = true
-auth_frontend_public_encryption_key         = <<-EOT
+# account_intervention_service_uri is stored in AWS Secrets Manager and populated using read_secrets.sh
+send_storage_token_to_ipv_enabled   = true
+auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0PcOHuVXOuexYZmpOlCo
 vFcGfezObHnnVTTfnCrS5TBmAEC9JNwH/YFmE/zx84I1dy5fEjll+2GIe8Hcue+W
@@ -34,7 +39,8 @@ EOT
 #
 # Shared with Orchestration
 #
-ipv_audience = "https://ipvstub.signin.dev.account.gov.uk"
+ipv_audience    = "https://ipvstub.signin.dev.account.gov.uk"
+ipv_backend_uri = "https://ipvstub.signin.dev.account.gov.uk"
 
 #
 # Auth specific overrides

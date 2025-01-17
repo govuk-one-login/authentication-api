@@ -20,9 +20,8 @@ support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
 
 # AUTH to IPV reverification
-# auth only
-ipv_auth_authorize_callback_uri = "https://signin.staging.account.gov.uk/ipv/callback/authorize"
-ipv_auth_authorize_client_id    = "auth"
+# Shared with orch
+ipv_authorisation_uri = "https://identity.staging.account.gov.uk/oauth2/authorize"
 
 orch_account_id                       = "590183975515"
 is_orch_stubbed                       = false
