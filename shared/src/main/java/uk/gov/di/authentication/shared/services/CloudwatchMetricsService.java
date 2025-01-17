@@ -125,6 +125,7 @@ public class CloudwatchMetricsService {
         DimensionSet dimensionSet = new DimensionSet();
 
         dimensionSet.addDimension("Environment", configurationService.getEnvironment());
+        dimensions.forEach(dimensionSet::addDimension);
 
         return dimensionSet;
     }
