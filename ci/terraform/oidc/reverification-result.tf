@@ -31,7 +31,7 @@ module "reverification_result" {
     REDIS_KEY                                     = local.redis_key
     IPV_AUDIENCE                                  = var.ipv_audience
     IPV_AUTHORISATION_CALLBACK_URI                = var.ipv_auth_authorize_callback_uri
-    IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_authorisation_client_id
+    IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_auth_authorize_client_id
     ENVIRONMENT                                   = var.environment
     IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.arn
     IPV_BACKEND_URI                               = var.ipv_backend_uri
