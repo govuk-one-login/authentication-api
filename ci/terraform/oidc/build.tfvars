@@ -65,3 +65,4 @@ orch_authentication_callback_enabled = true
 orch_doc_app_callback_enabled        = true
 orch_ipv_callback_enabled            = true
 auth_spot_response_disabled          = true
+orch_ipv_jwks_enabled                = true
