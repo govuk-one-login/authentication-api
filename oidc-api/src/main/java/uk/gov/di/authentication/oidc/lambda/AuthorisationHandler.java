@@ -857,7 +857,8 @@ public class AuthorisationHandler
                 ClientSubjectHelper.getSectorIdentifierForClient(
                         client, configurationService.getInternalSectorURI());
         var state = new State();
-        orchestrationAuthorizationService.storeState(session.getSessionId(), state);
+        orchestrationAuthorizationService.storeState(
+                session.getSessionId(), clientSessionId, state);
 
         String reauthSub = null;
         String reauthSid = null;
