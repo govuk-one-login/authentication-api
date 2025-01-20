@@ -11,7 +11,6 @@ doc_app_encryption_key_id                   = ""
 spot_enabled                                = false
 internal_sector_uri                         = "https://identity.dev.account.gov.uk"
 custom_doc_app_claim_enabled                = true
-ipv_no_session_response_enabled             = true
 ipv_audience                                = "https://ipvstub.signin.dev.account.gov.uk"
 doc_app_cri_data_v2_endpoint                = "credentials/issue"
 orch_client_id                              = "orchestrationAuth"

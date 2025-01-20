@@ -21,7 +21,6 @@ ipv_backend_uri                             = "https://api.identity.staging.acco
 internal_sector_uri                         = "https://identity.staging.account.gov.uk"
 spot_enabled                                = true
 test_clients_enabled                        = "true"
-ipv_no_session_response_enabled             = true
 doc_app_cri_data_v2_endpoint                = "userinfo/v2"
 orch_client_id                              = "orchestrationAuth"
 account_intervention_service_call_enabled   = true

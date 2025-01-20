@@ -623,10 +623,5 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }
-
-        @Override
-        public boolean isIPVNoSessionResponseEnabled() {
-            return true;
-        }
     }
 }

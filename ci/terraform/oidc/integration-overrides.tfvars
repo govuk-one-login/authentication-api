@@ -20,7 +20,6 @@ ipv_audience                                = "https://identity.integration.acco
 internal_sector_uri                         = "https://identity.integration.account.gov.uk"
 spot_enabled                                = true
 custom_doc_app_claim_enabled                = true
-ipv_no_session_response_enabled             = true
 orch_client_id                              = "orchestrationAuth"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true

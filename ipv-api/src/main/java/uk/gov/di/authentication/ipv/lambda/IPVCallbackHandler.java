@@ -206,8 +206,7 @@ public class IPVCallbackHandler
             if (Objects.isNull(sessionCookiesIds)) {
                 var noSessionEntity =
                         noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                input.getQueryStringParameters(),
-                                configurationService.isIPVNoSessionResponseEnabled());
+                                input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(
                                 noSessionEntity.getClientSession().getAuthRequestParams());
