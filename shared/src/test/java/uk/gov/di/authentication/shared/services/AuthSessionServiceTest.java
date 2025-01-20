@@ -46,6 +46,13 @@ class AuthSessionServiceTest {
     }
 
     @Test
+    void generatesANewSessionWithExpectedDefaults() {
+        var session = authSessionService.generateNewAuthSession(SESSION_ID);
+        assertEquals(SESSION_ID, session.getSessionId());
+        assertEquals(AuthSessionItem.AccountState.UNKNOWN, session.getIsNewAccount());
+    }
+
+    @Test
     void getSessionReturnsSessionWithValidTtl() {
         withValidSession();
         var session = authSessionService.getSession(SESSION_ID);

@@ -40,6 +40,16 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         this.configurationService = configurationService;
     }
 
+    public AuthSessionItem generateNewAuthSession(String sessionId) {
+        return new AuthSessionItem()
+                .withSessionId(sessionId)
+                .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                .withTimeToLive(
+                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond());
+    }
+
     public void addOrUpdateSessionIncludingSessionId(
             Optional<String> previousSessionId,
             String newSessionId,
