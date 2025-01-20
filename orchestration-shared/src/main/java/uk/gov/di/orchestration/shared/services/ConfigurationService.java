@@ -15,7 +15,9 @@ import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.orchestration.shared.exceptions.SSMParameterNotFoundException;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
@@ -73,6 +75,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().containsKey(envVar)
                 ? Optional.of(URI.create(System.getenv(envVar)))
                 : Optional.empty();
+    }
+
+    private URL getURLOrThrow(String envVar) {
+        try {
+            return getURIOrThrow(envVar).toURL();
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // Please keep the method names in alphabetical order so we can find stuff more easily.
@@ -297,6 +307,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
+    public URL getIPVJwksUrl() {
+        return getURLOrThrow("IPV_JWKS_URL");
+    }
+
+    public int getIPVJwkCacheExpirationInSeconds() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("IPV_JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
+    }
+
     public String getInternalSectorURI() {
         return System.getenv("INTERNAl_SECTOR_URI");
     }
@@ -407,6 +426,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isReturnAuthTimeInIdTokenEnabled() {
         return getFlagOrFalse("RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED");
+    }
+
+    public boolean isUseIPVJwksEndpointEnabled() {
+        return getFlagOrFalse("USE_IPV_JWKS_ENDPOINT");
     }
 
     public Optional<String> getIPVCapacity() {

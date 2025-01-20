@@ -80,6 +80,8 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  UseIpvJwksEndpointToGetEncryptionKey:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1693,10 +1695,11 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
         SubnetIds:
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1811,6 +1814,24 @@ Resources:
               !Ref Environment,
               ipvTokenKeyArn,
             ]
+          IPV_JWKS_URL: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
@@ -1850,6 +1871,12 @@ Resources:
             - SupportMaxAgeEnabled
             - true
             - false
+          USE_IPV_JWKS_ENDPOINT: !If
+            - UseIpvJwksEndpointToGetEncryptionKey
+            - true
+            - false
+          IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -3506,6 +3533,24 @@ Resources:
               !Ref Environment,
               ipvTokenKeyArn,
             ]
+          IPV_JWKS_URL: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           SPOT_QUEUE_URL: !If
             - IpvExists
             - !Sub
@@ -3523,6 +3568,11 @@ Resources:
                     authEnvironment,
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
+          USE_IPV_JWKS_ENDPOINT: !If
+            - UseIpvJwksEndpointToGetEncryptionKey
+            - true
+            - false
+          IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
         - !Ref IdentityCredentialsTableWriteAccessPolicy

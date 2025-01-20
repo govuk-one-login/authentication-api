@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,7 +57,7 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void shoulCacheTheNotifyBearerTokenAfterTheFirstCall() {
+    void shouldCacheTheNotifyBearerTokenAfterTheFirstCall() {
         var mock = mock(SsmClient.class);
         ConfigurationService configurationService = new ConfigurationService(mock);
 
@@ -80,6 +81,16 @@ class ConfigurationServiceTest {
         ConfigurationService configurationService = new ConfigurationService(systemService);
 
         assertEquals(configurationService.getAccountInterventionServiceURI(), URI.create(""));
+    }
+
+    @Test
+    void shouldThrowUncheckedExceptionIfUrlNotValid() {
+        when(systemService.getOrDefault("IPV_JWKS_URL", ""))
+                .thenReturn("not-a-protocol://test.com");
+
+        ConfigurationService configurationService = new ConfigurationService(systemService);
+
+        assertThrows(RuntimeException.class, configurationService::getIPVJwksUrl);
     }
 
     private GetParameterRequest parameterRequest(String name) {
