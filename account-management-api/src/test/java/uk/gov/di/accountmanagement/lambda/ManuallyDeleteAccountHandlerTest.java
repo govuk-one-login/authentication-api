@@ -58,7 +58,12 @@ class ManuallyDeleteAccountHandlerTest {
         var deletedAccountIdentifiers =
                 new DeletedAccountIdentifiers("publicSubject", "legacySubject", "subject");
         var expectedReturnValue =
-                "DeletedAccountIdentifiers[publicSubjectId=publicSubject, legacySubjectId=legacySubject, subjectId=subject]";
+                """
+                Deleted Account Identifiers
+                publicSubjectId: publicSubject
+                legacySubjectId: legacySubject
+                subjectId: subject
+                """;
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
