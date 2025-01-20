@@ -13,6 +13,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.orchestration.shared.helpers.CryptoProviderHelper;
+import uk.gov.di.orchestration.shared.helpers.JwkCache;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
 import java.net.URL;
@@ -64,6 +65,15 @@ public class JwksService {
     public JWK getPublicIpvTokenJwkWithOpaqueId() {
         LOG.info("Retrieving IPV token public key");
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
+    }
+
+    public JWK getIpvJwk() {
+        JwkCache jwkCache = JwkCache.getInstance();
+        var ipvJwkCacheEntry =
+                jwkCache.getOrCreateEntry(
+                        configurationService.getIPVJwksUrl(),
+                        configurationService.getIPVJwkCacheExpirationInSeconds());
+        return ipvJwkCacheEntry.getKey();
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {
