@@ -78,6 +78,8 @@ class AuthenticationCallbackHandlerTest {
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
+    private static final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
     private static final LogoutService logoutService = mock(LogoutService.class);
     private static final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -196,7 +198,8 @@ class AuthenticationCallbackHandlerTest {
                         initiateIPVAuthorisationService,
                         accountInterventionService,
                         logoutService,
-                        authFrontend);
+                        authFrontend,
+                        noSessionOrchestrationService);
     }
 
     @Test
