@@ -18,7 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_AUTHORISATION_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -64,7 +64,7 @@ public class IDReverificationStateHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AUTH_REVERIFY_UNSUCCESSFUL_AUTHORISATION_RECEIVED,
+                        AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED,
                         AuditContext.emptyAuditContext()
                                 .withClientSessionId(CLIENT_SESSION_ID)
                                 .withTxmaAuditEncoded(Optional.of(ENCODED_DEVICE_DETAILS)));

@@ -13,7 +13,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_AUTHORISATION_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -64,8 +64,7 @@ public class IDReverificationStateHandler {
 
         var auditContext =
                 baseAuditContext.withClientSessionId(idReverificationState.getClientSessionId());
-        auditService.submitAuditEvent(
-                AUTH_REVERIFY_UNSUCCESSFUL_AUTHORISATION_RECEIVED, auditContext);
+        auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED, auditContext);
         var response =
                 new IDReverificationStateResponse(
                         idReverificationState.getOrchestrationRedirectUrl());
