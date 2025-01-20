@@ -329,7 +329,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     private void withAuthSessionNewAccount() {
-        authSessionExtension.addSession(Optional.empty(), TEST_SESSION_ID);
+        authSessionExtension.addSession(TEST_SESSION_ID);
         authSessionExtension.updateSession(
                 authSessionExtension
                         .getSession(TEST_SESSION_ID)
