@@ -16,6 +16,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
@@ -50,10 +51,12 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -64,6 +67,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -127,6 +131,8 @@ class AuthenticationCallbackHandlerTest {
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
+    private static final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
     private static final LogoutService logoutService = mock(LogoutService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final AuthFrontend authFrontend = mock(AuthFrontend.class);
@@ -211,6 +217,7 @@ class AuthenticationCallbackHandlerTest {
         reset(initiateIPVAuthorisationService);
         reset(logoutService);
         reset(authorizationService);
+        reset(noSessionOrchestrationService);
         session.setCurrentCredentialStrength(null);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
@@ -242,7 +249,8 @@ class AuthenticationCallbackHandlerTest {
                         initiateIPVAuthorisationService,
                         accountInterventionService,
                         logoutService,
-                        authFrontend);
+                        authFrontend,
+                        noSessionOrchestrationService);
     }
 
     @Test
@@ -325,21 +333,6 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenSessionCookieNotFound() {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(Collections.emptyMap());
-        event.setHeaders(Collections.emptyMap());
-
-        var response = handler.handleRequest(event, null);
-
-        assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
-
-        verifyNoInteractions(
-                tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
-    }
-
-    @Test
     void shouldRedirectToRpWithErrorWhenRequestIsInvalid()
             throws AuthenticationCallbackValidationException {
         usingValidSession();
@@ -365,6 +358,72 @@ class AuthenticationCallbackHandlerTest {
 
         verifyNoInteractions(
                 tokenService, userInfoStorageService, cloudwatchMetricsService, logoutService);
+    }
+
+    @Test
+    void
+            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
+                    throws NoSessionException {
+
+        var event = new APIGatewayProxyRequestEvent();
+
+        Map<String, String> queryParameters = new HashMap<>();
+        queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        queryParameters.put("state", STATE.getValue());
+        event.setQueryStringParameters(queryParameters);
+        event.setHeaders(Collections.emptyMap());
+
+        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
+                .thenReturn(
+                        new NoSessionEntity(
+                                CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, clientSession));
+
+        var response = handler.handleRequest(event, null);
+
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI.toString()),
+                                OAuth2Error.ACCESS_DENIED,
+                                RP_STATE,
+                                null)
+                        .toURI()
+                        .toString();
+        assertThat(response, hasStatus(302));
+        assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+        verify(auditService)
+                .submitAuditEvent(
+                        OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED,
+                        CLIENT_ID.getValue(),
+                        TxmaAuditUser.user().withGovukSigninJourneyId(CLIENT_SESSION_ID));
+
+        verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
+    }
+
+    @Test
+    void
+            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
+                    throws NoSessionException {
+        var event = new APIGatewayProxyRequestEvent();
+
+        Map<String, String> queryParameters = new HashMap<>();
+        queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        queryParameters.put("state", STATE.getValue());
+        event.setQueryStringParameters(queryParameters);
+        event.setHeaders(Collections.emptyMap());
+
+        doThrow(
+                        new NoSessionException(
+                                "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
+                .when(noSessionOrchestrationService)
+                .generateNoSessionOrchestrationEntity(queryParameters);
+
+        var response = handler.handleRequest(event, null);
+
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
+
+        verifyNoInteractions(
+                tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
     }
 
     @Test
