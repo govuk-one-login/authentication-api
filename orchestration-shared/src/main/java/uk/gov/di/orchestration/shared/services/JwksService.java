@@ -3,13 +3,8 @@ package uk.gov.di.orchestration.shared.services;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKMatcher;
-import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
-import com.nimbusds.jose.proc.SecurityContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -18,6 +13,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.orchestration.shared.helpers.CryptoProviderHelper;
+import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
 import java.net.URL;
 import java.security.PublicKey;
@@ -34,7 +30,6 @@ import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class JwksService {
-
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
     private static final Map<String, JWK> KEY_CACHE = new HashMap<>();
@@ -72,20 +67,7 @@ public class JwksService {
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {
-        JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
-        JWKSource<SecurityContext> jwkSource =
-                JWKSourceBuilder.create(url)
-                        .retrying(true)
-                        .refreshAheadCache(false)
-                        .cache(false)
-                        .rateLimited(false)
-                        .build();
-
-        LOG.info("Retrieving JWKSet with URL: {}", url);
-        return jwkSource.get(selector, null).stream()
-                .findFirst()
-                .orElseThrow(
-                        () -> new KeySourceException("No key found with given keyId: " + keyId));
+        return JwksUtils.retrieveJwkFromURLWithKeyId(url, keyId);
     }
 
     private JWK getPublicJWKWithKeyId(String keyId) {
