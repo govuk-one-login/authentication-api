@@ -50,6 +50,15 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                 .getEpochSecond());
     }
 
+    public void addSession(AuthSessionItem authSessionItem) {
+        try {
+            put(authSessionItem);
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to add auth session item to table", authSessionItem.getSessionId(), e);
+        }
+    }
+
     public void addOrUpdateSessionIncludingSessionId(
             Optional<String> previousSessionId,
             String newSessionId,
