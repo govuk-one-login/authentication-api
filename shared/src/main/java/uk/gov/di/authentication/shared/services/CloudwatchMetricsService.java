@@ -36,24 +36,25 @@ public class CloudwatchMetricsService {
 
     public void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
         segmentedFunctionCall(
-                "Metrics::EMF",
-                () -> {
-                    var metrics = new MetricsLogger();
-                    var dimensionsSet = new DimensionSet();
+                "Metrics::EMF", () -> emitMetric(name, value, dimensions, new MetricsLogger()));
+    }
 
-                    String namespace = "Authentication";
-                    dimensions.forEach(dimensionsSet::addDimension);
-                    Unit unit = Unit.NONE;
+    protected void emitMetric(
+            String name, double value, Map<String, String> dimensions, MetricsLogger metrics) {
+        var dimensionsSet = new DimensionSet();
 
-                    MetricValidationWarningLogger.validateNamespace(namespace);
-                    MetricValidationWarningLogger.validateMetric(name, value, unit);
-                    dimensions.forEach(MetricValidationWarningLogger::validateDimensionSet);
+        String namespace = "Authentication";
+        dimensions.forEach(dimensionsSet::addDimension);
+        Unit unit = Unit.NONE;
 
-                    metrics.setNamespace(namespace);
-                    metrics.putDimensions(dimensionsSet);
-                    metrics.putMetric(name, value, unit);
-                    metrics.flush();
-                });
+        MetricValidationWarningLogger.validateNamespace(namespace);
+        MetricValidationWarningLogger.validateMetric(name, value, unit);
+        dimensions.forEach(MetricValidationWarningLogger::validateDimensionSet);
+
+        metrics.setNamespace(namespace);
+        metrics.putDimensions(dimensionsSet);
+        metrics.putMetric(name, value, unit);
+        metrics.flush();
     }
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
@@ -119,5 +120,14 @@ public class CloudwatchMetricsService {
         incrementCounter(
                 MFA_RESET_HANDOFF.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+    }
+
+    public DimensionSet getDimensions(Map<String, String> dimensions) {
+        DimensionSet dimensionSet = new DimensionSet();
+
+        dimensionSet.addDimension("Environment", configurationService.getEnvironment());
+        dimensions.forEach(dimensionSet::addDimension);
+
+        return dimensionSet;
     }
 }
