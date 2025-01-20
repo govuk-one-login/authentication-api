@@ -3,7 +3,9 @@ package uk.gov.di.authentication.api;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.matching.ContainsPattern;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
@@ -27,16 +28,18 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
 import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -44,6 +47,8 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
     private static final String USER_EMAIL = "test@email.com";
     private static final String USER_PASSWORD = "Password123!";
     private static final String USER_PHONE_NUMBER = "+447712345432";
+
+    private static WireMockServer wireMockServer;
 
     public static final String SUCCESSFUL_TOKEN_RESPONSE =
             """
@@ -79,13 +84,24 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
         environment.set("IPV_AUDIENCE", "test-audience");
         environment.set("TXMA_AUDIT_QUEUE_URL", txmaAuditQueue.getQueueUrl());
 
-        WireMockServer wireMockServer =
-                new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         wireMockServer.start();
         configureFor("localhost", wireMockServer.port());
-        URI ipvUri = URI.create("http://localhost:" + wireMockServer.port());
 
+        wireMockServer.stubFor(
+                any(urlPathMatching("/.*"))
+                        .willReturn(aResponse().proxiedFrom("http://localhost:45678")));
+        environment.set("LOCALSTACK_ENDPOINT", "http://localhost:" + wireMockServer.port());
+
+        URI ipvUri = URI.create("http://localhost:" + wireMockServer.port() + "/ipv");
         environment.set("IPV_BACKEND_URI", ipvUri);
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (wireMockServer != null) {
+            wireMockServer.stop();
+        }
     }
 
     @BeforeEach
@@ -107,7 +123,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
     @Test
     void shouldSuccessfullyProcessAReverificationResult() {
         stubFor(
-                post(urlPathMatching("/token"))
+                post(urlPathMatching("/ipv/token"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -115,7 +131,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
                                         .withBody(SUCCESSFUL_TOKEN_RESPONSE)));
 
         stubFor(
-                get(urlPathMatching("/reverification"))
+                get(urlPathMatching("/ipv/reverification"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -139,12 +155,16 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
     }
 
     private static void checkCorrectKeyUsedToSignRequestToIPVViaIntegrationWithKms() {
-        var kmsAccessInterceptor = ConfigurationService.getKmsAccessInterceptor();
-        assertTrue(kmsAccessInterceptor.wasKeyUsedToSign(mfaResetJarSigningKey.getKeyId()));
+        WireMock.verify(
+                postRequestedFor(urlEqualTo("/"))
+                        .withRequestBody(
+                                matchingJsonPath(
+                                        "$.KeyId",
+                                        new ContainsPattern(mfaResetJarSigningKey.getKeyId()))));
     }
 
     private static void checkIntegrationWithIPV() {
-        WireMock.verify(1, postRequestedFor(urlPathMatching("/token")));
-        WireMock.verify(1, getRequestedFor(urlPathMatching("/reverification")));
+        WireMock.verify(1, postRequestedFor(urlPathMatching("/ipv/token")));
+        WireMock.verify(1, getRequestedFor(urlPathMatching("/ipv/reverification")));
     }
 }

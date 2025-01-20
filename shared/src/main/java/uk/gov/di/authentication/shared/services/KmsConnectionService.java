@@ -3,14 +3,12 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
-import uk.gov.di.authentication.shared.interceptors.KmsAccessInterceptor;
 
 import java.net.URI;
 import java.util.Optional;
@@ -24,15 +22,11 @@ public class KmsConnectionService {
         this(
                 configurationService.getLocalstackEndpointUri(),
                 configurationService.getAwsRegion(),
-                configurationService.getTokenSigningKeyAlias(),
-                ConfigurationService.getKmsAccessInterceptor());
+                configurationService.getTokenSigningKeyAlias());
     }
 
     public KmsConnectionService(
-            Optional<String> localstackEndpointUri,
-            String awsRegion,
-            String tokenSigningKeyId,
-            KmsAccessInterceptor kmsAccessInterceptor) {
+            Optional<String> localstackEndpointUri, String awsRegion, String tokenSigningKeyId) {
         if (localstackEndpointUri.isPresent()) {
             LOG.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
             this.kmsClient =
@@ -40,10 +34,6 @@ public class KmsConnectionService {
                             .endpointOverride(URI.create(localstackEndpointUri.get()))
                             .credentialsProvider(DefaultCredentialsProvider.create())
                             .region(Region.of(awsRegion))
-                            .overrideConfiguration(
-                                    ClientOverrideConfiguration.builder()
-                                            .addExecutionInterceptor(kmsAccessInterceptor)
-                                            .build())
                             .build();
         } else {
             this.kmsClient =

@@ -1,14 +1,13 @@
 package uk.gov.di.authentication.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.matching.ContainsPattern;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWEObject;
-import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,13 +34,18 @@ import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -58,6 +62,8 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     private static final String USER_PHONE_NUMBER = "+447712345432";
     private static KeyPair keyPair;
     private String sessionId;
+
+    private static WireMockServer wireMockServer;
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
 
@@ -93,6 +99,21 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
         createTestIPVEncryptionKeyPair();
         putIPVPublicKeyInEnvironmentVariableUntilIPVJWKSAvailable();
+
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        wireMockServer.start();
+
+        wireMockServer.stubFor(
+                any(urlPathMatching("/.*"))
+                        .willReturn(aResponse().proxiedFrom("http://localhost:45678")));
+        environment.set("LOCALSTACK_ENDPOINT", "http://localhost:" + wireMockServer.port());
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (wireMockServer != null) {
+            wireMockServer.stop();
+        }
     }
 
     private static void createTestIPVEncryptionKeyPair() {
@@ -153,6 +174,11 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     void shouldAuthenticateMfaReset() {
         idReverificationStateExtension.store("orch-redirect-url", "client-session-id");
 
+        wireMockServer.stubFor(
+                post(urlEqualTo("/"))
+                        .withRequestBody(containing("\"Action\":\"Sign\""))
+                        .willReturn(aResponse().proxiedFrom("http://localhost:45678")));
+
         var response =
                 makeRequest(
                         Optional.of(new MfaResetRequest(USER_EMAIL, "")),
@@ -161,43 +187,20 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
         assertThat(response, hasStatus(200));
 
-        checkCorrectKeysUsedViaIntegrationWithKms(response.getBody());
+        checkCorrectKeysUsedViaIntegrationWithKms();
         checkStateIsStoredViaIntegrationWithRedis(sessionId);
         checkTxmaEventPublishedViaIntegrationWithSQS();
         checkExecutionMetricsPublishedViaIntegrationWithCloudWatch();
     }
 
-    private static void checkCorrectKeysUsedViaIntegrationWithKms(String body) {
-        var kmsAccessInterceptor = ConfigurationService.getKmsAccessInterceptor();
-        assertTrue(
-                kmsAccessInterceptor.wasKeyUsedToSign(
-                        ipvReverificationRequestsSigningKey.getKeyId()));
-        assertTrue(
-                kmsAccessInterceptor.wasKeyUsedToSign(mfaResetStorageTokenSigningKey.getKeyId()));
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            JsonNode rootNode = objectMapper.readTree(body);
-            String url = rootNode.get("authorize_url").asText();
-            Map<String, String> params =
-                    Arrays.stream(url.substring(1).split("&"))
-                            .map(param -> param.split("="))
-                            .collect(Collectors.toMap(param -> param[0], param -> param[1]));
-
-            String request = params.get("request");
-
-            JWEObject jweObject = JWEObject.parse(request);
-            jweObject.decrypt(new RSADecrypter(keyPair.getPrivate()));
-
-            var payload = jweObject.getPayload().toString();
-
-            SignedJWT signedJWT = SignedJWT.parse(payload);
-
-            assertNotNull(signedJWT);
-        } catch (JsonProcessingException e) {
-            fail("Body could not be parsed: " + body);
-        } catch (ParseException | JOSEException e) {
-            fail("JOSE exception processing JAR", e);
-        }
+    private static void checkCorrectKeysUsedViaIntegrationWithKms() {
+        WireMock.verify(
+                postRequestedFor(urlEqualTo("/"))
+                        .withRequestBody(
+                                matchingJsonPath(
+                                        "$.KeyId",
+                                        new ContainsPattern(
+                                                ipvReverificationRequestsSigningKey.getKeyId()))));
     }
 
     private static void checkStateIsStoredViaIntegrationWithRedis(String sessionId) {

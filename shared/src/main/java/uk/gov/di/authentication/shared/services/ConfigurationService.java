@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
-import uk.gov.di.authentication.shared.interceptors.KmsAccessInterceptor;
 
 import java.net.URI;
 import java.time.Clock;
@@ -34,12 +33,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public static final String FEATURE_SWITCH_OFF = "false";
     public static final String FEATURE_SWITCH_ON = "true";
     private static ConfigurationService configurationService;
-
-    public static KmsAccessInterceptor getKmsAccessInterceptor() {
-        return kmsAccessInterceptor;
-    }
-
-    private static final KmsAccessInterceptor kmsAccessInterceptor = new KmsAccessInterceptor();
 
     public static ConfigurationService getInstance() {
         if (configurationService == null) {
