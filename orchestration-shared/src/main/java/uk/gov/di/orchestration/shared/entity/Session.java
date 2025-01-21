@@ -77,11 +77,6 @@ public class Session {
         this.sessionId = sessionId;
     }
 
-    public Session withBrowserSessionId(String browserSessionId) {
-        this.browserSessionId = browserSessionId;
-        return this;
-    }
-
     public List<String> getClientSessions() {
         return clientSessions;
     }

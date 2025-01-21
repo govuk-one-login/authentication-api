@@ -2008,9 +2008,7 @@ class AuthorisationHandlerTest {
             @BeforeEach
             void setup() {
                 when(sessionService.generateSession(anyString()))
-                        .thenReturn(
-                                new Session(NEW_SESSION_ID)
-                                        .withBrowserSessionId(NEW_BROWSER_SESSION_ID));
+                        .thenReturn(new Session(NEW_SESSION_ID));
             }
 
             @Test
@@ -2076,7 +2074,7 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
-                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
@@ -2106,7 +2104,7 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
-                withExistingSession(session.withBrowserSessionId(null));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(null));
                 var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
@@ -2141,7 +2139,7 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
-                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
@@ -2172,7 +2170,7 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
-                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
