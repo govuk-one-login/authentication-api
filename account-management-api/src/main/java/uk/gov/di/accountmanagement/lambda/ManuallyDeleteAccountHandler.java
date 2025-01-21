@@ -59,9 +59,10 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
     }
 
     @Override
-    public String handleRequest(String userEmail, Context context) {
+    public String handleRequest(String rawUserEmail, Context context) {
         ThreadContext.clearMap();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
+        var userEmail = rawUserEmail.toLowerCase().trim();
         var userProfile =
                 authenticationService
                         .getUserProfileByEmailMaybe(userEmail)
