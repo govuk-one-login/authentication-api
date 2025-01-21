@@ -77,10 +77,6 @@ public class Session {
         this.sessionId = sessionId;
     }
 
-    public void setBrowserSessionId(String browserSessionId) {
-        this.browserSessionId = browserSessionId;
-    }
-
     public Session withBrowserSessionId(String browserSessionId) {
         this.browserSessionId = browserSessionId;
         return this;

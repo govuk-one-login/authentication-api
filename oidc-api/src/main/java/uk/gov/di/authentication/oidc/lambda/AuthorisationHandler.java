@@ -517,7 +517,7 @@ public class AuthorisationHandler
         var newBrowserSessionId = IdGenerator.generate();
 
         if (existingSession.isEmpty()) {
-            session = sessionService.generateSession(newSessionId, newBrowserSessionId);
+            session = sessionService.generateSession(newSessionId);
             updateAttachedSessionIdToLogs(newSessionId);
             LOG.info("Created new session with ID {}", newSessionId);
         } else {
@@ -637,7 +637,7 @@ public class AuthorisationHandler
         if (existingSession.isEmpty() || existingOrchSessionOptional.isEmpty()) {
             var newSessionId = IdGenerator.generate();
             var newBrowserSessionId = IdGenerator.generate();
-            session = sessionService.generateSession(newSessionId, newBrowserSessionId);
+            session = sessionService.generateSession(newSessionId);
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
         } else {
@@ -659,8 +659,7 @@ public class AuthorisationHandler
                         updateSharedSessionDueToMaxAgeExpiry(
                                 existingSession.get(),
                                 newSessionIdForPreviousSession,
-                                newSessionId,
-                                newBrowserSessionId);
+                                newSessionId);
 
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
@@ -776,14 +775,9 @@ public class AuthorisationHandler
     }
 
     private Session updateSharedSessionDueToMaxAgeExpiry(
-            Session previousSession,
-            String newSessionIdForPreviousSession,
-            String newSessionId,
-            String newBrowserSessionId) {
+            Session previousSession, String newSessionIdForPreviousSession, String newSessionId) {
         sessionService.updateWithNewSessionId(previousSession, newSessionIdForPreviousSession);
-        var newSession =
-                sessionService.copySessionForMaxAge(
-                        previousSession, newSessionId, newBrowserSessionId);
+        var newSession = sessionService.copySessionForMaxAge(previousSession, newSessionId);
         sessionService.storeOrUpdateSession(newSession);
         return newSession;
     }

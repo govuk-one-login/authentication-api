@@ -5,8 +5,17 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
-import org.junit.jupiter.api.extension.*;
-import uk.gov.di.orchestration.shared.entity.*;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
+import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -148,14 +157,6 @@ public class RedisExtension
     public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setEmailAddress(emailAddress);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
-    }
-
-    public void addBrowserSesssionIdToSession(String sessionId, String browserSessionId)
-            throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setBrowserSessionId(browserSessionId);
         redis.saveWithExpiry(
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
     }
