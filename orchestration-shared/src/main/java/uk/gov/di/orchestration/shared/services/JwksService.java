@@ -66,6 +66,11 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getStorageTokenSigningKeyAlias());
     }
 
+    public JWK getPublicIpvTokenJwkWithOpaqueId() {
+        LOG.info("Retrieving IPV token public key");
+        return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
+    }
+
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {
         JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
         JWKSource<SecurityContext> jwkSource =
