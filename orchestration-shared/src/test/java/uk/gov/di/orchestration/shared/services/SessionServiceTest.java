@@ -35,13 +35,12 @@ class SessionServiceTest {
     private final SessionService sessionService = new SessionService(configuration, redis);
 
     @Test
-    void shouldCreateSessionWithNewSessionIdAndBrowserSessionId() {
+    void shouldCreateSessionWithNewSessionId() {
         try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
-            idGenerator.when(IdGenerator::generate).thenReturn("id-1", "id-2");
+            idGenerator.when(IdGenerator::generate).thenReturn("id-1");
             Session session = sessionService.generateSession();
 
             assertEquals("id-1", session.getSessionId());
-            assertEquals("id-2", session.getBrowserSessionId());
         }
     }
 

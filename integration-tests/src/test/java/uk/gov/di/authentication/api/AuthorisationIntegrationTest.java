@@ -533,7 +533,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
-        withExistingOrchSession(previousSessionId);
+        withExistingOrchSessionAndBsid(previousSessionId);
 
         var response =
                 makeRequest(
@@ -578,7 +578,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
-        withExistingOrchSession(previousSessionId);
+        withExistingOrchSessionAndBsid(previousSessionId);
 
         var response =
                 makeRequest(
@@ -675,7 +675,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
-        withExistingOrchSession(previousSessionId);
+        withExistingOrchSessionAndBsid(previousSessionId);
 
         var response =
                 makeRequest(
@@ -722,7 +722,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
-        withExistingOrchSession(previousSessionId);
+        withExistingOrchSessionAndBsid(previousSessionId);
 
         var response =
                 makeRequest(
@@ -771,7 +771,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
-        withExistingOrchSession(previousSessionId);
+        withExistingOrchSessionAndBsid(previousSessionId);
 
         var response =
                 makeRequest(
@@ -1409,8 +1409,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return kpg.generateKeyPair();
     }
 
-    private void withExistingOrchSession(String sessionId) {
-        orchSessionExtension.addSession(new OrchSessionItem(sessionId).withAuthenticated(true));
+    private void withExistingOrchSessionAndBsid(String sessionId) {
+        orchSessionExtension.addSession(
+                new OrchSessionItem(sessionId)
+                        .withBrowserSessionId(BROWSER_SESSION_ID)
+                        .withAuthenticated(true));
         assertTrue(orchSessionExtension.getSession(sessionId).isPresent());
     }
 
