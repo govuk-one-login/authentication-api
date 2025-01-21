@@ -2194,6 +2194,138 @@ Resources:
             Unit: Count
   #endregion
 
+  #region IPV Jwks Lambda
+  IpvJwksFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-IpvJwksFunction
+      AutoPublishAlias: latest
+      CodeUri: ./ipv-api/build/distributions/ipv-api.zip
+      Handler: uk.gov.di.authentication.ipv.lambda.IpvJwksHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref IpvJwksFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - IpvJwksFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          IPV_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              ipvTokenKeyArn,
+            ]
+      Policies:
+        - !Ref IpvTokenSigningKmsAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  IpvJwksFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IpvJwksFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/ipv-jwks.json"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  IpvJwksFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-ipv-jwks-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  IpvJwksSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref IpvJwksFunctionLogGroup
+
+  IpvJwksFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-ipv-jwks-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref IpvJwksFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-ipv-jwks-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  IpvJwksFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-ipv-jwks-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-IpvJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-IpvJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
   #region Authorisation Lambda
 
   AuthorisationFunction:

@@ -71,6 +71,7 @@ auth_spot_response_disabled          = true
 orch_auth_code_enabled               = true
 orch_userinfo_enabled                = true
 orch_storage_token_jwk_enabled       = true
+orch_ipv_jwks_enabled                = true
 
 orch_account_id                       = "816047645251"
 is_orch_stubbed                       = false

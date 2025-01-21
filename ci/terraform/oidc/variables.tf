@@ -625,6 +625,12 @@ variable "orch_frontend_enabled" {
   default     = false
 }
 
+variable "orch_ipv_jwks_enabled" {
+  description = "Flag to enable routing IPV jwk traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool
