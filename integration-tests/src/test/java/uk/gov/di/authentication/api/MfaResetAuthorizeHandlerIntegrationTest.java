@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.api;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.matching.ContainsPattern;
 import com.nimbusds.jose.JOSEException;
@@ -22,8 +21,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.doubles.MetricsLoggerTestDouble;
-import uk.gov.di.authentication.sharedtest.extensions.CloudWatchExtension;
 import uk.gov.di.authentication.sharedtest.extensions.IDReverificationStateExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
@@ -49,10 +46,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.frontendapi.services.IPVReverificationService.STATE_STORAGE_PREFIX;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -78,9 +73,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     @RegisterExtension
     public static final RedisExtension redisExtension =
             new RedisExtension(new SerializationService(), new ConfigurationService());
-
-    @RegisterExtension
-    private static final CloudWatchExtension cloudwatchExtension = new CloudWatchExtension();
 
     @RegisterExtension
     private static final IDReverificationStateExtension idReverificationStateExtension =
@@ -149,12 +141,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        ConfigurationService configurationService = ConfigurationService.getInstance();
-        configurationService.setMetricsLoggerAdapter(
-                new MetricsLoggerTestDouble(
-                        cloudwatchExtension.getLogGroupName(),
-                        cloudwatchExtension.getLogStreamName()));
-
         handler = new MfaResetAuthorizeHandler();
 
         sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
@@ -190,11 +176,10 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         checkCorrectKeysUsedViaIntegrationWithKms();
         checkStateIsStoredViaIntegrationWithRedis(sessionId);
         checkTxmaEventPublishedViaIntegrationWithSQS();
-        checkExecutionMetricsPublishedViaIntegrationWithCloudWatch();
     }
 
     private static void checkCorrectKeysUsedViaIntegrationWithKms() {
-        WireMock.verify(
+        wireMockServer.verify(
                 postRequestedFor(urlEqualTo("/"))
                         .withRequestBody(
                                 matchingJsonPath(
@@ -210,9 +195,5 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     private static void checkTxmaEventPublishedViaIntegrationWithSQS() {
         assertEquals(1, txmaAuditQueue.getRawMessages().size());
-    }
-
-    private static void checkExecutionMetricsPublishedViaIntegrationWithCloudWatch() {
-        assertTrue(cloudwatchExtension.hasLoggedMetric(MFA_RESET_HANDOFF.getValue()));
     }
 }

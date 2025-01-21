@@ -140,7 +140,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
 
         var response =
                 makeRequest(
-                        Optional.of(new ReverificationResultRequest("code", "eamil")),
+                        Optional.of(new ReverificationResultRequest("code", "email")),
                         constructFrontendHeaders(sessionId, sessionId),
                         Map.of());
 
