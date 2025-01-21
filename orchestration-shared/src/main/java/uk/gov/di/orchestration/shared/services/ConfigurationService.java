@@ -257,10 +257,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("IDENTITY_ENABLED");
     }
 
-    public boolean isIPVNoSessionResponseEnabled() {
-        return getFlagOrFalse("IPV_NO_SESSION_RESPONSE_ENABLED");
-    }
-
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }

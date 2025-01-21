@@ -3380,7 +3380,6 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_NO_SESSION_RESPONSE_ENABLED: true
           IPV_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,

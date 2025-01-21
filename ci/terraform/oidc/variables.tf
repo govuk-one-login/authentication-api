@@ -362,11 +362,6 @@ variable "ipv_auth_authorize_client_id" {
   default = "undefined"
 }
 
-variable "ipv_no_session_response_enabled" {
-  type    = bool
-  default = false
-}
-
 variable "phone_checker_with_retry" {
   type    = bool
   default = true

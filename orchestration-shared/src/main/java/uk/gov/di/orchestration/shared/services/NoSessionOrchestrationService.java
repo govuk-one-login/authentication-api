@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_NAME;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -51,12 +50,9 @@ public class NoSessionOrchestrationService {
     }
 
     public NoSessionEntity generateNoSessionOrchestrationEntity(
-            Map<String, String> queryStringParameters, boolean noSessionResponseEnabled)
-            throws NoSessionException {
-        LOG.info(
-                "Attempting to generate error response using state. NoSessionResponseEnabled: {}",
-                noSessionResponseEnabled);
-        if (isAccessDeniedErrorAndStatePresent(queryStringParameters, noSessionResponseEnabled)) {
+            Map<String, String> queryStringParameters) throws NoSessionException {
+        LOG.info("Attempting to generate error response using state");
+        if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
             LOG.info("access_denied error and state param are both present");
             var clientSessionId =
                     getClientSessionIdFromState(State.parse(queryStringParameters.get("state")))
@@ -93,12 +89,9 @@ public class NoSessionOrchestrationService {
             return new NoSessionEntity(clientSessionId, errorObject, clientSession);
         } else {
             LOG.warn(
-                    "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: {}",
-                    noSessionResponseEnabled);
+                    "Session Cookie not present and access_denied or state param missing from error response");
             throw new NoSessionException(
-                    format(
-                            "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: %s",
-                            noSessionResponseEnabled));
+                    "Session Cookie not present and access_denied or state param missing from error response");
         }
     }
 
@@ -123,10 +116,8 @@ public class NoSessionOrchestrationService {
                 redisConnectionService.getValue(STATE_STORAGE_PREFIX + state.getValue()));
     }
 
-    private boolean isAccessDeniedErrorAndStatePresent(
-            Map<String, String> queryStringParameters, boolean noSessionResponseEnabled) {
-        return noSessionResponseEnabled
-                && Objects.nonNull(queryStringParameters)
+    private boolean isAccessDeniedErrorAndStatePresent(Map<String, String> queryStringParameters) {
+        return Objects.nonNull(queryStringParameters)
                 && queryStringParameters.containsKey("error")
                 && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
                 && queryStringParameters.containsKey("state")
