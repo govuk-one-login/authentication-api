@@ -441,13 +441,8 @@ public class AuthorisationHandler
                     user);
         }
 
-        Optional<String> browserSessionIdFromSession;
-        if (configurationService.isUseBrowserSessionIdStoredInOrchSessionEnabled()) {
-            browserSessionIdFromSession =
-                    orchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
-        } else {
-            browserSessionIdFromSession = session.map(Session::getBrowserSessionId);
-        }
+        Optional<String> browserSessionIdFromSession =
+                orchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
 
@@ -699,11 +694,6 @@ public class AuthorisationHandler
                         session.getSessionId());
             }
         }
-        var browserSessionIdsMatch =
-                Objects.equals(session.getBrowserSessionId(), orchSession.getBrowserSessionId());
-        LOG.info(
-                "Orch session and shared session {}have the same browserSessionId",
-                !browserSessionIdsMatch ? "do not " : "");
 
         attachSessionIdToLogs(session);
         attachOrchSessionIdToLogs(orchSession.getSessionId());
@@ -1111,12 +1101,7 @@ public class AuthorisationHandler
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));
 
-        String browserSessionId;
-        if (configurationService.isUseBrowserSessionIdStoredInOrchSessionEnabled()) {
-            browserSessionId = orchSessionItem.getBrowserSessionId();
-        } else {
-            browserSessionId = session.getBrowserSessionId();
-        }
+        String browserSessionId = orchSessionItem.getBrowserSessionId();
 
         if (browserSessionId != null) {
             cookies.add(

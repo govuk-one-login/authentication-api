@@ -1857,17 +1857,17 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldSetTheRelevantCookiesInTheHeader() {
-            Session sessionWithBrowserSessionId =
-                    new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID);
-            when(sessionService.generateSession(any(), any()))
-                    .thenReturn(sessionWithBrowserSessionId);
-
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            APIGatewayProxyResponseEvent response;
+            try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
+                idGenerator.when(IdGenerator::generate).thenReturn(SESSION_ID, BROWSER_SESSION_ID);
+                response = makeHandlerRequest(event);
+            }
 
             assertTrue(
                     response.getMultiValueHeaders()
@@ -2013,13 +2013,8 @@ class AuthorisationHandlerTest {
                                         .withBrowserSessionId(NEW_BROWSER_SESSION_ID));
             }
 
-            @ParameterizedTest(
-                    name = "With useBrowserSessionIdStoredInOrchSession feature flag = {0}")
-            @ValueSource(booleans = {true, false})
-            void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent(
-                    boolean useBrowserSessionIdStoredInOrchSession) {
-                when(configService.isUseBrowserSessionIdStoredInOrchSessionEnabled())
-                        .thenReturn(useBrowserSessionIdStoredInOrchSession);
+            @Test
+            void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
                 withExistingSession(null);
                 withExistingOrchSession(null);
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
@@ -2028,7 +2023,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2049,13 +2043,8 @@ class AuthorisationHandlerTest {
                                 pair("new_authentication_required", false));
             }
 
-            @ParameterizedTest(
-                    name = "With useBrowserSessionIdStoredInOrchSession feature flag = {0}")
-            @ValueSource(booleans = {true, false})
-            void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent(
-                    boolean useBrowserSessionIdStoredInOrchSession) {
-                when(configService.isUseBrowserSessionIdStoredInOrchSessionEnabled())
-                        .thenReturn(useBrowserSessionIdStoredInOrchSession);
+            @Test
+            void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
                 withExistingSession(null);
                 withExistingOrchSession(null);
                 APIGatewayProxyResponseEvent response =
@@ -2065,7 +2054,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2086,13 +2074,8 @@ class AuthorisationHandlerTest {
                                 pair("new_authentication_required", false));
             }
 
-            @ParameterizedTest(
-                    name = "With useBrowserSessionIdStoredInOrchSession feature flag = {0}")
-            @ValueSource(booleans = {true, false})
-            void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot(
-                    boolean useBrowserSessionIdStoredInOrchSession) {
-                when(configService.isUseBrowserSessionIdStoredInOrchSessionEnabled())
-                        .thenReturn(useBrowserSessionIdStoredInOrchSession);
+            @Test
+            void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
                 withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
@@ -2101,7 +2084,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2122,13 +2104,8 @@ class AuthorisationHandlerTest {
                                 pair("new_authentication_required", true));
             }
 
-            @ParameterizedTest(
-                    name = "With useBrowserSessionIdStoredInOrchSession feature flag = {0}")
-            @ValueSource(booleans = {true, false})
-            void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent(
-                    boolean useBrowserSessionIdStoredInOrchSession) {
-                when(configService.isUseBrowserSessionIdStoredInOrchSessionEnabled())
-                        .thenReturn(useBrowserSessionIdStoredInOrchSession);
+            @Test
+            void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
                 withExistingSession(session.withBrowserSessionId(null));
                 withExistingOrchSession(orchSession.withBrowserSessionId(null));
                 var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
@@ -2137,7 +2114,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(SESSION_ID, actualSession.getSessionId());
-                assertNull(actualSession.getBrowserSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2163,13 +2139,8 @@ class AuthorisationHandlerTest {
                                 pair("new_authentication_required", false));
             }
 
-            @ParameterizedTest(
-                    name = "With useBrowserSessionIdStoredInOrchSession feature flag = {0}")
-            @ValueSource(booleans = {true, false})
-            void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie(
-                    boolean useBrowserSessionIdStoredInOrchSession) {
-                when(configService.isUseBrowserSessionIdStoredInOrchSessionEnabled())
-                        .thenReturn(useBrowserSessionIdStoredInOrchSession);
+            @Test
+            void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
                 withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
@@ -2179,7 +2150,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(SESSION_ID, actualSession.getSessionId());
-                assertEquals(BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2200,13 +2170,8 @@ class AuthorisationHandlerTest {
                                 pair("new_authentication_required", false));
             }
 
-            @ParameterizedTest(
-                    name = "With useBrowserSessionIdStoredInOrchSession feature flag = {0}")
-            @ValueSource(booleans = {true, false})
-            void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch(
-                    boolean useBrowserSessionIdStoredInOrchSession) {
-                when(configService.isUseBrowserSessionIdStoredInOrchSessionEnabled())
-                        .thenReturn(useBrowserSessionIdStoredInOrchSession);
+            @Test
+            void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
                 withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
@@ -2216,7 +2181,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualSession.getBrowserSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2913,8 +2877,12 @@ class AuthorisationHandlerTest {
                                 "openid",
                                 "request",
                                 generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-        return makeHandlerRequest(withRequestEvent(requestParams));
+        try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
+            idGenerator
+                    .when(IdGenerator::generate)
+                    .thenReturn(NEW_SESSION_ID, NEW_BROWSER_SESSION_ID);
+            return makeHandlerRequest(withRequestEvent(requestParams));
+        }
     }
 
     private APIGatewayProxyRequestEvent withRequestEvent(Map<String, String> requestParams) {

@@ -93,13 +93,13 @@ class AuthOrchSerializationServicesIntegrationTest {
     void orchCanReadUnsharedFieldAfterAuthUpdatesSession() {
         var orchSession = orchSessionService.generateSession();
         var sessionId = orchSession.getSessionId();
-        orchSession.setBrowserSessionId(BROWSER_SESSION_ID);
+        orchSession.incrementProcessingIdentityAttempts();
         orchSessionService.storeOrUpdateSession(orchSession);
         var authSession = authSessionService.getSession(sessionId).get();
         authSession.addClientSession(CLIENT_SESSION_ID);
         authSessionService.storeOrUpdateSession(authSession);
         orchSession = orchSessionService.getSession(sessionId).get();
-        assertThat(orchSession.getBrowserSessionId(), is(equalTo(BROWSER_SESSION_ID)));
+        assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));
     }
 
     @Test
@@ -137,12 +137,12 @@ class AuthOrchSerializationServicesIntegrationTest {
         var orchSession = orchSessionService.generateSession();
         var sessionId = orchSession.getSessionId();
         orchSession.addClientSession(CLIENT_SESSION_ID);
-        orchSession.setBrowserSessionId(BROWSER_SESSION_ID);
+        orchSession.incrementProcessingIdentityAttempts();
         orchSessionService.storeOrUpdateSession(orchSession);
         var authSession = new Session(sessionId);
         authSessionService.storeOrUpdateSession(authSession);
         orchSession = orchSessionService.getSession(sessionId).get();
         assertThat(orchSession.getClientSessions(), is(empty()));
-        assertThat(orchSession.getBrowserSessionId(), is(equalTo(BROWSER_SESSION_ID)));
+        assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));
     }
 }
