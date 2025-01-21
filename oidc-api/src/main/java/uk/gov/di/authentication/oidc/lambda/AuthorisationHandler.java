@@ -681,6 +681,7 @@ public class AuthorisationHandler
 
             } else {
                 var sessionToBeUpdated = existingSession.get();
+                var previousSessionId = sessionToBeUpdated.getSessionId();
                 sessionService.updateWithNewSessionId(sessionToBeUpdated);
                 session = sessionToBeUpdated;
 
@@ -690,7 +691,7 @@ public class AuthorisationHandler
 
                 LOG.info(
                         "Updated existing session ID from {} to {}",
-                        orchSession.getSessionId(),
+                        previousSessionId,
                         session.getSessionId());
             }
         }
