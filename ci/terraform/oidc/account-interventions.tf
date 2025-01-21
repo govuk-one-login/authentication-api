@@ -15,7 +15,9 @@ module "frontend_api_account_interventions_role" {
     module.oidc_txma_audit.access_policy_arn,
     ], local.deploy_ticf_cri_count == 1 ? [
     aws_iam_policy.ticf_cri_lambda_invocation_policy[0].arn,
-  ] : [])
+    aws_iam_policy.dynamo_auth_session_read_policy.arn
+    ] : [
+  aws_iam_policy.dynamo_auth_session_read_policy.arn])
   extra_tags = {
     Service = "account-interventions"
   }
