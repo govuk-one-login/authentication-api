@@ -517,36 +517,33 @@ public class AuthorisationHandler
             String clientSessionId,
             String persistentSessionId,
             TxmaAuditUser user) {
-
-        var session = existingSession.orElseGet(sessionService::generateSession);
-        attachSessionIdToLogs(session);
+        Session session;
+        var newSessionId = IdGenerator.generate();
+        var newBrowserSessionId = IdGenerator.generate();
 
         if (existingSession.isEmpty()) {
-            updateAttachedSessionIdToLogs(session.getSessionId());
-            LOG.info("Created session");
+            session = sessionService.generateSession(newSessionId, newBrowserSessionId);
+            updateAttachedSessionIdToLogs(newSessionId);
+            LOG.info("Created new session with ID {}", newSessionId);
         } else {
+            session = existingSession.get();
             var previousSessionId = session.getSessionId();
-            sessionService.updateWithNewSessionId(session);
-            updateAttachedSessionIdToLogs(session.getSessionId());
-            LOG.info("Updated session id from {} - new", previousSessionId);
+            sessionService.updateWithNewSessionId(session, newSessionId);
+            updateAttachedSessionIdToLogs(newSessionId);
+            LOG.info("Updated session ID from {} to {}", previousSessionId, newSessionId);
         }
 
         OrchSessionItem orchSession;
-        String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
             orchSession =
-                    new OrchSessionItem(newSessionId)
-                            .withBrowserSessionId(session.getBrowserSessionId());
-            LOG.info("Created new Orch session");
+                    new OrchSessionItem(newSessionId).withBrowserSessionId(newBrowserSessionId);
+            LOG.info("Created new Orch session with ID {}", newSessionId);
         } else {
             String previousOrchSessionId = orchSessionOptional.get().getSessionId();
             orchSession =
                     orchSessionService.addOrUpdateSessionId(
                             Optional.of(previousOrchSessionId), newSessionId);
-            LOG.info(
-                    "Updated Orch session ID from {} to {}",
-                    previousOrchSessionId,
-                    orchSession.getSessionId());
+            LOG.info("Updated Orch session ID from {} to {}", previousOrchSessionId, newSessionId);
         }
         attachOrchSessionIdToLogs(orchSession.getSessionId());
 

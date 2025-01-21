@@ -2330,8 +2330,7 @@ class AuthorisationHandlerTest {
             makeDocAppHandlerRequest();
 
             verify(orchSessionService)
-                    .addOrUpdateSessionId(
-                            Optional.of(orchSession.getSessionId()), session.getSessionId());
+                    .addOrUpdateSessionId(Optional.of(orchSession.getSessionId()), NEW_SESSION_ID);
             verify(orchSessionService).updateSession(orchSession);
         }
 
