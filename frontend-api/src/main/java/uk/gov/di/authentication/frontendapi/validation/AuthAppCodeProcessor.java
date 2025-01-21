@@ -84,6 +84,9 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1042);
         }
 
+        LOG.warn("AIDAN: profileInformation: {}", codeRequest.getProfileInformation());
+        LOG.warn("AIDAN: journey type: {}", codeRequest.getJourneyType());
+
         var authAppSecret =
                 nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())
                         ? getMfaCredentialValue().orElse(null)
