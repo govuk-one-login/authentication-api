@@ -66,13 +66,13 @@ jobs:
           aws-region: ${{ inputs.aws_region }}
 
       - name: Set up JDK 17
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
         with:
           java-version: ${{ inputs.java_version }}
           distribution: ${{ inputs.java_distribution }}
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -189,7 +189,7 @@ jobs:
 
       - name: Upload artifacts
         id: upload-artifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: signed-${{ inputs.module_name }}
           path: "${{ steps.create_artifacts.outputs.artifact_dir }}/"

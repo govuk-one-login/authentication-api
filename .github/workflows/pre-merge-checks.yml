@@ -44,13 +44,13 @@ jobs:
 
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
@@ -79,13 +79,13 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -115,13 +115,13 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -156,7 +156,7 @@ jobs:
             !delivery-receipts-integration-tests/build/jacoco/
             !delivery-receipts-integration-tests/build/reports/
       - name: Upload Unit Test Reports
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: unit-test-reports
@@ -210,13 +210,13 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -244,7 +244,7 @@ jobs:
             integration-tests/build/jacoco/
             integration-tests/build/reports/
       - name: Upload Integration Test Reports
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: integration-test-reports
@@ -295,13 +295,13 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -321,7 +321,7 @@ jobs:
         run: |
           ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: account-management-integration-test-reports
@@ -344,7 +344,7 @@ jobs:
             delivery-receipts-integration-tests/build/reports/
 
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
         with:
           name: delivery-receipts-integration-test-reports
@@ -367,13 +367,13 @@ jobs:
           fetch-depth: 0
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
