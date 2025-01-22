@@ -92,14 +92,20 @@ class IPVTokenServiceTest {
     private IPVTokenService ipvTokenService;
 
     @BeforeEach
-    void setUp() {
-        ipvTokenService = new IPVTokenService(configService, kmsService);
+    void setUp() throws JOSEException {
+        ipvTokenService = new IPVTokenService(configService, kmsService, jwksService);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
         when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
         when(configService.getIPVTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        when(jwksService.getPublicIpvTokenJwkWithOpaqueId())
+                .thenReturn(
+                        new ECKeyGenerator(Curve.P_256)
+                                .keyID(KEY_ID)
+                                .algorithm(JWSAlgorithm.ES256)
+                                .generate());
     }
 
     @Test
