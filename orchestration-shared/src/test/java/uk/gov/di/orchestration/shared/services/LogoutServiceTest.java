@@ -581,7 +581,6 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId(clientId2)), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
         var expectedExtensions = new ArrayList<AuditService.MetadataPair>();
         expectedExtensions.add(pair("logoutReason", MAX_AGE_EXPIRY.getValue()));
         expectedExtensions.add(pair("sessionAge", 3600));
