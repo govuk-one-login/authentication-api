@@ -14,7 +14,8 @@ module "frontend_api_update_profile_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.user_credentials_encryption_policy_arn
+    local.user_credentials_encryption_policy_arn,
+    aws_iam_policy.dynamo_auth_session_read_policy.arn
   ]
   extra_tags = {
     Service = "update-profile"
