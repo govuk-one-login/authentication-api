@@ -20,6 +20,7 @@ locals {
     pattern = "test-user+${var.environment}-$${instantiationMillis}-$${counter}@test.null.local" # '$${' = literal '${' (escaped)
     regex   = "^test-user\\+${var.environment}-\\d+-\\d+@test\\.null\\.local$"
   }
+  simulator_acceptance_test_rp_client_email = "orch-test-user@digital.cabinet-office.gov.uk"
 }
 
 resource "aws_dynamodb_table_item" "stub_relying_party_client" {
@@ -108,7 +109,7 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
       N = each.value.test_client
     }
     TestClientEmailAllowlist = {
-      L = [for email in concat(split(",", var.test_client_email_allowlist), [local.acceptance_test_rp_client_emails.regex]) : {
+      L = [for email in concat(split(",", var.test_client_email_allowlist), [local.acceptance_test_rp_client_emails.regex], [local.simulator_acceptance_test_rp_client_email]) : {
         S = email
       }]
     }
