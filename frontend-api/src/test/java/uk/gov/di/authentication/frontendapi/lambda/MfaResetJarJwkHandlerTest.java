@@ -57,6 +57,9 @@ class MfaResetJarJwkHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasBody("Error providing MFA Reset JAR JWK data"));
+        assertThat(
+                result,
+                hasBody(
+                        "Auth MFA reverification request JAR signature verification key not available."));
     }
 }

@@ -46,7 +46,8 @@ public class MfaResetJarJwkHandler
     }
 
     public APIGatewayProxyResponseEvent mfaResetJarJwkHandler() {
-        LOG.info("MFA reset JAR Signing JWK request received");
+        LOG.info(
+                "Request for Auth reverification request JAR signature verification key received.");
         try {
 
             List<JWK> signingKeys = new ArrayList<>();
@@ -55,7 +56,7 @@ public class MfaResetJarJwkHandler
 
             JWKSet jwkSet = new JWKSet(signingKeys);
 
-            LOG.info("Generating MFA reset JAR signing JWK successful response");
+            LOG.info("Served Auth reverification request JAR signature verification key JWK set.");
 
             return generateApiGatewayProxyResponse(
                     200,
@@ -63,8 +64,12 @@ public class MfaResetJarJwkHandler
                     Map.of("Cache-Control", "max-age=86400"),
                     null);
         } catch (Exception e) {
-            LOG.error("Error in MfaResetJarJwkHandler lambda", e);
-            return generateApiGatewayProxyResponse(500, "Error providing MFA Reset JAR JWK data");
+            LOG.error(
+                    "Failed to serve Auth reverification request JAR signature verification key.",
+                    e);
+            return generateApiGatewayProxyResponse(
+                    500,
+                    "Auth MFA reverification request JAR signature verification key not available.");
         }
     }
 }

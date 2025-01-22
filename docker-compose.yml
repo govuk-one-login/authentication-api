@@ -5,7 +5,7 @@ services:
     image: localstack/localstack:3.1.0@sha256:a47b435f876a100115d1d9f24e19b6b302cc7acb78b91e9258122116283ba462
     restart: no
     environment:
-      SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch, events
+      SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch, events, logs
       GATEWAY_LISTEN: 0.0.0.0:45678
       LOCALSTACK_HOST: localhost:45678
       TEST_AWS_ACCOUNT_ID: 123456789012

@@ -177,7 +177,7 @@ jobs:
       localstack:
         image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:3.0.0' || '' }}
         env:
-          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events"
+          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events, logs"
           GATEWAY_LISTEN: 0.0.0.0:45678
           LOCALSTACK_HOST: localhost:45678
           TEST_AWS_ACCOUNT_ID: 123456789012

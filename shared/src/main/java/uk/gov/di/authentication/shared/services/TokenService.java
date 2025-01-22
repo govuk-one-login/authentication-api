@@ -428,7 +428,7 @@ public class TokenService {
                             .message(
                                     SdkBytes.fromByteArray(
                                             message.getBytes(StandardCharsets.UTF_8)))
-                            .keyId(signingKeyId)
+                            .keyId(signingKey)
                             .signingAlgorithm(signingAlgorithm)
                             .build();
             SignResponse signResult = kmsConnectionService.sign(signRequest);

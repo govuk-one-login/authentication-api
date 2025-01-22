@@ -26,6 +26,8 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
     private String keyAlias;
     private final KeyUsageType keyUsageType;
 
+    private String keyId;
+
     public KmsKeyExtension(String keyAliasSuffix) {
         this(keyAliasSuffix, SIGN_VERIFY);
     }
@@ -69,6 +71,8 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         .build();
         var keyResponse = kms.createKey(keyRequest);
 
+        keyId = keyResponse.keyMetadata().keyId();
+
         CreateAliasRequest aliasRequest =
                 CreateAliasRequest.builder()
                         .aliasName(keyAlias)
@@ -86,6 +90,8 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                         .build();
 
         var keyResponse = kms.createKey(keyRequest);
+
+        keyId = keyResponse.keyMetadata().keyId();
 
         CreateAliasRequest aliasRequest =
                 CreateAliasRequest.builder()
@@ -108,5 +114,9 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
 
     public String getKeyAlias() {
         return keyAlias;
+    }
+
+    public String getKeyId() {
+        return keyId;
     }
 }
