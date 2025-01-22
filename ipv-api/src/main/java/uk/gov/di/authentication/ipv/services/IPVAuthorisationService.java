@@ -165,7 +165,9 @@ public class IPVAuthorisationService {
             List<String> vtr,
             Boolean reproveIdentity) {
         LOG.info("Generating request JWT");
-        var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
+        var signingKeyJwt = jwksService.getPublicIpvTokenJwkWithOpaqueId();
+        var jwsHeader =
+                new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKeyJwt.getKeyID()).build();
         var jwtID = IdGenerator.generate();
         var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var claimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claims);
