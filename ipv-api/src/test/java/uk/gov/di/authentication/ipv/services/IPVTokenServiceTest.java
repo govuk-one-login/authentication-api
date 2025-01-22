@@ -7,6 +7,7 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.GrantType;
@@ -20,6 +21,7 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
@@ -28,10 +30,13 @@ import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,6 +61,7 @@ class IPVTokenServiceTest {
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private final UserInfoRequest userInfoRequest = mock(UserInfoRequest.class);
     private final HTTPRequest httpRequest = mock(HTTPRequest.class);
     private final TokenRequest tokenRequest = mock(TokenRequest.class);
@@ -93,11 +99,12 @@ class IPVTokenServiceTest {
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
         when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
+        when(configService.getIPVTokenSigningKeyAlias()).thenReturn(KEY_ID);
     }
 
     @Test
-    void shouldConstructTokenRequest() throws JOSEException {
-        signJWTWithKMS();
+    void shouldConstructTokenRequest() throws JOSEException, ParseException {
+        mockKmsSigningJwt();
         TokenRequest tokenRequest = ipvTokenService.constructTokenRequest(AUTH_CODE.getValue());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(IPV_URI + "token"));
         assertThat(
@@ -114,6 +121,8 @@ class IPVTokenServiceTest {
                 equalTo(CLIENT_ID.getValue()));
         assertThat(
                 tokenRequest.toHTTPRequest().getQueryParameters().get("resource"), equalTo(null));
+        assertSignRequestHeaderEquals(
+                new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build());
     }
 
     @Test
@@ -216,7 +225,17 @@ class IPVTokenServiceTest {
         verify(userInfoRequest.toHTTPRequest(), times(2)).send();
     }
 
-    private void signJWTWithKMS() throws JOSEException {
+    private void assertSignRequestHeaderEquals(JWSHeader expectedHeader) throws ParseException {
+        var signRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
+        verify(kmsService).sign(signRequestCaptor.capture());
+        var request = signRequestCaptor.getValue();
+        var message = request.message().asString(StandardCharsets.UTF_8);
+        var actualHeaderString = message.split("\\.")[0];
+        var actualHeader = JWSHeader.parse(Base64URL.from(actualHeaderString));
+        assertThat(actualHeader.toJSONObject(), equalTo(expectedHeader.toJSONObject()));
+    }
+
+    private void mockKmsSigningJwt() throws JOSEException {
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
