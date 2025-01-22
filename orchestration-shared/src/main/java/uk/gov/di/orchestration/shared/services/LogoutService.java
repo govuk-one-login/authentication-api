@@ -217,7 +217,6 @@ public class LogoutService {
     public void handleMaxAgeLogout(
             Session previousSession, OrchSessionItem previousOrchSession, TxmaAuditUser user) {
         destroySessions(previousSession);
-        cloudwatchMetricsService.incrementLogout(Optional.empty());
         Long sessionAge =
                 NowHelper.now().toInstant().getEpochSecond() - previousOrchSession.getAuthTime();
         sendAuditEvent(
