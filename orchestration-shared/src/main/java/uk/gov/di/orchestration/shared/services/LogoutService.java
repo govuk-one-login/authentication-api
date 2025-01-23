@@ -13,9 +13,10 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
-import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 
 import java.net.URI;
+import java.time.Clock;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
@@ -40,31 +41,36 @@ public class LogoutService {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final BackChannelLogoutService backChannelLogoutService;
     private final AuthFrontend authFrontend;
+    private final NowClock nowClock;
     private static final String STATE_PARAMETER_KEY = "state";
     private static final String LOGOUT_REASON = "logoutReason";
 
     public LogoutService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
+        this(
+                configurationService,
+                new SessionService(configurationService),
+                new OrchSessionService(configurationService),
+                new DynamoClientService(configurationService),
+                new ClientSessionService(configurationService),
+                new AuditService(configurationService),
+                new CloudwatchMetricsService(),
+                new BackChannelLogoutService(configurationService),
+                new AuthFrontend(configurationService),
+                new NowClock(Clock.systemUTC()));
     }
 
     public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
-        this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService, redis);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
+        this(
+                configurationService,
+                new SessionService(configurationService, redis),
+                new OrchSessionService(configurationService),
+                new DynamoClientService(configurationService),
+                new ClientSessionService(configurationService, redis),
+                new AuditService(configurationService),
+                new CloudwatchMetricsService(),
+                new BackChannelLogoutService(configurationService),
+                new AuthFrontend(configurationService),
+                new NowClock(Clock.systemUTC()));
     }
 
     public LogoutService(
@@ -76,7 +82,8 @@ public class LogoutService {
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             BackChannelLogoutService backChannelLogoutService,
-            AuthFrontend authFrontend) {
+            AuthFrontend authFrontend,
+            NowClock nowClock) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
@@ -86,6 +93,7 @@ public class LogoutService {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.backChannelLogoutService = backChannelLogoutService;
         this.authFrontend = authFrontend;
+        this.nowClock = nowClock;
     }
 
     private APIGatewayProxyResponseEvent generateLogoutResponse(
@@ -218,7 +226,7 @@ public class LogoutService {
             Session previousSession, OrchSessionItem previousOrchSession, TxmaAuditUser user) {
         destroySessions(previousSession);
         Long sessionAge =
-                NowHelper.now().toInstant().getEpochSecond() - previousOrchSession.getAuthTime();
+                nowClock.now().toInstant().getEpochSecond() - previousOrchSession.getAuthTime();
         sendAuditEvent(
                 user,
                 LogoutReason.MAX_AGE_EXPIRY,
