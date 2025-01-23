@@ -56,6 +56,15 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             }
                             """,
                     PASSWORD);
+    private static final String RESET_PASSWORD_REQUEST_WITH_ALLOW_MFA_RESET =
+            format(
+                    """
+                            {
+                            "password": %s,
+                            "allowMfaResetAfterPasswordReset": true
+                            }
+                            """,
+                    PASSWORD);
 
     @BeforeEach
     public void setUp() {
@@ -122,6 +131,37 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    void
+            shouldUpdatePasswordSendSMSAndNotWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumberButRequestAllowsMfaReset()
+                    throws Json.JsonException {
+        var sessionId = redis.createSession();
+        var phoneNumber = "+441234567890";
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST_WITH_ALLOW_MFA_RESET),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(2));
+
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
     @Test
