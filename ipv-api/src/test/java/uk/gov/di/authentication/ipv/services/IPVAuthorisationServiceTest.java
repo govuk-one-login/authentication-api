@@ -8,6 +8,8 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -22,10 +24,13 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import org.approvaltests.Approvals;
 import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
@@ -33,16 +38,20 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.sharedtest.helper.TestClockHelper;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Base64;
 import java.util.Collections;
@@ -57,7 +66,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.ipv.services.IPVAuthorisationService.STATE_STORAGE_PREFIX;
 
 class IPVAuthorisationServiceTest {
@@ -80,16 +92,18 @@ class IPVAuthorisationServiceTest {
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
                     configurationService,
                     redisConnectionService,
                     kmsConnectionService,
+                    jwksService,
                     TestClockHelper.getInstance());
     private PrivateKey privateKey;
 
     @BeforeEach
-    void setUp() throws Json.JsonException {
+    void setUp() throws Json.JsonException, MalformedURLException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));
@@ -104,6 +118,14 @@ class IPVAuthorisationServiceTest {
                         + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
                         + "\n-----END PUBLIC KEY-----\n";
         when(configurationService.getIPVAuthEncryptionPublicKey()).thenReturn(certpem);
+        var rsaKey =
+                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                        .keyUse(KeyUse.ENCRYPTION)
+                        .keyID(KEY_ID)
+                        .build();
+        when(configurationService.getIPVJwksUrl())
+                .thenReturn(new URL("http://localhost/.well-known/jwks.json"));
+        when(jwksService.getIpvJwk()).thenReturn(rsaKey);
     }
 
     @Test
@@ -229,8 +251,11 @@ class IPVAuthorisationServiceTest {
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         }
 
-        @Test
-        void shouldConstructASignedRequestJWT() throws JOSEException, ParseException {
+        @ParameterizedTest(name = "With useIpvJwksEndpointEnabled = {0}")
+        @ValueSource(booleans = {true, false})
+        void shouldConstructASignedRequestJWT(boolean useIpvJwksEndpoint)
+                throws JOSEException, ParseException {
+            when(configurationService.isUseIPVJwksEndpointEnabled()).thenReturn(useIpvJwksEndpoint);
             var state = new State("test-state");
             var scope = new Scope(OIDCScopeValue.OPENID);
             var pairwise = new Subject("pairwise-identifier");
@@ -271,7 +296,9 @@ class IPVAuthorisationServiceTest {
 
             JsonApprovals.verifyAsJson(
                     signedJWTResponse.getJWTClaimsSet().toJSONObject(),
-                    GsonBuilder::serializeNulls);
+                    GsonBuilder::serializeNulls,
+                    Approvals.NAMES.withParameters(
+                            useIpvJwksEndpoint ? "usingJwksEndpoint" : "usingSSM"));
 
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("client_id"),

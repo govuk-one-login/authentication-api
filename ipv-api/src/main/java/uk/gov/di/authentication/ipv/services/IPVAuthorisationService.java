@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -53,6 +54,7 @@ public class IPVAuthorisationService {
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final JwksService jwksService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -66,6 +68,7 @@ public class IPVAuthorisationService {
                 configurationService,
                 redisConnectionService,
                 kmsConnectionService,
+                new JwksService(configurationService, kmsConnectionService),
                 new NowClock(Clock.systemUTC()));
     }
 
@@ -73,10 +76,12 @@ public class IPVAuthorisationService {
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
+            JwksService jwksService,
             NowClock nowClock) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
+        this.jwksService = jwksService;
         this.nowClock = nowClock;
     }
 
@@ -221,7 +226,12 @@ public class IPVAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
-            var publicEncryptionKey = getPublicKey();
+            RSAPublicKey publicEncryptionKey;
+            if (configurationService.isUseIPVJwksEndpointEnabled()) {
+                publicEncryptionKey = getPublicKeyFromJwksEndpoint();
+            } else {
+                publicEncryptionKey = getPublicKeyFromSSM();
+            }
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(
@@ -241,9 +251,9 @@ public class IPVAuthorisationService {
         }
     }
 
-    private RSAPublicKey getPublicKey() {
+    private RSAPublicKey getPublicKeyFromSSM() {
         try {
-            LOG.info("Getting IPV Auth Encryption Public Key");
+            LOG.info("Getting IPV Auth Encryption Public Key via SSM");
             var ipvAuthEncryptionPublicKey = configurationService.getIPVAuthEncryptionPublicKey();
             return new RSAKey.Builder(
                             (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
@@ -251,7 +261,18 @@ public class IPVAuthorisationService {
                     .toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private RSAPublicKey getPublicKeyFromJwksEndpoint() {
+        try {
+            LOG.info("Getting IPV Auth Encryption Public Key via JWKS endpoint");
+            var ipvAuthEncryptionPublicKey = jwksService.getIpvJwk();
+            return new RSAKey.Builder((RSAKey) ipvAuthEncryptionPublicKey).build().toRSAPublicKey();
+        } catch (JOSEException e) {
+            LOG.error("Error parsing the public key to RSAPublicKey", e);
+            throw new RuntimeException(e);
         }
     }
 }
