@@ -45,21 +45,16 @@ public class SessionService {
     }
 
     public Session generateSession() {
-        return generateSession(IdGenerator.generate(), IdGenerator.generate());
+        return generateSession(IdGenerator.generate());
     }
 
-    public Session generateSession(String sessionId, String browserSessionId) {
-        Session session = new Session(sessionId);
-        session.setBrowserSessionId(browserSessionId);
-
-        return session;
+    public Session generateSession(String sessionId) {
+        return new Session(sessionId);
     }
 
-    public Session copySessionForMaxAge(
-            Session previousSession, String newSessionId, String newBrowserSessionId) {
+    public Session copySessionForMaxAge(Session previousSession, String newSessionId) {
         var copiedSession = new Session(previousSession);
         copiedSession.setSessionId(newSessionId);
-        copiedSession.setBrowserSessionId(newBrowserSessionId);
         copiedSession.setAuthenticated(false).setCurrentCredentialStrength(null);
         copiedSession.resetClientSessions();
         return copiedSession;

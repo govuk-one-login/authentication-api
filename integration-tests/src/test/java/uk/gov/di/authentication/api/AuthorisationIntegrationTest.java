@@ -481,7 +481,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(LOW_LEVEL);
-        redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
@@ -531,7 +530,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
-        redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -576,7 +574,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
-        redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -620,7 +617,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        redis.addBrowserSesssionIdToSession(sessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
@@ -673,7 +669,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
-        redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -720,7 +715,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
-        redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -769,7 +763,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(LOW_LEVEL);
         redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
-        redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 

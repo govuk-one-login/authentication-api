@@ -22,8 +22,6 @@ public class Session {
 
     @Expose private String sessionId;
 
-    @Expose private String browserSessionId;
-
     @Expose private List<String> clientSessions;
 
     @Expose private String emailAddress;
@@ -59,7 +57,6 @@ public class Session {
         this.isNewAccount = session.isNewAccount;
         this.processingIdentityAttempts = session.processingIdentityAttempts;
         this.codeRequestCountMap = session.codeRequestCountMap;
-        this.browserSessionId = session.browserSessionId;
         this.authenticated = session.authenticated;
         this.currentCredentialStrength = session.currentCredentialStrength;
         this.emailAddress = session.emailAddress;
@@ -75,15 +72,6 @@ public class Session {
 
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
-    }
-
-    public void setBrowserSessionId(String browserSessionId) {
-        this.browserSessionId = browserSessionId;
-    }
-
-    public Session withBrowserSessionId(String browserSessionId) {
-        this.browserSessionId = browserSessionId;
-        return this;
     }
 
     public List<String> getClientSessions() {

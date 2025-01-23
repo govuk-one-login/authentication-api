@@ -308,7 +308,7 @@ class AuthorisationHandlerTest {
         session = new Session(SESSION_ID);
         orchSession = new OrchSessionItem(SESSION_ID);
         when(sessionService.generateSession()).thenReturn(session);
-        when(sessionService.generateSession(anyString(), anyString())).thenReturn(session);
+        when(sessionService.generateSession(anyString())).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
                 .thenReturn(clientSession);
@@ -2007,10 +2007,8 @@ class AuthorisationHandlerTest {
 
             @BeforeEach
             void setup() {
-                when(sessionService.generateSession(anyString(), anyString()))
-                        .thenReturn(
-                                new Session(NEW_SESSION_ID)
-                                        .withBrowserSessionId(NEW_BROWSER_SESSION_ID));
+                when(sessionService.generateSession(anyString()))
+                        .thenReturn(new Session(NEW_SESSION_ID));
             }
 
             @Test
@@ -2019,7 +2017,7 @@ class AuthorisationHandlerTest {
                 withExistingOrchSession(null);
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession(anyString(), anyString());
+                verify(sessionService).generateSession(anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
@@ -2050,7 +2048,7 @@ class AuthorisationHandlerTest {
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession(anyString(), anyString());
+                verify(sessionService).generateSession(anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
@@ -2076,11 +2074,11 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
-                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession(anyString(), anyString());
+                verify(sessionService).generateSession(anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
@@ -2106,11 +2104,11 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
-                withExistingSession(session.withBrowserSessionId(null));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(null));
                 var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService, never()).generateSession(anyString(), anyString());
+                verify(sessionService, never()).generateSession(anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(SESSION_ID, actualSession.getSessionId());
@@ -2141,12 +2139,12 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
-                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService, never()).generateSession(anyString(), anyString());
+                verify(sessionService, never()).generateSession(anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(SESSION_ID, actualSession.getSessionId());
@@ -2172,12 +2170,12 @@ class AuthorisationHandlerTest {
 
             @Test
             void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
-                withExistingSession(session.withBrowserSessionId(BROWSER_SESSION_ID));
+                withExistingSession(session);
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession(anyString(), anyString());
+                verify(sessionService).generateSession(anyString());
                 verify(sessionService).storeOrUpdateSession(sessionCaptor.capture());
                 var actualSession = sessionCaptor.getValue();
                 assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
@@ -2601,7 +2599,7 @@ class AuthorisationHandlerTest {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
             withExistingSession(session);
-            when(sessionService.copySessionForMaxAge(any(Session.class), anyString(), anyString()))
+            when(sessionService.copySessionForMaxAge(any(Session.class), anyString()))
                     .thenCallRealMethod();
         }
 
