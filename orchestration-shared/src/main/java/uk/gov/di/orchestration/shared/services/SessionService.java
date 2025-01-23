@@ -80,15 +80,7 @@ public class SessionService {
     }
 
     public void updateWithNewSessionId(Session session) {
-        try {
-            String oldSessionId = session.getSessionId();
-            session.setSessionId(IdGenerator.generate());
-            session.resetProcessingIdentityAttempts();
-            storeOrUpdateSession(session, oldSessionId);
-            redisConnectionService.deleteValue(oldSessionId);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        updateWithNewSessionId(session, IdGenerator.generate());
     }
 
     public void updateWithNewSessionId(Session session, String newSessionId) {
