@@ -226,9 +226,12 @@ public class IPVAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
+            String keyId = null;
             RSAPublicKey publicEncryptionKey;
             if (configurationService.isUseIPVJwksEndpointEnabled()) {
-                publicEncryptionKey = getPublicKeyFromJwksEndpoint();
+                JWK publicEncryptionJwk = getJwkFromJwksEndpoint();
+                keyId = publicEncryptionJwk.getKeyID();
+                publicEncryptionKey = getRsaPublicKeyFromJwk(publicEncryptionJwk);
             } else {
                 publicEncryptionKey = getPublicKeyFromSSM();
             }
@@ -237,6 +240,7 @@ public class IPVAuthorisationService {
                             new JWEHeader.Builder(
                                             JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
                                     .contentType("JWT")
+                                    .keyID(keyId)
                                     .build(),
                             new Payload(signedJWT));
             jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
@@ -253,7 +257,7 @@ public class IPVAuthorisationService {
 
     private RSAPublicKey getPublicKeyFromSSM() {
         try {
-            LOG.info("Getting IPV Auth Encryption Public Key via SSM");
+            LOG.info("Getting IPV Encryption Public Key via SSM");
             var ipvAuthEncryptionPublicKey = configurationService.getIPVAuthEncryptionPublicKey();
             return new RSAKey.Builder(
                             (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
@@ -265,10 +269,14 @@ public class IPVAuthorisationService {
         }
     }
 
-    private RSAPublicKey getPublicKeyFromJwksEndpoint() {
+    private JWK getJwkFromJwksEndpoint() {
+        LOG.info("Getting IPV Encryption JWK via JWKS endpoint");
+        return jwksService.getIpvJwk();
+    }
+
+    private RSAPublicKey getRsaPublicKeyFromJwk(JWK ipvAuthEncryptionPublicKey) {
         try {
-            LOG.info("Getting IPV Auth Encryption Public Key via JWKS endpoint");
-            var ipvAuthEncryptionPublicKey = jwksService.getIpvJwk();
+            LOG.info("Converting JWK to RSAPublicKey");
             return new RSAKey.Builder((RSAKey) ipvAuthEncryptionPublicKey).build().toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
