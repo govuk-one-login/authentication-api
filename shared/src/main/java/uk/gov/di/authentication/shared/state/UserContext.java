@@ -91,6 +91,7 @@ public class UserContext {
 
     public static class Builder {
         private Session session;
+        private AuthSessionItem authSession;
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
@@ -102,6 +103,11 @@ public class UserContext {
 
         protected Builder(Session session) {
             this.session = session;
+        }
+
+        protected Builder(Session session, AuthSessionItem authSession) {
+            this.session = session;
+            this.authSession = authSession;
         }
 
         public Builder withUserProfile(UserProfile userProfile) {
@@ -152,6 +158,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withAuthSession(AuthSessionItem authSession) {
+            this.authSession = authSession;
+            return this;
+        }
+
         public UserContext build() {
             return new UserContext(
                     session,
@@ -162,7 +173,8 @@ public class UserContext {
                     clientSession,
                     userLanguage,
                     clientSessionId,
-                    txmaAuditEncoded);
+                    txmaAuditEncoded,
+                    authSession);
         }
     }
 }
