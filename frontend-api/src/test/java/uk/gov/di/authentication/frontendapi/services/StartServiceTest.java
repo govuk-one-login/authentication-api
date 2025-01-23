@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -68,6 +69,8 @@ class StartServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final Session SESSION = new Session("a-session-id").setEmailAddress(EMAIL);
+    private static final AuthSessionItem AUTH_SESSION =
+            new AuthSessionItem().withSessionId("a-session-id");
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String AUDIENCE = "oidc-audience";
@@ -119,7 +122,7 @@ class StartServiceTest {
     }
 
     @Test
-    void shouldCreateUserContextFromSessionAndClientSession() {
+    void shouldCreateUserContextFromSessionAuthSessionAndClientSession() {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(
                         Optional.of(
@@ -144,9 +147,10 @@ class StartServiceTest {
                         LocalDateTime.now(),
                         mock(VectorOfTrust.class),
                         CLIENT_NAME);
-        var userContext = startService.buildUserContext(SESSION, clientSession);
+        var userContext = startService.buildUserContext(SESSION, clientSession, AUTH_SESSION);
 
         assertThat(userContext.getSession(), equalTo(SESSION));
+        assertThat(userContext.getAuthSession(), equalTo(AUTH_SESSION));
         assertThat(userContext.getClientSession(), equalTo(clientSession));
     }
 

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.state;
 
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 public class UserContext {
     private final Session session;
+    private final AuthSessionItem authSession;
     private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
@@ -29,7 +31,8 @@ public class UserContext {
             ClientSession clientSession,
             SupportedLanguage userLanguage,
             String clientSessionId,
-            String txmaAuditEncoded) {
+            String txmaAuditEncoded,
+            AuthSessionItem authSession) {
         this.session = session;
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
@@ -39,6 +42,7 @@ public class UserContext {
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
         this.txmaAuditEncoded = txmaAuditEncoded;
+        this.authSession = authSession;
     }
 
     public Session getSession() {
@@ -83,6 +87,10 @@ public class UserContext {
 
     public String getTxmaAuditEncoded() {
         return txmaAuditEncoded;
+    }
+
+    public AuthSessionItem getAuthSession() {
+        return authSession;
     }
 
     public static Builder builder(Session session) {
