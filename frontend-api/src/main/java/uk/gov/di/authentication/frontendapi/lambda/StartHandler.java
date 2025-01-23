@@ -185,7 +185,8 @@ public class StartHandler
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
-            var userContext = startService.buildUserContext(session, clientSession.get());
+            var userContext =
+                    startService.buildUserContext(session, clientSession.get(), authSession);
 
             attachLogFieldToLogs(
                     CLIENT_ID,
