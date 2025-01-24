@@ -146,6 +146,9 @@ class IPVCallbackHandlerTest {
             URI.create("https://example.com/ipv-callback");
     private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
+    private static final String RP_SECTOR_URI = "https://test.com";
+    private static final String RP_SECTOR_HOST = "test.com";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -178,13 +181,19 @@ class IPVCallbackHandlerTest {
                             RP_STATE,
                             null)
                     .toURI();
-    private final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
+    private static final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
     private final UserProfile userProfile = generateUserProfile();
 
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    TEST_SUBJECT.getValue(), "test.account.gov.uk", salt);
+                    TEST_SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+    private static final String TEST_RP_PAIRWISE_ID =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_SUBJECT.getValue(),
+                    ClientSubjectHelper.getSectorIdentifierForClient(
+                            clientRegistry, RP_SECTOR_HOST),
+                    salt);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -201,13 +210,13 @@ class IPVCallbackHandlerTest {
 
     private final ClientSession clientSession =
             new ClientSession(
-                    generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
-                    null,
-                    List.of(
-                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
-                    CLIENT_NAME);
-
+                            generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
+                            null,
+                            List.of(
+                                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                            CLIENT_NAME)
+                    .setRpPairwiseId(TEST_RP_PAIRWISE_ID);
     private final Json objectMapper = SerializationService.getInstance();
 
     private static Stream<Arguments> additionalClaims() {
@@ -390,12 +399,13 @@ class IPVCallbackHandlerTest {
                                 REDIRECT_URI, null, null, null, null, null, null));
         var clientSession =
                 new ClientSession(
-                        generateAuthRequest(claimsRequest).toParameters(),
-                        null,
-                        List.of(
-                                new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
-                        CLIENT_NAME);
+                                generateAuthRequest(claimsRequest).toParameters(),
+                                null,
+                                List.of(
+                                        new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                        new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                                CLIENT_NAME)
+                        .setRpPairwiseId(TEST_RP_PAIRWISE_ID);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
 
@@ -455,13 +465,14 @@ class IPVCallbackHandlerTest {
                                     REDIRECT_URI, null, null, null, null, null, null));
             var clientSession =
                     new ClientSession(
-                            generateAuthRequest(oidcValidClaimsRequestWithoutReturnCode)
-                                    .toParameters(),
-                            null,
-                            List.of(
-                                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
-                            CLIENT_NAME);
+                                    generateAuthRequest(oidcValidClaimsRequestWithoutReturnCode)
+                                            .toParameters(),
+                                    null,
+                                    List.of(
+                                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                                    CLIENT_NAME)
+                            .setRpPairwiseId(TEST_RP_PAIRWISE_ID);
             when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(Optional.of(clientSession));
 
@@ -514,10 +525,11 @@ class IPVCallbackHandlerTest {
                                         .add(ValidClaims.RETURN_CODE.getValue()));
         var clientSession =
                 new ClientSession(
-                        generateAuthRequest(claimsRequest).toParameters(),
-                        null,
-                        (List<VectorOfTrust>) EMPTY_LIST,
-                        CLIENT_NAME);
+                                generateAuthRequest(claimsRequest).toParameters(),
+                                null,
+                                (List<VectorOfTrust>) EMPTY_LIST,
+                                CLIENT_NAME)
+                        .setRpPairwiseId(TEST_RP_PAIRWISE_ID);
 
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -611,15 +623,12 @@ class IPVCallbackHandlerTest {
                                 new UserInfo(new JSONObject(claims)), clientRegistry));
 
         assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
-        var expectedRpPairwiseSub =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry, dynamoService, INTERNAL_SECTOR_URI);
         verify(ipvCallbackHelper)
                 .queueSPOTRequest(
                         any(),
                         anyString(),
                         eq(userProfile),
-                        eq(expectedRpPairwiseSub),
+                        eq(new Subject(TEST_RP_PAIRWISE_ID)),
                         any(UserInfo.class),
                         eq(CLIENT_ID.getValue()));
         verify(ipvCallbackHelper)
@@ -1103,7 +1112,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(RP_SECTOR_URI)
                 .withSubjectType("pairwise");
     }
 
@@ -1112,7 +1121,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(RP_SECTOR_URI)
                 .withSubjectType("pairwise")
                 .withClaims(List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
