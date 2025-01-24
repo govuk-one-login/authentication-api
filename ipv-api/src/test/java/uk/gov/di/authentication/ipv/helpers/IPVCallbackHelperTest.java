@@ -296,7 +296,6 @@ class IPVCallbackHelperTest {
         helper.queueSPOTRequest(
                 new LogIds(),
                 "sector-identifier",
-                userProfile,
                 authUserInfo,
                 SUBJECT,
                 p2VotUserIdentityUserInfo,
@@ -344,7 +343,6 @@ class IPVCallbackHelperTest {
                                 helper.queueSPOTRequest(
                                         new LogIds(),
                                         "sector-identifier",
-                                        userProfile,
                                         authUserInfo,
                                         SUBJECT,
                                         p2VotUserIdentityUserInfo,
