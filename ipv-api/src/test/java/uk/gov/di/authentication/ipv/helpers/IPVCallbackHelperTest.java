@@ -449,7 +449,6 @@ class IPVCallbackHelperTest {
         helper.generateReturnCodeAuthenticationResponse(
                 generateAuthRequest(new OIDCClaimsRequest()),
                 CLIENT_SESSION_ID,
-                userProfile,
                 new Session(),
                 SESSION_ID,
                 orchSession,
@@ -459,7 +458,8 @@ class IPVCallbackHelperTest {
                 new UserInfo(new Subject()),
                 "127.0.0.1",
                 "a-persistent-session-id",
-                CLIENT_ID.getValue());
+                CLIENT_ID.getValue(),
+                TEST_EMAIL_ADDRESS);
 
         assertAuthorisationCodeGeneratedAndSaved();
     }

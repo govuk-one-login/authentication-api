@@ -424,8 +424,8 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyString(),
+                        any(),
                         any(),
                         any(),
                         any(),
@@ -519,8 +519,8 @@ class IPVCallbackHandlerTest {
                             any(),
                             any(),
                             any(),
-                            any(),
                             anyString(),
+                            any(),
                             any(),
                             any(),
                             any(),
@@ -639,8 +639,8 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyString(),
+                        any(),
                         any(),
                         any(),
                         any(),
@@ -660,7 +660,6 @@ class IPVCallbackHandlerTest {
                 .generateReturnCodeAuthenticationResponse(
                         any(),
                         eq(CLIENT_SESSION_ID),
-                        eq(userProfile),
                         eq(session),
                         eq(SESSION_ID),
                         any(OrchSessionItem.class),
@@ -670,7 +669,8 @@ class IPVCallbackHandlerTest {
                         eq(userIdentityUserInfo),
                         anyString(),
                         eq(PERSISTENT_SESSION_ID),
-                        eq(CLIENT_ID.getValue()));
+                        eq(CLIENT_ID.getValue()),
+                        eq(TEST_EMAIL_ADDRESS));
     }
 
     @Test
