@@ -465,6 +465,7 @@ public class IPVCallbackHandler
                     getSectorIdentifierForClient(
                             clientRegistry, configurationService.getInternalSectorURI()),
                     userProfile,
+                    authUserInfo,
                     rpPairwiseSubject,
                     userIdentityUserInfo,
                     clientId);
