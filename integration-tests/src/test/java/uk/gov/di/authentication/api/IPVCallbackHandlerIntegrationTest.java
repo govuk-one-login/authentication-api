@@ -134,7 +134,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         txmaAuditQueue.clear();
         spotQueue.clear();
 
-        setupUserProfileAndUserCredentials();
+        setupUserCredentials();
         setupClientStore();
 
         salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
@@ -616,7 +616,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 startsWith(REDIRECT_URI + "?error=access_denied"));
     }
 
-    private void setupUserProfileAndUserCredentials() {
+    private void setupUserCredentials() {
         userStore.signUp(TEST_EMAIL_ADDRESS, "password", TEST_SUBJECT);
         userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
     }
