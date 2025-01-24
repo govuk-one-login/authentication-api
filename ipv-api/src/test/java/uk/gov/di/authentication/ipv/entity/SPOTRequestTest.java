@@ -35,7 +35,7 @@ class SPOTRequestTest {
                 spotRequest.getSpotClaims().get(IdentityClaims.CREDENTIAL_JWT.getValue()));
         assertEquals("P2", spotRequest.getSpotClaims().get("vot"));
         assertEquals("/trustmark", spotRequest.getSpotClaims().get("vtm"));
-        assertEquals(saltString, Base64.getEncoder().encodeToString(spotRequest.getSalt()));
+        assertEquals(saltString, spotRequest.getSalt());
         assertEquals("<id>", spotRequest.getLocalAccountId());
         assertEquals("<subject identifier>", spotRequest.getSub());
         assertEquals("<id>", spotRequest.getLogIds().getSessionId());

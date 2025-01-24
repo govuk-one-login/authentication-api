@@ -220,7 +220,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         VTM.getValue(),
                                         "/trustmark"),
                                 TEST_SUBJECT.getValue(),
-                                salt,
+                                base64EncodedSalt,
                                 sectorId,
                                 rpPairwiseId,
                                 new LogIds(

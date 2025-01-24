@@ -1,9 +1,7 @@
 package uk.gov.di.authentication.ipv.entity;
 
 import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.orchestration.shared.serialization.Base64ByteArrayAdapter;
 
 import java.util.Map;
 
@@ -19,8 +17,7 @@ public class SPOTRequest {
 
     @SerializedName(value = "in_salt")
     @Expose
-    @JsonAdapter(Base64ByteArrayAdapter.class)
-    private byte[] salt;
+    private String salt;
 
     @SerializedName(value = "in_rp_sector_id")
     @Expose
@@ -41,7 +38,7 @@ public class SPOTRequest {
     public SPOTRequest(
             Map<String, Object> spotClaims,
             String localAccountId,
-            byte[] salt,
+            String salt,
             String rpSectorId,
             String sub,
             LogIds logIds,
@@ -65,7 +62,7 @@ public class SPOTRequest {
         return localAccountId;
     }
 
-    public byte[] getSalt() {
+    public String getSalt() {
         return salt;
     }
 
