@@ -282,13 +282,6 @@ public class IPVCallbackHandler
                             () ->
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(), sessionId));
-            var userProfile =
-                    dynamoService
-                            .getUserProfileByEmailMaybe(session.getEmailAddress())
-                            .orElseThrow(
-                                    () ->
-                                            new IpvCallbackException(
-                                                    "Email from session does not have a user profile"));
 
             UserInfo authUserInfo =
                     getAuthUserInfo(
