@@ -33,7 +33,6 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -122,7 +121,6 @@ class IPVCallbackHelperTest {
     private static final Subject RP_PAIRWISE_SUBJECT = new Subject("rp-pairwise-id");
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
-    private static final UserProfile userProfile = generateUserProfile();
     private static final UserInfo authUserInfo = generateAuthUserInfo();
     private static final UserInfo p0VotUserIdentityUserInfo =
             new UserInfo(
@@ -414,16 +412,6 @@ class IPVCallbackHelperTest {
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
                         "");
-    }
-
-    private static UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber(TEST_PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .withSubjectID(SUBJECT.getValue());
     }
 
     private static UserInfo generateAuthUserInfo() {
