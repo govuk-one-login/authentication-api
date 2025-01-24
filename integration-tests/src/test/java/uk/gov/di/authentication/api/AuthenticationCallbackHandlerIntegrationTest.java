@@ -278,7 +278,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         .nonce(new Nonce())
                         .state(RP_STATE);
         redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                authRequestBuilder.build().toParameters(),
+                "rp-pairwise-id");
         redis.addClientSessionAndStateToRedis(ORCH_TO_AUTH_STATE, CLIENT_SESSION_ID);
 
         var response =
