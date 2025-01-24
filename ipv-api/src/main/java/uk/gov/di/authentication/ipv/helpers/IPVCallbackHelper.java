@@ -17,12 +17,12 @@ import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
@@ -191,7 +191,6 @@ public class IPVCallbackHelper {
     public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
             AuthenticationRequest authRequest,
             String clientSessionId,
-            UserProfile userProfile,
             Session session,
             String sessionId,
             OrchSessionItem orchSession,
@@ -201,7 +200,8 @@ public class IPVCallbackHelper {
             UserInfo userIdentityUserInfo,
             String ipAddress,
             String persistentSessionId,
-            String clientId)
+            String clientId,
+            String email)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
@@ -211,10 +211,7 @@ public class IPVCallbackHelper {
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
-                        clientId,
-                        clientSessionId,
-                        userProfile.getEmail(),
-                        orchSession.getAuthTime());
+                        clientId, clientSessionId, email, orchSession.getAuthTime());
         var authenticationResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -247,15 +244,12 @@ public class IPVCallbackHelper {
                         .withGovukSigninJourneyId(clientSessionId)
                         .withSessionId(sessionId)
                         .withUserId(internalPairwiseSubjectId)
-                        .withEmail(
-                                Optional.ofNullable(session.getEmailAddress())
-                                        .orElse(AuditService.UNKNOWN))
+                        .withEmail(Optional.ofNullable(email).orElse(AuditService.UNKNOWN))
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
-        var isTestJourney =
-                dynamoClientService.isTestJourney(clientSessionId, session.getEmailAddress());
+        var isTestJourney = dynamoClientService.isTestJourney(clientSessionId, email);
         LOG.info("Is journey a test journey: {}", isTestJourney);
 
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
