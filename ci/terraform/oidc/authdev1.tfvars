@@ -9,14 +9,14 @@ account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
 call_ticf_cri                               = true
-support_reauth_signout_enabled              = true
-authentication_attempts_service_enabled     = true
+ipv_backend_uri                             = "https://ipvstub.signin.authdev1.dev.account.gov.uk"
 
-
-ipv_backend_uri                 = "https://ipvstub.signin.authdev1.dev.account.gov.uk"
 ipv_authorisation_uri           = "https://ipvstub.signin.authdev1.dev.account.gov.uk/authorize/"
 ipv_auth_authorize_callback_uri = "https://signin.authdev1.dev.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
+ipv_audience                    = "https://ipvstub.signin.authdev1.dev.account.gov.uk"
+evcs_audience                   = "https://credential-store.authdev1.dev.account.gov.uk"
+auth_issuer_claim_for_evcs      = "https://signin.authdev1.dev.account.gov.uk"
 
 # The IPV public encrypting key that is specific to auth
 
@@ -84,3 +84,10 @@ orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-
 authorize_protected_subnet_enabled = true
 
 oidc_cloudfront_enabled = false
+
+
+#
+# Possibly not needed anymore
+#
+support_reauth_signout_enabled          = true
+authentication_attempts_service_enabled = true
