@@ -35,7 +35,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -59,7 +58,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -279,16 +277,10 @@ public class IPVCallbackHandler
                                             new IpvCallbackException(
                                                     "Email from session does not have a user profile"));
 
-            var internalPairwiseSubjectId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
-                            dynamoService.getOrGenerateSalt(userProfile));
-
             UserInfo authUserInfo =
                     getAuthUserInfo(
                                     authUserInfoStorageService,
-                                    internalPairwiseSubjectId,
+                                    orchSession.getInternalCommonSubjectId(),
                                     clientSessionId)
                             .orElseThrow(() -> new IpvCallbackException("authUserInfo not found"));
 
@@ -299,7 +291,7 @@ public class IPVCallbackHandler
                             clientSessionId,
                             sessionId,
                             clientId,
-                            internalPairwiseSubjectId,
+                            orchSession.getInternalCommonSubjectId(),
                             session.getEmailAddress(),
                             ipAddress,
                             Objects.isNull(userProfile.getPhoneNumber())
@@ -313,7 +305,8 @@ public class IPVCallbackHandler
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                orchSession.getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -338,7 +331,7 @@ public class IPVCallbackHandler
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
                             .withSessionId(sessionId)
-                            .withUserId(internalPairwiseSubjectId)
+                            .withUserId(orchSession.getInternalCommonSubjectId())
                             .withEmail(session.getEmailAddress())
                             .withPhone(userProfile.getPhoneNumber())
                             .withPersistentSessionId(persistentId);
@@ -385,7 +378,8 @@ public class IPVCallbackHandler
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                orchSession.getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -410,7 +404,7 @@ public class IPVCallbackHandler
                                         orchSession,
                                         clientSession,
                                         rpPairwiseSubject,
-                                        internalPairwiseSubjectId,
+                                        orchSession.getInternalCommonSubjectId(),
                                         userIdentityUserInfo,
                                         ipAddress,
                                         persistentId,
