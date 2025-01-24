@@ -711,7 +711,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() throws ParseException {
+    void shouldRedirectToFrontendErrorPageWhenAuthUserInfoNotFound() throws ParseException {
         usingValidSession();
         usingValidClientSession();
         Map<String, String> responseHeaders = new HashMap<>();
