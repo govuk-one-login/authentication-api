@@ -275,7 +275,6 @@ public class IPVCallbackHelper {
     public void queueSPOTRequest(
             LogIds logIds,
             String sectorIdentifier,
-            UserProfile userProfile,
             UserInfo authUserInfo,
             Subject pairwiseSubject,
             UserInfo userIdentityUserInfo,
@@ -300,7 +299,7 @@ public class IPVCallbackHelper {
         var spotRequest =
                 new SPOTRequest(
                         spotClaimsBuilder.build(),
-                        userProfile.getSubjectID(),
+                        authUserInfo.getStringClaim(AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()),
                         authUserInfo.getStringClaim(AuthUserInfoClaims.SALT.getValue()),
                         sectorIdentifier,
                         pairwiseSubject.getValue(),
