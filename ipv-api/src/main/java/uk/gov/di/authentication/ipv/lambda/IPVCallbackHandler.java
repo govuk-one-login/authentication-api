@@ -292,11 +292,11 @@ public class IPVCallbackHandler
                             sessionId,
                             clientId,
                             orchSession.getInternalCommonSubjectId(),
-                            session.getEmailAddress(),
+                            authUserInfo.getEmailAddress(),
                             ipAddress,
-                            Objects.isNull(userProfile.getPhoneNumber())
+                            Objects.isNull(authUserInfo.getPhoneNumber())
                                     ? AuditService.UNKNOWN
-                                    : userProfile.getPhoneNumber(),
+                                    : authUserInfo.getPhoneNumber(),
                             persistentId);
 
             if (errorObject.isPresent()) {
@@ -333,7 +333,10 @@ public class IPVCallbackHandler
                             .withSessionId(sessionId)
                             .withUserId(orchSession.getInternalCommonSubjectId())
                             .withEmail(session.getEmailAddress())
-                            .withPhone(userProfile.getPhoneNumber())
+                            .withPhone(
+                                    Objects.isNull(authUserInfo.getPhoneNumber())
+                                            ? AuditService.UNKNOWN
+                                            : authUserInfo.getPhoneNumber())
                             .withPersistentSessionId(persistentId);
 
             auditService.submitAuditEvent(
@@ -398,7 +401,6 @@ public class IPVCallbackHandler
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
                                         clientSessionId,
-                                        userProfile,
                                         session,
                                         sessionId,
                                         orchSession,
@@ -408,7 +410,8 @@ public class IPVCallbackHandler
                                         userIdentityUserInfo,
                                         ipAddress,
                                         persistentId,
-                                        clientId);
+                                        clientId,
+                                        authUserInfo.getEmailAddress());
                         return generateApiGatewayProxyResponse(
                                 302,
                                 "",
