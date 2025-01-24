@@ -31,12 +31,14 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
-import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
 import java.text.ParseException;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -44,6 +46,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.time.Clock.fixed;
+import static java.time.ZoneId.systemDefault;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -161,7 +165,8 @@ class LogoutServiceTest {
                         auditService,
                         cloudwatchMetricsService,
                         backChannelLogoutService,
-                        authFrontend);
+                        authFrontend,
+                        new NowClock(Clock.systemUTC()));
 
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -560,16 +565,16 @@ class LogoutServiceTest {
                         .addClientSession(clientSessionId1)
                         .addClientSession(clientSessionId2);
 
+        var authTime = Instant.parse("2025-01-23T15:00:00Z");
         var previousOrchSession =
-                new OrchSessionItem(SESSION_ID)
-                        .withAuthTime(
-                                NowHelper.nowMinus(1, ChronoUnit.HOURS)
-                                        .toInstant()
-                                        .getEpochSecond());
+                new OrchSessionItem(SESSION_ID).withAuthTime(authTime.getEpochSecond());
         setUpClientSession(clientSessionId1, clientId1);
         setUpClientSession(clientSessionId2, clientId2);
 
-        logoutService.handleMaxAgeLogout(prevousSession, previousOrchSession, auditUser);
+        var logoutTime = authTime.plus(3600, ChronoUnit.SECONDS);
+        var clock = fixed(logoutTime, systemDefault());
+        logoutServiceWithClock(clock)
+                .handleMaxAgeLogout(prevousSession, previousOrchSession, auditUser);
 
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
@@ -590,6 +595,20 @@ class LogoutServiceTest {
                         AuditService.UNKNOWN,
                         auditUser,
                         expectedExtensions.toArray(AuditService.MetadataPair[]::new));
+    }
+
+    private LogoutService logoutServiceWithClock(Clock clock) {
+        return new LogoutService(
+                configurationService,
+                sessionService,
+                orchSessionService,
+                dynamoClientService,
+                clientSessionService,
+                auditService,
+                cloudwatchMetricsService,
+                backChannelLogoutService,
+                authFrontend,
+                new NowClock(clock));
     }
 
     private void setupAdditionalClientSessions() {
