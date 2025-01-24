@@ -276,6 +276,7 @@ public class IPVCallbackHelper {
             LogIds logIds,
             String sectorIdentifier,
             UserProfile userProfile,
+            UserInfo authUserInfo,
             Subject pairwiseSubject,
             UserInfo userIdentityUserInfo,
             String clientId)
@@ -300,7 +301,7 @@ public class IPVCallbackHelper {
                 new SPOTRequest(
                         spotClaimsBuilder.build(),
                         userProfile.getSubjectID(),
-                        dynamoService.getOrGenerateSalt(userProfile),
+                        authUserInfo.getStringClaim(AuthUserInfoClaims.SALT.getValue()),
                         sectorIdentifier,
                         pairwiseSubject.getValue(),
                         logIds,

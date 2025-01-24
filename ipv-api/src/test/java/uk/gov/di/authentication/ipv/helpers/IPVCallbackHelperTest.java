@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -72,6 +73,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class IPVCallbackHelperTest {
+    protected final Json objectMapper = SerializationService.getInstance();
     private final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
     private final AuditContext auditContext = mock(AuditContext.class);
@@ -276,6 +278,7 @@ class IPVCallbackHelperTest {
                 new LogIds(),
                 "sector-identifier",
                 userProfile,
+                authUserInfo,
                 SUBJECT,
                 p2VotUserIdentityUserInfo,
                 CLIENT_ID.getValue());
@@ -284,7 +287,10 @@ class IPVCallbackHelperTest {
                 logging.events(),
                 hasItem(withMessageContaining("Constructing SPOT request ready to queue")));
         var spotRequestString =
-                "{\"in_claims\":{\"https://vocab.account.gov.uk/v1/coreIdentity\":\"core-identity\",\"https://vocab.account.gov.uk/v1/credentialJWT\":null,\"vot\":\"P2\",\"vtm\":\"https://base-url.com/trustmark\"},\"in_local_account_id\":\"subject-id\",\"in_salt\":null,\"in_rp_sector_id\":\"sector-identifier\",\"out_sub\":\"subject-id\",\"log_ids\":{\"session_id\":null,\"persistent_session_id\":null,\"request_id\":null,\"client_id\":null,\"client_session_id\":null},\"out_audience\":\""
+                "{\"in_claims\":{\"https://vocab.account.gov.uk/v1/coreIdentity\":\"core-identity\",\"https://vocab.account.gov.uk/v1/credentialJWT\":null,\"vot\":\"P2\",\"vtm\":\"https://base-url.com/trustmark\"},\"in_local_account_id\":\"subject-id\","
+                        + "\"in_salt\":"
+                        + objectMapper.writeValueAsString(BASE_64_ENCODED_SALT)
+                        + ",\"in_rp_sector_id\":\"sector-identifier\",\"out_sub\":\"subject-id\",\"log_ids\":{\"session_id\":null,\"persistent_session_id\":null,\"request_id\":null,\"client_id\":null,\"client_session_id\":null},\"out_audience\":\""
                         + CLIENT_ID.getValue()
                         + "\"}";
         verify(sqsClient).send(spotRequestString);
@@ -294,7 +300,7 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldThrowJsonExceptionAndDoesNotInteractWithSqsIfCannotMapRequestToJson() {
-        var objectMapper = mock(SerializationService.class);
+        var objectMapperMock = mock(SerializationService.class);
         helper =
                 new IPVCallbackHelper(
                         auditService,
@@ -304,12 +310,13 @@ class IPVCallbackHelperTest {
                         dynamoClientService,
                         dynamoIdentityService,
                         dynamoService,
-                        objectMapper,
+                        objectMapperMock,
                         sessionService,
                         sqsClient,
                         oidcAPI,
                         orchSessionService);
-        when(objectMapper.writeValueAsString(any())).thenThrow(new JsonException("json-exception"));
+        when(objectMapperMock.writeValueAsString(any()))
+                .thenThrow(new JsonException("json-exception"));
 
         var exception =
                 assertThrows(
@@ -319,6 +326,7 @@ class IPVCallbackHelperTest {
                                         new LogIds(),
                                         "sector-identifier",
                                         userProfile,
+                                        authUserInfo,
                                         SUBJECT,
                                         p2VotUserIdentityUserInfo,
                                         CLIENT_ID.getValue()),

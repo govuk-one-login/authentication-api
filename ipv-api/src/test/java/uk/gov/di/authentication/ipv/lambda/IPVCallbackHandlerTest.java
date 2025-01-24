@@ -701,6 +701,7 @@ class IPVCallbackHandlerTest {
                         any(),
                         anyString(),
                         eq(userProfile),
+                        eq(authUserInfo),
                         eq(new Subject(TEST_RP_PAIRWISE_ID)),
                         any(UserInfo.class),
                         eq(CLIENT_ID.getValue()));

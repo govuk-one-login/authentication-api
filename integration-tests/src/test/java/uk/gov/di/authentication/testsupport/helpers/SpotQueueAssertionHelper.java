@@ -3,7 +3,6 @@ package uk.gov.di.authentication.testsupport.helpers;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 
-import java.util.Arrays;
 import java.util.Collection;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -13,7 +12,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasAccountId;
 import static uk.gov.di.authentication.testsupport.matchers.SpotRequestMatcher.hasSub;
 
@@ -39,10 +38,9 @@ public class SpotQueueAssertionHelper {
 
         var expectedSpotRequest = expectedRequests.stream().findFirst().orElseThrow();
 
-        assertTrue(
-                Arrays.equals(
-                        actualRequests.stream().findFirst().orElseThrow().getSalt(),
-                        expectedSpotRequest.getSalt()));
+        assertEquals(
+                actualRequests.stream().findFirst().orElseThrow().getSalt(),
+                expectedSpotRequest.getSalt());
 
         assertThat(
                 expectedSpotRequest.getLogIds().getSessionId(),
