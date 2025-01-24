@@ -59,7 +59,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.List;
@@ -281,12 +280,6 @@ public class IPVCallbackHandler
                                             new IpvCallbackException(
                                                     "Email from session does not have a user profile"));
 
-            var internalPairwiseSubjectId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
-                            dynamoService.getOrGenerateSalt(userProfile));
-
             var ipAddress = IpAddressHelper.extractIpAddress(input);
 
             var auditContext =
@@ -294,7 +287,7 @@ public class IPVCallbackHandler
                             clientSessionId,
                             sessionId,
                             clientId,
-                            internalPairwiseSubjectId,
+                            orchSession.getInternalCommonSubjectId(),
                             session.getEmailAddress(),
                             ipAddress,
                             Objects.isNull(userProfile.getPhoneNumber())
@@ -308,7 +301,8 @@ public class IPVCallbackHandler
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                orchSession.getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -338,7 +332,7 @@ public class IPVCallbackHandler
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
                             .withSessionId(sessionId)
-                            .withUserId(internalPairwiseSubjectId)
+                            .withUserId(orchSession.getInternalCommonSubjectId())
                             .withEmail(session.getEmailAddress())
                             .withPhone(userProfile.getPhoneNumber())
                             .withPersistentSessionId(persistentId);
@@ -446,7 +440,8 @@ public class IPVCallbackHandler
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                orchSession.getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -471,7 +466,7 @@ public class IPVCallbackHandler
                                         orchSession,
                                         orchClientSession.getClientName(),
                                         rpPairwiseSubject,
-                                        internalPairwiseSubjectId,
+                                        orchSession.getInternalCommonSubjectId(),
                                         userIdentityUserInfo,
                                         ipAddress,
                                         persistentId,
