@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
@@ -344,12 +345,7 @@ public class IPVCallbackHandler
                         sessionId);
             }
 
-            var rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            clientRegistry,
-                            dynamoService,
-                            configurationService.getInternalSectorURI());
+            var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
 
             var user =
                     TxmaAuditUser.user()
