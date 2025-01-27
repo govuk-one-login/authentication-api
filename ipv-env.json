@@ -1,0 +1,11 @@
+{
+  "Variables": {
+    "ENVIRONMENT": "localstack",
+    "REDIS_KEY": "redis_key",
+    "LOCALSTACK_ENDPOINT": "http://localhost:4566/",
+    "AWS_REGION": "eu-west-2",
+    "DYNAMO_ENDPOINT": "http://localhost:8000/",
+    "TOKEN_SIGNING_KEY_ALIAS": "thisMightNeedUpdating",
+    "TXMA_AUDIT_QUEUE_URL": ""
+  }
+}

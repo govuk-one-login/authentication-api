@@ -2,6 +2,7 @@ plugins {
     id "java"
     id "jacoco"
     id "au.com.dius.pact" version "4.6.16"
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 group "uk.gov.di.authentication.frontendapi"

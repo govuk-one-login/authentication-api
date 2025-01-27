@@ -1,0 +1,47 @@
+# Localstack docs: https://hub.docker.com/r/localstack/localstack
+
+services:
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+      - "127.0.0.1:4510-4559:4510-4559"
+    environment:
+      - SERVICES=lambda,kms,sqs,dynamodb,elasticache,ssm,apigateway,cloudformation,acm,logs,route53,iam,secretsmanager,cloudwatch,events
+      - DEBUG=${DEBUG:-0}
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - di-authentication-api-net
+
+  redis:
+    image: redis:6.0.5-alpine
+    restart: no
+    healthcheck:
+      test: '[[ $$(redis-cli ping 2> /dev/null) == "PONG" ]] || exit 1'
+      interval: 5s
+      timeout: 1m
+    ports:
+      - "6379:6379"
+    networks:
+      - di-authentication-api-net
+
+  dynamodb:
+    command: "-jar DynamoDBLocal.jar -sharedDb -optimizeDbBeforeStartup -dbPath ."
+    restart: no
+    working_dir: /home/dynamodblocal
+    image: amazon/dynamodb-local:1.22.0
+    healthcheck:
+      test: curl http://localhost:8000
+      interval: 5s
+      timeout: 1m
+    ports:
+      - "8000:8000"
+    networks:
+      - di-authentication-api-net
+
+networks:
+  di-authentication-api-net:
+

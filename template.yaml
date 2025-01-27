@@ -322,6 +322,14 @@ Globals:
             ]
 
 Resources:
+  MfaResetAuthorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: MfaResetAuthorizeFunction
+      Handler: uk.gov.di.authentication.frontend-api.lambda.MfaResetAuthorizeFunction::handleRequest
+      Runtime: java17
+      CodeUri: ./frontend-api/
+
   CodeDeployServiceRole:
     Type: AWS::IAM::Role
     Properties:

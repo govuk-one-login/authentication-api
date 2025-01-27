@@ -1,0 +1,14 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+
+
+Resources:
+  MfaResetAuthorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: MfaResetAuthorizeFunction
+      Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
+      Runtime: java17
+      CodeUri: ./frontend-api/
