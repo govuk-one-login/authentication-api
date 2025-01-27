@@ -366,11 +366,17 @@ public class IPVCallbackHandler
                                         .equals(authUserInfo.get().getPhoneNumber()));
                     }
                     var saltFromAuthUserInfo = authUserInfo.get().getStringClaim("salt");
-                    var saltDecoded = Base64.getDecoder().decode(saltFromAuthUserInfo);
-                    var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
-                    LOG.info(
-                            "is salt the same on authUserInfo as on UserProfile: {}",
-                            userProfile.getSalt().equals(saltBuffer));
+                    if (saltFromAuthUserInfo != null && !saltFromAuthUserInfo.isBlank()) {
+                        var saltDecoded = Base64.getDecoder().decode(saltFromAuthUserInfo);
+                        var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
+                        LOG.info(
+                                "is salt the same on authUserInfo as on UserProfile: {}",
+                                userProfile.getSalt().equals(saltBuffer));
+                    } else {
+                        LOG.info(
+                                "salt on authUserInfo is null or blank. Is salt on UserProfile defined: {}",
+                                userProfile.getSalt() != null);
+                    }
                     LOG.info(
                             "is subjectId the same on authUserInfo as on UserProfile: {}",
                             userProfile
