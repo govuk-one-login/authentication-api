@@ -387,6 +387,9 @@ public class AuthenticationCallbackHandler
                         "is rpPairwiseId attached to auth-external-api userinfo response: {}",
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue())
                                 != null);
+                LOG.info(
+                        "is salt attached to auth-external-api userinfo response: {}",
+                        userInfo.getStringClaim(AuthUserInfoClaims.SALT.getValue()) != null);
                 //
 
                 Boolean newAccount =

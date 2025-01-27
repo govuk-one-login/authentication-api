@@ -82,6 +82,9 @@ public class UserInfoService {
                 accessTokenInfo
                         .getClaims()
                         .contains(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()));
+        LOG.info(
+                "is salt a requested claim: {}",
+                accessTokenInfo.getClaims().contains(AuthUserInfoClaims.SALT.getValue()));
         //
 
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue())) {
@@ -107,6 +110,7 @@ public class UserInfoService {
         }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.SALT.getValue())) {
             String base64StringFromSalt = bytesToBase64(userProfile.getSalt());
+            LOG.info("is salt from UserProfile defined: {}", base64StringFromSalt != null);
             userInfo.setClaim("salt", base64StringFromSalt);
         }
     }
