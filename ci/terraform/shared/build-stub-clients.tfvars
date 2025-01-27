@@ -22,7 +22,7 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
-    max_age_enabled   = false
+    max_age_enabled   = true
   },
   {
     client_name           = "relying-party-stub-build-app"
@@ -46,7 +46,7 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
-    max_age_enabled   = false
+    max_age_enabled   = true
   },
   {
     client_name           = "relying-party-stub-build-acceptance-test"
@@ -98,7 +98,7 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
-    max_age_enabled   = false
+    max_age_enabled   = true
   },
   {
     # New client for Secure pipeline Migration
@@ -125,6 +125,6 @@ stub_rp_clients = [
     ]
     one_login_service = false
     service_type      = "MANDATORY"
-    max_age_enabled   = false
+    max_age_enabled   = true
   },
 ]
