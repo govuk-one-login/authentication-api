@@ -43,6 +43,25 @@ class ManuallyDeleteAccountHandlerTest {
     }
 
     @Test
+    void cleansInputEmail() {
+        // given
+        var inputEmail = " TestEmail@example.com    ";
+        var expectedEmail = "testemail@example.com";
+        var userProfile = mock(UserProfile.class);
+        when(authenticationService.getUserProfileByEmailMaybe(any()))
+                .thenReturn(Optional.ofNullable(userProfile));
+        when(manualAccountDeletionService.manuallyDeleteAccount(any()))
+                .thenReturn(mock(DeletedAccountIdentifiers.class));
+
+        // when
+        underTest.handleRequest(inputEmail, CONTEXT);
+
+        // then
+        verify(authenticationService).getUserProfileByEmailMaybe(expectedEmail);
+        verify(manualAccountDeletionService).manuallyDeleteAccount(userProfile);
+    }
+
+    @Test
     void throwsAnExceptionWhenTheUserIsNotFound() {
         // given
         when(authenticationService.getUserProfileByEmailMaybe(any())).thenReturn(Optional.empty());
@@ -58,7 +77,12 @@ class ManuallyDeleteAccountHandlerTest {
         var deletedAccountIdentifiers =
                 new DeletedAccountIdentifiers("publicSubject", "legacySubject", "subject");
         var expectedReturnValue =
-                "DeletedAccountIdentifiers[publicSubjectId=publicSubject, legacySubjectId=legacySubject, subjectId=subject]";
+                """
+                Deleted Account Identifiers
+                publicSubjectId: publicSubject
+                legacySubjectId: legacySubject
+                subjectId: subject
+                """;
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
