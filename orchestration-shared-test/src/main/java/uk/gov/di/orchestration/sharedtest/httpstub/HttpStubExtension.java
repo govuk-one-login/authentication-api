@@ -3,12 +3,9 @@ package uk.gov.di.orchestration.sharedtest.httpstub;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.List;
 
 public class HttpStubExtension implements AfterAllCallback {
 
@@ -28,45 +25,12 @@ public class HttpStubExtension implements AfterAllCallback {
         httpStub.start();
     }
 
-    public HttpStubExtension(
-            String keyStorePath,
-            String keyStorePassword,
-            String trustStorePath,
-            String trustStorePassword) {
-        httpStub = new HttpStub(keyStorePath, keyStorePassword, trustStorePath, trustStorePassword);
-        httpStub.start();
-    }
-
-    public HttpStubExtension(
-            boolean needSsl,
-            String keyStorePath,
-            String keyStorePassword,
-            String trustStorePath,
-            String trustStorePassword) {
-        httpStub =
-                new HttpStub(
-                        needSsl,
-                        keyStorePath,
-                        keyStorePassword,
-                        trustStorePath,
-                        trustStorePassword);
-        httpStub.start();
-    }
-
     public int getHttpPort() {
         return httpStub.getHttpPort();
     }
 
-    public int getHttpsPort() {
-        return httpStub.getHttpsPort();
-    }
-
     protected void startStub() {
         httpStub.start();
-    }
-
-    public void reset() {
-        httpStub.reset();
     }
 
     public void clearRequests() {
@@ -81,16 +45,8 @@ public class HttpStubExtension implements AfterAllCallback {
         httpStub.register(path, responseStatus, contentType, responseBody);
     }
 
-    public int getCountOfRequestsTo(final String path) {
-        return httpStub.getCountOfRequestsTo(path);
-    }
-
     public int getCountOfRequests() {
         return httpStub.getCountOfRequests();
-    }
-
-    public RecordedRequest getLastRequest() {
-        return httpStub.getLastRequest();
     }
 
     public URI uri(String path) {
@@ -99,24 +55,6 @@ public class HttpStubExtension implements AfterAllCallback {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public List<RecordedRequest> getRecordedRequests() {
-        return httpStub.getRecordedRequests();
-    }
-
-    public <T> List<T> getRecordedRequests(Class<T> clazz) {
-        return httpStub.getRecordedRequests().stream()
-                .map(RecordedRequest::getEntity)
-                .map(
-                        e -> {
-                            try {
-                                return SerializationService.getInstance().readValue(e, clazz);
-                            } catch (Json.JsonException ex) {
-                                throw new RuntimeException(ex);
-                            }
-                        })
-                .toList();
     }
 
     private URIBuilder baseUri() {
