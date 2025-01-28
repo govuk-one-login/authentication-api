@@ -416,9 +416,10 @@ public class AuthorisationHandler
                 user,
                 auditEventExtensions.toArray(AuditService.MetadataPair[]::new));
 
-        Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
+        Optional<String> sessionId =
+                CookieHelper.getSessionIdFromRequestHeaders(input.getHeaders());
         Optional<OrchSessionItem> orchSessionOptional =
-                orchSessionService.getSessionFromSessionCookie(input.getHeaders());
+                sessionId.flatMap(orchSessionService::getSession);
 
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
@@ -431,7 +432,7 @@ public class AuthorisationHandler
                 authRequest.toParameters(), Optional.of(client))) {
 
             return handleDocAppJourney(
-                    session,
+                    sessionId,
                     orchSessionOptional,
                     clientSession,
                     authRequest,
@@ -446,16 +447,15 @@ public class AuthorisationHandler
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
 
-        Optional<Session> sessionWithValidBrowserSessionId = session;
         boolean newAuthenticationRequired = false;
         if (browserSessionIdFromSession.isPresent()
                 && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
-            sessionWithValidBrowserSessionId = Optional.empty();
+            sessionId = Optional.empty();
             newAuthenticationRequired = true;
         }
 
         return handleAuthJourney(
-                sessionWithValidBrowserSessionId,
+                sessionId,
                 orchSessionOptional,
                 clientSession,
                 authRequest,
@@ -504,7 +504,7 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
-            Optional<Session> existingSession,
+            Optional<String> existingSessionId,
             Optional<OrchSessionItem> orchSessionOptional,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
@@ -515,15 +515,16 @@ public class AuthorisationHandler
         Session session;
         var newSessionId = IdGenerator.generate();
         var newBrowserSessionId = IdGenerator.generate();
-
-        if (existingSession.isEmpty()) {
+        var existingSession = existingSessionId.flatMap(sessionService::getSession);
+        if (existingSessionId.isEmpty() || existingSession.isEmpty()) {
             session = sessionService.generateSession(newSessionId);
             updateAttachedSessionIdToLogs(newSessionId);
             LOG.info("Created new session with ID {}", newSessionId);
         } else {
-            session = existingSession.get();
-            var previousSessionId = session.getSessionId();
-            sessionService.updateWithNewSessionId(session, newSessionId);
+            var previousSessionId = existingSessionId.get();
+            session =
+                    sessionService.updateWithNewSessionId(
+                            existingSession.get(), previousSessionId, newSessionId);
             updateAttachedSessionIdToLogs(newSessionId);
             LOG.info("Updated session ID from {} to {}", previousSessionId, newSessionId);
         }
@@ -575,13 +576,13 @@ public class AuthorisationHandler
 
         var authorisationRequest = authRequestBuilder.build();
 
-        docAppAuthorisationService.storeState(session.getSessionId(), state);
+        docAppAuthorisationService.storeState(newSessionId, state);
         noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
 
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                 client.getClientID(),
-                user.withSessionId(session.getSessionId())
+                user.withSessionId(newSessionId)
                         .withUserId(clientSession.getDocAppSubjectId().getValue()));
 
         URI authorisationRequestUri = authorisationRequest.toURI();
@@ -594,7 +595,7 @@ public class AuthorisationHandler
 
         List<String> cookies =
                 handleCookies(
-                        session,
+                        newSessionId,
                         orchSession,
                         authenticationRequest,
                         persistentSessionId,
@@ -608,7 +609,7 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
-            Optional<Session> existingSession,
+            Optional<String> existingSessionId,
             Optional<OrchSessionItem> existingOrchSessionOptional,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
@@ -632,11 +633,12 @@ public class AuthorisationHandler
 
         Session session;
         OrchSessionItem orchSession;
-        Optional<String> existingSessionId = existingSession.map(Session::getSessionId);
-
-        if (existingSession.isEmpty() || existingOrchSessionOptional.isEmpty()) {
-            var newSessionId = IdGenerator.generate();
-            var newBrowserSessionId = IdGenerator.generate();
+        var newSessionId = IdGenerator.generate();
+        var newBrowserSessionId = IdGenerator.generate();
+        var existingSession = existingSessionId.flatMap(sessionService::getSession);
+        if (existingSessionId.isEmpty()
+                || existingSession.isEmpty()
+                || existingOrchSessionOptional.isEmpty()) {
             session = sessionService.generateSession(newSessionId);
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
@@ -653,8 +655,6 @@ public class AuthorisationHandler
                             maxAgeParam,
                             timeNow)) {
                 var newSessionIdForPreviousSession = IdGenerator.generate();
-                var newSessionId = IdGenerator.generate();
-                var newBrowserSessionId = IdGenerator.generate();
                 session =
                         updateSharedSessionDueToMaxAgeExpiry(
                                 existingSession.get(),
@@ -679,26 +679,26 @@ public class AuthorisationHandler
                         newSessionId);
 
             } else {
-                var sessionToBeUpdated = existingSession.get();
-                var previousSessionId = sessionToBeUpdated.getSessionId();
-                sessionService.updateWithNewSessionId(sessionToBeUpdated);
-                session = sessionToBeUpdated;
+                var previousSession = existingSession.get();
+                var previousSessionId = existingSessionId.get();
+                session =
+                        sessionService.updateWithNewSessionId(
+                                previousSession, previousSessionId, newSessionId);
 
                 orchSession =
-                        updateOrchSession(
-                                session.getSessionId(), existingOrchSessionOptional.get(), timeNow);
+                        updateOrchSession(newSessionId, existingOrchSessionOptional.get(), timeNow);
 
                 LOG.info(
                         "Updated existing session ID from {} to {}",
                         previousSessionId,
-                        session.getSessionId());
+                        newSessionId);
             }
         }
 
-        attachSessionIdToLogs(session);
+        attachSessionIdToLogs(newSessionId);
         attachOrchSessionIdToLogs(orchSession.getSessionId());
 
-        user = user.withSessionId(session.getSessionId());
+        user = user.withSessionId(newSessionId);
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
                 authenticationRequest.getClientID().getValue(),
@@ -714,7 +714,7 @@ public class AuthorisationHandler
         sessionService.storeOrUpdateSession(session);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
-                session,
+                newSessionId,
                 clientSessionId,
                 authenticationRequest,
                 persistentSessionId,
@@ -811,7 +811,7 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
-            Session session,
+            String sessionId,
             String clientSessionId,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
@@ -845,7 +845,7 @@ public class AuthorisationHandler
 
         List<String> cookies =
                 handleCookies(
-                        session,
+                        sessionId,
                         orchSession,
                         authenticationRequest,
                         persistentSessionId,
@@ -857,7 +857,7 @@ public class AuthorisationHandler
                 ClientSubjectHelper.getSectorIdentifierForClient(
                         client, configurationService.getInternalSectorURI());
         var state = new State();
-        orchestrationAuthorizationService.storeState(session.getSessionId(), state);
+        orchestrationAuthorizationService.storeState(sessionId, state);
 
         String reauthSub = null;
         String reauthSid = null;
@@ -1075,7 +1075,7 @@ public class AuthorisationHandler
     }
 
     private List<String> handleCookies(
-            Session session,
+            String sessionId,
             OrchSessionItem orchSessionItem,
             AuthenticationRequest authRequest,
             String persistentSessionId,
@@ -1084,7 +1084,7 @@ public class AuthorisationHandler
         cookies.add(
                 CookieHelper.buildCookieString(
                         CookieHelper.SESSION_COOKIE_NAME,
-                        session.getSessionId() + "." + clientSessionId,
+                        sessionId + "." + clientSessionId,
                         configurationService.getSessionCookieMaxAge(),
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));

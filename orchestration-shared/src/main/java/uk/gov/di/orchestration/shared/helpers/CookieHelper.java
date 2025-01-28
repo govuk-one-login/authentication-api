@@ -77,6 +77,14 @@ public class CookieHelper {
         return parseStringToHttpCookie(cookie);
     }
 
+    public static Optional<String> getSessionIdFromRequestHeaders(Map<String, String> headers) {
+        return parseSessionCookieStatic(headers).map(SessionCookieIds::getSessionId);
+    }
+
+    public static Optional<SessionCookieIds> parseSessionCookieStatic(Map<String, String> headers) {
+        return new CookieHelper().parseSessionCookie(headers);
+    }
+
     public Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
         Optional<HttpCookie> httpCookie =
                 getHttpCookieFromRequestHeaders(headers, SESSION_COOKIE_NAME);
