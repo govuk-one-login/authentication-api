@@ -254,7 +254,7 @@ public class LogoutService {
     }
 
     private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
-        var sessionCookieIds = new CookieHelper().parseSessionCookie(headers);
+        var sessionCookieIds = CookieHelper.parseSessionCookie(headers);
         return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
     }
 

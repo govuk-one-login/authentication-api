@@ -25,7 +25,6 @@ import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parseBrowserSe
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parsePersistentCookie;
 
 class CookieHelperTest {
-    private static final CookieHelper cookieHelper = new CookieHelper();
 
     static Stream<String> inputs() {
         return Stream.of(REQUEST_COOKIE_HEADER, REQUEST_COOKIE_HEADER.toLowerCase());
@@ -47,7 +46,7 @@ class CookieHelperTest {
                 "Version=1; gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
         Map<String, String> headers = Map.ofEntries(Map.entry(header, cookieString));
 
-        CookieHelper.SessionCookieIds ids = cookieHelper.parseSessionCookie(headers).orElseThrow();
+        CookieHelper.SessionCookieIds ids = CookieHelper.parseSessionCookie(headers).orElseThrow();
 
         assertEquals("session-id", ids.getSessionId());
         assertEquals("456", ids.getClientSessionId());
@@ -73,7 +72,7 @@ class CookieHelperTest {
         HttpCookie cookie = new HttpCookie("gs", "session-id.456");
         Map<String, String> headers = Map.ofEntries(Map.entry(header, cookie.toString()));
 
-        CookieHelper.SessionCookieIds ids = cookieHelper.parseSessionCookie(headers).orElseThrow();
+        CookieHelper.SessionCookieIds ids = CookieHelper.parseSessionCookie(headers).orElseThrow();
 
         assertEquals("session-id", ids.getSessionId());
         assertEquals("456", ids.getClientSessionId());
@@ -133,22 +132,22 @@ class CookieHelperTest {
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnEmptyIfSessionCookieNotPresent(String header) {
-        assertEmpty(cookieHelper.parseSessionCookie(null));
-        assertEmpty(cookieHelper.parseSessionCookie(Map.of()));
-        assertEmpty(cookieHelper.parseSessionCookie(Map.of(header, "value")));
+        assertEmpty(CookieHelper.parseSessionCookie(null));
+        assertEmpty(CookieHelper.parseSessionCookie(Map.of()));
+        assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "value")));
     }
 
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnEmptyIfCookieMalformatted(String header) {
-        assertEmpty(cookieHelper.parseSessionCookie(Map.of(header, "")));
-        assertEmpty(cookieHelper.parseSessionCookie(Map.of(header, "someinvalidvalue")));
-        assertEmpty(cookieHelper.parseSessionCookie(Map.of(header, "gs=this is bad")));
-        assertEmpty(cookieHelper.parseSessionCookie(Map.of(header, "gs=no-dot")));
+        assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "")));
+        assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "someinvalidvalue")));
+        assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "gs=this is bad")));
+        assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "gs=no-dot")));
         assertEmpty(
-                cookieHelper.parseSessionCookie(
+                CookieHelper.parseSessionCookie(
                         Map.of(header, "gs=one-value.two-value.three-value;")));
-        assertEmpty(cookieHelper.parseSessionCookie(Map.of(header, "gsdsds=one-value.two-value")));
+        assertEmpty(CookieHelper.parseSessionCookie(Map.of(header, "gsdsds=one-value.two-value")));
     }
 
     @ParameterizedTest(name = "with header {0}")

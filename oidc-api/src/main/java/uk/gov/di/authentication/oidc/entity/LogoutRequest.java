@@ -41,7 +41,6 @@ public class LogoutRequest {
     private Optional<String> rpPairwiseId = Optional.empty();
     Optional<URI> postLogoutRedirectUri = Optional.empty();
     private Optional<ClientRegistry> clientRegistry = Optional.empty();
-    private final CookieHelper cookieHelper = new CookieHelper();
 
     public LogoutRequest(
             SessionService sessionService,
@@ -173,7 +172,7 @@ public class LogoutRequest {
     }
 
     private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
-        var sessionCookieIds = cookieHelper.parseSessionCookie(headers);
+        var sessionCookieIds = CookieHelper.parseSessionCookie(headers);
         return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
     }
 

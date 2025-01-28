@@ -21,6 +21,8 @@ public class CookieHelper {
 
     public static final String LANGUAGE_COOKIE_NAME = "lng";
 
+    private CookieHelper() {}
+
     public static Optional<HttpCookie> getHttpCookieFromRequestHeaders(
             Map<String, String> headers, String cookieName) {
         return getHttpCookieFromHeaders(headers, cookieName, REQUEST_COOKIE_HEADER);
@@ -78,14 +80,10 @@ public class CookieHelper {
     }
 
     public static Optional<String> getSessionIdFromRequestHeaders(Map<String, String> headers) {
-        return parseSessionCookieStatic(headers).map(SessionCookieIds::getSessionId);
+        return parseSessionCookie(headers).map(SessionCookieIds::getSessionId);
     }
 
-    public static Optional<SessionCookieIds> parseSessionCookieStatic(Map<String, String> headers) {
-        return new CookieHelper().parseSessionCookie(headers);
-    }
-
-    public Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
+    public static Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
         Optional<HttpCookie> httpCookie =
                 getHttpCookieFromRequestHeaders(headers, SESSION_COOKIE_NAME);
         if (httpCookie.isEmpty()) {

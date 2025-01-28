@@ -61,7 +61,6 @@ import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -127,7 +126,6 @@ class IPVCallbackHandlerTest {
     private final AuthenticationUserInfoStorageService authUserInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
-    private final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
@@ -279,7 +277,6 @@ class IPVCallbackHandlerTest {
                         auditService,
                         logoutService,
                         accountInterventionService,
-                        cookieHelper,
                         noSessionOrchestrationService,
                         ipvCallbackHelper,
                         frontend);
@@ -291,7 +288,6 @@ class IPVCallbackHandlerTest {
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
-        when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(

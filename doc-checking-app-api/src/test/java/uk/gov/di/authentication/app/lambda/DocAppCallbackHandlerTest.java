@@ -39,7 +39,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
@@ -65,7 +64,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -94,7 +92,6 @@ class DocAppCallbackHandlerTest {
             mock(NoSessionOrchestrationService.class);
     private static final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
-    private final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
@@ -150,7 +147,6 @@ class DocAppCallbackHandlerTest {
                         auditService,
                         dynamoDocAppService,
                         authorisationCodeService,
-                        cookieHelper,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
                         authFrontend,
@@ -160,7 +156,6 @@ class DocAppCallbackHandlerTest {
         when(docAppCriApi.criDataURI()).thenReturn(DOC_APP_CRI_V2_URI);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
-        when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
     }
 
