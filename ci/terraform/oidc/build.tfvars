@@ -1,11 +1,8 @@
-logging_endpoint_arn  = ""
-logging_endpoint_arns = []
-shared_state_bucket   = "digital-identity-dev-tfstate"
-test_clients_enabled  = true
-internal_sector_uri   = "https://identity.build.account.gov.uk"
-ipv_api_enabled       = true
-call_ticf_cri         = true
-ipv_backend_uri       = "https://ipvstub.signin.build.account.gov.uk"
+shared_state_bucket = "digital-identity-dev-tfstate"
+
+# App-specific
+
+ipv_backend_uri = "https://ipvstub.signin.build.account.gov.uk"
 
 # AUTH to IPV reverification
 # Shared with orch
@@ -14,7 +11,12 @@ ipv_authorisation_uri = "https://ipvstub.signin.build.account.gov.uk/authorize/"
 ipv_auth_authorize_callback_uri = "https://signin-sp.build.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
 
-# lockout config
+internal_sector_uri  = "https://identity.build.account.gov.uk"
+test_clients_enabled = true
+ipv_api_enabled      = true
+call_ticf_cri        = true
+
+## lockout config
 lockout_duration                          = 60
 reduced_lockout_duration                  = 30
 incorrect_password_lockout_count_ttl      = 60
@@ -24,17 +26,6 @@ account_creation_lockout_count_ttl        = 60
 support_account_creation_count_ttl        = true
 email_acct_creation_otp_code_ttl_duration = 60
 
-auth_frontend_public_encryption_key = <<-EOT
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
-g5p2NHAekvIAJaNb6ZkLuLXYdLBax+2c9f4ALTrltmLMBpgtS6VQg2zO8UmSE4bX
-+Nhaw2nf3/VRBIlAi2NiD4cUIwNtxIx5qpBeDxb+YR7NuTJ0nFq6u6jv34RB1RWE
-J1sEOiv9aSPEt6eK8TGL6uZbPGU8CKJuWwPfW1ko/lyuM1HG0G/KAZ8DaLJzOMWX
-+2aZatj9RHtOCtGxwMrZlU4n/O1gbVPBfXx9RugTi0W4upmeNFR5CsC+WgENkr0v
-pXEyIW7edR6lDsSYzJI+yurVFyt82Bn7Vo2x5CIoLiH/1ZcKaApNU02/eK/gMBf+
-EwIDAQAB
------END PUBLIC KEY-----
-EOT
 
 auth_to_orch_token_signing_public_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
@@ -43,7 +34,6 @@ AZUx4RCDu+VWAZpPi1NaF5XWvkFNFwH+MyLkATh90UEJDe+ayKW6AXFcRQ==
 -----END PUBLIC KEY-----
 EOT
 
-orch_client_id                     = "orchestrationAuth"
 orch_redirect_uri                  = "https://oidc.build.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
@@ -54,18 +44,69 @@ is_orch_stubbed                       = false
 orch_environment                      = "build"
 orch_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979"
 
-orch_storage_token_jwk_enabled       = true
-orch_trustmark_enabled               = true
-orch_openid_configuration_enabled    = true
-orch_jwks_enabled                    = true
-orch_register_enabled                = true
-orch_authorisation_enabled           = true
-orch_logout_enabled                  = true
-orch_token_enabled                   = true
-orch_userinfo_enabled                = true
-orch_auth_code_enabled               = true
-orch_authentication_callback_enabled = true
-orch_doc_app_callback_enabled        = true
-orch_ipv_callback_enabled            = true
-auth_spot_response_disabled          = true
-orch_ipv_jwks_enabled                = true
+orch_storage_token_jwk_enabled              = true
+orch_trustmark_enabled                      = true
+orch_openid_configuration_enabled           = true
+orch_jwks_enabled                           = true
+orch_register_enabled                       = true
+orch_authorisation_enabled                  = true
+orch_logout_enabled                         = true
+orch_token_enabled                          = true
+orch_userinfo_enabled                       = true
+orch_auth_code_enabled                      = true
+orch_authentication_callback_enabled        = true
+orch_doc_app_callback_enabled               = true
+orch_ipv_callback_enabled                   = true
+auth_spot_response_disabled                 = true
+orch_ipv_jwks_enabled                       = true
+doc_app_cri_data_endpoint                   = "credentials/issue"
+doc_app_backend_uri                         = "https://dcmaw-cri.build.stubs.account.gov.uk"
+doc_app_domain                              = "https://dcmaw-cri.build.stubs.account.gov.uk"
+doc_app_authorisation_client_id             = "orch-build"
+doc_app_authorisation_callback_uri          = "https://oidc.build.account.gov.uk/doc-app-callback"
+doc_app_authorisation_uri                   = "https://dcmaw-cri.build.stubs.account.gov.uk/authorize"
+doc_app_jwks_endpoint                       = "https://dcmaw-cri.build.stubs.account.gov.uk/.well-known/jwks.json"
+doc_app_aud                                 = "https://dcmaw-cri.build.stubs.account.gov.uk"
+doc_app_new_aud_claim_enabled               = true
+doc_app_encryption_key_id                   = "dcmaw-cri-stubs-build-INqHBvMYWmNodklvbpTCgf1DS10Fv5ic4_8LdoBNjAw"
+spot_enabled                                = false
+custom_doc_app_claim_enabled                = true
+doc_app_cri_data_v2_endpoint                = "credentials/issue"
+account_intervention_service_call_enabled   = true
+account_intervention_service_action_enabled = true
+## account_intervention_service_uri is stored in AWS Secrets Manager and populated using read_secrets.sh
+support_reauth_signout_enabled          = true
+authentication_attempts_service_enabled = true
+send_storage_token_to_ipv_enabled       = true
+auth_frontend_public_encryption_key     = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLJWOHz7uHLinSJr8XM0
+fhyq0aLm8HP06lCT7csGUoRav2xybsCsypufvJHbuD5SLkg25/VGFt21KH2g60u8
+6mV7ULLG/m4hvAiXbwSGdcRTToPS+UULX3YDnDXZHvd+3ypane82+XLjVZ9B2V0i
+1MGCJ7kiRurXCuE+9Kx/MQYBCqhz/OwHlCe3FJZXKvgnqqpO5ZtyjrxDJSZJpxbi
+KsVnLksPKV10Z0/XvpJ6oHtOjseetk8TRdekRWBvqCX5MqLjdi1TfiaDu2Tjg2N0
+dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
+1wIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+# Logging
+logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
+
+# Sizing
+performance_tuning = {
+  register = {
+    memory          = 512
+    concurrency     = 0
+    max_concurrency = 0
+    scaling_trigger = 0
+  }
+
+  update = {
+    memory          = 512
+    concurrency     = 0
+    max_concurrency = 0
+    scaling_trigger = 0
+  }
+}
+lambda_min_concurrency = 1
