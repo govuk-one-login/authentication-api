@@ -1,9 +1,8 @@
-environment                                 = "authdev1"
-shared_state_bucket                         = "di-auth-development-tfstate"
+shared_state_bucket = "di-auth-development-tfstate"
+
+# App-specific
 test_clients_enabled                        = "true"
 ipv_api_enabled                             = true
-logging_endpoint_enabled                    = false
-logging_endpoint_arns                       = []
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
@@ -18,7 +17,7 @@ ipv_audience                    = "https://ipvstub.signin.authdev1.dev.account.g
 evcs_audience                   = "https://credential-store.authdev1.dev.account.gov.uk"
 auth_issuer_claim_for_evcs      = "https://signin.authdev1.dev.account.gov.uk"
 
-# The IPV public encrypting key that is specific to auth
+## The IPV public encrypting key that is specific to auth
 
 auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
@@ -54,12 +53,8 @@ EOT
 enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
-lambda_max_concurrency = 0
-lambda_min_concurrency = 0
-endpoint_memory_size   = 1536
 
-
-# lockout config
+## lockout config
 lockout_duration                          = 600
 reduced_lockout_duration                  = 300
 incorrect_password_lockout_count_ttl      = 600
@@ -71,7 +66,6 @@ reauth_enter_password_count_ttl           = 120
 reauth_enter_auth_app_code_count_ttl      = 120
 reauth_enter_sms_code_count_ttl           = 120
 
-orch_client_id  = "orchestrationAuth"
 orch_account_id = "816047645251"
 is_orch_stubbed = true
 
