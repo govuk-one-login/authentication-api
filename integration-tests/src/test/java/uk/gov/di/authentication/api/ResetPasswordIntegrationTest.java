@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -21,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -38,6 +38,24 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
+    private static final String RESET_PASSWORD_REQUEST =
+            format(
+                    """
+                            {
+                            "password": %s,
+                            "isForcedPasswordReset": false
+                            }
+                            """,
+                    PASSWORD);
+    private static final String FORCED_RESET_PASSWORD_REQUEST =
+            format(
+                    """
+                            {
+                            "password": %s,
+                            "isForcedPasswordReset": true
+                            }
+                            """,
+                    PASSWORD);
 
     @BeforeEach
     public void setUp() {
@@ -55,7 +73,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(RESET_PASSWORD_REQUEST),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -82,7 +100,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(RESET_PASSWORD_REQUEST),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -112,13 +130,18 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
+        var body =
+                format(
+                        """
+                            {
+                            "password": "%s",
+                            "isForcedPasswordReset": false
+                            }
+                            """,
+                        CommonPasswordsExtension.TEST_COMMON_PASSWORD);
+
         var response =
-                makeRequest(
-                        Optional.of(
-                                new ResetPasswordCompletionRequest(
-                                        CommonPasswordsExtension.TEST_COMMON_PASSWORD, false)),
-                        constructFrontendHeaders(sessionId),
-                        Map.of());
+                makeRequest(Optional.of(body), constructFrontendHeaders(sessionId), Map.of());
 
         assertThat(response, hasStatus(400));
         assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
@@ -133,7 +156,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, true)),
+                        Optional.of(FORCED_RESET_PASSWORD_REQUEST),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -168,7 +191,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(RESET_PASSWORD_REQUEST),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -217,7 +240,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(RESET_PASSWORD_REQUEST),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
