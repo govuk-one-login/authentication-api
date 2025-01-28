@@ -85,9 +85,5 @@ authorize_protected_subnet_enabled = true
 
 oidc_cloudfront_enabled = false
 
-
-#
-# Possibly not needed anymore
-#
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
