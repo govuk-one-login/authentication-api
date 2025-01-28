@@ -154,6 +154,8 @@ echo -n "Retrieving Terraform variables from Secrets Manager ... "
 source "${DIR}/scripts/read_secrets__main.sh" "${ENVIRONMENT}"
 echo "done!"
 
+export TF_VAR_environment="${ENVIRONMENT}"
+
 function run_terraform() {
   local component="${1}"
   echo "Running ${component} Terraform ..."
