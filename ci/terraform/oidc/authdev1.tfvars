@@ -12,7 +12,7 @@ call_ticf_cri                               = true
 ipv_backend_uri                             = "https://ipvstub.signin.authdev1.dev.account.gov.uk"
 
 ipv_authorisation_uri           = "https://ipvstub.signin.authdev1.dev.account.gov.uk/authorize/"
-ipv_auth_authorize_callback_uri = "https://signin.authdev1.dev.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_callback_uri = "https://signin.authdev1.sandpit.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
 ipv_audience                    = "https://ipvstub.signin.authdev1.dev.account.gov.uk"
 evcs_audience                   = "https://credential-store.authdev1.dev.account.gov.uk"
