@@ -70,13 +70,12 @@ variable "logging_endpoint_arns" {
 }
 
 variable "redis_node_size" {
-  default = "cache.t2.small"
+  default = "cache.t2.micro"
   type    = string
 }
 
 variable "common_state_bucket" {
-  type    = string
-  default = "digital-identity-dev-tfstate"
+  type = string
 }
 
 variable "cloudwatch_log_retention" {
@@ -92,7 +91,7 @@ variable "dlq_alarm_threshold" {
 }
 
 variable "lambda_min_concurrency" {
-  default     = 1
+  default     = 0
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
@@ -129,7 +128,7 @@ variable "lambda_max_concurrency" {
 }
 
 variable "scaling_trigger" {
-  default = 0.7
+  default = 0.6
   type    = number
 }
 
