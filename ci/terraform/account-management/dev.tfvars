@@ -1,16 +1,16 @@
-logging_endpoint_arn  = ""
-logging_endpoint_arns = []
-common_state_bucket   = "di-auth-development-tfstate"
+common_state_bucket = "di-auth-development-tfstate"
 
+# URIs
 internal_sector_uri = "https://identity.dev.account.gov.uk"
 
-lambda_max_concurrency = 0
-lambda_min_concurrency = 1
-endpoint_memory_size   = 1536
-scaling_trigger        = 0.6
-
+# Durations
 lockout_duration                          = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
+# App-specific
 openapi_spec_filename = "openapi_v2.yaml"
+
+# Sizing
+redis_node_size        = "cache.t2.small"
+lambda_min_concurrency = 1
