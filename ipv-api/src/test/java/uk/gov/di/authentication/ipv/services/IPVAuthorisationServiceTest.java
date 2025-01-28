@@ -291,7 +291,9 @@ class IPVAuthorisationServiceTest {
                                 List.of("P2", "PCL200"),
                                 true);
             }
-
+            if (useIpvJwksEndpoint) {
+                assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
+            }
             var signedJWTResponse = decryptJWT(encryptedJWT);
 
             JsonApprovals.verifyAsJson(
