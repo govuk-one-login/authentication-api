@@ -14,6 +14,7 @@ it's immediately obvious that this provisions a **_private_** gateway (as oppose
 | <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
 
 ## Modules
 
