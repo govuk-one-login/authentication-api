@@ -1,5 +1,4 @@
-utils_release_zip_file = "./artifacts/utils.zip"
-shared_state_bucket    = "digital-identity-dev-tfstate"
+shared_state_bucket = "digital-identity-dev-tfstate"
 
 # App Specific
 internal_sector_uri = "https://identity.build.account.gov.uk"
