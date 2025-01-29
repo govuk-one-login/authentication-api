@@ -1,7 +1,7 @@
 shared_state_bucket = "di-auth-development-tfstate"
 
 # App-specific
-test_clients_enabled                        = "true"
+test_clients_enabled                        = true
 ipv_api_enabled                             = true
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
