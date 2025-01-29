@@ -83,6 +83,10 @@ jobs:
       - name: Download dependencies for caching
         run: ./gradlew --no-daemon --console=plain assemble
 
+  terraform-validate:
+    name: Terraform Validate
+    uses: ./.github/workflows/call_terraform_validate.yml
+
   build:
     name: Build modules
     needs:
@@ -120,7 +124,9 @@ jobs:
 
   create-promotion-artifact-shared:
     name: Create Shared Promotion Artifact
-    needs: set-up
+    needs:
+      - set-up
+      - terraform-validate
     permissions:
       id-token: write
       contents: read
@@ -131,6 +137,7 @@ jobs:
     needs:
       - set-up
       - build
+      - terraform-validate
     strategy:
       matrix:
         include:
