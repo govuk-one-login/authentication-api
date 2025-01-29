@@ -6,6 +6,8 @@ plugins {
 group 'uk.gov.di.authentication.utils'
 version 'unspecified'
 
+File terraformDir = new File(project.rootDir, "ci/terraform/utils")
+
 dependencies {
     compileOnly configurations.lambda,
             configurations.s3,
@@ -37,6 +39,9 @@ java {
 }
 
 task buildZip(type: Zip) {
+    if (isDevDeployBuild) {
+        destinationDirectory = new File(terraformDir, "artifacts")
+    }
     from compileJava
     from processResources
     into("lib") {
