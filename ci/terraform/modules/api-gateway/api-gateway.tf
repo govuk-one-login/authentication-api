@@ -190,7 +190,7 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "waf_log_subscription" {
-  count           = var.waf_arns != [] ? length(var.logging_endpoint_arns) : 0
+  count           = length(var.waf_arns) != 0 ? length(var.logging_endpoint_arns) : 0
   name            = "${var.api_gateway_name}-waf-logs-subscription"
   log_group_name  = aws_cloudwatch_log_group.waf_logs[0].name
   filter_pattern  = ""
