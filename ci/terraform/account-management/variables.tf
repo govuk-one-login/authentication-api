@@ -32,6 +32,7 @@ variable "environment" {
 
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "aws_endpoint" {
@@ -47,11 +48,13 @@ variable "aws_dynamodb_endpoint" {
 variable "enable_api_gateway_execution_logging" {
   default     = true
   description = "Whether to enable logging of API gateway runs"
+  type        = bool
 }
 
 variable "enable_api_gateway_execution_request_tracing" {
   default     = false
   description = "Whether to enable capturing of requests/responses from API gateway runs (ONLY ENABLE IN NON-PROD ENVIRONMENTS)"
+  type        = bool
 }
 
 variable "lambda_zip_file" {
@@ -68,6 +71,7 @@ variable "logging_endpoint_arns" {
 
 variable "redis_node_size" {
   default = "cache.t2.small"
+  type    = string
 }
 
 variable "common_state_bucket" {
@@ -121,10 +125,12 @@ variable "performance_tuning" {
 
 variable "lambda_max_concurrency" {
   default = 0
+  type    = number
 }
 
 variable "scaling_trigger" {
   default = 0.7
+  type    = number
 }
 
 variable "txma_account_id" {

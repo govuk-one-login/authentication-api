@@ -128,6 +128,7 @@ variable "lambda_env_vars_encryption_kms_key_arn" {
 
 variable "code_signing_config_arn" {
   default = null
+  type    = string
 }
 
 variable "memory_size" {
@@ -136,14 +137,17 @@ variable "memory_size" {
 
 variable "provisioned_concurrency" {
   default = 0
+  type    = number
 }
 
 variable "max_provisioned_concurrency" {
   default = 5
+  type    = number
 }
 
 variable "scaling_trigger" {
   default = 0.7
+  type    = number
 }
 
 variable "slack_event_topic_arn" {

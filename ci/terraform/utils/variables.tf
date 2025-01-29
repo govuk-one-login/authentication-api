@@ -1,5 +1,6 @@
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "deployer_role_arn" {
@@ -163,10 +164,12 @@ variable "email_check_results_writer_provisioned_concurrency" {
 
 variable "email_check_results_sqs_queue_arn" {
   description = "ARN of the SQS email results check queue"
+  type        = string
 }
 
 variable "email_check_results_sqs_queue_encryption_key_arn" {
   description = "ARN of the CMK used for server side encryption on the SQS email results check queue"
+  type        = string
 }
 
 variable "support_email_check_enabled" {
