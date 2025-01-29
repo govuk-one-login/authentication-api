@@ -23,7 +23,7 @@ import {
 resource "aws_ssm_parameter" "at_rp_url" {
   name  = "/acceptance-tests/${var.environment}/RP_URL"
   type  = "String"
-  value = var.orch_stub_deployed ? "https://orchstub.signin.${local.service_domain}/" : "${var.stub_rp_clients[index(var.stub_rp_clients.*.at_client, true)].sector_identifier_uri}/?relyingParty=${random_string.stub_relying_party_client_id[var.stub_rp_clients[index(var.stub_rp_clients.*.at_client, true)].client_name].result}"
+  value = var.orch_stub_deployed ? "https://orchstub.signin.${local.service_domain}/" : "${var.stub_rp_clients[index(var.stub_rp_clients[*].at_client, true)].sector_identifier_uri}/?relyingParty=${random_string.stub_relying_party_client_id[var.stub_rp_clients[index(var.stub_rp_clients[*].at_client, true)].client_name].result}"
 }
 import {
   to = aws_ssm_parameter.at_rp_url
@@ -39,7 +39,7 @@ resource "aws_ssm_parameter" "at_rp_type" {
 resource "aws_ssm_parameter" "at_doc_app_url" {
   name  = "/acceptance-tests/${var.environment}/DOC_APP_URL"
   type  = "String"
-  value = var.stub_rp_clients[index(var.stub_rp_clients.*.client_name, "relying-party-stub-${var.environment}-app")].sector_identifier_uri
+  value = var.stub_rp_clients[index(var.stub_rp_clients[*].client_name, "relying-party-stub-${var.environment}-app")].sector_identifier_uri
 }
 import {
   to = aws_ssm_parameter.at_doc_app_url
