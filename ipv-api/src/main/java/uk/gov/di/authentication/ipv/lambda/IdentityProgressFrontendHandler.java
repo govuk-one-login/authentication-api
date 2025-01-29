@@ -147,7 +147,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             var user =
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(userSession.getClientSessionId())
-                            .withSessionId(userSession.getSession().getSessionId())
+                            .withSessionId(userSession.getSessionId())
                             .withIpAddress(extractIpAddress(input))
                             .withPersistentSessionId(
                                     extractPersistentIdFromHeaders(input.getHeaders()));

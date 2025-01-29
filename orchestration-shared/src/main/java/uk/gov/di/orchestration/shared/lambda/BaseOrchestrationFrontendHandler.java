@@ -16,17 +16,15 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
 
-import java.util.Objects;
-import java.util.Optional;
-
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeadersOpt;
 
 public abstract class BaseOrchestrationFrontendHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -67,31 +65,38 @@ public abstract class BaseOrchestrationFrontendHandler
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-
-        var session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
-        if (Objects.isNull(session)) {
+        var sessionIdOpt =
+                getHeaderValueFromHeadersOpt(
+                        input.getHeaders(),
+                        SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        if (sessionIdOpt.isEmpty()) {
+            LOG.warn("Session ID was not found in request headers");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+        var sessionId = sessionIdOpt.get();
+        var clientSessionIdOpt =
+                getHeaderValueFromHeadersOpt(
+                        input.getHeaders(),
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        var sessionOpt = sessionService.getSession(sessionId);
+        if (sessionOpt.isEmpty()) {
             LOG.warn("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            attachSessionIdToLogs(session);
         }
+        var clientSession = clientSessionIdOpt.flatMap(clientSessionService::getClientSession);
+
+        attachSessionIdToLogs(sessionId);
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         OrchestrationUserSession.Builder userSessionBuilder =
-                OrchestrationUserSession.builder(session);
-
-        String clientSessionId =
-                getHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
-        userSessionBuilder.withClientSessionId(clientSessionId);
-
-        Optional<ClientSession> clientSession =
-                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
-        userSessionBuilder.withClientSession(clientSession.orElse(null));
+                OrchestrationUserSession.builder(sessionOpt.get())
+                        .withSessionId(sessionId)
+                        .withClientSessionId(clientSessionIdOpt.orElse(null))
+                        .withClientSession(clientSession.orElse(null));
 
         var clientID =
                 clientSession
