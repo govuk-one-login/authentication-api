@@ -1,7 +1,6 @@
-shared_state_bucket   = "di-auth-development-tfstate"
-logging_endpoint_arn  = ""
-logging_endpoint_arns = []
+shared_state_bucket = "di-auth-development-tfstate"
 
+# App-specific
 internal_sector_uri = "https://identity.dev.account.gov.uk"
 
 allow_bulk_test_users = true
@@ -17,4 +16,5 @@ bulk_user_email_batch_query_limit     = 25
 bulk_user_email_max_batch_count       = 100
 bulk_user_email_batch_pause_duration  = 0
 
+# Sizing
 email_check_results_writer_provisioned_concurrency = 0
