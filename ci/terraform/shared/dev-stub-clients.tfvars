@@ -1,3 +1,4 @@
+# Stub RP clients
 stub_rp_clients = [
   {
     client_name           = "relying-party-stub-dev"
