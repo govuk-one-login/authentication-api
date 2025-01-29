@@ -50,6 +50,7 @@ import java.util.Optional;
 import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
@@ -154,15 +155,21 @@ public class AuthCodeHandler
 
     public APIGatewayProxyResponseEvent authCodeRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        String sessionId;
         Session session;
         OrchSessionItem orchSession;
         String clientSessionId;
         try {
-            session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
-            orchSession =
-                    orchSessionService
-                            .getSessionFromRequestHeaders(input.getHeaders())
-                            .orElse(null);
+            sessionId =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+            if (sessionId == null) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
+            session = sessionService.getSession(sessionId).orElse(null);
+            orchSession = orchSessionService.getSession(sessionId).orElse(null);
             clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
@@ -173,7 +180,7 @@ public class AuthCodeHandler
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         }
 
-        attachSessionIdToLogs(session);
+        attachSessionIdToLogs(sessionId);
         attachOrchSessionIdToLogs(orchSession.getSessionId());
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
@@ -264,7 +271,7 @@ public class AuthCodeHandler
                     clientID.getValue(),
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(session.getSessionId())
+                            .withSessionId(sessionId)
                             .withUserId(internalCommonPairwiseSubjectId)
                             .withEmail(
                                     Optional.ofNullable(session.getEmailAddress())
