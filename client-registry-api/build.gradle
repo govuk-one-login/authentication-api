@@ -6,6 +6,8 @@ plugins {
 group "uk.gov.di.clientregistry"
 version "unspecified"
 
+File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
+
 dependencies {
 
     compileOnly configurations.lambda,
@@ -37,6 +39,9 @@ test {
 }
 
 task buildZip(type: Zip) {
+    if (isDevDeployBuild) {
+        destinationDirectory = new File(terraformDir, "artifacts")
+    }
     from compileJava
     from processResources
     into("lib") {

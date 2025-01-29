@@ -58,7 +58,7 @@ variable "endpoint_memory_size" {
 }
 
 variable "ticf_cri_stub_release_zip_file" {
-  default     = "../../../ticf-cri-stub/build/distributions/ticf-cri-stub.zip"
+  default     = "./artifacts/ticf-cri-stub.zip"
   description = "Location of the Lambda ZIP file - defaults to build output folder when built locally"
   type        = string
 }

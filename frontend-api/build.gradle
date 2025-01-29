@@ -7,6 +7,8 @@ plugins {
 group "uk.gov.di.authentication.frontendapi"
 version "unspecified"
 
+File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
+
 dependencies {
 
     implementation project(path: ':shared')
@@ -72,6 +74,9 @@ pact {
 }
 
 task buildZip(type: Zip) {
+    if (isDevDeployBuild) {
+        destinationDirectory = new File(terraformDir, "artifacts")
+    }
     from compileJava
     from processResources
     into("lib") {

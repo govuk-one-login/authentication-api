@@ -1,29 +1,29 @@
 variable "oidc_api_lambda_zip_file" {
-  default     = "../../../oidc-api/build/distributions/oidc-api.zip"
+  default     = "./artifacts/oidc-api.zip"
   description = "Location of the OIDC API Lambda ZIP file"
   type        = string
 }
 
 variable "frontend_api_lambda_zip_file" {
-  default     = "../../../frontend-api/build/distributions/frontend-api.zip"
+  default     = "./artifacts/frontend-api.zip"
   description = "Location of the Frontend API Lambda ZIP file"
   type        = string
 }
 
 variable "client_registry_api_lambda_zip_file" {
-  default     = "../../../client-registry-api/build/distributions/client-registry-api.zip"
+  default     = "./artifacts/client-registry-api.zip"
   description = "Location of the client registry API Lambda ZIP file"
   type        = string
 }
 
 variable "ipv_api_lambda_zip_file" {
-  default     = "../../../ipv-api/build/distributions/ipv-api.zip"
+  default     = "./artifacts/ipv-api.zip"
   description = "Location of the ipv API Lambda ZIP file"
   type        = string
 }
 
 variable "doc_checking_app_api_lambda_zip_file" {
-  default     = "../../../doc-checking-app-api/build/distributions/doc-checking-app-api.zip"
+  default     = "./artifacts/doc-checking-app-api.zip"
   description = "Location of the doc checking app API Lambda ZIP file"
   type        = string
 }

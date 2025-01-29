@@ -1,6 +1,5 @@
 import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
-
 buildscript {
     repositories {
         maven {
@@ -70,6 +69,10 @@ subprojects {
 
     apply plugin: "com.github.spotbugs"
     apply plugin: "java"
+
+    ext {
+        isDevDeployBuild = project.hasProperty("devDeployBuild") ? project.getProperty("devDeployBuild").toBoolean() : false
+    }
 
     spotbugs {
         ignoreFailures = false

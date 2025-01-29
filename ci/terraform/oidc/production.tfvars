@@ -1,13 +1,8 @@
-oidc_api_lambda_zip_file             = "./artifacts/oidc-api.zip"
-frontend_api_lambda_zip_file         = "./artifacts/frontend-api.zip"
-client_registry_api_lambda_zip_file  = "./artifacts/client-registry-api.zip"
-ipv_api_lambda_zip_file              = "./artifacts/ipv-api.zip"
-doc_checking_app_api_lambda_zip_file = "./artifacts/doc-checking-app-api.zip"
-logging_endpoint_arn                 = ""
-logging_endpoint_arns                = []
-shared_state_bucket                  = "digital-identity-prod-tfstate"
-test_clients_enabled                 = false
-internal_sector_uri                  = "https://identity.account.gov.uk"
+logging_endpoint_arn  = ""
+logging_endpoint_arns = []
+shared_state_bucket   = "digital-identity-prod-tfstate"
+test_clients_enabled  = false
+internal_sector_uri   = "https://identity.account.gov.uk"
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
