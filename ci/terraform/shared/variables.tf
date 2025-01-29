@@ -51,10 +51,12 @@ variable "orch_stub_deployed" {
 
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "redis_node_size" {
   default = "cache.t2.small"
+  type    = string
 }
 
 variable "provision_dynamo" {
@@ -95,6 +97,7 @@ variable "common_state_bucket" {
 variable "di_tools_signing_profile_version_arn" {
   description = "The AWS Signer profile version to use from the `di-tools-prod` account"
   default     = "arn:aws:signer:eu-west-2:114407264696:/signing-profiles/di_auth_lambda_signing_20220215170204371800000001/zLiNn2Hi1I"
+  type        = string
 }
 
 variable "tools_account_id" {
@@ -106,6 +109,7 @@ variable "tools_account_id" {
 variable "enforce_code_signing" {
   default     = true
   description = "Whether the code signing policy will reject unsigned code. (only set to false in sandpit environments)"
+  type        = bool
 }
 
 variable "enable_user_profile_stream" {

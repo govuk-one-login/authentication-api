@@ -65,7 +65,7 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_api_key_required"></a> [api\_key\_required](#input\_api\_key\_required) | n/a | `bool` | `false` | no |
 | <a name="input_authorizer_id"></a> [authorizer\_id](#input\_authorizer\_id) | n/a | `string` | `null` | no |
 | <a name="input_cloudwatch_log_retention"></a> [cloudwatch\_log\_retention](#input\_cloudwatch\_log\_retention) | The number of day to retain Cloudwatch logs for | `number` | `30` | no |
-| <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `any` | `null` | no |
+| <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `string` | `null` | no |
 | <a name="input_create_endpoint"></a> [create\_endpoint](#input\_create\_endpoint) | n/a | `bool` | `true` | no |
 | <a name="input_endpoint_name_sanitized"></a> [endpoint\_name\_sanitized](#input\_endpoint\_name\_sanitized) | The name of the endpoint, required if endpoint\_name contains a period | `string` | `null` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |

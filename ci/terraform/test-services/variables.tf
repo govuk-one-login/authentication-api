@@ -27,6 +27,7 @@ variable "aws_endpoint" {
 variable "enable_api_gateway_execution_logging" {
   default     = true
   description = "Whether to enable logging of API gateway runs"
+  type        = bool
 }
 
 variable "logging_endpoint_arns" {
@@ -37,6 +38,7 @@ variable "logging_endpoint_arns" {
 
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "cloudwatch_log_retention" {
