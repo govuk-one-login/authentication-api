@@ -32,12 +32,11 @@ module "register" {
   }
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest"
 
-  create_endpoint        = false
-  rest_api_id            = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id       = aws_api_gateway_resource.register_resource.id
-  execution_arn          = aws_api_gateway_rest_api.di_authentication_api.execution_arn
-  authentication_vpc_arn = local.authentication_vpc_arn
-  memory_size            = lookup(var.performance_tuning, "register", local.default_performance_parameters).memory
+  create_endpoint  = false
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
+  root_resource_id = aws_api_gateway_resource.register_resource.id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  memory_size      = lookup(var.performance_tuning, "register", local.default_performance_parameters).memory
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file         = aws_s3_object.client_api_release_zip.key

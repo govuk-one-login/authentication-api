@@ -42,7 +42,6 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_account_alias"></a> [account\_alias](#input\_account\_alias) | The 'friendly-name' of the AWS account, eg. di-auth-development | `string` | n/a | yes |
-| <a name="input_authentication_vpc_arn"></a> [authentication\_vpc\_arn](#input\_authentication\_vpc\_arn) | n/a | `string` | n/a | yes |
 | <a name="input_cloudwatch_key_arn"></a> [cloudwatch\_key\_arn](#input\_cloudwatch\_key\_arn) | The ARN of the KMS key to use log encryption | `string` | n/a | yes |
 | <a name="input_dynatrace_secret"></a> [dynatrace\_secret](#input\_dynatrace\_secret) | JSON decoded dynatrace secret | <pre>object({<br/>    JAVA_LAYER = string<br/><br/>    DT_CONNECTION_AUTH_TOKEN     = string<br/>    DT_CONNECTION_BASE_URL       = string<br/>    DT_CLUSTER_ID                = string<br/>    DT_TENANT                    = string<br/>    DT_LOG_COLLECTION_AUTH_TOKEN = string<br/>  })</pre> | n/a | yes |
 | <a name="input_endpoint_method"></a> [endpoint\_method](#input\_endpoint\_method) | n/a | `list(string)` | n/a | yes |
@@ -64,7 +63,6 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_source_bucket"></a> [source\_bucket](#input\_source\_bucket) | n/a | `string` | n/a | yes |
 | <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | The id of the subnets for the lambda | `list(string)` | n/a | yes |
 | <a name="input_api_key_required"></a> [api\_key\_required](#input\_api\_key\_required) | n/a | `bool` | `false` | no |
-| <a name="input_architectures"></a> [architectures](#input\_architectures) | n/a | `list(string)` | <pre>[<br/>  "x86_64"<br/>]</pre> | no |
 | <a name="input_authorizer_id"></a> [authorizer\_id](#input\_authorizer\_id) | n/a | `string` | `null` | no |
 | <a name="input_cloudwatch_log_retention"></a> [cloudwatch\_log\_retention](#input\_cloudwatch\_log\_retention) | The number of day to retain Cloudwatch logs for | `number` | `30` | no |
 | <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `any` | `null` | no |
@@ -76,16 +74,13 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="input_lambda_error_rate_alarm_disabled"></a> [lambda\_error\_rate\_alarm\_disabled](#input\_lambda\_error\_rate\_alarm\_disabled) | n/a | `bool` | `false` | no |
 | <a name="input_lambda_log_alarm_error_rate_threshold"></a> [lambda\_log\_alarm\_error\_rate\_threshold](#input\_lambda\_log\_alarm\_error\_rate\_threshold) | The rate of errors in a lambda before generating a Cloudwatch alarm. Calculated by dividing the number of errors in a lambda divided by the number of invocations in a 60 second period | `number` | `10` | no |
 | <a name="input_lambda_log_alarm_threshold"></a> [lambda\_log\_alarm\_threshold](#input\_lambda\_log\_alarm\_threshold) | The number of errors in a lambda logs before generating a Cloudwatch alarm | `number` | `5` | no |
-| <a name="input_logging_endpoint_arn"></a> [logging\_endpoint\_arn](#input\_logging\_endpoint\_arn) | Amazon Resource Name (ARN) for the endpoint to ship logs to | `string` | `""` | no |
 | <a name="input_logging_endpoint_arns"></a> [logging\_endpoint\_arns](#input\_logging\_endpoint\_arns) | Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to | `list(string)` | `[]` | no |
-| <a name="input_logging_endpoint_enabled"></a> [logging\_endpoint\_enabled](#input\_logging\_endpoint\_enabled) | Whether the Lambda should ship its logs to the `logging_endpoint_arn` | `bool` | `false` | no |
 | <a name="input_max_provisioned_concurrency"></a> [max\_provisioned\_concurrency](#input\_max\_provisioned\_concurrency) | n/a | `number` | `5` | no |
 | <a name="input_method_request_parameters"></a> [method\_request\_parameters](#input\_method\_request\_parameters) | n/a | `map(bool)` | `{}` | no |
 | <a name="input_provisioned_concurrency"></a> [provisioned\_concurrency](#input\_provisioned\_concurrency) | n/a | `number` | `0` | no |
 | <a name="input_runbook_link"></a> [runbook\_link](#input\_runbook\_link) | A link that is appended to alarm descriptions that should open a page describing how to triage and handle the alarm | `string` | `null` | no |
 | <a name="input_scaling_trigger"></a> [scaling\_trigger](#input\_scaling\_trigger) | n/a | `number` | `0.7` | no |
 | <a name="input_snapstart"></a> [snapstart](#input\_snapstart) | n/a | `bool` | `false` | no |
-| <a name="input_wait_for_alias_timeout"></a> [wait\_for\_alias\_timeout](#input\_wait\_for\_alias\_timeout) | The number of seconds to wait for the alias to be created | `number` | `300` | no |
 
 ## Outputs
 

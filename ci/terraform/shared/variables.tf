@@ -18,57 +18,9 @@ variable "aws_dynamodb_endpoint" {
   default = null
 }
 
-variable "lambda_dynamo_endpoint" {
-  type        = string
-  default     = "http://dynamodb:8000"
-  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
-}
-
-variable "external_redis_host" {
-  type    = string
-  default = "redis"
-}
-
 variable "terms_and_conditions" {
   type    = string
   default = "1.12"
-}
-
-variable "external_redis_port" {
-  type    = number
-  default = 6379
-}
-
-variable "external_redis_password" {
-  type    = string
-  default = null
-}
-
-variable "redis_use_tls" {
-  type    = string
-  default = "true"
-}
-
-variable "enable_api_gateway_execution_logging" {
-  default     = true
-  description = "Whether to enable logging of API gateway runs"
-}
-
-variable "enable_api_gateway_execution_request_tracing" {
-  default     = false
-  description = "Whether to enable capturing of requests/responses from API gateway runs (ONLY ENABLE IN NON-PROD ENVIRONMENTS)"
-}
-
-variable "logging_endpoint_enabled" {
-  type        = bool
-  default     = true
-  description = "Whether the service should ship its Lambda logs to the `logging_endpoint_arn`"
-}
-
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
 
 variable "logging_endpoint_arns" {
@@ -107,10 +59,6 @@ variable "redis_node_size" {
 
 variable "provision_dynamo" {
   type    = bool
-  default = false
-}
-
-variable "ipv_api_enabled" {
   default = false
 }
 

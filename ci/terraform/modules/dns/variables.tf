@@ -11,10 +11,6 @@ variable "dns_state_key" {
   type = string
 }
 
-variable "dns_state_role" {
-  type = string
-}
-
 variable "environment" {
   type = string
 }

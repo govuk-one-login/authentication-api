@@ -98,12 +98,6 @@ variable "orch_client_id" {
   description = "The client ID used by the orchestrator in two situations: 1) when passing an authorize request to the authentication frontend - see OIDC module 2) when calling the authentication token endpoint - in this second case there is no real client registry or defined scopes, but it is a part of OAuth2 formalities."
 }
 
-variable "authentication_backend_uri" {
-  default     = ""
-  type        = string
-  description = "The base URL for the authentication API (all endpoints). This is not used for HTTP(S) routing within the context of this module, but is used to calculate the expected 'aud(ience)' in the signed client_assertion JWT in the orchestrator's token request to authentication's token endpoint"
-}
-
 variable "orch_to_auth_public_signing_key" {
   default     = ""
   type        = string

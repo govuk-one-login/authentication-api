@@ -60,10 +60,6 @@ variable "environment" {
   type = string
 }
 
-variable "authentication_vpc_arn" {
-  type = string
-}
-
 variable "security_group_ids" {
   type        = list(string)
   description = "The list of security group IDs to apply to the lambda"
@@ -76,18 +72,6 @@ variable "subnet_id" {
 
 variable "lambda_role_arn" {
   type = string
-}
-
-variable "logging_endpoint_enabled" {
-  type        = bool
-  default     = false
-  description = "Whether the Lambda should ship its logs to the `logging_endpoint_arn`"
-}
-
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
 
 variable "logging_endpoint_arns" {

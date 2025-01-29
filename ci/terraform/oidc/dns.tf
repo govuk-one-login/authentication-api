@@ -6,12 +6,11 @@ locals {
 
   oidc_cloudfront_id_export_name = var.environment == "sandpit" ? "dev-oidc-cloudfront-DistributionId" : "${var.environment}-oidc-cloudfront-DistributionId"
 
-  account_management_fqdn     = local.service_domain
-  account_management_api_fqdn = "manage.${local.service_domain}"
-  frontend_fqdn               = "signin.${local.service_domain}"
-  frontend_api_fqdn           = "auth.${local.service_domain}"
-  oidc_api_fqdn               = "oidc.${local.service_domain}"
-  oidc_origin_api_fqdn        = "origin.${local.oidc_api_fqdn}"
+  account_management_fqdn = local.service_domain
+  frontend_fqdn           = "signin.${local.service_domain}"
+  frontend_api_fqdn       = "auth.${local.service_domain}"
+  oidc_api_fqdn           = "oidc.${local.service_domain}"
+  oidc_origin_api_fqdn    = "origin.${local.oidc_api_fqdn}"
 }
 
 # TODO: delete

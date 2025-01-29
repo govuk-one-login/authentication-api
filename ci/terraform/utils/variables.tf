@@ -38,12 +38,6 @@ variable "shared_state_bucket" {
   default = "digital-identity-dev-tfstate"
 }
 
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
-}
-
 variable "logging_endpoint_arns" {
   type        = list(string)
   default     = []
@@ -139,11 +133,6 @@ variable "bulk_user_email_audience_loader_schedule_expression" {
   type        = string
   description = "Run at 15:00 every Friday in 2049.  Designed not to trigger, replace with desired expression."
   default     = "cron(0 13 ? * FRI 2049)"
-}
-
-variable "txma_account_id" {
-  default = ""
-  type    = string
 }
 
 variable "performance_tuning" {

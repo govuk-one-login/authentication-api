@@ -10,12 +10,9 @@ module "endpoint_lambda" {
   handler_environment_variables          = var.handler_environment_variables
   handler_runtime                        = var.handler_runtime
   environment                            = var.environment
-  authentication_vpc_arn                 = var.authentication_vpc_arn
   security_group_ids                     = var.security_group_ids
   subnet_id                              = var.subnet_id
   lambda_role_arn                        = var.lambda_role_arn
-  logging_endpoint_enabled               = var.logging_endpoint_enabled
-  logging_endpoint_arn                   = var.logging_endpoint_arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   extra_tags                             = var.extra_tags
   cloudwatch_key_arn                     = var.cloudwatch_key_arn

@@ -30,10 +30,6 @@ variable "environment" {
   type = string
 }
 
-variable "service_domain" {
-  default = null
-}
-
 variable "aws_region" {
   default = "eu-west-2"
 }
@@ -46,12 +42,6 @@ variable "aws_endpoint" {
 variable "aws_dynamodb_endpoint" {
   type    = string
   default = null
-}
-
-variable "lambda_dynamo_endpoint" {
-  type        = string
-  default     = "http://dynamodb:8000"
-  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
 }
 
 variable "enable_api_gateway_execution_logging" {
@@ -70,42 +60,10 @@ variable "lambda_zip_file" {
   type        = string
 }
 
-variable "logging_endpoint_enabled" {
-  type        = bool
-  default     = true
-  description = "Whether the service should ship its Lambda logs to the `logging_endpoint_arn`"
-}
-
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
-}
-
 variable "logging_endpoint_arns" {
   type        = list(string)
   default     = []
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
-}
-
-variable "external_redis_host" {
-  type    = string
-  default = "redis"
-}
-
-variable "external_redis_port" {
-  type    = number
-  default = 6379
-}
-
-variable "external_redis_password" {
-  type    = string
-  default = null
-}
-
-variable "redis_use_tls" {
-  type    = string
-  default = "true"
 }
 
 variable "redis_node_size" {
@@ -127,12 +85,6 @@ variable "dlq_alarm_threshold" {
   default     = 1
   type        = number
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
-}
-
-variable "waf_alarm_blocked_reqeuest_threshold" {
-  default     = 1000
-  type        = number
-  description = "The number of blocked requests caught by the WAF before a Cloudwatch alarm is generated"
 }
 
 variable "lambda_min_concurrency" {
