@@ -254,8 +254,8 @@ variable "test_client_verify_phone_number_otp" {
 }
 
 variable "test_clients_enabled" {
-  type    = string
-  default = "false"
+  type    = bool
+  default = false
 }
 
 variable "client_registry_api_enabled" {

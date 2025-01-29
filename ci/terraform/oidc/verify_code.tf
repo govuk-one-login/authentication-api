@@ -44,7 +44,7 @@ module "verify_code" {
     TERMS_CONDITIONS_VERSION                 = var.terms_and_conditions
     TEST_CLIENT_VERIFY_EMAIL_OTP             = var.test_client_verify_email_otp
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP      = var.test_client_verify_phone_number_otp
-    TEST_CLIENTS_ENABLED                     = var.test_clients_enabled
+    TEST_CLIENTS_ENABLED                     = var.test_clients_enabled ? "true" : "false"
     INTERNAl_SECTOR_URI                      = var.internal_sector_uri
     CODE_MAX_RETRIES_INCREASED               = var.code_max_retries_increased
     REDUCED_LOCKOUT_DURATION                 = var.reduced_lockout_duration

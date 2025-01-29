@@ -1,7 +1,7 @@
 shared_state_bucket = "digital-identity-dev-tfstate"
 
 # App-specific
-test_clients_enabled                        = "true"
+test_clients_enabled                        = true
 ipv_api_enabled                             = true
 ipv_authorisation_callback_uri              = ""
 ipv_authorisation_uri                       = ""
