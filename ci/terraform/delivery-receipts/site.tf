@@ -38,7 +38,6 @@ provider "aws" {
 }
 
 locals {
-  request_tracing_allowed       = contains(["build", "sandpit"], var.environment)
   deploy_bulk_email_users_count = 0
 
   access_logging_template = jsonencode({

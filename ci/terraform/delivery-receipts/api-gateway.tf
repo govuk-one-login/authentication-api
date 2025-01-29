@@ -19,7 +19,6 @@ resource "aws_api_gateway_deployment" "delivery_receipts_api_deployment" {
 }
 
 locals {
-  api_delivery_receipts_api_base_url = aws_api_gateway_rest_api.di_authentication_delivery_receipts_api.id
 }
 
 resource "aws_cloudwatch_log_group" "delivery_receipts_api_stage_execution_logs" {

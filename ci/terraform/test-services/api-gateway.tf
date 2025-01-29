@@ -41,7 +41,6 @@ resource "aws_api_gateway_deployment" "test_services_api_deployment" {
 }
 
 locals {
-  api_test_services_api_base_url = aws_api_gateway_rest_api.di_authentication_test_services_api.id
 }
 
 resource "aws_cloudwatch_log_group" "test_services_api_stage_execution_logs" {
