@@ -6,6 +6,8 @@ plugins {
 group = 'uk.gov.di.authentication.interventions-api-stub'
 version = 'unspecified'
 
+File terraformDir = new File(project.rootDir, "ci/terraform/interventions-api-stub")
+
 dependencies {
     compileOnly configurations.lambda,
             configurations.dynamodb
@@ -30,6 +32,9 @@ java {
 }
 
 task buildZip(type: Zip) {
+    if (isDevDeployBuild) {
+        destinationDirectory = new File(terraformDir, "artifacts")
+    }
     from compileJava
     from processResources
     into("lib") {

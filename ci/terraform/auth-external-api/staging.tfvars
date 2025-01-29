@@ -1,5 +1,4 @@
-auth_ext_lambda_zip_file = "./artifacts/auth-external-api.zip"
-shared_state_bucket      = "di-auth-staging-tfstate"
+shared_state_bucket = "di-auth-staging-tfstate"
 
 # URIs
 internal_sector_uri = "https://identity.staging.account.gov.uk"

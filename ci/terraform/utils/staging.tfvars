@@ -1,5 +1,4 @@
-utils_release_zip_file = "./artifacts/utils.zip"
-shared_state_bucket    = "di-auth-staging-tfstate"
+shared_state_bucket = "di-auth-staging-tfstate"
 
 # App-specific
 internal_sector_uri         = "https://identity.staging.account.gov.uk"

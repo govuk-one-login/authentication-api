@@ -125,7 +125,7 @@ fi
 if [[ ${O_BUILD} -eq 1 ]]; then
   echo "Building deployment artefacts ... "
   pushd "${DIR}" > /dev/null
-  ./gradlew ${O_CLEAN} build buildZip -x test -x spotlessCheck -x composeDown
+  ./gradlew ${O_CLEAN} buildZip -PdevDeployBuild=1
   popd > /dev/null
   echo "done!"
 fi

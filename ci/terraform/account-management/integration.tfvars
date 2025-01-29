@@ -1,4 +1,3 @@
-lambda_zip_file     = "./artifacts/account-management-api.zip"
 common_state_bucket = "digital-identity-dev-tfstate"
 
 # FMS Flag
