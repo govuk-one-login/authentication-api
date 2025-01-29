@@ -42,7 +42,8 @@ class DocAppUserHelperTest {
 
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
-    private static final Session SESSION = new Session("a-session-id");
+    private static final String SESSION_ID = "a-session-id";
+    private static final Session SESSION = new Session(SESSION_ID);
     private static final String AUDIENCE = "oidc-audience";
     private static final Scope VALID_SCOPE =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
@@ -188,6 +189,7 @@ class DocAppUserHelperTest {
                         .withCookieConsentShared(false)
                         .withClientType(clientType.getValue());
         return UserContext.builder(SESSION)
+                .withSessionId(SESSION_ID)
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
                 .build();
