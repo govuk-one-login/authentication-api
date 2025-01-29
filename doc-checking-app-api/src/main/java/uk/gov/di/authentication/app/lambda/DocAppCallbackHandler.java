@@ -206,34 +206,27 @@ public class DocAppCallbackHandler
                                                 .getDocAppSubjectId()
                                                 .getValue()));
             }
+            var sessionId = sessionCookiesIds.getSessionId();
+            var clientSessionId = sessionCookiesIds.getClientSessionId();
             var session =
                     sessionService
-                            .getSession(sessionCookiesIds.getSessionId())
-                            .orElseThrow(
-                                    () -> {
-                                        throw new DocAppCallbackException("Session not found");
-                                    });
+                            .getSession(sessionId)
+                            .orElseThrow(() -> new DocAppCallbackException("Session not found"));
 
             var orchSession =
                     orchSessionService
-                            .getSession(sessionCookiesIds.getSessionId())
+                            .getSession(sessionId)
                             .orElseThrow(
-                                    () -> {
-                                        throw new DocAppCallbackException("Orch Session not found");
-                                    });
+                                    () -> new DocAppCallbackException("Orch Session not found"));
 
-            attachSessionIdToLogs(session);
-            var clientSessionId = sessionCookiesIds.getClientSessionId();
+            attachSessionIdToLogs(sessionId);
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
             var clientSession =
                     clientSessionService
                             .getClientSession(clientSessionId)
                             .orElseThrow(
-                                    () -> {
-                                        throw new DocAppCallbackException(
-                                                "ClientSession not found");
-                                    });
+                                    () -> new DocAppCallbackException("ClientSession not found"));
             if (Objects.isNull(clientSession.getDocAppSubjectId()))
                 throw new DocAppCallbackException("No DocAppSubjectId present in ClientSession");
 
@@ -249,12 +242,12 @@ public class DocAppCallbackHandler
 
             var errorObject =
                     authorisationService.validateResponse(
-                            input.getQueryStringParameters(), session.getSessionId());
+                            input.getQueryStringParameters(), sessionId);
 
             var user =
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(session.getSessionId())
+                            .withSessionId(sessionId)
                             .withUserId(clientSession.getDocAppSubjectId().getValue());
 
             if (errorObject.isPresent()) {
