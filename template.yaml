@@ -481,6 +481,66 @@ Resources:
 
   #endregion
 
+  #region AuthUserInfo DynamoDB Table
+
+  AuthUserInfoEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for AuthUserInfo DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  AuthUserInfoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Auth-User-Info
+      AttributeDefinitions:
+        - AttributeName: InternalCommonSubjectId
+          AttributeType: S
+        - AttributeName: ClientSessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: InternalCommonSubjectId
+          KeyType: HASH
+        - AttributeName: ClientSessionId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt AuthUserInfoEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: AuthUserInfoTable
+  #endregion
+
   #region RP Public Key DynamoDB Table
 
   RpPublicKeyTableEncryptionKey:
