@@ -47,7 +47,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
-    private final AuthSessionService authSessionService;
 
     public SignUpHandler(
             ConfigurationService configurationService,
@@ -65,11 +64,11 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
-        this.authSessionService = authSessionService;
     }
 
     public SignUpHandler() {
@@ -81,7 +80,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public SignUpHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -89,7 +87,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -107,12 +104,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
         attachSessionIdToLogs(userContext.getSession());
 
-        var optionalAuthSessionItem =
-                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (optionalAuthSessionItem.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
-        AuthSessionItem authSessionItem = optionalAuthSessionItem.get();
+        AuthSessionItem authSessionItem = userContext.getAuthSession();
 
         LOG.info("Received request");
 
