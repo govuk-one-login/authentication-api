@@ -80,7 +80,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountModifiersService accountModifiersService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
-    private final AuthSessionService authSessionService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -100,13 +99,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountModifiersService = accountModifiersService;
         this.authenticationAttemptsService = authenticationAttemptsService;
-        this.authSessionService = authSessionService;
     }
 
     public VerifyCodeHandler() {
@@ -121,7 +120,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public VerifyCodeHandler(
@@ -133,7 +131,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -155,13 +152,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
-            Optional<AuthSessionItem> authSession =
-                    authSessionService.getSessionFromRequestHeaders(input.getHeaders());
-            if (authSession.isEmpty()) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
+            AuthSessionItem authSession = userContext.getAuthSession();
 
-            attachAuthSessionIdToLogs(authSession.get());
+            attachAuthSessionIdToLogs(authSession);
             var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
@@ -235,7 +228,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
                 SessionHelper.updateSessionWithSubject(
                         userContext,
-                        authSession.get(),
+                        authSession,
                         sessionService,
                         authSessionService,
                         authenticationService,
@@ -243,7 +236,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    authSession.get(),
+                    authSession,
                     codeRequest,
                     userContext,
                     subjectId,
