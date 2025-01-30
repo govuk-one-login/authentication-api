@@ -100,7 +100,14 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
-    private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair RP_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final String AUTH_PUBLIC_ENCRYPTION_KEY =
+            "-----BEGIN PUBLIC KEY-----\n"
+                    + Base64.getMimeEncoder()
+                            .encodeToString(AUTH_ENCRYPTION_KEY_PAIR.getPublic().getEncoded())
+                    + "\n-----END PUBLIC KEY-----\n";
+    private static final KeyPair DCMAW_ENCRYPTION_KEY_PAIR = generateRsaKeyPair();
     public static final String DUMMY_CLIENT_SESSION_ID = "456";
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
     private static final String PERSISTENT_SESSION_ID =
@@ -119,12 +126,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
 
-    public static final String publicKey =
-            "-----BEGIN PUBLIC KEY-----\n"
-                    + Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded())
-                    + "\n-----END PUBLIC KEY-----\n";
-
-    private final KeyPair keyPair = generateRsaKeyPair();
     private static final String ENCRYPTION_KEY_ID = UUID.randomUUID().toString();
 
     private static final URI CALLBACK_URI = URI.create("http://localhost/callback");
@@ -187,7 +188,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
                 @Override
                 public String getOrchestrationToAuthenticationEncryptionPublicKey() {
-                    return publicKey;
+                    return AUTH_PUBLIC_ENCRYPTION_KEY;
                 }
             };
 
@@ -1268,7 +1269,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
 
         var jwkKey =
-                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                new RSAKey.Builder((RSAPublicKey) DCMAW_ENCRYPTION_KEY_PAIR.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(ENCRYPTION_KEY_ID)
                         .build();
@@ -1311,7 +1312,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList(RP_REDIRECT_URI.toString()),
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 scopes,
-                Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
+                Base64.getMimeEncoder().encodeToString(RP_KEY_PAIR.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
@@ -1386,7 +1387,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
-        var signer = new RSASSASigner(KEY_PAIR.getPrivate());
+        var signer = new RSASSASigner(RP_KEY_PAIR.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
     }
