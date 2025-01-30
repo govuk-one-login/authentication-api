@@ -363,7 +363,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
             var notifyRequest =
                     new NotifyRequest(
-                            destination, notificationType, code, userContext.getUserLanguage());
+                            destination,
+                            notificationType,
+                            code,
+                            userContext.getUserLanguage(),
+                            session.getSessionId(),
+                            userContext.getClientSessionId());
             emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("{} placed on queue", request.getNotificationType());
             LOG.info("Successfully processed request");
