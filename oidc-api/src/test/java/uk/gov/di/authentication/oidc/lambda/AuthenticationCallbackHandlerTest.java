@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
@@ -146,7 +147,8 @@ class AuthenticationCallbackHandlerTest {
             new Session(SESSION_ID)
                     .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
                     .setAuthenticated(false)
-                    .setCurrentCredentialStrength(null);
+                    .setCurrentCredentialStrength(null)
+                    .setEmailAddress(TEST_EMAIL_ADDRESS);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -222,10 +224,10 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
                 .thenReturn(null);
-        when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any()))
+        when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any(), any()))
                 .thenAnswer(
                         args -> {
-                            var errorRedirectUri = (URI) args.getArgument(3);
+                            var errorRedirectUri = (URI) args.getArgument(4);
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
                                     .withHeaders(
@@ -251,6 +253,7 @@ class AuthenticationCallbackHandlerTest {
                         logoutService,
                         authFrontend,
                         noSessionOrchestrationService);
+        session.resetClientSessions();
     }
 
     @Test
@@ -452,7 +455,15 @@ class AuthenticationCallbackHandlerTest {
 
         verify(logoutService, times(1))
                 .handleReauthenticationFailureLogout(
-                        eq(session), eq(event), eq(CLIENT_ID.toString()), any());
+                        eq(
+                                new DestroySessionsRequest(
+                                        SESSION_ID,
+                                        List.of(CLIENT_SESSION_ID),
+                                        TEST_EMAIL_ADDRESS)),
+                        eq(null),
+                        eq(event),
+                        eq(CLIENT_ID.toString()),
+                        any());
 
         verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
     }
@@ -1248,6 +1259,7 @@ class AuthenticationCallbackHandlerTest {
     private void usingValidClientSession() {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
+        session.addClientSession(CLIENT_SESSION_ID);
     }
 
     private void usingValidClient() {

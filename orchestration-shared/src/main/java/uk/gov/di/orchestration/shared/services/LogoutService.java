@@ -186,12 +186,13 @@ public class LogoutService {
     }
 
     public APIGatewayProxyResponseEvent handleReauthenticationFailureLogout(
-            Session session,
+            DestroySessionsRequest request,
+            String internalCommonSubjectId,
             APIGatewayProxyRequestEvent input,
             String clientId,
             URI errorRedirectUri) {
-        var auditUser = createAuditUser(input, session);
-        destroySessions(session);
+        var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
+        destroySessions(request);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId));
         return generateLogoutResponse(
                 errorRedirectUri,
@@ -263,13 +264,19 @@ public class LogoutService {
     }
 
     private TxmaAuditUser createAuditUser(APIGatewayProxyRequestEvent input, Session session) {
+        return createAuditUser(
+                input, session.getSessionId(), session.getInternalCommonSubjectIdentifier());
+    }
+
+    private TxmaAuditUser createAuditUser(
+            APIGatewayProxyRequestEvent input, String sessionId, String internalCommonSubjectId) {
         return TxmaAuditUser.user()
                 .withIpAddress(extractIpAddress(input))
                 .withPersistentSessionId(extractPersistentIdFromCookieHeader(input.getHeaders()))
-                .withSessionId(session.getSessionId())
+                .withSessionId(sessionId)
                 .withGovukSigninJourneyId(
                         CookieHelper.getClientSessionIdFromRequestHeaders(input.getHeaders())
                                 .orElse(null))
-                .withUserId(session.getInternalCommonSubjectIdentifier());
+                .withUserId(internalCommonSubjectId);
     }
 }

@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -753,7 +754,7 @@ public class AuthenticationCallbackHandler
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
-                            authenticationRequest, input, e, user, session));
+                            authenticationRequest, input, e, user, session, sessionId));
         }
         return Optional.empty();
     }
@@ -763,7 +764,8 @@ public class AuthenticationCallbackHandler
             APIGatewayProxyRequestEvent input,
             AuthenticationCallbackValidationException exception,
             TxmaAuditUser user,
-            Session session) {
+            Session session,
+            String sessionId) {
         var error = exception.getError();
         LOG.warn(
                 "Error in Authentication Authorisation Response. ErrorCode: {}. ErrorDescription: {}.{}",
@@ -784,7 +786,8 @@ public class AuthenticationCallbackHandler
 
         if (exception.getLogoutRequired()) {
             return logoutService.handleReauthenticationFailureLogout(
-                    session,
+                    new DestroySessionsRequest(sessionId, session),
+                    session.getInternalCommonSubjectIdentifier(),
                     input,
                     authenticationRequest.getClientID().getValue(),
                     errorResponseUri);

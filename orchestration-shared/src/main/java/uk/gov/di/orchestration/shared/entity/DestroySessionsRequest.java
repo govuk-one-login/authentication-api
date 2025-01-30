@@ -8,6 +8,10 @@ public class DestroySessionsRequest {
     private final List<String> clientSessions;
     private final String emailAddress;
 
+    public DestroySessionsRequest(Session session) {
+        this(session.getSessionId(), session.getClientSessions(), session.getEmailAddress());
+    }
+
     public DestroySessionsRequest(String sessionId, Session session) {
         this(sessionId, session.getClientSessions(), session.getEmailAddress());
     }
