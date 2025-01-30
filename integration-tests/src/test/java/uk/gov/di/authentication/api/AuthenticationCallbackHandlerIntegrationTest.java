@@ -885,7 +885,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 throws Json.JsonException {
             var session = new Session(PREVIOUS_SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
             PREVIOUS_CLIENT_SESSIONS.forEach(session::addClientSession);
-            redis.addSession(session);
+            redis.addSessionWithId(session, PREVIOUS_SESSION_ID);
             redis.addStateToRedis(
                     AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                     ORCH_TO_AUTH_STATE,
