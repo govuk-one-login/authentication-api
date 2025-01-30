@@ -97,7 +97,7 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = mock(Session.class);
-    private final AuthSessionItem authSession = mock(AuthSessionItem.class);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
@@ -314,6 +314,7 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
+        authSessionExists();
 
         var event = new APIGatewayProxyRequestEvent().withHeaders(VALID_HEADERS).withBody("{ }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -338,6 +339,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn400IfEmailAddressIsInvalid() {
         usingValidSession();
         setupClient();
+        authSessionExists();
 
         var result = handler.handleRequest(userExistsRequest("joe.bloggs"), context);
 
