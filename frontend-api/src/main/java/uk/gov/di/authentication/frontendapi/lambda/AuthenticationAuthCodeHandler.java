@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -56,14 +57,16 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            AuthSessionService authSessionService) {
         super(
                 AuthCodeRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.dynamoAuthCodeService = dynamoAuthCodeService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
