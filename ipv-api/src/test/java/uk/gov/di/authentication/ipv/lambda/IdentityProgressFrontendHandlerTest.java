@@ -55,7 +55,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.conte
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class IdentityProgressHandlerTest {
+public class IdentityProgressFrontendHandlerTest {
 
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
     public static final String SESSION_ID = "some-session-id";
