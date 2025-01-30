@@ -113,6 +113,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
     void setup() throws Json.JsonException {
         handler = new ReverificationResultHandler();
         sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        authSessionStore.addSession(sessionId);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         new Subject().getValue(),
