@@ -6,12 +6,15 @@ import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -949,9 +952,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getLocationResponseHeader(response),
                 startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
 
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        var clientSessionID = sessionCookie.get().getValue().split("\\.")[1];
+        var clientSessionID = getClientSessionId(response);
         var clientSession = redis.getClientSession(clientSessionID);
         var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
 
@@ -981,6 +982,31 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .get(ADDRESS.getValue())
                         .getClaimRequirement(),
                 equalTo(ClaimRequirement.ESSENTIAL));
+    }
+
+    @Test
+    void shouldStoreStateInNoSessionOrchestrationService()
+            throws ParseException, JOSEException, java.text.ParseException {
+        setupForAuthJourney();
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                        Optional.of("GET"));
+        assertNoSessionObjectStored(response);
+    }
+
+    private void assertNoSessionObjectStored(APIGatewayProxyResponseEvent response)
+            throws ParseException, JOSEException, java.text.ParseException {
+        var authRequest = extractAuthRequestFromResponse(response);
+        var decryptedJWT = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
+        var orchToAuthState = decryptedJWT.getJWTClaimsSet().getStringClaim("state");
+        var noSessionObject = redis.getFromRedis("state:" + orchToAuthState);
+
+        var clientSessionId = getClientSessionId(response);
+
+        assertEquals(clientSessionId, noSessionObject);
     }
 
     @Test
@@ -1064,9 +1090,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 }),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
                         Optional.of("GET"));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        var newSessionId = sessionCookie.get().getValue().split("\\.")[0];
+        var newSessionId = getSessionId(response);
 
         var newSession = orchSessionExtension.getSession(newSessionId);
         assertTrue(newSession.isPresent());
@@ -1102,10 +1126,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 }),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
                         Optional.of("GET"));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        var newSessionId = sessionCookie.get().getValue().split("\\.")[0];
-
+        var newSessionId = getSessionId(response);
         var newSession = redis.getSession(newSessionId);
         assertNotNull(newSession);
         assertEquals(1, newSession.getClientSessions().size());
@@ -1401,6 +1422,30 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
         kpg.initialize(2048);
         return kpg.generateKeyPair();
+    }
+
+    private static String getClientSessionId(APIGatewayProxyResponseEvent response) {
+        var sessionCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        return sessionCookie.get().getValue().split("\\.")[1];
+    }
+
+    private static String getSessionId(APIGatewayProxyResponseEvent response) {
+        var sessionCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        return sessionCookie.get().getValue().split("\\.")[0];
+    }
+
+    private AuthorizationRequest extractAuthRequestFromResponse(
+            APIGatewayProxyResponseEvent response) throws ParseException {
+        URI redirectLocationHeader =
+                URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+        return AuthorizationRequest.parse(redirectLocationHeader);
+    }
+
+    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
+        encryptedJWT.decrypt(new RSADecrypter(AUTH_ENCRYPTION_KEY_PAIR.getPrivate()));
+        return encryptedJWT.getPayload().toSignedJWT();
     }
 
     private void withExistingOrchSessionAndBsid(String sessionId) {

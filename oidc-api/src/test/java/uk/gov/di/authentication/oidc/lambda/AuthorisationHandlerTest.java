@@ -388,7 +388,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
             verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), any(State.class));
+                    .storeState(eq(NEW_SESSION_ID), eq(CLIENT_SESSION_ID), any(State.class));
             assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
             assertThat(
                     splitQuery(locationHeader).get("request"),
@@ -427,7 +427,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
             verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), any(State.class));
+                    .storeState(eq(NEW_SESSION_ID), eq(CLIENT_SESSION_ID), any(State.class));
             assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
             assertThat(
                     splitQuery(locationHeader).get("request"),
@@ -466,7 +466,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
             verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), any(State.class));
+                    .storeState(eq(NEW_SESSION_ID), eq(CLIENT_SESSION_ID), any(State.class));
             assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
             assertThat(
                     splitQuery(locationHeader).get("request"),
