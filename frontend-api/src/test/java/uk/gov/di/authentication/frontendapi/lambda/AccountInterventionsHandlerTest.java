@@ -26,6 +26,7 @@ import uk.gov.di.authentication.frontendapi.entity.Intervention;
 import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -111,6 +113,7 @@ class AccountInterventionsHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
+    private final AuthSessionService mockAuthSessionService = mock(AuthSessionService.class);
 
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
@@ -118,6 +121,7 @@ class AccountInterventionsHandlerTest {
                     .setEmailAddress(EMAIL)
                     .setSessionId(SESSION_ID)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -137,6 +141,8 @@ class AccountInterventionsHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(mockAuthSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
         UserProfile userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -168,7 +174,8 @@ class AccountInterventionsHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         new NowHelper.NowClock(fixed(fixedDate, systemDefault())),
-                        mockLambdaInvokerService);
+                        mockLambdaInvokerService,
+                        mockAuthSessionService);
     }
 
     @Test

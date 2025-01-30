@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -103,14 +104,16 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             NowClock clock,
-            LambdaInvokerService lambdaInvoker) {
+            LambdaInvokerService lambdaInvoker,
+            AuthSessionService authSessionService) {
         super(
                 AccountInterventionsRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.accountInterventionsService = accountInterventionsService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
