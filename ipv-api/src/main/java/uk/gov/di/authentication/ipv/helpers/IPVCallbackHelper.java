@@ -193,6 +193,7 @@ public class IPVCallbackHelper {
             String clientSessionId,
             UserProfile userProfile,
             Session session,
+            String sessionId,
             OrchSessionItem orchSession,
             ClientSession clientSession,
             Subject rpPairwiseSubject,
@@ -242,7 +243,7 @@ public class IPVCallbackHelper {
                 authRequest.getClientID().getValue(),
                 TxmaAuditUser.user()
                         .withGovukSigninJourneyId(clientSessionId)
-                        .withSessionId(session.getSessionId())
+                        .withSessionId(sessionId)
                         .withUserId(internalPairwiseSubjectId)
                         .withEmail(
                                 Optional.ofNullable(session.getEmailAddress())

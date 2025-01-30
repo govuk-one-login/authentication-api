@@ -226,20 +226,21 @@ public class IPVCallbackHandler
                         noSessionEntity.getClientSessionId(),
                         AuditService.UNKNOWN);
             }
+            var sessionId = sessionCookiesIds.getSessionId();
             var session =
                     sessionService
-                            .getSession(sessionCookiesIds.getSessionId())
+                            .getSession(sessionId)
                             .orElseThrow(
                                     () -> new IPVCallbackNoSessionException("Session not found"));
             OrchSessionItem orchSession =
                     orchSessionService
-                            .getSession(sessionCookiesIds.getSessionId())
+                            .getSession(sessionId)
                             .orElseThrow(
                                     () ->
                                             new IPVCallbackNoSessionException(
                                                     "Orchestration session not found in DynamoDB"));
 
-            attachSessionIdToLogs(session);
+            attachSessionIdToLogs(sessionId);
             var persistentId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
@@ -270,8 +271,7 @@ public class IPVCallbackHandler
                             "validateIpvAuthResponse",
                             () ->
                                     ipvAuthorisationService.validateResponse(
-                                            input.getQueryStringParameters(),
-                                            session.getSessionId()));
+                                            input.getQueryStringParameters(), sessionId));
             var userProfile =
                     dynamoService
                             .getUserProfileByEmailMaybe(session.getEmailAddress())
@@ -296,7 +296,7 @@ public class IPVCallbackHandler
             var user =
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(session.getSessionId())
+                            .withSessionId(sessionId)
                             .withUserId(internalPairwiseSubjectId)
                             .withEmail(session.getEmailAddress())
                             .withPhone(userProfile.getPhoneNumber())
@@ -305,7 +305,7 @@ public class IPVCallbackHandler
             var auditContext =
                     new AuditContext(
                             clientSessionId,
-                            session.getSessionId(),
+                            sessionId,
                             clientId,
                             internalPairwiseSubjectId,
                             session.getEmailAddress(),
@@ -333,7 +333,7 @@ public class IPVCallbackHandler
                         new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
                         false,
                         clientSessionId,
-                        session.getSessionId());
+                        sessionId);
             }
 
             auditService.submitAuditEvent(
@@ -444,6 +444,7 @@ public class IPVCallbackHandler
                                         clientSessionId,
                                         userProfile,
                                         session,
+                                        sessionId,
                                         orchSession,
                                         clientSession,
                                         rpPairwiseSubject,
@@ -492,7 +493,7 @@ public class IPVCallbackHandler
             LOG.info("SPOT will be invoked.");
             var logIds =
                     new LogIds(
-                            session.getSessionId(),
+                            sessionId,
                             persistentId,
                             context.getAwsRequestId(),
                             clientId,
