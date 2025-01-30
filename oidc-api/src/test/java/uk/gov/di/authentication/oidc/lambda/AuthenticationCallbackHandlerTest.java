@@ -1145,7 +1145,7 @@ class AuthenticationCallbackHandlerTest {
             var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
             var sharedSession = withMaxAgeSharedSession();
             var previousOrchSession = withPreviousOrchSessionDueToMaxAge();
-            var previousSharedSession = withPreviousSharedSessionDueToMaxAge();
+            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1174,7 +1174,11 @@ class AuthenticationCallbackHandlerTest {
 
             verify(logoutService, times(1))
                     .handleMaxAgeLogout(
-                            eq(previousSharedSession),
+                            eq(
+                                    new DestroySessionsRequest(
+                                            PREVIOUS_SESSION_ID,
+                                            PREVIOUS_CLIENT_SESSIONS,
+                                            TEST_EMAIL_ADDRESS)),
                             eq(previousOrchSession),
                             any(TxmaAuditUser.class));
         }
@@ -1188,12 +1192,12 @@ class AuthenticationCallbackHandlerTest {
             return previousOrchSession;
         }
 
-        private Session withPreviousSharedSessionDueToMaxAge() {
+        private void withPreviousSharedSessionDueToMaxAge() {
             var previousSharedSession = new Session(PREVIOUS_SESSION_ID);
             PREVIOUS_CLIENT_SESSIONS.forEach(previousSharedSession::addClientSession);
+            previousSharedSession.setEmailAddress(TEST_EMAIL_ADDRESS);
             when(sessionService.getSession(PREVIOUS_SESSION_ID))
                     .thenReturn(Optional.of(previousSharedSession));
-            return previousSharedSession;
         }
 
         private void withNoPreviousSharedSession() {

@@ -233,8 +233,10 @@ public class LogoutService {
     }
 
     public void handleMaxAgeLogout(
-            Session previousSession, OrchSessionItem previousOrchSession, TxmaAuditUser user) {
-        destroySessions(previousSession);
+            DestroySessionsRequest request,
+            OrchSessionItem previousOrchSession,
+            TxmaAuditUser user) {
+        destroySessions(request);
         Long sessionAge =
                 nowClock.now().toInstant().getEpochSecond() - previousOrchSession.getAuthTime();
         sendAuditEvent(

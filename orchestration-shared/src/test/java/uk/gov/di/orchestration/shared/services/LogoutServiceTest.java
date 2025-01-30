@@ -567,11 +567,9 @@ class LogoutServiceTest {
         var clientSessionId2 = IdGenerator.generate();
         var clientId1 = CLIENT_ID + "1";
         var clientId2 = CLIENT_ID + "2";
-        var prevousSession =
-                new Session(SESSION_ID)
-                        .setEmailAddress(EMAIL)
-                        .addClientSession(clientSessionId1)
-                        .addClientSession(clientSessionId2);
+        var destroySessionsRequestForClients =
+                new DestroySessionsRequest(
+                        SESSION_ID, List.of(clientSessionId1, clientSessionId2), EMAIL);
 
         var authTime = Instant.parse("2025-01-23T15:00:00Z");
         var previousOrchSession =
@@ -582,7 +580,8 @@ class LogoutServiceTest {
         var logoutTime = authTime.plus(3600, ChronoUnit.SECONDS);
         var clock = fixed(logoutTime, systemDefault());
         logoutServiceWithClock(clock)
-                .handleMaxAgeLogout(prevousSession, previousOrchSession, auditUser);
+                .handleMaxAgeLogout(
+                        destroySessionsRequestForClients, previousOrchSession, auditUser);
 
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);

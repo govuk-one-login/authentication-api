@@ -410,7 +410,7 @@ public class AuthenticationCallbackHandler
                 if (configurationService.supportMaxAgeEnabled()
                         && Objects.nonNull(orchSession.getPreviousSessionId())) {
                     LOG.info("Previous session id is present - handling max age");
-                    handleMaxAgeSession(orchSession, session, user);
+                    handleMaxAgeSession(session, orchSession, user);
                 }
 
                 session.setAuthenticated(true);
@@ -841,7 +841,7 @@ public class AuthenticationCallbackHandler
     }
 
     private void handleMaxAgeSession(
-            OrchSessionItem currentOrchSession, Session currentSharedSession, TxmaAuditUser user) {
+            Session currentSharedSession, OrchSessionItem currentOrchSession, TxmaAuditUser user) {
         var previousSessionId = currentOrchSession.getPreviousSessionId();
         var previousSharedSession = sessionService.getSession(previousSessionId);
         var previousOrchSession = orchSessionService.getSession(previousSessionId);
@@ -869,7 +869,9 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
             logoutService.handleMaxAgeLogout(
-                    previousSharedSession.get(), previousOrchSession.get(), user);
+                    new DestroySessionsRequest(previousSessionId, previousSharedSession.get()),
+                    previousOrchSession.get(),
+                    user);
         }
         currentOrchSession.setPreviousSessionId(null);
     }
