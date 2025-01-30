@@ -142,6 +142,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         handler = new MfaResetAuthorizeHandler();
 
         sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        authSessionStore.addSession(sessionId);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         new Subject().getValue(),

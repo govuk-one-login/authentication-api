@@ -16,8 +16,10 @@ import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -70,6 +72,8 @@ class MfaResetAuthorizeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private static final IDReverificationStateService idReverificationStateService =
             mock(IDReverificationStateService.class);
+    private static final AuthSessionService authSessionService = mock(AuthSessionService.class);
+
     private static final AuditContext testAuditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
@@ -88,6 +92,8 @@ class MfaResetAuthorizeHandlerTest {
                     format(
                             "{ \"email\": \"%s\", \"orchestrationRedirectUrl\": \"%s\" }",
                             EMAIL, ORCHESTRATION_STATE));
+    private static final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID);
     private static MfaResetAuthorizeHandler handler;
 
     @BeforeAll
@@ -98,6 +104,8 @@ class MfaResetAuthorizeHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(session.getSessionId()).thenReturn(SESSION_ID);
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
     }
 
     @BeforeEach
@@ -112,7 +120,8 @@ class MfaResetAuthorizeHandlerTest {
                         ipvReverificationService,
                         auditService,
                         cloudwatchMetricsService,
-                        idReverificationStateService);
+                        idReverificationStateService,
+                        authSessionService);
     }
 
     @Test
