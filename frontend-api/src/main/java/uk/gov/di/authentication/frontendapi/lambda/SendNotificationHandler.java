@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -97,14 +98,16 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
-            AuditService auditService) {
+            AuditService auditService,
+            AuthSessionService authSessionService) {
         super(
                 SendNotificationRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
         this.codeGeneratorService = codeGeneratorService;
