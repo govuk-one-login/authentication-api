@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LogoutReason;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -111,7 +112,15 @@ public class LogoutService {
     }
 
     private void destroySessions(Session session) {
-        for (String clientSessionId : session.getClientSessions()) {
+        destroySessions(
+                new DestroySessionsRequest(
+                        session.getSessionId(),
+                        session.getClientSessions(),
+                        session.getEmailAddress()));
+    }
+
+    private void destroySessions(DestroySessionsRequest request) {
+        for (String clientSessionId : request.getClientSessions()) {
             clientSessionService
                     .getClientSession(clientSessionId)
                     .flatMap(
@@ -123,20 +132,20 @@ public class LogoutService {
                             clientRegistry ->
                                     backChannelLogoutService.sendLogoutMessage(
                                             clientRegistry,
-                                            session.getEmailAddress(),
+                                            request.getEmailAddress(),
                                             configurationService.getInternalSectorURI()));
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);
         }
         LOG.info("Deleting Session");
-        sessionService.deleteStoredSession(session.getSessionId());
+        sessionService.deleteStoredSession(request.getSessionId());
 
         LOG.info("Deleting Orch Session");
-        orchSessionService.deleteSession(session.getSessionId());
+        orchSessionService.deleteSession(request.getSessionId());
     }
 
     public APIGatewayProxyResponseEvent handleLogout(
-            Optional<Session> session,
+            Optional<DestroySessionsRequest> destroySessionsRequest,
             Optional<ErrorObject> errorObject,
             Optional<URI> redirectURI,
             Optional<String> state,
@@ -144,9 +153,9 @@ public class LogoutService {
             Optional<String> clientId,
             Optional<String> rpPairwiseId) {
 
-        session.ifPresent(
-                s -> {
-                    destroySessions(s);
+        destroySessionsRequest.ifPresent(
+                request -> {
+                    destroySessions(request);
                     cloudwatchMetricsService.incrementLogout(clientId);
                 });
 

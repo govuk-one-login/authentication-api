@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -54,7 +55,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -137,6 +138,7 @@ class LogoutServiceTest {
                     .withSessionId(SESSION_ID)
                     .withPersistentSessionId(null)
                     .withUserId(null);
+    private DestroySessionsRequest destroySessionsRequest;
 
     @BeforeEach
     void setup() throws JOSEException, ParseException {
@@ -182,7 +184,9 @@ class LogoutServiceTest {
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID);
-        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        destroySessionsRequest =
+                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
     }
 
     @AfterEach
@@ -196,7 +200,7 @@ class LogoutServiceTest {
     void successfullyReturnsClientLogoutResponse() {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.getValue()),
@@ -229,7 +233,7 @@ class LogoutServiceTest {
     void successfullyReturnsLogoutResponseWithoutStateWhenStateIsAbsent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -262,7 +266,7 @@ class LogoutServiceTest {
     void successfullyReturnsDefaultLogoutResponseWithStateWhenStateIsPresent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(STATE.getValue()),
@@ -296,7 +300,7 @@ class LogoutServiceTest {
         var errorObject = new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.of(errorObject),
                         Optional.empty(),
                         Optional.empty(),
@@ -411,7 +415,7 @@ class LogoutServiceTest {
         input.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         logoutService.handleLogout(
-                Optional.of(session),
+                Optional.of(destroySessionsRequest),
                 Optional.empty(),
                 Optional.of(CLIENT_LOGOUT_URI),
                 Optional.of(STATE.getValue()),
@@ -455,7 +459,7 @@ class LogoutServiceTest {
     void includesRpPairwiseIdInLogOutSuccessAuditEventWhenItIsAvailable() {
 
         logoutService.handleLogout(
-                Optional.of(session),
+                Optional.of(destroySessionsRequest),
                 Optional.empty(),
                 Optional.of(CLIENT_LOGOUT_URI),
                 Optional.of(STATE.getValue()),
@@ -478,7 +482,7 @@ class LogoutServiceTest {
 
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.getValue()),
@@ -614,12 +618,12 @@ class LogoutServiceTest {
     private void setupAdditionalClientSessions() {
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        generateSessionFromCookie(session);
         setupClientSessionToken(signedIDToken);
-    }
-
-    private void generateSessionFromCookie(Session session) {
-        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        destroySessionsRequest =
+                new DestroySessionsRequest(
+                        SESSION_ID,
+                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"),
+                        EMAIL);
     }
 
     private void setupClientSessionToken(JWT idToken) {

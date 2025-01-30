@@ -98,9 +98,8 @@ public class LogoutHandler
             Session session = logoutRequest.session().get();
             attachSessionToLogs(session, input.getHeaders());
         }
-
         return logoutService.handleLogout(
-                logoutRequest.session(),
+                logoutRequest.destroySessionsRequest(),
                 logoutRequest.errorObject(),
                 logoutRequest.postLogoutRedirectUri(),
                 logoutRequest.state(),

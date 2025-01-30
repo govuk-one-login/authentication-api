@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -39,7 +40,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -416,13 +417,12 @@ class LogoutRequestTest {
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
     }
 
-    private uk.gov.di.orchestration.shared.entity.Session generateSession() {
-        return new uk.gov.di.orchestration.shared.entity.Session(SESSION_ID)
-                .addClientSession(CLIENT_SESSION_ID);
+    private Session generateSession() {
+        return new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
     }
 
-    private void generateSessionFromCookie(uk.gov.di.orchestration.shared.entity.Session session) {
-        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+    private void generateSessionFromCookie(Session session) {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
     }
 
     private ClientRegistry createClientRegistry() {

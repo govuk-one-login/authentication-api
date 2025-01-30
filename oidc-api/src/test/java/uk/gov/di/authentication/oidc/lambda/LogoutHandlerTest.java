@@ -2,7 +2,6 @@ package uk.gov.di.authentication.oidc.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.Curve;
@@ -17,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -28,6 +29,7 @@ import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -36,14 +38,11 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
-import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -68,12 +67,13 @@ class LogoutHandlerTest {
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
+    private static final String SOURCE_IP = "123.123.123.123";
     private LogoutHandler handler;
     private SignedJWT signedIDToken;
     private String idTokenHint;
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
-    private uk.gov.di.orchestration.shared.entity.Session session;
+    private Session session;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutHandler.class);
@@ -108,8 +108,6 @@ class LogoutHandlerTest {
         idTokenHint = signedIDToken.serialize();
 
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(logoutService.handleLogout(any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(new APIGatewayProxyResponseEvent());
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
@@ -128,25 +126,31 @@ class LogoutHandlerTest {
                                 "id_token_hint", idTokenHint,
                                 "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                                 "state", STATE.toString()));
-        setupSessions();
-        TxmaAuditUser auditUser =
+
+        setUpClientSession("client-session-id-2", "client-id-2");
+        setUpClientSession("client-session-id-3", "client-id-3");
+        saveSession(session);
+        handler.handleRequest(event, context);
+
+        var expectedDestroySessionsRequest =
+                new DestroySessionsRequest(
+                        SESSION_ID,
+                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"),
+                        EMAIL);
+        TxmaAuditUser expectedAuditUser =
                 TxmaAuditUser.user()
-                        .withIpAddress(extractIpAddress(event))
-                        .withPersistentSessionId(
-                                extractPersistentIdFromCookieHeader(event.getHeaders()))
+                        .withIpAddress(SOURCE_IP)
+                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
                         .withGovukSigninJourneyId("id-token-client-session-id")
                         .withSessionId(SESSION_ID)
                         .withUserId(SUBJECT.getValue());
-
-        handler.handleRequest(event, context);
-
         verify(logoutService, times(1))
                 .handleLogout(
-                        Optional.of(session),
+                        Optional.of(expectedDestroySessionsRequest),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
-                        auditUser,
+                        expectedAuditUser,
                         Optional.of("client-id"),
                         Optional.of(SUBJECT.getValue()));
     }
@@ -159,24 +163,23 @@ class LogoutHandlerTest {
                                 "id_token_hint", idTokenHint,
                                 "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                                 "state", STATE.toString()));
-        TxmaAuditUser auditUser =
-                TxmaAuditUser.user()
-                        .withIpAddress(extractIpAddress(event))
-                        .withPersistentSessionId(
-                                extractPersistentIdFromCookieHeader(event.getHeaders()))
-                        .withGovukSigninJourneyId("id-token-client-session-id")
-                        .withSessionId(null)
-                        .withUserId(null);
 
         handler.handleRequest(event, context);
 
+        TxmaAuditUser expectedAuditUser =
+                TxmaAuditUser.user()
+                        .withIpAddress(SOURCE_IP)
+                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                        .withGovukSigninJourneyId("id-token-client-session-id")
+                        .withSessionId(null)
+                        .withUserId(null);
         verify(logoutService, times(1))
                 .handleLogout(
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
-                        auditUser,
+                        expectedAuditUser,
                         Optional.of("client-id"),
                         Optional.of(SUBJECT.getValue()));
     }
@@ -196,37 +199,46 @@ class LogoutHandlerTest {
                                 CLIENT_LOGOUT_URI.toString(),
                                 "state",
                                 STATE.toString()));
-        setupSessions();
+
+        setUpClientSession("client-session-id-2", "client-id-2");
+        setUpClientSession("client-session-id-3", "client-id-3");
         session.getClientSessions().add("expired-client-session-id");
-        TxmaAuditUser auditUser =
+        saveSession(session);
+        handler.handleRequest(event, context);
+
+        var expectedDestroySessionsRequest =
+                new DestroySessionsRequest(
+                        SESSION_ID,
+                        List.of(
+                                CLIENT_SESSION_ID,
+                                "client-session-id-2",
+                                "client-session-id-3",
+                                "expired-client-session-id"),
+                        EMAIL);
+        TxmaAuditUser expectedAuditUser =
                 TxmaAuditUser.user()
-                        .withIpAddress(extractIpAddress(event))
-                        .withPersistentSessionId(
-                                extractPersistentIdFromCookieHeader(event.getHeaders()))
+                        .withIpAddress(SOURCE_IP)
+                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
                         .withGovukSigninJourneyId("id-token-client-session-id")
                         .withSessionId(SESSION_ID)
                         .withUserId(SUBJECT.getValue());
-
-        handler.handleRequest(event, context);
-
         verify(logoutService, times(1))
                 .handleLogout(
-                        Optional.of(session),
+                        Optional.of(expectedDestroySessionsRequest),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
-                        auditUser,
+                        expectedAuditUser,
                         Optional.of("client-id"),
                         Optional.of(SUBJECT.getValue()));
     }
 
-    private uk.gov.di.orchestration.shared.entity.Session generateSession() {
-        return new uk.gov.di.orchestration.shared.entity.Session(SESSION_ID)
-                .addClientSession(CLIENT_SESSION_ID);
+    private Session generateSession() {
+        return new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
     }
 
-    private void generateSessionFromCookie(uk.gov.di.orchestration.shared.entity.Session session) {
-        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+    private void saveSession(Session session) {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
     }
 
     private ClientRegistry createClientRegistry() {
@@ -260,12 +272,6 @@ class LogoutHandlerTest {
             event.setQueryStringParameters(queryStringParameters);
         }
         return event;
-    }
-
-    private void setupSessions() {
-        setUpClientSession("client-session-id-2", "client-id-2");
-        setUpClientSession("client-session-id-3", "client-id-3");
-        generateSessionFromCookie(session);
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {
