@@ -254,23 +254,24 @@ public class AuthenticationCallbackHandler
                 throw new AuthenticationCallbackException("No session cookie found");
             }
 
-            Session userSession =
+            var sessionId = sessionCookiesIds.getSessionId();
+            var clientSessionId = sessionCookiesIds.getClientSessionId();
+            var session =
                     sessionService
-                            .getSession(sessionCookiesIds.getSessionId())
+                            .getSession(sessionId)
                             .orElseThrow(
                                     () ->
                                             new AuthenticationCallbackException(
                                                     "Shared session not found in Redis"));
-            OrchSessionItem orchSession =
+            var orchSession =
                     orchSessionService
-                            .getSession(sessionCookiesIds.getSessionId())
+                            .getSession(sessionId)
                             .orElseThrow(
                                     () ->
                                             new AuthenticationCallbackException(
                                                     "Orchestration session not found in DynamoDB"));
 
-            attachSessionIdToLogs(userSession);
-            var clientSessionId = sessionCookiesIds.getClientSessionId();
+            attachSessionIdToLogs(sessionId);
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
@@ -289,7 +290,7 @@ public class AuthenticationCallbackHandler
             var user =
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(userSession.getSessionId())
+                            .withSessionId(sessionId)
                             .withPersistentSessionId(persistentSessionId);
 
             var authenticationRequest =
@@ -300,7 +301,7 @@ public class AuthenticationCallbackHandler
 
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
-                            authenticationRequest, input, user, userSession);
+                            authenticationRequest, input, user, session, sessionId);
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
@@ -334,7 +335,6 @@ public class AuthenticationCallbackHandler
                         buildURI(
                                 configurationService.getAuthenticationBackendURI().toString(),
                                 "userinfo");
-                var sessionId = userSession.getSessionId();
                 HTTPRequest authorizationRequest = new HTTPRequest(GET, userInfoURI);
                 authorizationRequest.setHeader(SESSION_ID_HEADER, sessionId);
                 authorizationRequest.setAuthorization(
@@ -396,7 +396,7 @@ public class AuthenticationCallbackHandler
                         userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
                 AccountState accountState = deduceAccountState(newAccount);
                 OrchSessionItem.AccountState orchAccountState = deduceOrchAccountState(newAccount);
-                userSession.setNewAccount(accountState);
+                session.setNewAccount(accountState);
                 orchSession.withAccountState(orchAccountState);
 
                 if (!orchSession.getAuthenticated() || deduceUpliftRequired(userInfo)) {
@@ -406,15 +406,15 @@ public class AuthenticationCallbackHandler
                 if (configurationService.supportMaxAgeEnabled()
                         && Objects.nonNull(orchSession.getPreviousSessionId())) {
                     LOG.info("Previous session id is present - handling max age");
-                    handleMaxAgeSession(orchSession, userSession, user);
+                    handleMaxAgeSession(orchSession, session, user);
                 }
 
-                userSession.setAuthenticated(true);
+                session.setAuthenticated(true);
                 orchSession.setAuthenticated(true);
                 clientSession.setRpPairwiseId(
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
 
-                sessionService.storeOrUpdateSession(userSession);
+                sessionService.storeOrUpdateSession(session);
                 orchSessionService.updateSession(orchSession);
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
 
@@ -445,7 +445,7 @@ public class AuthenticationCallbackHandler
                 CredentialTrustLevel requestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
                 CredentialTrustLevel credentialTrustLevel =
-                        Optional.ofNullable(userSession.getCurrentCredentialStrength())
+                        Optional.ofNullable(session.getCurrentCredentialStrength())
                                 .map(
                                         sessionValue ->
                                                 CredentialTrustLevel.max(
@@ -466,7 +466,7 @@ public class AuthenticationCallbackHandler
                 var auditContext =
                         new AuditContext(
                                 clientSessionId,
-                                userSession.getSessionId(),
+                                sessionId,
                                 clientId,
                                 userInfo.getSubject().getValue(),
                                 Objects.isNull(userInfo.getEmailAddress())
@@ -491,12 +491,12 @@ public class AuthenticationCallbackHandler
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    userSession, input, clientId, intervention);
+                                    session, input, clientId, intervention);
                         }
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        userSession, input, clientId, intervention);
+                                        session, input, clientId, intervention);
                             }
                             // continue
                         }
@@ -511,7 +511,7 @@ public class AuthenticationCallbackHandler
                             input,
                             authenticationRequest,
                             userInfo,
-                            userSession,
+                            session,
                             client,
                             clientId,
                             clientSessionId,
@@ -533,11 +533,11 @@ public class AuthenticationCallbackHandler
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
-                if (isNull(userSession.getCurrentCredentialStrength())
+                if (isNull(session.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
-                                        userSession.getCurrentCredentialStrength())
+                                        session.getCurrentCredentialStrength())
                                 > 0) {
-                    userSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
+                    session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
                 }
 
                 var authCode =
@@ -551,7 +551,7 @@ public class AuthenticationCallbackHandler
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
-                sessionService.storeOrUpdateSession(userSession);
+                sessionService.storeOrUpdateSession(session);
                 var currentCredentialStrength =
                         userInfo.getStringClaim(
                                 AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
@@ -570,14 +570,14 @@ public class AuthenticationCallbackHandler
                 // ATO-975 logging to make sure there are no differences in production
                 LOG.info(
                         "Shared session current credential strength: {}",
-                        userSession.getCurrentCredentialStrength());
+                        session.getCurrentCredentialStrength());
                 LOG.info(
                         "Orch session current credential strength: {}",
                         orchSession.getCurrentCredentialStrength());
                 LOG.info(
                         "Is shared session CCS equal to Orch session CCS: {}",
                         Objects.equals(
-                                userSession.getCurrentCredentialStrength(),
+                                session.getCurrentCredentialStrength(),
                                 orchSession.getCurrentCredentialStrength()));
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
@@ -711,10 +711,10 @@ public class AuthenticationCallbackHandler
                     AuthenticationRequest authenticationRequest,
                     APIGatewayProxyRequestEvent input,
                     TxmaAuditUser user,
-                    Session session) {
+                    Session session,
+                    String sessionId) {
         try {
-            authorisationService.validateRequest(
-                    input.getQueryStringParameters(), session.getSessionId());
+            authorisationService.validateRequest(input.getQueryStringParameters(), sessionId);
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
