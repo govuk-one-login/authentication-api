@@ -79,6 +79,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
@@ -575,10 +576,8 @@ class AuthCodeHandlerTest {
                         SESSION_ID,
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_SESSION_ID));
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
-        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(orchSession));
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -673,10 +672,8 @@ class AuthCodeHandlerTest {
 
     private void generateValidSession(
             Map<String, List<String>> authRequestParams, CredentialTrustLevel requestedLevel) {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
-        when(orchSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(orchSession));
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
