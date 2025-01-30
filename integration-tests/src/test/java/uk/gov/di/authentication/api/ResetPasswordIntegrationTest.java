@@ -77,6 +77,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
@@ -101,6 +102,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber()
             throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
@@ -138,6 +140,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
             shouldUpdatePasswordSendSMSAndNotWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumberButRequestAllowsMfaReset()
                     throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
@@ -167,6 +170,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
@@ -191,6 +195,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue()
             throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
@@ -222,6 +227,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordAndWriteToAccountModifiersTableWithIfUserHasVerifiedPhoneNumber(
             boolean phoneNumberVerified) throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         userStore.setPhoneNumberAndVerificationStatus(
@@ -272,6 +278,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedAuthApp(
             boolean authAppVerified) throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addMfaMethod(

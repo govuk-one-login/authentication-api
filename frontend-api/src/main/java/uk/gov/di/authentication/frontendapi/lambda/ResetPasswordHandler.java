@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -75,14 +76,16 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
-            DynamoAccountModifiersService dynamoAccountModifiersService) {
+            DynamoAccountModifiersService dynamoAccountModifiersService,
+            AuthSessionService authSessionService) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
