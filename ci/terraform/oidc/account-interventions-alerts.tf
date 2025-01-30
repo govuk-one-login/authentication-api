@@ -45,7 +45,3 @@ resource "aws_cloudwatch_metric_alarm" "account_interventions_p1_cloudwatch_alar
     Service = "account-interventions"
   }
 }
-moved {
-  from = aws_cloudwatch_metric_alarm.account_interventions_p1_cloudwatch_alarm[0]
-  to   = aws_cloudwatch_metric_alarm.account_interventions_p1_cloudwatch_alarm
-}
