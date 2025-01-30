@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
@@ -67,6 +68,9 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
             new AuthenticationAttemptsStoreExtension();
 
+    @RegisterExtension
+    protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
@@ -95,6 +99,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void setup() throws Json.JsonException {
 
         var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL);
+        authSessionExtension.addSession(sessionId);
         requestHeaders = createHeaders(sessionId);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
         handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE, redisConnectionService);
