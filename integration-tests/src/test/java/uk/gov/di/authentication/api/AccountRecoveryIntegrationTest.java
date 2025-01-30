@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountRecoveryHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -44,6 +46,10 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
+    @RegisterExtension
+    public static final AuthSessionExtension authSessionServiceExtension =
+            new AuthSessionExtension();
+
     @BeforeEach
     void setup() {
         handler =
@@ -60,6 +66,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
         var sessionId = redis.createSession();
+        authSessionServiceExtension.addSession(sessionId);
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
@@ -79,6 +86,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
     @Test
     void shouldBePermittedForAccountRecoveryWhenNoBlockIsPresent() throws Json.JsonException {
         var sessionId = redis.createSession();
+        authSessionServiceExtension.addSession(sessionId);
         userStore.signUp(EMAIL, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
