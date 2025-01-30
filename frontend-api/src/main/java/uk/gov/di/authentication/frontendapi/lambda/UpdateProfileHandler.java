@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -49,14 +50,16 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             ClientSessionService clientSessionService,
             ConfigurationService configurationService,
             AuditService auditService,
-            ClientService clientService) {
+            ClientService clientService,
+            AuthSessionService authSessionService) {
         super(
                 UpdateProfileRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.auditService = auditService;
     }
 
