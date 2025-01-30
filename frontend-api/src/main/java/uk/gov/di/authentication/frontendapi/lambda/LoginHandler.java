@@ -84,7 +84,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
-    private final AuthSessionService authSessionService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -106,14 +105,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 clientSessionService,
                 clientService,
                 authenticationService,
-                true);
+                true,
+                authSessionService);
         this.codeStorageService = codeStorageService;
         this.userMigrationService = userMigrationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
-        this.authSessionService = authSessionService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -127,7 +126,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -141,7 +139,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler() {
@@ -161,14 +158,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LoginRequest request,
             UserContext userContext) {
 
-        var optionalAuthSession =
-                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
-
-        if (optionalAuthSession.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
-
-        AuthSessionItem authSession = optionalAuthSession.get();
+        AuthSessionItem authSession = userContext.getAuthSession();
 
         AuditContext auditContext =
                 auditContextFromUserContext(
