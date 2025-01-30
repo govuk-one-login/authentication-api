@@ -5,7 +5,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 @DynamoDbBean
-public class AuthenticationUserInfo {
+public class OldAuthenticationUserInfo {
 
     private String subjectID;
     private String userInfo;
@@ -21,7 +21,7 @@ public class AuthenticationUserInfo {
         this.subjectID = subjectID;
     }
 
-    public AuthenticationUserInfo withSubjectID(String subjectID) {
+    public OldAuthenticationUserInfo withSubjectID(String subjectID) {
         this.subjectID = subjectID;
         return this;
     }
@@ -35,7 +35,7 @@ public class AuthenticationUserInfo {
         this.userInfo = userInfo;
     }
 
-    public AuthenticationUserInfo withUserInfo(String userInfo) {
+    public OldAuthenticationUserInfo withUserInfo(String userInfo) {
         this.userInfo = userInfo;
         return this;
     }
@@ -49,7 +49,7 @@ public class AuthenticationUserInfo {
         this.timeToExist = timeToExist;
     }
 
-    public AuthenticationUserInfo withTimeToExist(long timeToExist) {
+    public OldAuthenticationUserInfo withTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
         return this;
     }
