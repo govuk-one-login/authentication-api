@@ -1,5 +1,33 @@
 variable "endpoint_name" {
-  type = string
+  description = "The name of the endpoint, used for naming resources"
+  type        = string
+}
+
+variable "endpoint_name_sanitized" {
+  // This allows us to remove some 'replace' directives, which will reduce 'known after apply' false triggers
+  description = "A sanitized version of endpoint_name, required if endpoint_name contains a dot."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.endpoint_name_sanitized == null ? !strcontains(var.endpoint_name, ".") : true
+    error_message = "endpoint_name_sanitized is required if endpoint_name contains a dot"
+  }
+
+  validation {
+    condition     = var.endpoint_name_sanitized != null ? strcontains(var.endpoint_name, ".") : true
+    error_message = "endpoint_name_sanitized must not be set if endpoint_name does not contain a dot"
+  }
+
+  validation {
+    condition     = var.endpoint_name_sanitized != null ? !strcontains(var.endpoint_name_sanitized, ".") : true
+    error_message = "endpoint_name_sanitized must not contain a dot"
+  }
+}
+
+locals {
+  // If endpoint_name_sanitized is not set, use endpoint_name, otherwise use endpoint_name_sanitized
+  endpoint_name_sanitized = var.endpoint_name_sanitized != null ? var.endpoint_name_sanitized : var.endpoint_name
 }
 
 variable "source_bucket" {

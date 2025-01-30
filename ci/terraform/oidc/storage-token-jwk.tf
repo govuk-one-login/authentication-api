@@ -15,7 +15,9 @@ module "oidc_storage_token_jwk_role" {
 module "storage_token_jwk" {
   source = "../modules/endpoint-module-v2"
 
-  endpoint_name   = "storage-token-jwk.json"
+  endpoint_name           = "storage-token-jwk.json"
+  endpoint_name_sanitized = "storage-token-jwkjson"
+
   path_part       = var.orch_storage_token_jwk_enabled ? "storage-token-jwk-auth.json" : "storage-token-jwk.json"
   endpoint_method = ["GET"]
   environment     = var.environment

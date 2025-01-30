@@ -17,7 +17,9 @@ module "oidc_jwks_role" {
 module "jwks" {
   source = "../modules/endpoint-module-v2"
 
-  endpoint_name   = "jwks.json"
+  endpoint_name           = "jwks.json"
+  endpoint_name_sanitized = "jwksjson"
+
   path_part       = var.orch_jwks_enabled ? "jwks-auth.json" : "jwks.json"
   endpoint_method = ["GET"]
   environment     = var.environment

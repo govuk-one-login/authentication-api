@@ -3,6 +3,14 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
+TMPDIR="${TMPDIR:-/tmp}"
+TF_DATA_DIR_BASE="${TMPDIR}/authentication-api-tf"
+
+CURRENT_BRANCH_B64="$(git rev-parse --abbrev-ref HEAD | base64 -b0)"
+TF_DATA_DIR_CURRENT_BRANCH_BASE="${TF_DATA_DIR_BASE}/${CURRENT_BRANCH_B64}"
+
+mkdir -p "${TF_DATA_DIR_CURRENT_BRANCH_BASE}"
+
 environments=("authdev1" "authdev2" "sandpit")
 
 function usage() {
@@ -14,7 +22,7 @@ Options:
     -b, --build                 run gradle and buildZip tasks before applying the Terraform configuration. (default: true)
     --no-build                  do not run gradle and buildZip tasks before applying the Terraform configuration. (default: false)
     -p, --prompt                prompt for confirmation before applying the Terraform configuration. (default: false)
-    -c, --clean                 run gradle clean before build. (default: false)
+    -c, --clean                 run gradle clean and remove old terraform data dirs before build. (default: false)
     --shell                     start a shell in the Terraform configuration directory. (does not automatically apply) (default: false)
     -r, --refresh-only          only refresh the Terraform configuration without applying it. (default: false)
     -h, --help                  display this help message.
@@ -130,6 +138,12 @@ if [[ ${O_BUILD} -eq 1 ]]; then
   echo "done!"
 fi
 
+if [[ ${O_CLEAN} == "clean" ]]; then
+  echo "Cleaning Terraform cache ..."
+  rm -rf "${TF_DATA_DIR_BASE}"
+  echo "done!"
+fi
+
 echo "Ensuring AWS CLI is configured ..."
 # Test if the AWS CLI is configured with the correct profile
 if ! sso_session="$(aws configure get sso_session --profile "${AWS_PROFILE}")"; then
@@ -151,8 +165,8 @@ echo "done!"
 function run_terraform() {
   local component="${1}"
   echo "Running ${component} Terraform ..."
+  export TF_DATA_DIR="${TF_DATA_DIR_CURRENT_BRANCH_BASE}/${component}"
   pushd "${DIR}/ci/terraform/${component}" > /dev/null
-  rm -rf .terraform/
   terraform init -backend-config="${ENVIRONMENT}".hcl
 
   if [[ ${O_SHELL} -eq 1 ]]; then
