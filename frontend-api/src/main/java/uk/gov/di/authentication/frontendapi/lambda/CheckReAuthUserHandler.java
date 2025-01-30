@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -67,14 +68,16 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             AuthenticationService authenticationService,
             AuditService auditService,
             AuthenticationAttemptsService authenticationAttemptsService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            AuthSessionService authSessionService) {
         super(
                 CheckReauthUserRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.auditService = auditService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
