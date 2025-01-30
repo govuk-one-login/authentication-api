@@ -249,7 +249,9 @@ class SendNotificationHandlerTest {
                                                 EMAIL,
                                                 notificationType,
                                                 TEST_SIX_DIGIT_CODE,
-                                                SupportedLanguage.EN)));
+                                                SupportedLanguage.EN,
+                                                SESSION_ID,
+                                                CLIENT_SESSION_ID)));
                 if (notificationType == NotificationType.VERIFY_EMAIL
                         && journeyType == JourneyType.REGISTRATION) {
                     verify(pendingEmailCheckSqsClient)
@@ -392,7 +394,9 @@ class SendNotificationHandlerTest {
                                         EMAIL,
                                         notificationType,
                                         TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN)));
+                                        SupportedLanguage.EN,
+                                        SESSION_ID,
+                                        CLIENT_SESSION_ID)));
         var expectedEvent =
                 notificationType.equals(VERIFY_EMAIL)
                         ? AUTH_EMAIL_CODE_SENT
@@ -434,7 +438,9 @@ class SendNotificationHandlerTest {
                                         CommonTestVariables.UK_MOBILE_NUMBER,
                                         VERIFY_PHONE_NUMBER,
                                         TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN)));
+                                        SupportedLanguage.EN,
+                                        SESSION_ID,
+                                        CLIENT_SESSION_ID)));
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_PHONE_CODE_SENT, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
@@ -565,7 +571,9 @@ class SendNotificationHandlerTest {
                                         EMAIL,
                                         notificationType,
                                         TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN)));
+                                        SupportedLanguage.EN,
+                                        SESSION_ID,
+                                        CLIENT_SESSION_ID)));
 
         var body =
                 format(
@@ -641,7 +649,9 @@ class SendNotificationHandlerTest {
                                         phoneNumber,
                                         VERIFY_PHONE_NUMBER,
                                         TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN)));
+                                        SupportedLanguage.EN,
+                                        SESSION_ID,
+                                        CLIENT_SESSION_ID)));
         verify(auditService)
                 .submitAuditEvent(AUTH_PHONE_CODE_SENT, auditContext.withPhoneNumber(phoneNumber));
     }
