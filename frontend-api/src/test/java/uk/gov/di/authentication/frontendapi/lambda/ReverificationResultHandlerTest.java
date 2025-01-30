@@ -10,10 +10,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.IDReverificationState;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -54,6 +56,7 @@ class ReverificationResultHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -63,6 +66,7 @@ class ReverificationResultHandlerTest {
     private final IDReverificationStateService idReverificationStateService =
             mock(IDReverificationStateService.class);
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
     private static final String AUTHENTICATION_STATE = "abcdefg";
     private static final IDReverificationState ID_REVERIFICATION_STATE =
@@ -75,6 +79,8 @@ class ReverificationResultHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
         when(configurationService.getIPVBackendURI())
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
 
@@ -87,6 +93,7 @@ class ReverificationResultHandlerTest {
                         authenticationService,
                         reverificationResultService,
                         auditService,
+                        authSessionService,
                         idReverificationStateService);
     }
 
