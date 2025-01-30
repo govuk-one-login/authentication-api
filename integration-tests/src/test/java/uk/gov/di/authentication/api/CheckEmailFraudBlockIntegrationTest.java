@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 
 import java.net.URI;
@@ -49,6 +50,9 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
     protected static final EmailCheckResultExtension emailCheckResultExtension =
             new EmailCheckResultExtension();
 
+    @RegisterExtension
+    protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+
     @BeforeEach
     void setup() {
         handler =
@@ -61,6 +65,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
     void shouldReturnCorrectStatusBasedOnDbResult() throws Json.JsonException {
         userStore.signUp(EMAIL, "password-1", SUBJECT);
         var sessionId = redis.createSession();
+        authSessionExtension.addSession(sessionId);
         dynamoEmailCheckResultService.saveEmailCheckResult(
                 EMAIL, EmailCheckResultStatus.ALLOW, unixTimePlusNDays(), "test-reference");
         redis.addEmailToSession(sessionId, EMAIL);
