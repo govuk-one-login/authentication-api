@@ -9,9 +9,13 @@ import au.com.dius.pact.core.model.PactSpecVersion;
 import au.com.dius.pact.core.model.RequestResponsePact;
 import au.com.dius.pact.core.model.annotations.Pact;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.oauth2.sdk.*;
-import com.nimbusds.oauth2.sdk.id.*;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.JWTID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -21,8 +25,10 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
-import uk.gov.di.orchestration.shared.helpers.*;
-import uk.gov.di.orchestration.shared.services.*;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.JwksService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.net.URI;
 import java.time.Instant;
@@ -34,13 +40,16 @@ import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
 
 @PactConsumerTest
 @MockServerConfig(hostInterface = "localHost", port = "1234")
 public class IpvTokenTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private IPVTokenService ipvTokenService;
 
     private static final String IPV_AUD = "http://ipv/";
@@ -68,12 +77,18 @@ public class IpvTokenTest {
             "Oe86h2qN7LGSSqBWW7m2nZOuPzvupvH6DBlrp5VyNkb4gScUuLk9xKQpXf3IPUM8oLnVV4IuDbcKFWLUynV9EA";
 
     @BeforeEach
-    void setUp() {
-        ipvTokenService = new IPVTokenService(configService, kmsConnectionService);
+    void setUp() throws JOSEException {
+        ipvTokenService = new IPVTokenService(configService, kmsConnectionService, jwksService);
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
         when(configService.getIPVTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockKmsReturn());
+        when(jwksService.getPublicIpvTokenJwkWithOpaqueId())
+                .thenReturn(
+                        new ECKeyGenerator(Curve.P_256)
+                                .keyID(KEY_ID)
+                                .algorithm(JWSAlgorithm.ES256)
+                                .generate());
     }
 
     @Pact(consumer = "OrchTokenConsumer")

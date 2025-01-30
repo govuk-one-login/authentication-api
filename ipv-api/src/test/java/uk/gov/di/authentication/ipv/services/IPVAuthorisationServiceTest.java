@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -71,6 +72,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.ipv.services.IPVAuthorisationService.STATE_STORAGE_PREFIX;
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 
 class IPVAuthorisationServiceTest {
 
@@ -83,6 +85,7 @@ class IPVAuthorisationServiceTest {
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
+    private static final String IPV_SIGNING_KEY_ID = "test-signing-key-id";
     private static final String SERIALIZED_JWT =
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLmFjY291bnQuZ292LnVrIiwiaHR0cHM6Ly9pZGVudGl0eS50ZXN0LmFjY291bnQuZ292LnVrIl0sInN1YiI6InVybjpmZGM6Z292LnVrOjIwMjI6VEpMdDNXYWlHa0xoOFVxZWlzSDJ6VktHQVAwIiwic2NvcGUiOiJwcm92aW5nIiwiaXNzIjoiaHR0cHM6Ly9vaWRjLnRlc3QuYWNjb3VudC5nb3YudWsiLCJleHAiOjE3MTgxOTU3NjMsImlhdCI6MTcxODE5NTQ2MywianRpIjoiMWQyZTdmODgtYWIwNy00NWU5LThkYTAtOWEyMzIyMWFhZjM3In0.6MpC8IZbOICVjvf_97ySj6yOO6khQGhkEGHvYB6kXGMroSQgF0z0-Z1EVJi5sVXwmbe4X6eDRTIYtM07xItiMg";
 
@@ -126,6 +129,14 @@ class IPVAuthorisationServiceTest {
         when(configurationService.getIPVJwksUrl())
                 .thenReturn(new URL("http://localhost/.well-known/jwks.json"));
         when(jwksService.getIpvJwk()).thenReturn(rsaKey);
+        when(configurationService.getIPVTokenSigningKeyAlias()).thenReturn(IPV_SIGNING_KEY_ID);
+        when(jwksService.getPublicIpvTokenJwkWithOpaqueId())
+                .thenReturn(
+                        new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                                .keyID(hashSha256String(IPV_SIGNING_KEY_ID))
+                                .keyUse(KeyUse.SIGNATURE)
+                                .algorithm(RS256)
+                                .build());
     }
 
     @Test
@@ -336,6 +347,9 @@ class IPVAuthorisationServiceTest {
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("reprove_identity"),
                     equalTo(true));
+            assertThat(
+                    signedJWTResponse.getHeader().getKeyID(),
+                    equalTo(hashSha256String(IPV_SIGNING_KEY_ID)));
         }
 
         @Test
