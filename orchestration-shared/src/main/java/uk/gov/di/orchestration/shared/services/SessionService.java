@@ -24,14 +24,12 @@ public class SessionService {
 
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
-    private final CookieHelper cookieHelper;
 
     public SessionService(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
-        this.cookieHelper = new CookieHelper();
     }
 
     public SessionService(ConfigurationService configurationService) {
@@ -84,12 +82,17 @@ public class SessionService {
     }
 
     public void updateWithNewSessionId(Session session, String newSessionId) {
+        updateWithNewSessionId(session, session.getSessionId(), newSessionId);
+    }
+
+    public Session updateWithNewSessionId(
+            Session session, String oldSessionId, String newSessionId) {
         try {
-            String oldSessionId = session.getSessionId();
             session.setSessionId(newSessionId);
             session.resetProcessingIdentityAttempts();
             storeOrUpdateSession(session, oldSessionId);
             redisConnectionService.deleteValue(oldSessionId);
+            return session;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -124,7 +127,7 @@ public class SessionService {
 
     public Optional<Session> getSessionFromSessionCookie(Map<String, String> headers) {
         try {
-            Optional<CookieHelper.SessionCookieIds> ids = cookieHelper.parseSessionCookie(headers);
+            Optional<CookieHelper.SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
             return ids.flatMap(s -> getSession(s.getSessionId()));
         } catch (Exception e) {
             throw new RuntimeException(e);

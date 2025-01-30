@@ -99,7 +99,6 @@ public class IPVCallbackHandler
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final CommonFrontend frontend;
     protected final Json objectMapper = SerializationService.getInstance();
-    private final CookieHelper cookieHelper;
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -118,7 +117,6 @@ public class IPVCallbackHandler
             AuditService auditService,
             LogoutService logoutService,
             AccountInterventionService accountInterventionService,
-            CookieHelper cookieHelper,
             NoSessionOrchestrationService noSessionOrchestrationService,
             IPVCallbackHelper ipvCallbackHelper,
             CommonFrontend frontend) {
@@ -134,7 +132,6 @@ public class IPVCallbackHandler
         this.auditService = auditService;
         this.logoutService = logoutService;
         this.accountInterventionService = accountInterventionService;
-        this.cookieHelper = cookieHelper;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.ipvCallbackHelper = ipvCallbackHelper;
         this.frontend = frontend;
@@ -163,7 +160,6 @@ public class IPVCallbackHandler
                         configurationService,
                         new CloudwatchMetricsService(configurationService),
                         auditService);
-        this.cookieHelper = new CookieHelper();
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
@@ -191,7 +187,6 @@ public class IPVCallbackHandler
                         configurationService,
                         new CloudwatchMetricsService(configurationService),
                         auditService);
-        this.cookieHelper = new CookieHelper();
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService, redis);
@@ -215,7 +210,7 @@ public class IPVCallbackHandler
                 throw new IpvCallbackException("Identity is not enabled");
             }
             var sessionCookiesIds =
-                    cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
+                    CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
             if (Objects.isNull(sessionCookiesIds)) {
                 var noSessionEntity =
                         noSessionOrchestrationService.generateNoSessionOrchestrationEntity(

@@ -36,7 +36,6 @@ public class LogoutHandler
     private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
     private final TokenValidationService tokenValidationService;
-    private final CookieHelper cookieHelper;
 
     private final LogoutService logoutService;
 
@@ -53,7 +52,6 @@ public class LogoutHandler
                                 configurationService,
                                 new KmsConnectionService(configurationService)),
                         configurationService);
-        this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
     }
 
@@ -66,7 +64,6 @@ public class LogoutHandler
                                 configurationService,
                                 new KmsConnectionService(configurationService)),
                         configurationService);
-        this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
     }
 
@@ -78,7 +75,6 @@ public class LogoutHandler
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.tokenValidationService = tokenValidationService;
-        this.cookieHelper = new CookieHelper();
         this.logoutService = logoutService;
     }
 
@@ -115,7 +111,7 @@ public class LogoutHandler
 
     private void attachSessionToLogs(Session session, Map<String, String> headers) {
         CookieHelper.SessionCookieIds sessionCookieIds =
-                cookieHelper.parseSessionCookie(headers).orElseThrow();
+                CookieHelper.parseSessionCookie(headers).orElseThrow();
         attachSessionIdToLogs(session);
         attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());

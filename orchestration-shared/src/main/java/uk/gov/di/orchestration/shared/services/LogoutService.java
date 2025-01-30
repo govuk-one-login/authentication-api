@@ -253,18 +253,14 @@ public class LogoutService {
                 metadata.toArray(AuditService.MetadataPair[]::new));
     }
 
-    private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
-        var sessionCookieIds = new CookieHelper().parseSessionCookie(headers);
-        return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
-    }
-
     private TxmaAuditUser createAuditUser(APIGatewayProxyRequestEvent input, Session session) {
         return TxmaAuditUser.user()
                 .withIpAddress(extractIpAddress(input))
                 .withPersistentSessionId(extractPersistentIdFromCookieHeader(input.getHeaders()))
                 .withSessionId(session.getSessionId())
                 .withGovukSigninJourneyId(
-                        extractClientSessionIdFromCookieHeaders(input.getHeaders()).orElse(null))
+                        CookieHelper.getClientSessionIdFromRequestHeaders(input.getHeaders())
+                                .orElse(null))
                 .withUserId(session.getInternalCommonSubjectIdentifier());
     }
 }

@@ -23,14 +23,12 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
     private static final Logger LOG = LogManager.getLogger(OrchSessionService.class);
 
     private final ConfigurationService configurationService;
-    private final CookieHelper cookieHelper;
 
     private final long timeToLive;
 
     public OrchSessionService(ConfigurationService configurationService) {
         super(OrchSessionItem.class, "Orch-Session", configurationService, true);
         this.timeToLive = configurationService.getSessionExpiry();
-        this.cookieHelper = new CookieHelper();
         this.configurationService = configurationService;
     }
 
@@ -40,7 +38,6 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
             ConfigurationService configurationService) {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
-        this.cookieHelper = new CookieHelper();
         this.configurationService = configurationService;
     }
 
@@ -121,7 +118,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
 
     public Optional<OrchSessionItem> getSessionFromSessionCookie(Map<String, String> headers) {
         try {
-            Optional<CookieHelper.SessionCookieIds> ids = cookieHelper.parseSessionCookie(headers);
+            Optional<CookieHelper.SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
             return ids.flatMap(s -> getSession(s.getSessionId()));
         } catch (Exception e) {
             logAndThrowOrchSessionException(

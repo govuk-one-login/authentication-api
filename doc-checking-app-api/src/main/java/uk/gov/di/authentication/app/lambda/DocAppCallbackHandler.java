@@ -75,7 +75,6 @@ public class DocAppCallbackHandler
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final AuthorisationCodeService authorisationCodeService;
-    private final CookieHelper cookieHelper;
     private final AuthFrontend authFrontend;
     private final DocAppCriAPI docAppCriApi;
     private final OrchSessionService orchSessionService;
@@ -94,7 +93,6 @@ public class DocAppCallbackHandler
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
             AuthorisationCodeService authorisationCodeService,
-            CookieHelper cookieHelper,
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
             AuthFrontend authFrontend,
@@ -108,7 +106,6 @@ public class DocAppCallbackHandler
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
         this.authorisationCodeService = authorisationCodeService;
-        this.cookieHelper = cookieHelper;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.authFrontend = authFrontend;
@@ -133,7 +130,6 @@ public class DocAppCallbackHandler
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
-        this.cookieHelper = new CookieHelper();
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
@@ -161,7 +157,6 @@ public class DocAppCallbackHandler
         this.authorisationCodeService =
                 new AuthorisationCodeService(
                         configurationService, redis, SerializationService.getInstance());
-        this.cookieHelper = new CookieHelper();
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);
@@ -184,7 +179,7 @@ public class DocAppCallbackHandler
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             var sessionCookiesIds =
-                    cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
+                    CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
 
             if (Objects.isNull(sessionCookiesIds)) {
                 LOG.warn("No session cookie present. Attempt to find session using state");

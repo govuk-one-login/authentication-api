@@ -113,7 +113,6 @@ public class AuthenticationCallbackHandler
     private final ClientService clientService;
     private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
     private final AccountInterventionService accountInterventionService;
-    private final CookieHelper cookieHelper;
     private final LogoutService logoutService;
     private final AuthFrontend authFrontend;
 
@@ -135,7 +134,6 @@ public class AuthenticationCallbackHandler
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.cookieHelper = new CookieHelper();
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
@@ -176,7 +174,6 @@ public class AuthenticationCallbackHandler
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.cookieHelper = new CookieHelper();
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authorisationCodeService =
                 new AuthorisationCodeService(
@@ -214,7 +211,6 @@ public class AuthenticationCallbackHandler
             ClientSessionService clientSessionService,
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
-            CookieHelper cookieHelper,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthorisationCodeService authorisationCodeService,
             ClientService clientService,
@@ -230,7 +226,6 @@ public class AuthenticationCallbackHandler
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
-        this.cookieHelper = cookieHelper;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authorisationCodeService = authorisationCodeService;
         this.clientService = clientService;
@@ -248,7 +243,7 @@ public class AuthenticationCallbackHandler
 
         try {
             CookieHelper.SessionCookieIds sessionCookiesIds =
-                    cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
+                    CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
 
             if (sessionCookiesIds == null) {
                 throw new AuthenticationCallbackException("No session cookie found");
