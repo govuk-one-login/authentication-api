@@ -63,6 +63,12 @@ variable "interventions_api_stub_release_zip_file" {
   type        = string
 }
 
+variable "interventions_api_stub_dependencies_zip_file" {
+  default     = "../../../interventions-api-stub/build/distributions/interventions-api-stub-dependencies.zip"
+  description = "Location of the Lambda dependencies ZIP file"
+  type        = string
+}
+
 variable "orchestration_vpc_endpoint_id" {
   description = "ID of the VPC endpoint in the orchestration VPC to permit access"
   type        = string
