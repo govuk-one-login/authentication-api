@@ -495,12 +495,20 @@ public class AuthenticationCallbackHandler
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    session, input, clientId, intervention);
+                                    new DestroySessionsRequest(sessionId, session),
+                                    session.getInternalCommonSubjectIdentifier(),
+                                    input,
+                                    clientId,
+                                    intervention);
                         }
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        session, input, clientId, intervention);
+                                        new DestroySessionsRequest(sessionId, session),
+                                        session.getInternalCommonSubjectIdentifier(),
+                                        input,
+                                        clientId,
+                                        intervention);
                             }
                             // continue
                         }

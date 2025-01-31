@@ -350,7 +350,11 @@ class LogoutServiceTest {
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, intervention);
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        SUBJECT.getValue(),
+                        event,
+                        CLIENT_ID,
+                        intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
@@ -380,7 +384,11 @@ class LogoutServiceTest {
 
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, intervention);
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        SUBJECT.getValue(),
+                        event,
+                        CLIENT_ID,
+                        intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(session.getSessionId());
@@ -444,12 +452,19 @@ class LogoutServiceTest {
         AccountIntervention intervention =
                 new AccountIntervention(new AccountInterventionState(false, false, false, false));
 
+        var expectedDestroySessionsRequest =
+                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
+        var expectedInternalCommonSubjectId = SUBJECT.getValue();
         RuntimeException exception =
                 assertThrows(
                         RuntimeException.class,
                         () ->
                                 logoutService.handleAccountInterventionLogout(
-                                        session, event, CLIENT_ID, intervention),
+                                        expectedDestroySessionsRequest,
+                                        expectedInternalCommonSubjectId,
+                                        event,
+                                        CLIENT_ID,
+                                        intervention),
                         "Expected to throw exception");
 
         assertEquals("Account status must be blocked or suspended", exception.getMessage());

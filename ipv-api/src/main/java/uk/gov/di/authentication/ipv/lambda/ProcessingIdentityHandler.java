@@ -13,6 +13,7 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -213,7 +214,12 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             throws Json.JsonException {
         var logoutResult =
                 logoutService.handleAccountInterventionLogout(
-                        userContext.getSession(), input, client.getClientID(), intervention);
+                        new DestroySessionsRequest(
+                                userContext.getSessionId(), userContext.getSession()),
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        input,
+                        client.getClientID(),
+                        intervention);
         var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
         return generateApiGatewayProxyResponse(
                 200,

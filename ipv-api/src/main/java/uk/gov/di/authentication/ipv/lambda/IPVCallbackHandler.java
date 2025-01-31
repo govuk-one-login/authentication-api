@@ -29,6 +29,7 @@ import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -325,7 +326,11 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, intervention);
+                            new DestroySessionsRequest(sessionId, session),
+                            session.getInternalCommonSubjectIdentifier(),
+                            input,
+                            clientId,
+                            intervention);
                 }
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -431,7 +436,11 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, intervention);
+                            new DestroySessionsRequest(sessionId, session),
+                            session.getInternalCommonSubjectIdentifier(),
+                            input,
+                            clientId,
+                            intervention);
                 }
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
                 if (returnCodePresentInIPVResponse(returnCode)) {

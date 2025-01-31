@@ -18,6 +18,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -229,7 +230,7 @@ class ProcessingIdentityHandlerTest {
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(intervention);
         String redirectUrl = "https://example.com/intervention";
-        when(logoutService.handleAccountInterventionLogout(any(), any(), any(), any()))
+        when(logoutService.handleAccountInterventionLogout(any(), any(), any(), any(), any()))
                 .thenReturn(
                         generateApiGatewayProxyResponse(
                                 302, "", Map.of(ResponseHeaders.LOCATION, redirectUrl), null));
@@ -237,7 +238,12 @@ class ProcessingIdentityHandlerTest {
         var result = handler.handleRequest(event, context);
 
         verify(logoutService)
-                .handleAccountInterventionLogout(session, event, CLIENT_ID, intervention);
+                .handleAccountInterventionLogout(
+                        new DestroySessionsRequest(SESSION_ID, List.of(), null),
+                        null,
+                        event,
+                        CLIENT_ID,
+                        intervention);
         assertThat(result, hasStatus(200));
         assertThat(
                 result,

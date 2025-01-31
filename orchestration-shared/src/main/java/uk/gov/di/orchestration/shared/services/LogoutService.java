@@ -12,7 +12,6 @@ import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LogoutReason;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 
@@ -111,14 +110,6 @@ public class LogoutService {
                 302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
 
-    private void destroySessions(Session session) {
-        destroySessions(
-                new DestroySessionsRequest(
-                        session.getSessionId(),
-                        session.getClientSessions(),
-                        session.getEmailAddress()));
-    }
-
     private void destroySessions(DestroySessionsRequest request) {
         for (String clientSessionId : request.getClientSessions()) {
             clientSessionService
@@ -203,14 +194,15 @@ public class LogoutService {
     }
 
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
-            Session session,
+            DestroySessionsRequest request,
+            String internalCommonSubjectId,
             APIGatewayProxyRequestEvent input,
             String clientId,
             AccountIntervention intervention) {
 
-        var auditUser = createAuditUser(input, session);
+        var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
 
-        destroySessions(session);
+        destroySessions(request);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
 
         URI redirectURI;
@@ -263,11 +255,6 @@ public class LogoutService {
                 auditClientId,
                 auditUser,
                 metadata.toArray(AuditService.MetadataPair[]::new));
-    }
-
-    private TxmaAuditUser createAuditUser(APIGatewayProxyRequestEvent input, Session session) {
-        return createAuditUser(
-                input, session.getSessionId(), session.getInternalCommonSubjectIdentifier());
     }
 
     private TxmaAuditUser createAuditUser(

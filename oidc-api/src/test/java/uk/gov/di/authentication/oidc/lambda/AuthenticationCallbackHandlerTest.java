@@ -143,6 +143,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String PERSISTENT_SESSION_ID =
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
+
     private static final Session session =
             new Session(SESSION_ID)
                     .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
@@ -810,7 +811,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
             }
 
             @Test
@@ -824,7 +830,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
             }
 
             @Test
@@ -838,7 +849,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
             }
 
             @Test
@@ -873,7 +889,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.getValue(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.getValue(),
+                                intervention);
             }
         }
 
@@ -924,7 +945,13 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.getValue(),
+                                intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
                 verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
                 verify(orchSessionService, times(2))
@@ -969,7 +996,13 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
                 verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
             }
@@ -1012,7 +1045,13 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
             }
         }
