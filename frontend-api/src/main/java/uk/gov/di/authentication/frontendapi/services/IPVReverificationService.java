@@ -19,14 +19,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.security.interfaces.RSAPublicKey;
@@ -39,43 +35,31 @@ public class IPVReverificationService {
     private static final Logger LOG = LogManager.getLogger(IPVReverificationService.class);
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private static final String MFA_RESET_SCOPE = "reverification";
-    public static final String STATE_STORAGE_PREFIX = "mfaReset:state:";
     private final ConfigurationService configurationService;
     private final JwtService jwtService;
     private final NowClock nowClock;
     private final TokenService tokenService;
-    private final RedisConnectionService redisConnectionService;
-    private final Json objectMapper = SerializationService.getInstance();
 
     public IPVReverificationService(
             ConfigurationService configurationService,
             JwtService jwtService,
-            TokenService tokenService,
-            RedisConnectionService redisConnectionService) {
-        this(
-                configurationService,
-                new NowClock(Clock.systemUTC()),
-                jwtService,
-                tokenService,
-                redisConnectionService);
+            TokenService tokenService) {
+        this(configurationService, new NowClock(Clock.systemUTC()), jwtService, tokenService);
     }
 
     public IPVReverificationService(
             ConfigurationService configurationService,
             NowClock nowClock,
             JwtService jwtService,
-            TokenService tokenService,
-            RedisConnectionService redisConnectionService) {
+            TokenService tokenService) {
         this.configurationService = configurationService;
         this.nowClock = nowClock;
         this.jwtService = jwtService;
         this.tokenService = tokenService;
-        this.redisConnectionService = redisConnectionService;
     }
 
     public String buildIpvReverificationRedirectUri(
-            Subject subject, String clientSessionId, Session session, State state)
-            throws JwtServiceException {
+            Subject subject, String clientSessionId, State state) throws JwtServiceException {
         ClaimsSetRequest claims = buildMfaResetClaimsRequest(subject);
         EncryptedJWT requestJWT =
                 constructMfaResetAuthorizationJWT(state, subject, claims, clientSessionId);
@@ -89,8 +73,6 @@ public class IPVReverificationService {
 
         AuthorizationRequest ipvAuthorisationRequest = authRequestBuilder.build();
         String ipvReverificationRequestURI = ipvAuthorisationRequest.toURI().toString();
-
-        storeState(session.getSessionId(), state);
 
         LOG.info("IPV reverification JAR created, redirect URI {}", ipvReverificationRequestURI);
 
@@ -168,18 +150,6 @@ public class IPVReverificationService {
             throw new IPVReverificationServiceException(e.getMessage());
         } catch (MissingEnvVariableException e) {
             LOG.error("Missing environment variable IPV Auth Encryption Public Key");
-            throw new IPVReverificationServiceException(e.getMessage());
-        }
-    }
-
-    private void storeState(String sessionId, State state) {
-        try {
-            redisConnectionService.saveWithExpiry(
-                    STATE_STORAGE_PREFIX + sessionId,
-                    objectMapper.writeValueAsString(state),
-                    configurationService.getSessionExpiry());
-        } catch (Json.JsonException e) {
-            LOG.error("Unable to save state to Redis");
             throw new IPVReverificationServiceException(e.getMessage());
         }
     }

@@ -45,9 +45,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
-import static uk.gov.di.authentication.frontendapi.services.IPVReverificationService.STATE_STORAGE_PREFIX;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -174,7 +172,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         assertThat(response, hasStatus(200));
 
         checkCorrectKeysUsedViaIntegrationWithKms();
-        checkStateIsStoredViaIntegrationWithRedis(sessionId);
         checkTxmaEventPublishedViaIntegrationWithSQS();
     }
 
@@ -186,11 +183,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                                         "$.KeyId",
                                         new ContainsPattern(
                                                 ipvReverificationRequestsSigningKey.getKeyId()))));
-    }
-
-    private static void checkStateIsStoredViaIntegrationWithRedis(String sessionId) {
-        var state = redisExtension.getFromRedis(STATE_STORAGE_PREFIX + sessionId);
-        assertNotNull(state);
     }
 
     private static void checkTxmaEventPublishedViaIntegrationWithSQS() {

@@ -121,10 +121,7 @@ class MfaResetAuthorizeHandlerTest {
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        eq(new Subject(COMMON_SUBJECT_ID)),
-                        eq(CLIENT_SESSION_ID),
-                        eq(session),
-                        any()))
+                        eq(new Subject(COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
                 .thenReturn(TEST_REDIRECT_URI);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
@@ -144,7 +141,7 @@ class MfaResetAuthorizeHandlerTest {
         ArgumentCaptor<State> authenticationStateCaptor = ArgumentCaptor.forClass(State.class);
         verify(ipvReverificationService)
                 .buildIpvReverificationRedirectUri(
-                        any(), any(), any(), authenticationStateCaptor.capture());
+                        any(), any(), authenticationStateCaptor.capture());
         verify(idReverificationStateService)
                 .store(
                         authenticationStateCaptor.getValue().getValue(),
@@ -155,10 +152,7 @@ class MfaResetAuthorizeHandlerTest {
     @Test
     void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        eq(new Subject(COMMON_SUBJECT_ID)),
-                        eq(CLIENT_SESSION_ID),
-                        eq(session),
-                        any()))
+                        eq(new Subject(COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
                 .thenThrow(new JwtServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
@@ -170,10 +164,7 @@ class MfaResetAuthorizeHandlerTest {
     @Test
     void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        eq(new Subject(COMMON_SUBJECT_ID)),
-                        eq(CLIENT_SESSION_ID),
-                        eq(session),
-                        any()))
+                        eq(new Subject(COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
                 .thenThrow(new IPVReverificationServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
