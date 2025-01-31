@@ -762,7 +762,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER.withSessionId(session.getSessionId()),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
         }
@@ -2026,11 +2026,9 @@ class AuthorisationHandlerTest {
                 withExistingOrchSession(null);
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession(anyString());
+                verify(sessionService).generateSession(NEW_SESSION_ID);
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-                var actualSession = sessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2058,11 +2056,9 @@ class AuthorisationHandlerTest {
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession(anyString());
+                verify(sessionService).generateSession(NEW_SESSION_ID);
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-                var actualSession = sessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2089,11 +2085,9 @@ class AuthorisationHandlerTest {
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession(anyString());
+                verify(sessionService).generateSession(NEW_SESSION_ID);
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-                var actualSession = sessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2123,8 +2117,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService, never()).generateSession(anyString());
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-                var actualSession = sessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2160,8 +2152,6 @@ class AuthorisationHandlerTest {
                 verify(sessionService, never()).generateSession(anyString());
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-                var actualSession = sessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
@@ -2189,11 +2179,9 @@ class AuthorisationHandlerTest {
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession(anyString());
+                verify(sessionService).generateSession(NEW_SESSION_ID);
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-                var actualSession = sessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualSession.getSessionId());
 
                 verify(orchSessionService).addSession(orchSessionCaptor.capture());
                 var actualOrchSession = orchSessionCaptor.getValue();
