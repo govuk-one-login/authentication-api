@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.IDReverificationStateExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -76,6 +77,10 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
     private static final KmsKeyExtension mfaResetJarSigningKey =
             new KmsKeyExtension("mfa-reset-jar-signing-key", KeyUsageType.SIGN_VERIFY);
 
+    @RegisterExtension
+    protected static final IDReverificationStateExtension idReverificationStateExtension =
+            new IDReverificationStateExtension();
+
     @BeforeAll
     static void setupEnvironment() {
         environment.set(
@@ -122,6 +127,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
 
     @Test
     void shouldSuccessfullyProcessAReverificationResult() {
+        idReverificationStateExtension.store("redirect-url", sessionId);
         stubFor(
                 post(urlPathMatching("/ipv/token"))
                         .willReturn(
@@ -140,7 +146,11 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
 
         var response =
                 makeRequest(
-                        Optional.of(new ReverificationResultRequest("code", "email")),
+                        Optional.of(
+                                new ReverificationResultRequest(
+                                        "code",
+                                        IDReverificationStateExtension.AUTHENTICATION_STATE_FIELD,
+                                        "email")),
                         constructFrontendHeaders(sessionId, sessionId),
                         Map.of());
 

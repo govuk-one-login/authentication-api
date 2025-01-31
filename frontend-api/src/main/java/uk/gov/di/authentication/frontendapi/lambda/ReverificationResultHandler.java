@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -29,6 +30,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -37,6 +39,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
     private static final Logger LOG = LogManager.getLogger(ReverificationResultHandler.class);
     private final ReverificationResultService reverificationResultService;
     private final AuditService auditService;
+    private final IDReverificationStateService idReverificationStateService;
 
     public ReverificationResultHandler(
             ConfigurationService configurationService,
@@ -45,7 +48,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             ClientService clientService,
             AuthenticationService authenticationService,
             ReverificationResultService reverificationResultService,
-            AuditService auditService) {
+            AuditService auditService,
+            IDReverificationStateService idReverificationStateService) {
         super(
                 ReverificationResultRequest.class,
                 configurationService,
@@ -55,6 +59,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                 authenticationService);
         this.reverificationResultService = reverificationResultService;
         this.auditService = auditService;
+        this.idReverificationStateService = idReverificationStateService;
     }
 
     public ReverificationResultHandler() {
@@ -65,6 +70,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         super(ReverificationResultRequest.class, configurationService, true);
         this.reverificationResultService = new ReverificationResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.idReverificationStateService = new IDReverificationStateService(configurationService);
     }
 
     @Override
@@ -88,6 +94,16 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+        var idReverificationStateMaybe = idReverificationStateService.get(request.state());
+        if (idReverificationStateMaybe.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1061);
+        }
+
+        var idReverificationState = idReverificationStateMaybe.get();
+        if (!idReverificationState.getClientSessionId().equals(userContext.getClientSessionId())) {
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1061);
+        }
 
         var tokenResponse =
                 InstrumentationHelper.segmentedFunctionCall(
