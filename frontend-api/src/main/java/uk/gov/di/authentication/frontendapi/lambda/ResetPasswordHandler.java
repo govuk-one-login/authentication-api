@@ -186,7 +186,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             updateAccountRecoveryBlockTable(
-                    userProfile, userCredentials, internalCommonSubjectId, auditContext);
+                    userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
 
             var incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
@@ -258,7 +258,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             UserProfile userProfile,
             UserCredentials userCredentials,
             Subject internalCommonSubjectId,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            ResetPasswordCompletionRequest request) {
         var authAppVerified =
                 Optional.ofNullable(userCredentials.getMfaMethods())
                         .orElseGet(Collections::emptyList)
@@ -273,7 +274,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 "AuthAppVerified: {}. PhoneNumberVerified: {}",
                 authAppVerified,
                 phoneNumberVerified);
-        if (phoneNumberVerified || authAppVerified) {
+        if (!request.allowMfaResetAfterPasswordReset()
+                && (phoneNumberVerified || authAppVerified)) {
             LOG.info("Adding block to account modifiers table");
             dynamoAccountModifiersService.setAccountRecoveryBlock(
                     internalCommonSubjectId.getValue(), true);

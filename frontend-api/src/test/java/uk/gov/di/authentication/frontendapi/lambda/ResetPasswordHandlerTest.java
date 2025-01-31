@@ -13,6 +13,9 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -50,11 +53,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -225,8 +231,7 @@ class ResetPasswordHandlerTest {
 
     @Test
     void
-            shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateModifiersTableWithBlock()
-                    throws Json.JsonException {
+            shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateModifiersTableWithBlock() {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
@@ -236,36 +241,55 @@ class ResetPasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(sqsClient, times(1))
-                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
-        verify(sqsClient, times(1))
-                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
         verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
         verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
-    @Test
-    void shouldNotWriteToAccountModifiersTableWhenNoVerifiedMFAMethodIsPresent()
-            throws Json.JsonException {
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
+    private static Stream<Arguments> requestsToExpectedWriteToAccountModifersTable() {
+        return Stream.of(
+                Arguments.of(format("{ \"password\": \"%s\"}", NEW_PASSWORD), true),
+                Arguments.of(
+                        format(
+                                "{ \"password\": \"%s\", \"allowMfaResetAfterPasswordReset\": false}",
+                                NEW_PASSWORD),
+                        true),
+                Arguments.of(
+                        format(
+                                "{ \"password\": \"%s\", \"allowMfaResetAfterPasswordReset\": true}",
+                                NEW_PASSWORD),
+                        false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("requestsToExpectedWriteToAccountModifersTable")
+    void
+            shouldReturn204ForSuccessfulResetAndWriteToAccountModifiersTableDependentOnFlagPassedThroughInRequest(
+                    String requestBody, boolean expectedWriteToAccountModifiers)
+                    throws Json.JsonException {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(true));
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, requestBody);
 
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(sqsClient, times(1))
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
-        verify(sqsClient, never())
+        verify(sqsClient, times(1))
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountModifiersService);
-
         verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+
+        if (expectedWriteToAccountModifiers) {
+            verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
+        } else {
+            verify(accountModifiersService, never())
+                    .setAccountRecoveryBlock(anyString(), anyBoolean());
+        }
     }
 
     @Test
