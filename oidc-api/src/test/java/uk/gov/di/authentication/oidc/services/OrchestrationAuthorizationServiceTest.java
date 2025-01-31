@@ -288,9 +288,10 @@ class OrchestrationAuthorizationServiceTest {
     void shouldSaveStateInRedis() {
         when(configurationService.getSessionExpiry()).thenReturn(3600L);
         var sessionId = "new-session-id";
+        var clientSessionId = "new-client-session-id";
         var state = new State();
 
-        orchestrationAuthorizationService.storeState(sessionId, state);
+        orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
         verify(redisConnectionService)
                 .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);

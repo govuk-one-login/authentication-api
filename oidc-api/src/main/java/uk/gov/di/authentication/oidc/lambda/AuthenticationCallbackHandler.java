@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -115,6 +116,7 @@ public class AuthenticationCallbackHandler
     private final AccountInterventionService accountInterventionService;
     private final LogoutService logoutService;
     private final AuthFrontend authFrontend;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
 
     public AuthenticationCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -156,13 +158,15 @@ public class AuthenticationCallbackHandler
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
     }
 
     public AuthenticationCallbackHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService) {
 
         var kmsConnectionService = new KmsConnectionService(configurationService);
-        var redisConnectionService = redis;
         this.configurationService = configurationService;
         this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
         this.tokenService =
@@ -200,6 +204,8 @@ public class AuthenticationCallbackHandler
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService, redisConnectionService);
         this.authFrontend = new AuthFrontend(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redisConnectionService);
     }
 
     public AuthenticationCallbackHandler(
@@ -217,7 +223,8 @@ public class AuthenticationCallbackHandler
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
             AccountInterventionService accountInterventionService,
             LogoutService logoutService,
-            AuthFrontend authFrontend) {
+            AuthFrontend authFrontend,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -233,6 +240,7 @@ public class AuthenticationCallbackHandler
         this.accountInterventionService = accountInterventionService;
         this.logoutService = logoutService;
         this.authFrontend = authFrontend;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -246,7 +254,7 @@ public class AuthenticationCallbackHandler
                     CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
 
             if (sessionCookiesIds == null) {
-                throw new AuthenticationCallbackException("No session cookie found");
+                return handleMissingSession(input);
             }
 
             var sessionId = sessionCookiesIds.getSessionId();
@@ -621,6 +629,38 @@ public class AuthenticationCallbackHandler
             LOG.info("Cannot retrieve auth request params from client session id");
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         }
+    }
+
+    private APIGatewayProxyResponseEvent handleMissingSession(APIGatewayProxyRequestEvent input)
+            throws ParseException {
+        try {
+            return handleCrossBrowserError(input);
+        } catch (NoSessionException e) {
+            throw new AuthenticationCallbackException("No session cookie found", e);
+        }
+    }
+
+    private APIGatewayProxyResponseEvent handleCrossBrowserError(APIGatewayProxyRequestEvent input)
+            throws NoSessionException, ParseException {
+        var noSessionEntity =
+                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                        input.getQueryStringParameters());
+        var authenticationRequest =
+                AuthenticationRequest.parse(
+                        noSessionEntity.getClientSession().getAuthRequestParams());
+        auditService.submitAuditEvent(
+                OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED,
+                authenticationRequest.getClientID().getValue(),
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(noSessionEntity.getClientSessionId()));
+        var errorResponse =
+                new AuthenticationErrorResponse(
+                        authenticationRequest.getRedirectionURI(),
+                        noSessionEntity.getErrorObject(),
+                        authenticationRequest.getState(),
+                        authenticationRequest.getResponseMode());
+        return generateApiGatewayProxyResponse(
+                302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
     }
 
     private boolean deduceUpliftRequired(UserInfo userInfo) {

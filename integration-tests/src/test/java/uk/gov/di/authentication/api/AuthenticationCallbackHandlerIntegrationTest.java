@@ -7,6 +7,7 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -14,6 +15,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -73,6 +75,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -88,6 +91,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -198,8 +202,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 containsString(RP_STATE.getValue()));
 
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
+                txmaAuditQueue, List.of(AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
 
         Optional<UserInfo> userInfo =
                 userInfoStoreExtension.getAuthenticationUserInfo(SUBJECT_ID.getValue());
@@ -258,6 +261,46 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
+    void
+            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
+                    throws Json.JsonException {
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .nonce(new Nonce())
+                        .state(RP_STATE);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addClientSessionAndStateToRedis(ORCH_TO_AUTH_STATE, CLIENT_SESSION_ID);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        emptyMap(),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCH_TO_AUTH_STATE.getValue(),
+                                        "error",
+                                        "access_denied")));
+
+        var error =
+                new ErrorObject(
+                        OAuth2Error.ACCESS_DENIED_CODE,
+                        "Access denied for security reasons, a new authentication request may be successful");
+
+        var expectedURI =
+                new AuthenticationErrorResponse(REDIRECT_URI, error, RP_STATE, null)
+                        .toURI()
+                        .toString();
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, singletonList(AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
+    }
+
+    @Test
     void shouldRedirectToIPVWhenIdentityRequired()
             throws ParseException, JOSEException, java.text.ParseException, Json.JsonException {
         setupTestWithDefaultEnvVars();
@@ -275,6 +318,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertRedirectToIpv(response, false);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertInformationStoredForNoSessionService(response);
     }
 
     void accountInterventionSetup() throws Json.JsonException {
@@ -966,10 +1010,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     private void assertRedirectToIpv(APIGatewayProxyResponseEvent response, boolean reproveIdentity)
             throws java.text.ParseException, JOSEException, ParseException {
-        var authRequest = validateQueryRequestToIPVAndReturnAuthRequest(response);
-
-        var encryptedRequestObject = authRequest.getRequestObject();
-        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
+        var signedJWTResponse = validateAndDecryptRequestObject(response);
 
         validateClaimsInJar(signedJWTResponse, reproveIdentity);
 
@@ -982,6 +1023,22 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED));
+    }
+
+    private SignedJWT validateAndDecryptRequestObject(APIGatewayProxyResponseEvent response)
+            throws ParseException, JOSEException {
+        var authRequest = validateQueryRequestToIPVAndReturnAuthRequest(response);
+
+        var encryptedRequestObject = authRequest.getRequestObject();
+        return decryptJWT((EncryptedJWT) encryptedRequestObject);
+    }
+
+    private void assertInformationStoredForNoSessionService(APIGatewayProxyResponseEvent response)
+            throws java.text.ParseException, ParseException, JOSEException {
+        var requestObject = validateAndDecryptRequestObject(response);
+        var state = requestObject.getJWTClaimsSet().getClaim("state");
+        var noSessionObject = redis.getFromRedis("state:" + state);
+        assertEquals(CLIENT_SESSION_ID, noSessionObject);
     }
 
     private void assertUserInfoStoredAndRedirectedToRp(APIGatewayProxyResponseEvent response)

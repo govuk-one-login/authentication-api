@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 
 import java.net.URI;
@@ -61,6 +62,7 @@ public class OrchestrationAuthorizationService {
     private final IPVCapacityService ipvCapacityService;
     private final KmsConnectionService kmsConnectionService;
     private final RedisConnectionService redisConnectionService;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
     private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
 
     public OrchestrationAuthorizationService(
@@ -74,6 +76,8 @@ public class OrchestrationAuthorizationService {
         this.ipvCapacityService = ipvCapacityService;
         this.kmsConnectionService = kmsConnectionService;
         this.redisConnectionService = redisConnectionService;
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redisConnectionService);
     }
 
     public OrchestrationAuthorizationService(ConfigurationService configurationService) {
@@ -239,12 +243,13 @@ public class OrchestrationAuthorizationService {
         return isTestJourney;
     }
 
-    public void storeState(String sessionId, State state) {
+    public void storeState(String sessionId, String clientSessionId, State state) {
         LOG.info("Storing state");
         redisConnectionService.saveWithExpiry(
                 AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId,
                 state.getValue(),
                 configurationService.getSessionExpiry());
+        noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 
     public boolean isJarValidationRequired(ClientRegistry client) {
