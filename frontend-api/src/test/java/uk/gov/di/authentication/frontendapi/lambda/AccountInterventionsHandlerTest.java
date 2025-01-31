@@ -493,13 +493,7 @@ class AccountInterventionsHandlerTest {
     private AccountInterventionsInboundResponse generateAccountInterventionResponse(
             boolean blocked, boolean suspended, boolean reproveIdentity, boolean resetPassword) {
         return new AccountInterventionsInboundResponse(
-                new Intervention(
-                        "1696969322935",
-                        AccountInterventionsHandlerTest.APPLIED_AT_TIMESTAMP,
-                        "1696869003456",
-                        "AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED",
-                        "1696969322935",
-                        "1696875903456"),
+                new Intervention(AccountInterventionsHandlerTest.APPLIED_AT_TIMESTAMP),
                 new State(blocked, suspended, reproveIdentity, resetPassword));
     }
 
