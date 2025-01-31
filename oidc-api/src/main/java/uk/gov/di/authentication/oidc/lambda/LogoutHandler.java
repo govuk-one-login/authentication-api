@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.LogoutRequest;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -94,10 +93,9 @@ public class LogoutHandler
                 new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, input);
 
-        if (logoutRequest.session().isPresent()) {
-            Session session = logoutRequest.session().get();
-            attachSessionToLogs(session, input.getHeaders());
-        }
+        logoutRequest
+                .sessionId()
+                .ifPresent(sessionId -> attachSessionToLogs(sessionId, input.getHeaders()));
         return logoutService.handleLogout(
                 logoutRequest.destroySessionsRequest(),
                 logoutRequest.errorObject(),
@@ -108,10 +106,10 @@ public class LogoutHandler
                 logoutRequest.rpPairwiseId());
     }
 
-    private void attachSessionToLogs(Session session, Map<String, String> headers) {
+    private void attachSessionToLogs(String sessionId, Map<String, String> headers) {
         CookieHelper.SessionCookieIds sessionCookieIds =
                 CookieHelper.parseSessionCookie(headers).orElseThrow();
-        attachSessionIdToLogs(session);
+        attachSessionIdToLogs(sessionId);
         attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
     }
