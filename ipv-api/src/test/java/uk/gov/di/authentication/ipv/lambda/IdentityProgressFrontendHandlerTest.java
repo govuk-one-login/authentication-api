@@ -44,7 +44,6 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -56,7 +55,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.conte
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class IdentityProgressHandlerTest {
+public class IdentityProgressFrontendHandlerTest {
 
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
     public static final String SESSION_ID = "some-session-id";
@@ -137,7 +136,7 @@ public class IdentityProgressHandlerTest {
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+        when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
 
         var result = handler.handleRequest(event, context);
@@ -175,7 +174,7 @@ public class IdentityProgressHandlerTest {
                         .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+        when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
 
         var result = handler.handleRequest(event, context);
@@ -210,7 +209,7 @@ public class IdentityProgressHandlerTest {
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(Optional.empty());
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+        when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
 
         var result = handler.handleRequest(event, context);
@@ -244,7 +243,7 @@ public class IdentityProgressHandlerTest {
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(Optional.empty());
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+        when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
 
         var result = handler.handleRequest(event, context);
@@ -283,7 +282,7 @@ public class IdentityProgressHandlerTest {
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+        when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -305,7 +304,6 @@ public class IdentityProgressHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
     }
 }

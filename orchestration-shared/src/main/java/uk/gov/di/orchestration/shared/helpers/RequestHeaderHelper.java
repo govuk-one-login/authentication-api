@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Map;
+import java.util.Optional;
 
 public final class RequestHeaderHelper {
 
@@ -39,6 +40,11 @@ public final class RequestHeaderHelper {
             LOG.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
             return false;
         }
+    }
+
+    public static Optional<String> getHeaderValueFromHeadersOpt(
+            Map<String, String> headers, String headerName, boolean matchLowerCase) {
+        return Optional.ofNullable(getHeaderValueFromHeaders(headers, headerName, matchLowerCase));
     }
 
     public static String getHeaderValueFromHeaders(

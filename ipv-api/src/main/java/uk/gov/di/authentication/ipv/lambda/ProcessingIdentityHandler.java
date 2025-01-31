@@ -160,7 +160,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             var auditContext =
                     new AuditContext(
                             userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                            userContext.getSessionId(),
                             client.getClientID(),
                             AuditService.UNKNOWN,
                             userContext

@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public class UserContext {
     private final Session session;
+    private final String sessionId;
     private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
@@ -21,6 +22,7 @@ public class UserContext {
 
     protected UserContext(
             Session session,
+            String sessionId,
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
             boolean userAuthenticated,
@@ -29,6 +31,7 @@ public class UserContext {
             SupportedLanguage userLanguage,
             String clientSessionId) {
         this.session = session;
+        this.sessionId = sessionId;
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
         this.userAuthenticated = userAuthenticated;
@@ -40,6 +43,10 @@ public class UserContext {
 
     public Session getSession() {
         return session;
+    }
+
+    public String getSessionId() {
+        return sessionId;
     }
 
     public Optional<UserProfile> getUserProfile() {
@@ -84,6 +91,7 @@ public class UserContext {
 
     public static class Builder {
         private Session session;
+        private String sessionId;
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
@@ -94,6 +102,11 @@ public class UserContext {
 
         protected Builder(Session session) {
             this.session = session;
+        }
+
+        public Builder withSessionId(String sessionId) {
+            this.sessionId = sessionId;
+            return this;
         }
 
         public Builder withUserProfile(UserProfile userProfile) {
@@ -142,6 +155,7 @@ public class UserContext {
         public UserContext build() {
             return new UserContext(
                     session,
+                    sessionId,
                     userProfile,
                     userCredentials,
                     userAuthenticated,

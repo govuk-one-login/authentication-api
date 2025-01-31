@@ -6,16 +6,19 @@ import uk.gov.di.orchestration.shared.entity.Session;
 
 public class OrchestrationUserSession {
     private final Session session;
+    private final String sessionId;
     @Nullable private final String clientId;
     @Nullable private final ClientSession clientSession;
     private final String clientSessionId;
 
     protected OrchestrationUserSession(
             Session session,
+            String sessionId,
             @Nullable String clientId,
             @Nullable ClientSession clientSession,
             String clientSessionId) {
         this.session = session;
+        this.sessionId = sessionId;
         this.clientId = clientId;
         this.clientSession = clientSession;
         this.clientSessionId = clientSessionId;
@@ -23,6 +26,10 @@ public class OrchestrationUserSession {
 
     public Session getSession() {
         return session;
+    }
+
+    public String getSessionId() {
+        return sessionId;
     }
 
     public @Nullable String getClientId() {
@@ -43,12 +50,18 @@ public class OrchestrationUserSession {
 
     public static class Builder {
         private Session session;
+        private String sessionId;
         private String clientId;
         private ClientSession clientSession;
         private String clientSessionId;
 
         protected Builder(Session session) {
             this.session = session;
+        }
+
+        public Builder withSessionId(String sessionId) {
+            this.sessionId = sessionId;
+            return this;
         }
 
         public Builder withClientId(String clientId) {
@@ -67,7 +80,8 @@ public class OrchestrationUserSession {
         }
 
         public OrchestrationUserSession build() {
-            return new OrchestrationUserSession(session, clientId, clientSession, clientSessionId);
+            return new OrchestrationUserSession(
+                    session, sessionId, clientId, clientSession, clientSessionId);
         }
     }
 }
