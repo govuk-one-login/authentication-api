@@ -347,6 +347,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     private AccountInterventionsResponse noAccountInterventions() {
         return new AccountInterventionsResponse(
-                false, false, false, false, valueOf(clock.now().toInstant().toEpochMilli()));
+                false, false, false, false, clock.now().toInstant().toEpochMilli());
     }
 }
