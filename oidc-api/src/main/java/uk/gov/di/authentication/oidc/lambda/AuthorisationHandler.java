@@ -658,6 +658,7 @@ public class AuthorisationHandler
                 session =
                         updateSharedSessionDueToMaxAgeExpiry(
                                 existingSession.get(),
+                                existingSessionId.get(),
                                 newSessionIdForPreviousSession,
                                 newSessionId);
 
@@ -776,8 +777,12 @@ public class AuthorisationHandler
     }
 
     private Session updateSharedSessionDueToMaxAgeExpiry(
-            Session previousSession, String newSessionIdForPreviousSession, String newSessionId) {
-        sessionService.updateWithNewSessionId(previousSession, newSessionIdForPreviousSession);
+            Session previousSession,
+            String previousSessionId,
+            String newSessionIdForPreviousSession,
+            String newSessionId) {
+        sessionService.updateWithNewSessionId(
+                previousSession, previousSessionId, newSessionIdForPreviousSession);
         var newSession = sessionService.copySessionForMaxAge(previousSession, newSessionId);
         sessionService.storeOrUpdateSession(newSession, newSessionId);
         return newSession;

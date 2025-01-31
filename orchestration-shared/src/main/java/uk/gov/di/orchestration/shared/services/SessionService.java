@@ -1,7 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
@@ -60,14 +59,6 @@ public class SessionService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public void updateWithNewSessionId(Session session) {
-        updateWithNewSessionId(session, IdGenerator.generate());
-    }
-
-    public void updateWithNewSessionId(Session session, String newSessionId) {
-        updateWithNewSessionId(session, session.getSessionId(), newSessionId);
     }
 
     public Session updateWithNewSessionId(

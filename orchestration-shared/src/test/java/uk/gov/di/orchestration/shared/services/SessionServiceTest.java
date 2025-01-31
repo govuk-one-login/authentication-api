@@ -6,6 +6,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,9 +37,10 @@ class SessionServiceTest {
         var session = new Session("session-id").addClientSession("client-session-id");
 
         sessionService.storeOrUpdateSession(session, "session-id");
-        sessionService.updateWithNewSessionId(session);
+        sessionService.updateWithNewSessionId(session, "session-id", "new-session-id");
 
-        verify(redis, times(2)).saveWithExpiry(anyString(), anyString(), anyLong());
+        verify(redis).saveWithExpiry(eq("session-id"), anyString(), anyLong());
+        verify(redis).saveWithExpiry(eq("new-session-id"), anyString(), anyLong());
         verify(redis).deleteValue("session-id");
     }
 
@@ -47,7 +49,7 @@ class SessionServiceTest {
         var session = new Session("session-id").addClientSession("client-session-id");
 
         sessionService.storeOrUpdateSession(session, "session-id");
-        sessionService.deleteStoredSession(session.getSessionId());
+        sessionService.deleteStoredSession("session-id");
 
         verify(redis).deleteValue("session-id");
     }
