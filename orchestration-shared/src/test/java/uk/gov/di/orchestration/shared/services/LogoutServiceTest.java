@@ -209,7 +209,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -242,7 +242,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -275,7 +275,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -309,7 +309,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -357,7 +357,7 @@ class LogoutServiceTest {
                         intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -391,7 +391,7 @@ class LogoutServiceTest {
                         intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -432,7 +432,7 @@ class LogoutServiceTest {
                 rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -508,7 +508,7 @@ class LogoutServiceTest {
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(clientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(clientSessionService).deleteStoredClientSession("client-session-id-3");
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -559,7 +559,7 @@ class LogoutServiceTest {
                         REAUTH_FAILURE_URI);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -600,7 +600,7 @@ class LogoutServiceTest {
 
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
