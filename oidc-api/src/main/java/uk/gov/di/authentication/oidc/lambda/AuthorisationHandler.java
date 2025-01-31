@@ -557,7 +557,7 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.storeOrUpdateSession(session);
+        sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionOptional.ifPresentOrElse(
                 s -> orchSessionService.updateSession(orchSession),
                 () -> orchSessionService.addSession(orchSession));
@@ -711,7 +711,7 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.storeOrUpdateSession(session);
+        sessionService.storeOrUpdateSession(session, newSessionId);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
                 newSessionId,
@@ -779,7 +779,7 @@ public class AuthorisationHandler
             Session previousSession, String newSessionIdForPreviousSession, String newSessionId) {
         sessionService.updateWithNewSessionId(previousSession, newSessionIdForPreviousSession);
         var newSession = sessionService.copySessionForMaxAge(previousSession, newSessionId);
-        sessionService.storeOrUpdateSession(newSession);
+        sessionService.storeOrUpdateSession(newSession, newSessionId);
         return newSession;
     }
 

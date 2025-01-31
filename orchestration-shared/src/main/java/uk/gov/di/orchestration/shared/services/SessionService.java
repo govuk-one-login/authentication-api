@@ -43,11 +43,11 @@ public class SessionService {
         return copiedSession;
     }
 
-    public void storeOrUpdateSession(Session session) {
-        storeOrUpdateSession(session, session.getSessionId());
+    public void storeOrUpdateSession(Session session, String sessionId) {
+        storeOrUpdateSession(session, sessionId, sessionId);
     }
 
-    private void storeOrUpdateSession(Session session, String oldSessionId) {
+    private void storeOrUpdateSession(Session session, String oldSessionId, String newSessionId) {
         try {
             var newSession = OBJECT_MAPPER.writeValueAsString(session);
             if (redisConnectionService.keyExists(oldSessionId)) {
@@ -56,7 +56,7 @@ public class SessionService {
             }
 
             redisConnectionService.saveWithExpiry(
-                    session.getSessionId(), newSession, configurationService.getSessionExpiry());
+                    newSessionId, newSession, configurationService.getSessionExpiry());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -75,7 +75,7 @@ public class SessionService {
         try {
             session.setSessionId(newSessionId);
             session.resetProcessingIdentityAttempts();
-            storeOrUpdateSession(session, oldSessionId);
+            storeOrUpdateSession(session, oldSessionId, newSessionId);
             redisConnectionService.deleteValue(oldSessionId);
             return session;
         } catch (Exception e) {

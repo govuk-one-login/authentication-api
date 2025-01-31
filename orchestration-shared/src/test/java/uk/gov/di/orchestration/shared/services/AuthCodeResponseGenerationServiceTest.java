@@ -16,6 +16,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -89,7 +90,7 @@ class AuthCodeResponseGenerationServiceTest {
     @Test
     void saveSessionUpdatesNonDocAppSessionWithAuthenticatedAndAccountState() {
         authCodeResponseGenerationService.saveSession(
-                false, sessionService, session, orchSessionService, orchSession);
+                false, sessionService, session, SESSION_ID, orchSessionService, orchSession);
 
         verify(sessionService)
                 .storeOrUpdateSession(
@@ -97,7 +98,8 @@ class AuthCodeResponseGenerationServiceTest {
                                 s ->
                                         s.isAuthenticated()
                                                 && s.isNewAccount()
-                                                        == Session.AccountState.EXISTING));
+                                                        == Session.AccountState.EXISTING),
+                        eq(SESSION_ID));
         verify(orchSessionService)
                 .updateSession(
                         argThat(
@@ -110,14 +112,15 @@ class AuthCodeResponseGenerationServiceTest {
     @Test
     void saveSessionUpdatesDocAppSessionWithDocAppState() {
         authCodeResponseGenerationService.saveSession(
-                true, sessionService, session, orchSessionService, orchSession);
+                true, sessionService, session, SESSION_ID, orchSessionService, orchSession);
 
         verify(sessionService)
                 .storeOrUpdateSession(
                         argThat(
                                 s ->
                                         s.isNewAccount()
-                                                == Session.AccountState.EXISTING_DOC_APP_JOURNEY));
+                                                == Session.AccountState.EXISTING_DOC_APP_JOURNEY),
+                        eq(SESSION_ID));
         verify(orchSessionService)
                 .updateSession(
                         argThat(

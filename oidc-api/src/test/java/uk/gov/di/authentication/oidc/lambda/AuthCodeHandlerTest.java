@@ -192,14 +192,21 @@ class AuthCodeHandlerTest {
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(true, sessionService, session, orchSessionService, orchSession);
+                .saveSession(
+                        true, sessionService, session, SESSION_ID, orchSessionService, orchSession);
         doAnswer(
                         (i) -> {
                             session.setAuthenticated(true).setNewAccount(EXISTING);
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(false, sessionService, session, orchSessionService, orchSession);
+                .saveSession(
+                        false,
+                        sessionService,
+                        session,
+                        SESSION_ID,
+                        orchSessionService,
+                        orchSession);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -300,6 +307,7 @@ class AuthCodeHandlerTest {
                         anyBoolean(),
                         eq(sessionService),
                         eq(session),
+                        eq(SESSION_ID),
                         eq(orchSessionService),
                         eq(orchSession));
 
@@ -416,6 +424,7 @@ class AuthCodeHandlerTest {
                         anyBoolean(),
                         eq(sessionService),
                         eq(session),
+                        eq(SESSION_ID),
                         any(OrchSessionService.class),
                         any(OrchSessionItem.class));
         verify(auditService)
@@ -644,6 +653,7 @@ class AuthCodeHandlerTest {
                         anyBoolean(),
                         eq(sessionService),
                         eq(session),
+                        eq(SESSION_ID),
                         any(OrchSessionService.class),
                         any(OrchSessionItem.class));
     }
