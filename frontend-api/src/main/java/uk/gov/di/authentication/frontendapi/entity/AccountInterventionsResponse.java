@@ -8,4 +8,4 @@ public record AccountInterventionsResponse(
         @Expose @Required boolean blocked,
         @Expose @Required boolean temporarilySuspended,
         @Expose @Required boolean reproveIdentity,
-        @Expose @Required String appliedAt) {}
+        @Expose @Required Long appliedAt) {}

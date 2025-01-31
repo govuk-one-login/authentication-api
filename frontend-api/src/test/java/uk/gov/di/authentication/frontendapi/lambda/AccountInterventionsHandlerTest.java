@@ -85,7 +85,7 @@ class AccountInterventionsHandlerTest {
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
-    private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
+    private static final Long APPLIED_AT_TIMESTAMP = 1696869005821L;
 
     private static final Instant fixedDate = Instant.now();
 
