@@ -1,27 +1,12 @@
 package uk.gov.di.orchestration.shared.services;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.CookieHelper;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,16 +20,6 @@ class SessionServiceTest {
     private final SessionService sessionService = new SessionService(configuration, redis);
 
     @Test
-    void shouldCreateSessionWithNewSessionId() {
-        try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
-            idGenerator.when(IdGenerator::generate).thenReturn("id-1");
-            Session session = sessionService.generateSession();
-
-            assertEquals("id-1", session.getSessionId());
-        }
-    }
-
-    @Test
     void shouldPersistSessionToRedisWithExpiry() throws Json.JsonException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
@@ -54,95 +29,6 @@ class SessionServiceTest {
 
         verify(redis, times(1))
                 .saveWithExpiry("session-id", objectMapper.writeValueAsString(session), 1234L);
-    }
-
-    @Test
-    void shouldRetrieveSessionUsingRequestHeaders() throws Json.JsonException {
-        when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
-
-        var sessionInRedis =
-                sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", "session-id"));
-
-        sessionInRedis.ifPresentOrElse(
-                session -> assertThat(session.getSessionId(), is("session-id")),
-                () -> fail("Could not retrieve result"));
-    }
-
-    @Test
-    void shouldNotRetrieveSessionForLowerCaseHeaderName() throws Json.JsonException {
-        when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
-
-        var sessionInRedis =
-                sessionService.getSessionFromRequestHeaders(Map.of("session-id", "session-id"));
-        assertTrue(sessionInRedis.isEmpty());
-    }
-
-    @Test
-    void shouldNotRetrieveSessionWithNoHeaders() {
-        var session = sessionService.getSessionFromRequestHeaders(Collections.emptyMap());
-        assertTrue(session.isEmpty());
-    }
-
-    @Test
-    void shouldNotRetrieveSessionWithNullHeaders() {
-        var session = sessionService.getSessionFromRequestHeaders(null);
-        assertTrue(session.isEmpty());
-    }
-
-    @Test
-    void shouldNotRetrieveSessionWithMissingHeader() {
-        var session = sessionService.getSessionFromRequestHeaders(Map.of("Something", "Else"));
-        assertTrue(session.isEmpty());
-    }
-
-    @Test
-    void shouldNotRetrieveSessionIfNotPresentInRedis() {
-        when(redis.keyExists("session-id")).thenReturn(false);
-
-        var session =
-                sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", "session-id"));
-
-        assertTrue(session.isEmpty());
-    }
-
-    @Test
-    void
-            shouldReturnOptionalEmptyWhenGetSessionFromSessionCookieCalledWithIncorrectCookieHeaderValues() {
-        assertEquals(
-                Optional.empty(),
-                sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(CookieHelper.REQUEST_COOKIE_HEADER, "gs=this is bad"))));
-    }
-
-    @Test
-    void shouldReturnSessionFromSessionCookieCalledWithValidCookieHeaderValues()
-            throws Json.JsonException {
-        when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
-
-        Optional<Session> sessionFromSessionCookie =
-                sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(
-                                        CookieHelper.REQUEST_COOKIE_HEADER, "gs=session-id.456;")));
-
-        assertTrue(sessionFromSessionCookie.isPresent());
-        Assertions.assertEquals("session-id", sessionFromSessionCookie.get().getSessionId());
-    }
-
-    @Test
-    void shouldNotReturnSessionFromSessionCookieCalledWithMissingSessionId() {
-        when(redis.keyExists("session-id")).thenReturn(false);
-        Optional<Session> session =
-                sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(
-                                        CookieHelper.REQUEST_COOKIE_HEADER, "gs=session-id.456;")));
-
-        assertFalse(session.isPresent());
     }
 
     @Test

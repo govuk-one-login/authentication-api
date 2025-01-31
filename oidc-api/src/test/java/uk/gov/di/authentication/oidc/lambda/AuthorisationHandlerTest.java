@@ -314,7 +314,6 @@ class AuthorisationHandlerTest {
         session = new Session(SESSION_ID);
         newSession = new Session(NEW_SESSION_ID);
         orchSession = new OrchSessionItem(SESSION_ID);
-        when(sessionService.generateSession()).thenReturn(new Session(newSession));
         when(sessionService.generateSession(anyString())).thenReturn(newSession);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))

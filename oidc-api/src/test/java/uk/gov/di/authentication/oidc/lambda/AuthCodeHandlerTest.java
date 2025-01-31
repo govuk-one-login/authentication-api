@@ -465,8 +465,6 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenOrchSessionIsNotFound() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
