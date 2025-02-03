@@ -1,7 +1,13 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
+
+import java.util.Objects;
 
 public record AccountInterventionsInboundResponse(
-        @Expose @Required Intervention intervention, @Expose @Required State state) {}
+        @Expose Intervention intervention, @Expose State state) {
+    public AccountInterventionsInboundResponse {
+        Objects.requireNonNull(intervention);
+        Objects.requireNonNull(state);
+    }
+}
