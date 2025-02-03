@@ -232,7 +232,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         TxmaAuditUser.user()
                                 .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                 .withSessionId(SESSION_ID)
-                                .withUserId(expectedCommonSubject)
+                                .withUserId(userInfo.getSubject().getValue())
                                 .withEmail(EMAIL_ADDRESS)
                                 .withIpAddress(IP_ADDRESS)
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
