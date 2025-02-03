@@ -19,8 +19,7 @@ FetchJwksErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} FetchJwks lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -64,8 +63,7 @@ OpenIdConfigurationErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} OpenIdConfiguration lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -109,8 +107,7 @@ TrustmarkFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -153,8 +150,7 @@ BackChannelLogoutRequestErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} BackChannelLogoutRequest lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -197,8 +193,7 @@ DocAppCallbackErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} DocAppCallback lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -240,8 +235,7 @@ TokenFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} TokenFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -283,8 +277,7 @@ LogoutFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} LogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -326,8 +319,7 @@ AuthenticationCallbackFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} AuthenticationCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -370,8 +362,7 @@ JwksFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} JwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -414,8 +405,7 @@ AuthorisationFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} AuthorisationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -458,8 +448,7 @@ UserInfoFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} UserInfoFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -502,8 +491,7 @@ AuthCodeFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} AuthCodeFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -548,8 +536,7 @@ UpdateClientConfigFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} UpdateClientConfigFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -594,8 +581,7 @@ ClientRegistrationFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} ClientRegistrationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -638,8 +624,7 @@ IpvCallbackFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} IpvCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -684,8 +669,7 @@ SpotResponseFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} SpotResponseFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
@@ -728,8 +712,7 @@ StorageTokenJwkFunctionErrorAnomalyAlarm:
       Fn::Sub: "Anomalous Error rate in ${Environment} StorageTokenJwkFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
     ComparisonOperator: GreaterThanUpperThreshold
-    EvaluationPeriods: 1
-    DatapointsToAlarm: 1
+    EvaluationPeriods: 3
     ThresholdMetricId: ad1
     TreatMissingData: notBreaching
     Metrics:
