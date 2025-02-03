@@ -80,16 +80,16 @@ public class InitiateIPVAuthorisationService {
 
         attachLogFieldToLogs(CLIENT_ID, rpClientID);
         LOG.info("AuthenticationCallbackHandler initiated IPV authorisation request");
-        var pairwiseSubject = userInfo.getSubject();
+        var internalCommonSubjectId = userInfo.getSubject();
 
         var state = new State();
-        var claimsSetRequest = buildIpvClaimsRequest(authRequest, pairwiseSubject);
+        var claimsSetRequest = buildIpvClaimsRequest(authRequest, internalCommonSubjectId);
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
                         state,
                         authRequest.getScope(),
-                        pairwiseSubject,
+                        internalCommonSubjectId,
                         claimsSetRequest,
                         Optional.ofNullable(clientSessionId).orElse("unknown"),
                         userInfo.getEmailAddress(),
@@ -115,7 +115,7 @@ public class InitiateIPVAuthorisationService {
                 TxmaAuditUser.user()
                         .withGovukSigninJourneyId(clientSessionId)
                         .withSessionId(session.getSessionId())
-                        .withUserId(session.getInternalCommonSubjectIdentifier())
+                        .withUserId(internalCommonSubjectId.getValue())
                         .withEmail(userInfo.getEmailAddress())
                         .withIpAddress(IpAddressHelper.extractIpAddress(input))
                         .withPersistentSessionId(persistentSessionCookieId),
