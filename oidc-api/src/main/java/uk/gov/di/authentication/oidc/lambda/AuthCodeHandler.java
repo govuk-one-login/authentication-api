@@ -250,7 +250,7 @@ public class AuthCodeHandler
                 internalCommonSubjectId = clientSession.getDocAppSubjectId().getValue();
             } else {
                 authCodeResponseService.processVectorOfTrust(clientSession, dimensions);
-                internalCommonSubjectId = session.getInternalCommonSubjectIdentifier();
+                internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
                 subjectId = authCodeResponseService.getSubjectId(session);
                 rpPairwiseId =
                         authCodeResponseService.getRpPairwiseId(

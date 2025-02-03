@@ -130,6 +130,7 @@ class AuthCodeHandlerTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
     private static final String DOC_APP_SUBJECT_ID = "docAppSubjectId";
+    private static final String INTERNAL_COMMON_SUBJECT_ID = "internalCommonSubjectId";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "test-client-name";
     private static final String AUDIENCE = "oidc-audience";
@@ -143,6 +144,7 @@ class AuthCodeHandlerTest {
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.NEW)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
                     .withAuthTime(12345L);
 
     @RegisterExtension
@@ -251,10 +253,6 @@ class AuthCodeHandlerTest {
         doCallRealMethod()
                 .when(authCodeResponseService)
                 .processVectorOfTrust(eq(clientSession), any());
-        var expectedCommonSubject =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
-        session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
         session.setCurrentCredentialStrength(initialLevel)
@@ -314,7 +312,7 @@ class AuthCodeHandlerTest {
                         TxmaAuditUser.user()
                                 .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                 .withSessionId(SESSION_ID)
-                                .withUserId(expectedCommonSubject)
+                                .withUserId(INTERNAL_COMMON_SUBJECT_ID)
                                 .withEmail(EMAIL)
                                 .withIpAddress("123.123.123.123")
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
