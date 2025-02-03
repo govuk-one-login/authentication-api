@@ -195,7 +195,7 @@ variable "orch_protectedsub_cidr_blocks" {
   default     = []
 }
 
-variable "auth_new_frontend_account_id" {
+variable "auth_new_account_id" {
   type        = string
   description = "Account id of the auth new frontend"
   default     = ""
@@ -205,4 +205,10 @@ variable "vpc_environment" {
   description = "The name of the environment this environment is sharing the VPC , this var is only for Authdevs env and must be overide using Authdevs.tfvars, default value should be null always."
   type        = string
   default     = null
+}
+
+variable "new_auth_protectedsub_cidr_blocks" {
+  type        = list(string)
+  default     = []
+  description = "New Auth equivalent environment protected subnets"
 }
