@@ -46,6 +46,7 @@ import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
@@ -59,6 +60,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
@@ -84,6 +86,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -104,7 +107,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper.gen
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class TokenHandlerTest {
+class TokenHandlerTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
@@ -136,7 +139,8 @@ public class TokenHandlerTest {
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String BASE_URI = "http://localhost";
     private static final String TOKEN_URI = "http://localhost/token";
-    public static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final String SESSION_ID = "a-session-id";
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
@@ -160,6 +164,7 @@ public class TokenHandlerTest {
             mock(RedisConnectionService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private TokenHandler handler;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -169,6 +174,14 @@ public class TokenHandlerTest {
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();
+        when(sessionService.getSession(any()))
+                .thenReturn(
+                        Optional.of(new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID)));
+        when(clientSessionService.getClientSession(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientSession(
+                                        Map.of(), LocalDateTime.now(), List.of(), CLIENT_NAME)));
         handler =
                 new TokenHandler(
                         tokenService,
@@ -179,7 +192,8 @@ public class TokenHandlerTest {
                         tokenValidationService,
                         redisConnectionService,
                         tokenClientAuthValidatorFactory,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        sessionService);
     }
 
     private static Stream<Arguments> validVectorValues() {
@@ -382,12 +396,12 @@ public class TokenHandlerTest {
         String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
-                        eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
-                        eq(SCOPES.toStringList()),
-                        eq(RP_PAIRWISE_SUBJECT),
-                        eq(INTERNAL_PAIRWISE_SUBJECT),
-                        eq(JWSAlgorithm.ES256)))
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES.toStringList(),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        JWSAlgorithm.ES256))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -412,14 +426,14 @@ public class TokenHandlerTest {
             throws JOSEException, ParseException, Json.JsonException, TokenAuthInvalidException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
-        SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
+        SignedJWT signedRefreshToken = createSignedRsaRefreshToken(clientId);
         KeyPair keyPair = generateRsaKeyPair();
         RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, CLIENT_ID).withIdTokenSigningAlgorithm("RSA256");
+                generateClientRegistry(keyPair, clientId).withIdTokenSigningAlgorithm("RSA256");
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
@@ -440,17 +454,17 @@ public class TokenHandlerTest {
                         INTERNAL_PAIRWISE_SUBJECT.getValue());
         String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
+                        REFRESH_TOKEN_PREFIX + clientId + "." + RP_PAIRWISE_SUBJECT.getValue()))
                 .thenReturn(null);
         String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
-                        eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
-                        eq(SCOPES.toStringList()),
-                        eq(RP_PAIRWISE_SUBJECT),
-                        eq(INTERNAL_PAIRWISE_SUBJECT),
-                        eq(JWSAlgorithm.RS256)))
+                        clientId,
+                        INTERNAL_SUBJECT,
+                        SCOPES.toStringList(),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        JWSAlgorithm.RS256))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -465,7 +479,7 @@ public class TokenHandlerTest {
                                 ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
-                                CLIENT_ID));
+                                clientId != null ? clientId : ""));
     }
 
     @Test
@@ -628,6 +642,46 @@ public class TokenHandlerTest {
     }
 
     @Test
+    void shouldReturn400IfClientSessionNotFoundInCurrentSession()
+            throws JOSEException, TokenAuthInvalidException {
+        when(sessionService.getSession(any())).thenReturn(Optional.of(new Session(SESSION_ID)));
+
+        KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        AuthenticationRequest authenticationRequest =
+                generateAuthRequest(JsonArrayHelper.jsonArrayOf("Cl.Cm"));
+        List<VectorOfTrust> vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        authenticationRequest.toParameters(),
+                                                        LocalDateTime.now(),
+                                                        vtr,
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)));
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
+    }
+
+    @Test
     void shouldReturn200ForSuccessfulDocAppJourneyTokenRequest()
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
@@ -727,12 +781,12 @@ public class TokenHandlerTest {
                 CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, RP_PAIRWISE_SUBJECT, "KEY_ID");
     }
 
-    private SignedJWT createSignedRsaRefreshToken() throws JOSEException {
+    private SignedJWT createSignedRsaRefreshToken(String clientId) throws JOSEException {
         JWSSigner signer =
                 new RSASSASigner(
                         new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
         return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, RP_PAIRWISE_SUBJECT, "KEY_ID");
+                clientId, BASE_URI, SCOPES.toStringList(), signer, RP_PAIRWISE_SUBJECT, "KEY_ID");
     }
 
     private PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) throws JOSEException {
@@ -777,6 +831,7 @@ public class TokenHandlerTest {
         String requestParams = URLUtils.serializeParameters(privateKeyParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(requestParams);
+        event.setHeaders(Map.of("Cookie", format("gs=%s.%s", SESSION_ID, CLIENT_SESSION_ID)));
         return handler.handleRequest(event, context);
     }
 
@@ -794,6 +849,7 @@ public class TokenHandlerTest {
         String requestParams = URLUtils.serializeParameters(privateKeyParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(requestParams);
+        event.setHeaders(Map.of("Cookie", format("gs=%s.%s", SESSION_ID, CLIENT_SESSION_ID)));
         return handler.handleRequest(event, context);
     }
 

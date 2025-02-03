@@ -29,6 +29,7 @@ import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
@@ -42,6 +43,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
@@ -81,6 +83,7 @@ public class TokenHandler
     private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final SessionService sessionService;
     private final Json objectMapper = SerializationService.getInstance();
 
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
@@ -94,7 +97,8 @@ public class TokenHandler
             TokenValidationService tokenValidationService,
             RedisConnectionService redisConnectionService,
             TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            SessionService sessionService) {
         this.tokenService = tokenService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
@@ -104,6 +108,7 @@ public class TokenHandler
         this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.sessionService = sessionService;
     }
 
     public TokenHandler(ConfigurationService configurationService) {
@@ -128,6 +133,7 @@ public class TokenHandler
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.sessionService = new SessionService(configurationService, redisConnectionService);
     }
 
     public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -152,6 +158,7 @@ public class TokenHandler
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.sessionService = new SessionService(configurationService, redisConnectionService);
     }
 
     public TokenHandler() {
@@ -239,6 +246,13 @@ public class TokenHandler
                     400, e.getErrorObject().toJSONObject().toJSONString());
         }
 
+        if (!clientSessionExistsInSession(
+                authCodeExchangeData.getClientSessionId(), input.getHeaders())) {
+            LOG.warn("Client session from auth code not found in current session");
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
+        }
+
         var tokenResponse =
                 getTokenResponse(
                         clientSession,
@@ -261,6 +275,15 @@ public class TokenHandler
 
         LOG.info("Successfully generated tokens");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+    }
+
+    private boolean clientSessionExistsInSession(
+            String clientSessionId, Map<String, String> headers) {
+        var sessionIdOpt = CookieHelper.getSessionIdFromRequestHeaders(headers);
+        var sessionOpt = sessionIdOpt.flatMap(sessionService::getSession);
+        return sessionOpt
+                .map(session -> session.getClientSessions().contains(clientSessionId))
+                .orElse(false);
     }
 
     private static boolean refreshTokenRequest(Map<String, String> requestBody) {

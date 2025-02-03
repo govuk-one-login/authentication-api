@@ -47,6 +47,7 @@ import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -72,6 +73,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -89,6 +91,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TOKEN_ENDPOINT = "/token";
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-id";
+    private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String SESSION_ID = "session-id";
     private static final String DIFFERENT_CLIENT_ID = "different-test-id";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
@@ -585,9 +589,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var privateKeyJWT =
                 new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
         requestParams.putAll(privateKeyJWT.toParameters());
-
+        var headers = Map.of("Cookie", format("gs=%s.%s", SESSION_ID, CLIENT_SESSION_ID));
         var requestBody = URLUtils.serializeParameters(requestParams);
-        return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
+        return makeRequest(Optional.of(requestBody), headers, Map.of());
     }
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
@@ -595,8 +599,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSecretPost = new ClientSecretPost(new ClientID(CLIENT_ID), clientSecret);
         clientSecretPost.toParameters();
         requestParams.putAll(clientSecretPost.toParameters());
+        var headers = Map.of("Cookie", format("gs=%s.%s", SESSION_ID, CLIENT_SESSION_ID));
         var requestBody = URLUtils.serializeParameters(requestParams);
-        return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
+        return makeRequest(Optional.of(requestBody), headers, Map.of());
     }
 
     private Map<String, List<String>> constructBaseTokenRequest(
@@ -612,9 +617,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     VectorOfTrust.parseFromAuthRequestAttribute(
                             singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
+        redis.addSessionWithId(
+                new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID), SESSION_ID);
         redis.addAuthCodeAndCreateClientSession(
                 code,
-                "a-client-session-id",
+                CLIENT_SESSION_ID,
                 TEST_EMAIL,
                 generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
                 vtrList,
