@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -54,7 +55,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -137,6 +138,7 @@ class LogoutServiceTest {
                     .withSessionId(SESSION_ID)
                     .withPersistentSessionId(null)
                     .withUserId(null);
+    private DestroySessionsRequest destroySessionsRequest;
 
     @BeforeEach
     void setup() throws JOSEException, ParseException {
@@ -182,7 +184,9 @@ class LogoutServiceTest {
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID);
-        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        destroySessionsRequest =
+                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
     }
 
     @AfterEach
@@ -196,7 +200,7 @@ class LogoutServiceTest {
     void successfullyReturnsClientLogoutResponse() {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.getValue()),
@@ -205,7 +209,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -229,7 +233,7 @@ class LogoutServiceTest {
     void successfullyReturnsLogoutResponseWithoutStateWhenStateIsAbsent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -238,7 +242,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -262,7 +266,7 @@ class LogoutServiceTest {
     void successfullyReturnsDefaultLogoutResponseWithStateWhenStateIsPresent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(STATE.getValue()),
@@ -271,7 +275,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -296,7 +300,7 @@ class LogoutServiceTest {
         var errorObject = new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.of(errorObject),
                         Optional.empty(),
                         Optional.empty(),
@@ -305,7 +309,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -346,10 +350,14 @@ class LogoutServiceTest {
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, intervention);
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        SUBJECT.getValue(),
+                        event,
+                        CLIENT_ID,
+                        intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -376,10 +384,14 @@ class LogoutServiceTest {
 
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, intervention);
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        SUBJECT.getValue(),
+                        event,
+                        CLIENT_ID,
+                        intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -411,7 +423,7 @@ class LogoutServiceTest {
         input.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         logoutService.handleLogout(
-                Optional.of(session),
+                Optional.of(destroySessionsRequest),
                 Optional.empty(),
                 Optional.of(CLIENT_LOGOUT_URI),
                 Optional.of(STATE.getValue()),
@@ -420,7 +432,7 @@ class LogoutServiceTest {
                 rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -440,12 +452,19 @@ class LogoutServiceTest {
         AccountIntervention intervention =
                 new AccountIntervention(new AccountInterventionState(false, false, false, false));
 
+        var expectedDestroySessionsRequest =
+                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
+        var expectedInternalCommonSubjectId = SUBJECT.getValue();
         RuntimeException exception =
                 assertThrows(
                         RuntimeException.class,
                         () ->
                                 logoutService.handleAccountInterventionLogout(
-                                        session, event, CLIENT_ID, intervention),
+                                        expectedDestroySessionsRequest,
+                                        expectedInternalCommonSubjectId,
+                                        event,
+                                        CLIENT_ID,
+                                        intervention),
                         "Expected to throw exception");
 
         assertEquals("Account status must be blocked or suspended", exception.getMessage());
@@ -455,7 +474,7 @@ class LogoutServiceTest {
     void includesRpPairwiseIdInLogOutSuccessAuditEventWhenItIsAvailable() {
 
         logoutService.handleLogout(
-                Optional.of(session),
+                Optional.of(destroySessionsRequest),
                 Optional.empty(),
                 Optional.of(CLIENT_LOGOUT_URI),
                 Optional.of(STATE.getValue()),
@@ -478,7 +497,7 @@ class LogoutServiceTest {
 
         APIGatewayProxyResponseEvent response =
                 logoutService.handleLogout(
-                        Optional.of(session),
+                        Optional.of(destroySessionsRequest),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.getValue()),
@@ -489,7 +508,7 @@ class LogoutServiceTest {
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(clientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(clientSessionService).deleteStoredClientSession("client-session-id-3");
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -533,10 +552,14 @@ class LogoutServiceTest {
     void successfullyLogsOutAndGeneratesRedirectResponseForeReauthenticationFailure() {
         var response =
                 logoutService.handleReauthenticationFailureLogout(
-                        session, event, CLIENT_ID, REAUTH_FAILURE_URI);
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        SUBJECT.getValue(),
+                        event,
+                        CLIENT_ID,
+                        REAUTH_FAILURE_URI);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -559,11 +582,9 @@ class LogoutServiceTest {
         var clientSessionId2 = IdGenerator.generate();
         var clientId1 = CLIENT_ID + "1";
         var clientId2 = CLIENT_ID + "2";
-        var prevousSession =
-                new Session(SESSION_ID)
-                        .setEmailAddress(EMAIL)
-                        .addClientSession(clientSessionId1)
-                        .addClientSession(clientSessionId2);
+        var destroySessionsRequestForClients =
+                new DestroySessionsRequest(
+                        SESSION_ID, List.of(clientSessionId1, clientSessionId2), EMAIL);
 
         var authTime = Instant.parse("2025-01-23T15:00:00Z");
         var previousOrchSession =
@@ -574,11 +595,12 @@ class LogoutServiceTest {
         var logoutTime = authTime.plus(3600, ChronoUnit.SECONDS);
         var clock = fixed(logoutTime, systemDefault());
         logoutServiceWithClock(clock)
-                .handleMaxAgeLogout(prevousSession, previousOrchSession, auditUser);
+                .handleMaxAgeLogout(
+                        destroySessionsRequestForClients, previousOrchSession, auditUser);
 
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
         verify(clientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
-        verify(sessionService).deleteStoredSession(session.getSessionId());
+        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -614,12 +636,12 @@ class LogoutServiceTest {
     private void setupAdditionalClientSessions() {
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        generateSessionFromCookie(session);
         setupClientSessionToken(signedIDToken);
-    }
-
-    private void generateSessionFromCookie(Session session) {
-        when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
+        destroySessionsRequest =
+                new DestroySessionsRequest(
+                        SESSION_ID,
+                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"),
+                        EMAIL);
     }
 
     private void setupClientSessionToken(JWT idToken) {

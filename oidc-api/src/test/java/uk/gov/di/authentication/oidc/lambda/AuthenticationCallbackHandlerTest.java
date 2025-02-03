@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
@@ -142,11 +143,13 @@ class AuthenticationCallbackHandlerTest {
     private static final String PERSISTENT_SESSION_ID =
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
+
     private static final Session session =
             new Session(SESSION_ID)
                     .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
                     .setAuthenticated(false)
-                    .setCurrentCredentialStrength(null);
+                    .setCurrentCredentialStrength(null)
+                    .setEmailAddress(TEST_EMAIL_ADDRESS);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -222,10 +225,10 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
                 .thenReturn(null);
-        when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any()))
+        when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any(), any()))
                 .thenAnswer(
                         args -> {
-                            var errorRedirectUri = (URI) args.getArgument(3);
+                            var errorRedirectUri = (URI) args.getArgument(4);
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(302)
                                     .withHeaders(
@@ -251,6 +254,7 @@ class AuthenticationCallbackHandlerTest {
                         logoutService,
                         authFrontend,
                         noSessionOrchestrationService);
+        session.resetClientSessions();
     }
 
     @Test
@@ -452,7 +456,15 @@ class AuthenticationCallbackHandlerTest {
 
         verify(logoutService, times(1))
                 .handleReauthenticationFailureLogout(
-                        eq(session), eq(event), eq(CLIENT_ID.toString()), any());
+                        eq(
+                                new DestroySessionsRequest(
+                                        SESSION_ID,
+                                        List.of(CLIENT_SESSION_ID),
+                                        TEST_EMAIL_ADDRESS)),
+                        eq(null),
+                        eq(event),
+                        eq(CLIENT_ID.toString()),
+                        any());
 
         verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
     }
@@ -799,7 +811,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
             }
 
             @Test
@@ -813,7 +830,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
             }
 
             @Test
@@ -827,7 +849,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
             }
 
             @Test
@@ -862,7 +889,12 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.getValue(), intervention);
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.getValue(),
+                                intervention);
             }
         }
 
@@ -913,7 +945,13 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.getValue(),
+                                intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
                 verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
                 verify(orchSessionService, times(2))
@@ -958,7 +996,13 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
                 verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
             }
@@ -1001,7 +1045,13 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), eq(intervention));
+                        .handleAccountInterventionLogout(
+                                new DestroySessionsRequest(
+                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                null,
+                                event,
+                                CLIENT_ID.toString(),
+                                intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
             }
         }
@@ -1134,7 +1184,7 @@ class AuthenticationCallbackHandlerTest {
             var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
             var sharedSession = withMaxAgeSharedSession();
             var previousOrchSession = withPreviousOrchSessionDueToMaxAge();
-            var previousSharedSession = withPreviousSharedSessionDueToMaxAge();
+            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1163,7 +1213,11 @@ class AuthenticationCallbackHandlerTest {
 
             verify(logoutService, times(1))
                     .handleMaxAgeLogout(
-                            eq(previousSharedSession),
+                            eq(
+                                    new DestroySessionsRequest(
+                                            PREVIOUS_SESSION_ID,
+                                            PREVIOUS_CLIENT_SESSIONS,
+                                            TEST_EMAIL_ADDRESS)),
                             eq(previousOrchSession),
                             any(TxmaAuditUser.class));
         }
@@ -1177,12 +1231,12 @@ class AuthenticationCallbackHandlerTest {
             return previousOrchSession;
         }
 
-        private Session withPreviousSharedSessionDueToMaxAge() {
+        private void withPreviousSharedSessionDueToMaxAge() {
             var previousSharedSession = new Session(PREVIOUS_SESSION_ID);
             PREVIOUS_CLIENT_SESSIONS.forEach(previousSharedSession::addClientSession);
+            previousSharedSession.setEmailAddress(TEST_EMAIL_ADDRESS);
             when(sessionService.getSession(PREVIOUS_SESSION_ID))
                     .thenReturn(Optional.of(previousSharedSession));
-            return previousSharedSession;
         }
 
         private void withNoPreviousSharedSession() {
@@ -1248,6 +1302,7 @@ class AuthenticationCallbackHandlerTest {
     private void usingValidClientSession() {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
+        session.addClientSession(CLIENT_SESSION_ID);
     }
 
     private void usingValidClient() {

@@ -8,10 +8,10 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LogoutReason;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 
@@ -110,8 +110,8 @@ public class LogoutService {
                 302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
 
-    private void destroySessions(Session session) {
-        for (String clientSessionId : session.getClientSessions()) {
+    private void destroySessions(DestroySessionsRequest request) {
+        for (String clientSessionId : request.getClientSessions()) {
             clientSessionService
                     .getClientSession(clientSessionId)
                     .flatMap(
@@ -123,20 +123,20 @@ public class LogoutService {
                             clientRegistry ->
                                     backChannelLogoutService.sendLogoutMessage(
                                             clientRegistry,
-                                            session.getEmailAddress(),
+                                            request.getEmailAddress(),
                                             configurationService.getInternalSectorURI()));
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);
         }
         LOG.info("Deleting Session");
-        sessionService.deleteStoredSession(session.getSessionId());
+        sessionService.deleteStoredSession(request.getSessionId());
 
         LOG.info("Deleting Orch Session");
-        orchSessionService.deleteSession(session.getSessionId());
+        orchSessionService.deleteSession(request.getSessionId());
     }
 
     public APIGatewayProxyResponseEvent handleLogout(
-            Optional<Session> session,
+            Optional<DestroySessionsRequest> destroySessionsRequest,
             Optional<ErrorObject> errorObject,
             Optional<URI> redirectURI,
             Optional<String> state,
@@ -144,9 +144,9 @@ public class LogoutService {
             Optional<String> clientId,
             Optional<String> rpPairwiseId) {
 
-        session.ifPresent(
-                s -> {
-                    destroySessions(s);
+        destroySessionsRequest.ifPresent(
+                request -> {
+                    destroySessions(request);
                     cloudwatchMetricsService.incrementLogout(clientId);
                 });
 
@@ -177,12 +177,13 @@ public class LogoutService {
     }
 
     public APIGatewayProxyResponseEvent handleReauthenticationFailureLogout(
-            Session session,
+            DestroySessionsRequest request,
+            String internalCommonSubjectId,
             APIGatewayProxyRequestEvent input,
             String clientId,
             URI errorRedirectUri) {
-        var auditUser = createAuditUser(input, session);
-        destroySessions(session);
+        var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
+        destroySessions(request);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId));
         return generateLogoutResponse(
                 errorRedirectUri,
@@ -193,14 +194,15 @@ public class LogoutService {
     }
 
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
-            Session session,
+            DestroySessionsRequest request,
+            String internalCommonSubjectId,
             APIGatewayProxyRequestEvent input,
             String clientId,
             AccountIntervention intervention) {
 
-        var auditUser = createAuditUser(input, session);
+        var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
 
-        destroySessions(session);
+        destroySessions(request);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
 
         URI redirectURI;
@@ -223,8 +225,10 @@ public class LogoutService {
     }
 
     public void handleMaxAgeLogout(
-            Session previousSession, OrchSessionItem previousOrchSession, TxmaAuditUser user) {
-        destroySessions(previousSession);
+            DestroySessionsRequest request,
+            OrchSessionItem previousOrchSession,
+            TxmaAuditUser user) {
+        destroySessions(request);
         Long sessionAge =
                 nowClock.now().toInstant().getEpochSecond() - previousOrchSession.getAuthTime();
         sendAuditEvent(
@@ -253,14 +257,15 @@ public class LogoutService {
                 metadata.toArray(AuditService.MetadataPair[]::new));
     }
 
-    private TxmaAuditUser createAuditUser(APIGatewayProxyRequestEvent input, Session session) {
+    private TxmaAuditUser createAuditUser(
+            APIGatewayProxyRequestEvent input, String sessionId, String internalCommonSubjectId) {
         return TxmaAuditUser.user()
                 .withIpAddress(extractIpAddress(input))
                 .withPersistentSessionId(extractPersistentIdFromCookieHeader(input.getHeaders()))
-                .withSessionId(session.getSessionId())
+                .withSessionId(sessionId)
                 .withGovukSigninJourneyId(
                         CookieHelper.getClientSessionIdFromRequestHeaders(input.getHeaders())
                                 .orElse(null))
-                .withUserId(session.getInternalCommonSubjectIdentifier());
+                .withUserId(internalCommonSubjectId);
     }
 }

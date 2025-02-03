@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.helpers.CookieHelper.SessionCookieIds;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -41,6 +43,7 @@ public class LogoutRequest {
     private Optional<String> rpPairwiseId = Optional.empty();
     Optional<URI> postLogoutRedirectUri = Optional.empty();
     private Optional<ClientRegistry> clientRegistry = Optional.empty();
+    private Optional<DestroySessionsRequest> destroySessionsRequest = Optional.empty();
 
     public LogoutRequest(
             SessionService sessionService,
@@ -48,23 +51,28 @@ public class LogoutRequest {
             DynamoClientService dynamoClientService,
             APIGatewayProxyRequestEvent input) {
 
+        var sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders());
+        sessionId = sessionCookieIds.map(SessionCookieIds::getSessionId);
+        var clientSessionIdFromCookie = sessionCookieIds.map(SessionCookieIds::getClientSessionId);
         session =
                 segmentedFunctionCall(
-                        "getSessionFromSessionCookie",
-                        () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
+                        "getSession", () -> sessionId.flatMap(sessionService::getSession));
 
         internalCommonSubjectId = session.map(Session::getInternalCommonSubjectIdentifier);
-        sessionId = session.map(Session::getSessionId);
-        Optional<String> journeyId = extractClientSessionIdFromCookieHeaders(input.getHeaders());
 
         auditUser =
                 TxmaAuditUser.user()
                         .withIpAddress(extractIpAddress(input))
                         .withPersistentSessionId(
                                 extractPersistentIdFromCookieHeader(input.getHeaders()))
-                        .withSessionId(sessionId.orElse(null))
-                        .withGovukSigninJourneyId(journeyId.orElse(null))
+                        .withGovukSigninJourneyId(clientSessionIdFromCookie.orElse(null))
                         .withUserId(internalCommonSubjectId.orElse(null));
+
+        if (sessionId.isPresent() && session.isPresent()) {
+            destroySessionsRequest =
+                    session.map(s -> new DestroySessionsRequest(sessionId.get(), s));
+            auditUser = auditUser.withSessionId(sessionId.get());
+        }
 
         queryStringParameters = Optional.ofNullable(input.getQueryStringParameters());
         if (queryStringParameters.isEmpty()) {
@@ -171,17 +179,16 @@ public class LogoutRequest {
         }
     }
 
-    private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
-        var sessionCookieIds = CookieHelper.parseSessionCookie(headers);
-        return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
-    }
-
     public Optional<Session> session() {
         return session;
     }
 
     public Optional<String> internalCommonSubjectId() {
         return internalCommonSubjectId;
+    }
+
+    public Optional<DestroySessionsRequest> destroySessionsRequest() {
+        return destroySessionsRequest;
     }
 
     public Optional<String> sessionId() {

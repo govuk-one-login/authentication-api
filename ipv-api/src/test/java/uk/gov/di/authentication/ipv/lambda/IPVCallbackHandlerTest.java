@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -975,6 +976,84 @@ class IPVCallbackHandlerTest {
         when(configurationService.getOrchFrontendEnabled()).thenReturn(orchFrontendEnabled);
         var actualFrontendClass = IPVCallbackHandler.getFrontend(configurationService).getClass();
         assertThat(actualFrontendClass, is(equalTo(expectedFrontendClass)));
+    }
+
+    @Test
+    void shouldLogoutUserWhenAISReturnsBlockedAccountInAuthStep() {
+        usingValidSession();
+        usingValidClientSession();
+        var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("error", errorObject.toString());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        var intervention =
+                new AccountIntervention(new AccountInterventionState(true, false, false, false));
+        when(accountInterventionService.getAccountIntervention(anyString(), any()))
+                .thenReturn(intervention);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        event.setQueryStringParameters(responseHeaders);
+        handler.handleRequest(event, context);
+
+        verify(logoutService)
+                .handleAccountInterventionLogout(
+                        new DestroySessionsRequest(SESSION_ID, List.of(), TEST_EMAIL_ADDRESS),
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                        event,
+                        CLIENT_ID.getValue(),
+                        intervention);
+    }
+
+    @Test
+    void shouldLogoutUserWhenAISReturnsBlockedAccountInTokenStep() throws IpvCallbackException {
+        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+        var clientRegistry = generateClientRegistryNoClaims();
+        var userProfile = generateUserProfile();
+        usingValidSession();
+        usingValidClientSession();
+        when(ipvCallbackHelper.validateUserIdentityResponse(any(), eq(VTR_LIST)))
+                .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(clientRegistry));
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
+        var successfulTokenResponse =
+                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+        when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
+        var intervention =
+                new AccountIntervention(new AccountInterventionState(true, false, false, false));
+        when(accountInterventionService.getAccountIntervention(anyString(), any()))
+                .thenReturn(intervention);
+
+        var request = new APIGatewayProxyRequestEvent();
+        request.setQueryStringParameters(responseHeaders);
+        request.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+        handler.handleRequest(request, context);
+
+        verify(logoutService)
+                .handleAccountInterventionLogout(
+                        new DestroySessionsRequest(SESSION_ID, List.of(), TEST_EMAIL_ADDRESS),
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                        request,
+                        CLIENT_ID.getValue(),
+                        intervention);
     }
 
     static Stream<Arguments> getFrontendCases() {

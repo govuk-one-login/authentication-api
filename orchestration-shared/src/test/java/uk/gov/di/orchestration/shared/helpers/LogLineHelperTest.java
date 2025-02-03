@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.helpers;
 import org.apache.logging.log4j.ThreadContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.orchestration.shared.entity.Session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,14 +33,6 @@ class LogLineHelperTest {
     @Test
     void shouldAttachSessionIdToThreadContextUsingString() {
         attachSessionIdToLogs(identifier);
-
-        assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
-        assertEquals(identifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
-    }
-
-    @Test
-    void shouldAttachSessionIdToThreadContextUsingSession() {
-        attachSessionIdToLogs(new Session(identifier));
 
         assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
         assertEquals(identifier, ThreadContext.get(SESSION_ID.getLogFieldName()));

@@ -1,7 +1,6 @@
 package uk.gov.di.orchestration.shared.helpers;
 
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.orchestration.shared.entity.Session;
 
 import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.ORCH_SESSION_ID;
@@ -47,10 +46,6 @@ public class LogLineHelper {
             ThreadContext.remove(logFieldName.getLogFieldName());
         }
         attachLogFieldToLogs(logFieldName, value);
-    }
-
-    public static void attachSessionIdToLogs(Session session) {
-        attachLogFieldToLogs(SESSION_ID, session.getSessionId());
     }
 
     public static void attachSessionIdToLogs(String sessionId) {
