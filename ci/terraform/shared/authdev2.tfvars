@@ -64,5 +64,5 @@ enforce_code_signing     = false
 
 orchestration_account_id = "816047645251"
 
-auth_new_account_id               = "058264536367"
+auth_new_account_id               = "975050272416"
 new_auth_protectedsub_cidr_blocks = ["10.6.4.0/23", "10.6.6.0/23", "10.6.8.0/23"]
