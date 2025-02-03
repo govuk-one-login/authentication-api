@@ -1,11 +1,18 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 public record AccountInterventionsResponse(
-        @Expose @Required boolean passwordResetRequired,
-        @Expose @Required boolean blocked,
-        @Expose @Required boolean temporarilySuspended,
-        @Expose @Required boolean reproveIdentity,
-        @Expose @Required Long appliedAt) {}
+        @Expose boolean passwordResetRequired,
+        @Expose boolean blocked,
+        @Expose boolean temporarilySuspended,
+        @Expose boolean reproveIdentity,
+        @Expose @NotNull Long appliedAt) {
+
+    public AccountInterventionsResponse {
+        Objects.requireNonNull(appliedAt);
+    }
+}

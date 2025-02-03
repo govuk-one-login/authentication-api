@@ -34,8 +34,20 @@ public class RequiredFieldValidator implements Validator {
                 var accessible = field.canAccess(object);
                 try {
                     if (!accessible) field.trySetAccessible();
-                    if (field.isAnnotationPresent(Required.class) && isNull(field.get(object))) {
+
+                    var fieldValue = field.get(object);
+
+                    if (field.isAnnotationPresent(Required.class) && isNull(fieldValue)) {
                         violations.add(field.getName());
+                    }
+
+                    if (!isNull(fieldValue)
+                            && !fieldValue.getClass().isPrimitive()
+                            && fieldValue
+                                    .getClass()
+                                    .getName()
+                                    .startsWith("uk.gov.di.authentication")) {
+                        violations.addAll(validateRequiredFields(fieldValue, field.getType()));
                     }
                 } catch (IllegalAccessException e) {
                     LOG.warn("Could not validate field: {}", field.getName());
