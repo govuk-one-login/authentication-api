@@ -76,7 +76,7 @@ resource "aws_security_group_rule" "allow_incoming_redis_from_orch_protected_sub
   type        = "ingress"
 }
 
-resource "aws_security_group_rule" "allow_incoming_frontend_redis_from_new_auth" {
+resource "aws_security_group_rule" "allow_incoming_session_redis_from_new_auth" {
   count = length(var.new_auth_protectedsub_cidr_blocks) == 0 ? 0 : 1
 
   description       = "Allow ingress to Redis from new Auth equivalent environment protected subnets"
