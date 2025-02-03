@@ -353,8 +353,11 @@ public class AuthenticationCallbackHandler
                         clientId,
                         user);
                 LOG.info("Adding Authentication userinfo to dynamo");
+
+                String internalCommonSubjectId = userInfo.getSubject().getValue();
+
                 userInfoStorageService.addAuthenticationUserInfoData(
-                        userInfo.getSubject().getValue(), userInfo);
+                        internalCommonSubjectId, userInfo);
                 addClaimsToOrchSession(orchSession, userInfo);
 
                 ClientRegistry client = clientService.getClient(clientId).orElseThrow();
@@ -471,7 +474,7 @@ public class AuthenticationCallbackHandler
                                 clientSessionId,
                                 sessionId,
                                 clientId,
-                                userInfo.getSubject().getValue(),
+                                internalCommonSubjectId,
                                 Objects.isNull(userInfo.getEmailAddress())
                                         ? UNKNOWN
                                         : userInfo.getEmailAddress(),
@@ -484,7 +487,7 @@ public class AuthenticationCallbackHandler
                 Long passwordResetTime = getPasswordResetTimeClaim(userInfo);
                 AccountIntervention intervention =
                         accountInterventionService.getAccountIntervention(
-                                userInfo.getSubject().getValue(), passwordResetTime, auditContext);
+                                internalCommonSubjectId, passwordResetTime, auditContext);
 
                 Boolean reproveIdentity = null;
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
