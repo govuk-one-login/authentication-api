@@ -37,10 +37,11 @@ class AuthorisationCodeServiceTest {
                 new ClientSession(Map.of(), LocalDateTime.now(), List.of(), "test-client");
 
         authCodeService.generateAndSaveAuthorisationCode(
-                "test-client-session", "test@email.com", clientSession, 12345L);
+                "test-client-id", "test-client-session", "test@email.com", clientSession, 12345L);
 
         AuthCodeExchangeData expectedExchangeData =
                 new AuthCodeExchangeData()
+                        .setClientId("test-client-id")
                         .setClientSessionId("test-client-session")
                         .setEmail("test@email.com")
                         .setClientSession(clientSession)
