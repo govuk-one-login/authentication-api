@@ -27,9 +27,11 @@ public class AuthenticationUserInfoStorageService {
         this.timeToExist = 21600L; // 6 hours
     }
 
-    public void addAuthenticationUserInfoData(String subjectID, UserInfo userInfo) {
+    public void addAuthenticationUserInfoData(
+            String subjectID, String clientSessionId, UserInfo userInfo) {
         String userInfoJson = userInfo.toJSONString();
-        var userInfoDbObject =
+
+        var oldUserInfoDbObject =
                 new OldAuthenticationUserInfo()
                         .withSubjectID(subjectID)
                         .withUserInfo(userInfoJson)
@@ -37,8 +39,18 @@ public class AuthenticationUserInfoStorageService {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
+        oldAuthenticationUserInfoDynamoService.put(oldUserInfoDbObject);
 
-        oldAuthenticationUserInfoDynamoService.put(userInfoDbObject);
+        var userInfoDbObject =
+                new AuthUserInfo()
+                        .withInternalCommonSubjectId(subjectID)
+                        .withClientSessionId(clientSessionId)
+                        .withUserInfo(userInfoJson)
+                        .withTimeToExist(
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond());
+        authUserInfoDynamoService.put(userInfoDbObject);
     }
 
     public Optional<UserInfo> getAuthenticationUserInfo(String subjectID)
