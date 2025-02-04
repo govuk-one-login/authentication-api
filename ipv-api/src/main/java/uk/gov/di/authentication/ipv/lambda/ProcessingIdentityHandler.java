@@ -219,7 +219,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 logoutService.handleAccountInterventionLogout(
                         new DestroySessionsRequest(
                                 userContext.getSessionId(), userContext.getSession()),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        userContext.getOrchSession().getInternalCommonSubjectId(),
                         input,
                         client.getClientID(),
                         intervention);

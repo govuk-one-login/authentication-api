@@ -169,6 +169,7 @@ public abstract class BaseFrontendHandler<T>
         UserContext.Builder userContextBuilder = UserContext.builder(session.get());
 
         userContextBuilder.withSessionId(sessionId).withClientSessionId(clientSessionId);
+        userContextBuilder.withOrchSession(orchSession.get());
 
         var clientID =
                 clientSession
