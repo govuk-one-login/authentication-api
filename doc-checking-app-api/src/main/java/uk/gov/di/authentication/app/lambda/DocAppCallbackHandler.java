@@ -311,7 +311,10 @@ public class DocAppCallbackHandler
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
-                                clientSessionId, session.getEmailAddress(), clientSession);
+                                clientId,
+                                clientSessionId,
+                                session.getEmailAddress(),
+                                clientSession);
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
