@@ -101,7 +101,8 @@ public class UserInfoService {
         try {
             Optional<UserInfo> userInfoFromStorage =
                     userInfoStorageService.getAuthenticationUserInfo(
-                            accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId());
+                            accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId(),
+                            accessTokenInfo.getAccessTokenStore().getJourneyId());
 
             if (userInfoFromStorage.isEmpty()) {
                 throw new AccessTokenException(

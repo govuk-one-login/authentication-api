@@ -53,7 +53,7 @@ public class AuthenticationUserInfoStorageService {
         authUserInfoDynamoService.put(userInfoDbObject);
     }
 
-    public Optional<UserInfo> getAuthenticationUserInfo(String subjectID)
+    public Optional<UserInfo> getAuthenticationUserInfo(String subjectID, String clientSessionId)
             throws com.nimbusds.oauth2.sdk.ParseException {
         var userInfoData = getAuthenticationUserInfoData(subjectID);
         if (userInfoData.isEmpty()) {
