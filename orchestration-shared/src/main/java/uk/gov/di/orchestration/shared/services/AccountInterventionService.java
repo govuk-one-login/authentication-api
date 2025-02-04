@@ -9,6 +9,7 @@ import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService.MetadataPair;
+import uk.gov.di.orchestration.shared.tracing.TracingHttpClient;
 
 import java.io.IOException;
 import java.net.URI;
@@ -39,7 +40,7 @@ public class AccountInterventionService {
     public AccountInterventionService(ConfigurationService configService) {
         this(
                 configService,
-                HttpClient.newHttpClient(),
+                TracingHttpClient.newHttpClient(),
                 new CloudwatchMetricsService(),
                 new AuditService(configService));
     }
@@ -48,7 +49,11 @@ public class AccountInterventionService {
             ConfigurationService configService,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
-        this(configService, HttpClient.newHttpClient(), cloudwatchMetricsService, auditService);
+        this(
+                configService,
+                TracingHttpClient.newHttpClient(),
+                cloudwatchMetricsService,
+                auditService);
     }
 
     public AccountInterventionService(
