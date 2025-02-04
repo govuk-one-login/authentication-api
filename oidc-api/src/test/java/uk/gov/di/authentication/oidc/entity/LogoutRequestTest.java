@@ -17,11 +17,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
@@ -54,6 +56,7 @@ class LogoutRequestTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -71,7 +74,8 @@ class LogoutRequestTest {
     private final ClientRegistry clientRegistry = createClientRegistry();
     private String idTokenHint;
     private String rpPairwiseId;
-    private uk.gov.di.orchestration.shared.entity.Session session;
+    private Session session;
+    private OrchSessionItem orchSession;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutRequest.class);
@@ -107,6 +111,8 @@ class LogoutRequestTest {
                 generateSession()
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        orchSession =
+                new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(SUBJECT.getValue());
         idTokenHint = signedIDToken.serialize();
         rpPairwiseId = signedIDToken.getJWTClaimsSet().getSubject();
     }
@@ -126,9 +132,14 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.of(session), logoutRequest.session());
+        assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
@@ -151,9 +162,14 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.of(session), logoutRequest.session());
+        assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(Optional.empty(), logoutRequest.queryStringParameters());
@@ -184,9 +200,14 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.empty(), logoutRequest.session());
+        assertEquals(Optional.empty(), logoutRequest.orchSession());
         assertEquals(Optional.empty(), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.empty(), logoutRequest.sessionId());
         assertEquals(
@@ -216,13 +237,18 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.of(session), logoutRequest.session());
+        assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
@@ -258,13 +284,18 @@ class LogoutRequestTest {
                                 "post_logout_redirect_uri",
                                 CLIENT_LOGOUT_URI.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.of(session), logoutRequest.session());
+        assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
@@ -309,13 +340,18 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.of(session), logoutRequest.session());
+        assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
@@ -342,7 +378,7 @@ class LogoutRequestTest {
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
 
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
 
         when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
@@ -353,9 +389,14 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.of(session), logoutRequest.session());
+        assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
@@ -390,13 +431,18 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         session.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService, tokenValidationService, dynamoClientService, event);
+                        sessionService,
+                        tokenValidationService,
+                        dynamoClientService,
+                        event,
+                        orchSessionService);
 
         assertEquals(Optional.of(session), logoutRequest.session());
+        assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
@@ -421,8 +467,9 @@ class LogoutRequestTest {
         return new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
     }
 
-    private void generateSessionFromCookie(Session session) {
+    private void generateSessionFromCookie(Session session, OrchSessionItem orchSession) {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 
     private ClientRegistry createClientRegistry() {
@@ -461,7 +508,7 @@ class LogoutRequestTest {
     private void setupSessions() {
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        generateSessionFromCookie(session);
+        generateSessionFromCookie(session, orchSession);
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {

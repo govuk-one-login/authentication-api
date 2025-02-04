@@ -9,9 +9,11 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
@@ -44,12 +46,14 @@ public class LogoutRequest {
     Optional<URI> postLogoutRedirectUri = Optional.empty();
     private Optional<ClientRegistry> clientRegistry = Optional.empty();
     private Optional<DestroySessionsRequest> destroySessionsRequest = Optional.empty();
+    private Optional<OrchSessionItem> orchSession = Optional.empty();
 
     public LogoutRequest(
             SessionService sessionService,
             TokenValidationService tokenValidationService,
             DynamoClientService dynamoClientService,
-            APIGatewayProxyRequestEvent input) {
+            APIGatewayProxyRequestEvent input,
+            OrchSessionService orchSessionService) {
 
         var sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders());
         sessionId = sessionCookieIds.map(SessionCookieIds::getSessionId);
@@ -57,8 +61,9 @@ public class LogoutRequest {
         session =
                 segmentedFunctionCall(
                         "getSession", () -> sessionId.flatMap(sessionService::getSession));
+        orchSession = sessionId.flatMap(orchSessionService::getSession);
 
-        internalCommonSubjectId = session.map(Session::getInternalCommonSubjectIdentifier);
+        internalCommonSubjectId = orchSession.map(OrchSessionItem::getInternalCommonSubjectId);
 
         auditUser =
                 TxmaAuditUser.user()
@@ -233,5 +238,9 @@ public class LogoutRequest {
 
     public Optional<ClientRegistry> clientRegistry() {
         return clientRegistry;
+    }
+
+    public Optional<OrchSessionItem> orchSession() {
+        return orchSession;
     }
 }

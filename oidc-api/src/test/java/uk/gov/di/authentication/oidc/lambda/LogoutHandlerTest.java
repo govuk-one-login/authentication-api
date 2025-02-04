@@ -17,12 +17,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
@@ -55,6 +57,7 @@ class LogoutHandlerTest {
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
@@ -74,6 +77,7 @@ class LogoutHandlerTest {
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
     private Session session;
+    private OrchSessionItem orchSession;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutHandler.class);
@@ -95,7 +99,11 @@ class LogoutHandlerTest {
     void setUp() throws JOSEException {
         handler =
                 new LogoutHandler(
-                        sessionService, dynamoClientService, tokenValidationService, logoutService);
+                        sessionService,
+                        dynamoClientService,
+                        tokenValidationService,
+                        logoutService,
+                        orchSessionService);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
@@ -106,6 +114,8 @@ class LogoutHandlerTest {
                         "id-token-client-session-id",
                         ecSigningKey);
         idTokenHint = signedIDToken.serialize();
+        orchSession =
+                new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(SUBJECT.getValue());
 
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
@@ -239,6 +249,7 @@ class LogoutHandlerTest {
 
     private void saveSession(Session session) {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 
     private ClientRegistry createClientRegistry() {
