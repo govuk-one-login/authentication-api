@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventio
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.tracing.TracingHttpClient;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -33,13 +34,13 @@ public class AccountInterventionsService {
     private ConfigurationService configurationService;
 
     public AccountInterventionsService() {
-        httpClient = HttpClient.newHttpClient();
+        httpClient = TracingHttpClient.newHttpClient();
         configurationService = new ConfigurationService();
     }
 
     public AccountInterventionsService(ConfigurationService configService) {
         configurationService = configService;
-        httpClient = HttpClient.newHttpClient();
+        httpClient = TracingHttpClient.newHttpClient();
     }
 
     public AccountInterventionsService(HttpClient client, ConfigurationService configService) {
