@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -54,6 +55,7 @@ public abstract class BaseFrontendHandler<T>
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final Json objectMapper = SerializationService.getInstance();
+    protected final OrchSessionService orchSessionService;
 
     protected BaseFrontendHandler(
             Class<T> clazz,
@@ -61,13 +63,15 @@ public abstract class BaseFrontendHandler<T>
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            OrchSessionService orchSessionService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.clientService = clientService;
         this.authenticationService = authenticationService;
+        this.orchSessionService = orchSessionService;
     }
 
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
@@ -77,6 +81,7 @@ public abstract class BaseFrontendHandler<T>
         this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     protected BaseFrontendHandler(
@@ -89,6 +94,7 @@ public abstract class BaseFrontendHandler<T>
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     @Override
