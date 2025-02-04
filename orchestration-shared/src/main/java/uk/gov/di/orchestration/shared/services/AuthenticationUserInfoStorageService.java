@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfo;
 import uk.gov.di.orchestration.shared.entity.OldAuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
@@ -12,6 +13,7 @@ public class AuthenticationUserInfoStorageService {
     private final long timeToExist;
     private final BaseDynamoService<OldAuthenticationUserInfo>
             oldAuthenticationUserInfoDynamoService;
+    private final BaseDynamoService<AuthUserInfo> authUserInfoDynamoService;
 
     public AuthenticationUserInfoStorageService(ConfigurationService configurationService) {
         oldAuthenticationUserInfoDynamoService =
@@ -19,6 +21,9 @@ public class AuthenticationUserInfoStorageService {
                         OldAuthenticationUserInfo.class,
                         "authentication-callback-userinfo",
                         configurationService);
+        authUserInfoDynamoService =
+                new BaseDynamoService<>(
+                        AuthUserInfo.class, "Auth-User-Info", configurationService, true);
         this.timeToExist = 21600L; // 6 hours
     }
 
