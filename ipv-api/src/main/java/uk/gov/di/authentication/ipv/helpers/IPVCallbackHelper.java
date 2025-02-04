@@ -209,6 +209,7 @@ public class IPVCallbackHelper {
                 () -> saveIdentityClaimsToDynamo(rpPairwiseSubject, userIdentityUserInfo));
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
+                        clientId,
                         clientSessionId,
                         userProfile.getEmail(),
                         clientSession,

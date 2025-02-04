@@ -40,12 +40,17 @@ public class AuthorisationCodeService {
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientSessionId, String email, ClientSession clientSession) {
-        return generateAndSaveAuthorisationCode(clientSessionId, email, clientSession, null);
+            String clientId, String clientSessionId, String email, ClientSession clientSession) {
+        return generateAndSaveAuthorisationCode(
+                clientId, clientSessionId, email, clientSession, null);
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientSessionId, String email, ClientSession clientSession, Long authTime) {
+            String clientId,
+            String clientSessionId,
+            String email,
+            ClientSession clientSession,
+            Long authTime) {
         LOG.info("Generating and saving AuthorisationCode");
         AuthorizationCode authorizationCode = new AuthorizationCode();
         try {
@@ -54,6 +59,7 @@ public class AuthorisationCodeService {
                     objectMapper.writeValueAsString(
                             new AuthCodeExchangeData()
                                     .setEmail(email)
+                                    .setClientId(clientId)
                                     .setClientSessionId(clientSessionId)
                                     .setClientSession(clientSession)
                                     .setAuthTime(authTime)),

@@ -273,7 +273,11 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_SESSION_ID), eq(EMAIL), eq(clientSession), any(Long.class)))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        eq(clientSession),
+                        any(Long.class)))
                 .thenReturn(authorizationCode);
         when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
@@ -372,7 +376,11 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_SESSION_ID), eq(null), eq(clientSession), any(Long.class)))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        eq(clientSession),
+                        any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -607,7 +615,11 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_SESSION_ID), eq(null), eq(clientSession), any(Long.class)))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        eq(clientSession),
+                        any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),

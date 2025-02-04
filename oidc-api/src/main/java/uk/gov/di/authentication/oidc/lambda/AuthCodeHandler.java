@@ -398,6 +398,7 @@ public class AuthCodeHandler
             orchSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
         return authorisationCodeService.generateAndSaveAuthorisationCode(
+                clientID.getValue(),
                 clientSessionId,
                 session.getEmailAddress(),
                 clientSession,

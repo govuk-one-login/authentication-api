@@ -193,6 +193,7 @@ class AuthenticationCallbackHandlerTest {
                         new AccountIntervention(
                                 new AccountInterventionState(false, false, false, false)));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
                         eq(clientSession),
@@ -586,6 +587,7 @@ class AuthenticationCallbackHandlerTest {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(mediumRequestSession));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
                         eq(mediumRequestSession),
@@ -1412,6 +1414,7 @@ class AuthenticationCallbackHandlerTest {
         ClientSession clientSessionWithCredentialTrustLevel =
                 createClientSession(credentialTrustLevel);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
                         eq(clientSessionWithCredentialTrustLevel),
