@@ -20,7 +20,7 @@ dependencies {
     implementation project(":shared")
 
     runtimeOnly configurations.logging_runtime,
-            configurations.open_telemetry
+            configurations.otel_aws_instrumentation
 
     testImplementation configurations.tests,
             configurations.apache,
