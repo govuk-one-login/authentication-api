@@ -25,7 +25,6 @@ import java.util.Objects;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
-@IgnoreNoPactsToVerify
 @Provider("${PROVIDER_UNDER_TEST}")
 @PactBroker(
         url = "${PACT_URL}?testSource=${PACT_BROKER_SOURCE_HEADER}",
