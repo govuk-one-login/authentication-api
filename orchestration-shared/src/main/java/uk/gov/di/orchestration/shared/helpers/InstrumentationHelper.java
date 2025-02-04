@@ -3,11 +3,13 @@ package uk.gov.di.orchestration.shared.helpers;
 import com.amazonaws.xray.AWSXRay;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.annotations.ExcludeFromGeneratedCoverageReport;
 
 import java.util.concurrent.Callable;
 
 import static java.util.Objects.nonNull;
 
+@ExcludeFromGeneratedCoverageReport
 public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
 
