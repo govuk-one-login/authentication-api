@@ -67,5 +67,6 @@ jobs:
         env:
           CONSUMER_APP_VERSION: ${{ github.sha }}
         run: ./gradlew pactPublish
-#      - name: Verify pacts
-#        run: ./gradlew pactProviderTests
+
+      - name: Verify pacts
+        run: ./gradlew pactProviderTests
