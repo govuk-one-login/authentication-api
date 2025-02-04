@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
+import uk.gov.di.authentication.shared.entity.IDReverificationState;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -36,11 +38,13 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -56,7 +60,15 @@ class ReverificationResultHandlerTest {
     private final ReverificationResultService reverificationResultService =
             mock(ReverificationResultService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final IDReverificationStateService idReverificationStateService =
+            mock(IDReverificationStateService.class);
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+
+    private static final String AUTHENTICATION_STATE = "abcdefg";
+    private static final IDReverificationState ID_REVERIFICATION_STATE =
+            new IDReverificationState()
+                    .withAuthenticationState(AUTHENTICATION_STATE)
+                    .withClientSessionId(CLIENT_SESSION_ID);
 
     @BeforeEach
     void setUp() throws URISyntaxException {
@@ -74,7 +86,8 @@ class ReverificationResultHandlerTest {
                         clientService,
                         authenticationService,
                         reverificationResultService,
-                        auditService);
+                        auditService,
+                        idReverificationStateService);
     }
 
     @Nested
@@ -85,12 +98,16 @@ class ReverificationResultHandlerTest {
             HTTPResponse userInfo = new HTTPResponse(200);
             userInfo.setContent(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
-            var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(200));
             assertThat(result, hasBody(userInfo.getContent()));
@@ -102,12 +119,15 @@ class ReverificationResultHandlerTest {
             HTTPResponse userInfo = new HTTPResponse(200);
             userInfo.setContent(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
-            handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+            handler.handleRequest(
+                    apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             verify(auditService)
                     .submitAuditEvent(eq(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED), any());
@@ -119,12 +139,15 @@ class ReverificationResultHandlerTest {
             HTTPResponse userInfo = new HTTPResponse(200);
             userInfo.setContent(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
-            handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+            handler.handleRequest(
+                    apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             verify(auditService)
                     .submitAuditEvent(
@@ -133,10 +156,44 @@ class ReverificationResultHandlerTest {
     }
 
     @Nested
+    class StateErrors {
+        @Test
+        void shouldHandleStateNotRecordedError() {
+            when(idReverificationStateService.get(any())).thenReturn(Optional.empty());
+
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ERROR_1061));
+        }
+
+        @Test
+        void shouldHandleStateMismatchedClientSessionIdError() {
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(
+                            Optional.ofNullable(
+                                    new IDReverificationState()
+                                            .withAuthenticationState(AUTHENTICATION_STATE)
+                                            .withClientSessionId("nonmatchingid")));
+
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ERROR_1061));
+        }
+    }
+
+    @Nested
     class TokenErrors {
         @Test
         void shouldHandleIPVTokenError()
                 throws ParseException, UnsuccessfulReverificationResponseException {
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getUnsuccessfulTokenResponse());
             when(reverificationResultService.sendIpvReverificationRequest(any()))
@@ -144,7 +201,9 @@ class ReverificationResultHandlerTest {
                             new UnsuccessfulReverificationResponseException(
                                     "Error getting reverification result"));
 
-            var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ERROR_1058));
@@ -153,6 +212,8 @@ class ReverificationResultHandlerTest {
         @Test
         void shouldSubmitUnsuccessfulTokenReceivedAuditEvent()
                 throws ParseException, UnsuccessfulReverificationResponseException {
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getUnsuccessfulTokenResponse());
             when(reverificationResultService.sendIpvReverificationRequest(any()))
@@ -160,7 +221,8 @@ class ReverificationResultHandlerTest {
                             new UnsuccessfulReverificationResponseException(
                                     "Error getting reverification result"));
 
-            handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+            handler.handleRequest(
+                    apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             verify(auditService)
                     .submitAuditEvent(eq(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED), any());
@@ -172,6 +234,8 @@ class ReverificationResultHandlerTest {
         @Test
         void shouldHandleIPVReverificationError()
                 throws ParseException, UnsuccessfulReverificationResponseException {
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
             when(reverificationResultService.sendIpvReverificationRequest(any()))
@@ -179,7 +243,9 @@ class ReverificationResultHandlerTest {
                             new UnsuccessfulReverificationResponseException(
                                     "Error getting reverification result"));
 
-            var result = handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ERROR_1059));
@@ -214,8 +280,12 @@ class ReverificationResultHandlerTest {
         return TokenErrorResponse.parse(tokenHTTPResponse);
     }
 
-    private APIGatewayProxyRequestEvent apiRequestEventWithEmail(String code, String email) {
-        var body = format("{ \"code\": \"%s\" , \"email\": \"%s\"}", code, email);
+    private APIGatewayProxyRequestEvent apiRequestEventWithEmail(
+            String code, String state, String email) {
+        var body =
+                format(
+                        "{ \"code\": \"%s\" , \"state\": \"%s\" , \"email\": \"%s\"}",
+                        code, state, email);
         return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
     }
 }

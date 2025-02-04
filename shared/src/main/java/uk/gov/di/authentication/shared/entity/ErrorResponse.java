@@ -71,7 +71,8 @@ public enum ErrorResponse {
     ERROR_1057(1057, "User entered invalid reauth sign in details too many times"),
     ERROR_1058(1058, "IPV TokenResponse was not successful"),
     ERROR_1059(1059, "Error getting reverification result"),
-    ERROR_1060(1060, "Failed to generate MFA Reset Authorize JAR for IPV");
+    ERROR_1060(1060, "Failed to generate MFA Reset Authorize JAR for IPV"),
+    ERROR_1061(1061, "State returned from IPV does not match expected state");
 
     private int code;
 

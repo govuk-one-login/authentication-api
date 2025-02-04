@@ -31,13 +31,11 @@ import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.sharedtest.helper.TestClockHelper;
@@ -61,7 +59,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
 class IPVReverificationServiceTest {
@@ -70,7 +67,6 @@ class IPVReverificationServiceTest {
     private static final String TEST_STATE_STORAGE_PREFIX = "mfaReset:state:";
     private static final String TEST_STATE_VALUE = "testState";
     public static final State STATE = State.parse(TEST_STATE_VALUE);
-    private static final Session TEST_SESSION = new Session(SESSION_ID);
     private static final String TEST_CLIENT_SESSION_ID = "journeyId";
     private static final Subject TEST_SUBJECT = new Subject(COMMON_SUBJECT_ID);
     private static final String TEST_AUDIENCE_CLAIM = "someAud";
@@ -99,16 +95,9 @@ class IPVReverificationServiceTest {
     private final NowHelper.NowClock nowClock = TestClockHelper.getInstance();
     private final TokenService tokenService = mock(TokenService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final JWTClaimsSet testJwtClaims = constructTestClaimSet();
     private final IPVReverificationService ipvReverificationService =
-            new IPVReverificationService(
-                    configurationService,
-                    nowClock,
-                    jwtService,
-                    tokenService,
-                    redisConnectionService);
+            new IPVReverificationService(configurationService, nowClock, jwtService, tokenService);
     private SignedJWT testSignedJwt;
     private EncryptedJWT testEncryptedJwt;
     MockedStatic<IdGenerator> mockIdGen;
@@ -148,8 +137,7 @@ class IPVReverificationServiceTest {
     }
 
     @Test
-    void shouldReturn200WithAuthorizeUrlInBody()
-            throws JOSEException, Json.JsonException, ParseException {
+    void shouldReturn200WithAuthorizeUrlInBody() throws JOSEException, ParseException {
         try (MockedConstruction<State> mockedState =
                 Mockito.mockConstruction(
                         State.class,
@@ -159,7 +147,7 @@ class IPVReverificationServiceTest {
 
             String redirectUri =
                     ipvReverificationService.buildIpvReverificationRedirectUri(
-                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION, STATE);
+                            TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE);
 
             RSAPublicKey expectedPublicKey =
                     new RSAKey.Builder(
@@ -172,11 +160,6 @@ class IPVReverificationServiceTest {
             verify(jwtService)
                     .signJWT(TEST_SIGNING_ALGORITHM, constructTestClaimSet(), TEST_KEY_ID);
             verify(jwtService).encryptJWT(testSignedJwt, expectedPublicKey);
-            verify(redisConnectionService)
-                    .saveWithExpiry(
-                            TEST_STATE_STORAGE_PREFIX + SESSION_ID,
-                            objectMapper.writeValueAsString(TEST_STATE_VALUE),
-                            TEST_SESSION_EXPIRY);
             verify(tokenService).generateStorageTokenForMfaReset(TEST_SUBJECT);
 
             var expectedUri =
@@ -202,7 +185,7 @@ class IPVReverificationServiceTest {
                         IPVReverificationServiceException.class,
                         () ->
                                 ipvReverificationService.buildIpvReverificationRedirectUri(
-                                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, TEST_SESSION, STATE));
+                                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE));
 
         assertEquals(
                 "Missing required environment variable: IPV_PUBLIC_ENCRYPTION_KEY",

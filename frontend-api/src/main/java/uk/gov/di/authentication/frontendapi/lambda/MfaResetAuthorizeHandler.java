@@ -80,8 +80,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.ipvReverificationService =
-                new IPVReverificationService(
-                        configurationService, jwtService, tokenService, redisConnectionService);
+                new IPVReverificationService(configurationService, jwtService, tokenService);
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
     }
 
@@ -122,10 +121,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             State authenticationState = new State();
             var ipvReverificationRequestURI =
                     ipvReverificationService.buildIpvReverificationRedirectUri(
-                            internalCommonSubjectId,
-                            clientSessionId,
-                            userSession,
-                            authenticationState);
+                            internalCommonSubjectId, clientSessionId, authenticationState);
 
             idReverificationStateService.store(
                     authenticationState.getValue(),
