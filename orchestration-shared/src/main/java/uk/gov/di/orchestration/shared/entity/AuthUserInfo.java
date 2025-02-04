@@ -3,11 +3,13 @@ package uk.gov.di.orchestration.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
 @DynamoDbBean
 public class AuthUserInfo {
 
     private String internalCommonSubjectId;
+    private String clientSessionId;
     private String userInfo;
     private long timeToExist;
 
@@ -23,6 +25,21 @@ public class AuthUserInfo {
 
     public AuthUserInfo withInternalCommonSubjectId(String internalCommonSubjectId) {
         this.internalCommonSubjectId = internalCommonSubjectId;
+        return this;
+    }
+
+    @DynamoDbSortKey
+    @DynamoDbAttribute("ClientSessionId")
+    public String getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+    }
+
+    public AuthUserInfo withClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
         return this;
     }
 
