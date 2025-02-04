@@ -46,12 +46,6 @@ public class AuthorisationCodeService {
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientSessionId, String email, ClientSession clientSession, Long authTime) {
-        return generateAndSaveAuthorisationCode(
-                null, clientSessionId, email, clientSession, authTime);
-    }
-
-    public AuthorizationCode generateAndSaveAuthorisationCode(
             String clientId,
             String clientSessionId,
             String email,
