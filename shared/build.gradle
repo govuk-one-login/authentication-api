@@ -28,6 +28,8 @@ dependencies {
             configurations.apache
     implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 
+    implementation configurations.otel
+
     testImplementation configurations.tests,
             configurations.lambda_tests,
             project(":shared-test")
