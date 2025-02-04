@@ -8,6 +8,7 @@ import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.tracing.TracingHttpClient;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -40,7 +41,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
 
     public TicfCriHandler() {
         this.configurationService = ConfigurationService.getInstance();
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = TracingHttpClient.newHttpClient();
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
