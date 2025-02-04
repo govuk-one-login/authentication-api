@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
@@ -36,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
 public class IPVTokenService {
@@ -103,6 +105,13 @@ public class IPVTokenService {
                 if (count > 0) LOG.warn("Retrying IPV access token request");
                 count++;
                 tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+                if (!tokenResponse.indicatesSuccess()) {
+                    HTTPResponse response = tokenResponse.toHTTPResponse();
+                    LOG.warn(
+                            format(
+                                    "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
+                                    response.getStatusCode(), count, response.getContent()));
+                }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
             return tokenResponse;
@@ -127,6 +136,14 @@ public class IPVTokenService {
                 count++;
                 var httpResponse = userInfoRequest.toHTTPRequest().send();
                 userIdentityResponse = UserInfoResponse.parse(httpResponse);
+                if (!httpResponse.indicatesSuccess()) {
+                    LOG.warn(
+                            format(
+                                    "Unsuccessful %s response from IPV user identity endpoint on attempt %d: %s ",
+                                    httpResponse.getStatusCode(),
+                                    count,
+                                    httpResponse.getContent()));
+                }
             } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
 
             if (!userIdentityResponse.indicatesSuccess()) {

@@ -104,6 +104,13 @@ public class DocAppCriService {
                 if (count > 0) LOG.warn("Retrying DocApp token request");
                 count++;
                 tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+                if (!tokenResponse.indicatesSuccess()) {
+                    HTTPResponse response = tokenResponse.toHTTPResponse();
+                    LOG.warn(
+                            format(
+                                    "Unsuccessful %s response from DocApp token endpoint on attempt %d: %s ",
+                                    response.getStatusCode(), count, response.getContent()));
+                }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
             return tokenResponse;
         } catch (IOException e) {
@@ -126,6 +133,12 @@ public class DocAppCriService {
                 if (count > 0) LOG.warn("Retrying DocApp cri data request");
                 count++;
                 response = request.send();
+                if (!response.indicatesSuccess()) {
+                    LOG.warn(
+                            format(
+                                    "Unsuccessful %s response from DocApp userinfo endpoint on attempt %d: %s ",
+                                    response.getStatusCode(), count, response.getContent()));
+                }
             } while (!response.indicatesSuccess() && count < maxTries);
 
             if (!response.indicatesSuccess()) {
