@@ -144,6 +144,23 @@ public class IdentityProgressFrontendHandlerTest {
     }
 
     @Test
+    void shouldReturnErrorWhenInternalCommonSubjectIdIsNullOnOrchSession()
+            throws Json.JsonException {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(null)));
+        when(clientSessionService.getClientSession(any()))
+                .thenReturn(Optional.of(getClientSession()));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        verifyNoInteractions(cloudwatchMetricsService, auditService);
+    }
+
+    @Test
     void shouldReturnCOMPLETEDStatusWhenIdentityCredentialIsPresent() throws Json.JsonException {
         usingValidSession();
         var identityCredentials =

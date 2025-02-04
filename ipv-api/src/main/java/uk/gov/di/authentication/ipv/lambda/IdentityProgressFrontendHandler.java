@@ -102,6 +102,12 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             }
 
             UserInfo userInfo;
+
+            if (Objects.isNull(internalCommonSubjectIdentifier)
+                    || internalCommonSubjectIdentifier.isBlank()) {
+                LOG.warn("InternalCommonSubjectId is null on orch session");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
             try {
                 Optional<UserInfo> userInfoFromStorage =
                         userInfoStorageService.getAuthenticationUserInfo(
