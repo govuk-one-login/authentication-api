@@ -10,16 +10,19 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 
 import java.net.URI;
@@ -55,6 +58,9 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     public static final State STATE = new State();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+
+    @RegisterExtension
+    protected static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
 
     @BeforeEach
     void setup() {
@@ -193,6 +199,9 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                         .state(STATE)
                         .nonce(new Nonce());
         redis.createSession(SESSION_ID);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(SESSION_ID)
+                        .withInternalCommonSubjectId(INTERNAL_SUBJECT.getValue()));
         var clientSession =
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),

@@ -10,6 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.shared.entity.BaseFrontendRequest;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -140,6 +141,12 @@ public abstract class BaseFrontendHandler<T>
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
         if (session.isEmpty()) {
             LOG.warn("Session cannot be found");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
+        Optional<OrchSessionItem> orchSession = orchSessionService.getSession(sessionId);
+        if (orchSession.isEmpty()) {
+            LOG.warn("Orch session not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
         attachSessionIdToLogs(sessionId);
