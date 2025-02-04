@@ -97,11 +97,13 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
         var idReverificationStateMaybe = idReverificationStateService.get(request.state());
         if (idReverificationStateMaybe.isEmpty()) {
+            LOG.error("Cannot match received state to a recorded state");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1061);
         }
 
         var idReverificationState = idReverificationStateMaybe.get();
         if (!idReverificationState.getClientSessionId().equals(userContext.getClientSessionId())) {
+            LOG.error("Received state belongs to a different session");
             return generateApiGatewayProxyErrorResponse(400, ERROR_1061);
         }
 
