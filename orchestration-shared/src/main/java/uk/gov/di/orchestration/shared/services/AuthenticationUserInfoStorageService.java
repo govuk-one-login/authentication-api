@@ -7,16 +7,18 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-public class AuthenticationUserInfoStorageService
-        extends BaseDynamoService<OldAuthenticationUserInfo> {
+public class AuthenticationUserInfoStorageService {
 
     private final long timeToExist;
+    private final BaseDynamoService<OldAuthenticationUserInfo>
+            oldAuthenticationUserInfoDynamoService;
 
     public AuthenticationUserInfoStorageService(ConfigurationService configurationService) {
-        super(
-                OldAuthenticationUserInfo.class,
-                "authentication-callback-userinfo",
-                configurationService);
+        oldAuthenticationUserInfoDynamoService =
+                new BaseDynamoService<>(
+                        OldAuthenticationUserInfo.class,
+                        "authentication-callback-userinfo",
+                        configurationService);
         this.timeToExist = 21600L; // 6 hours
     }
 
@@ -31,7 +33,7 @@ public class AuthenticationUserInfoStorageService
                                         .toInstant()
                                         .getEpochSecond());
 
-        put(userInfoDbObject);
+        oldAuthenticationUserInfoDynamoService.put(userInfoDbObject);
     }
 
     public Optional<UserInfo> getAuthenticationUserInfo(String subjectID)
@@ -45,7 +47,8 @@ public class AuthenticationUserInfoStorageService
     }
 
     private Optional<OldAuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
-        return get(subjectID)
+        return oldAuthenticationUserInfoDynamoService
+                .get(subjectID)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 }
