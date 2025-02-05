@@ -120,17 +120,19 @@ public class AuthCodeResponseGenerationService {
             boolean docAppJourney,
             SessionService sessionService,
             Session session,
+            String sessionId,
             OrchSessionService orchSessionService,
             OrchSessionItem orchSession) {
 
         if (docAppJourney) {
-            sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
+            sessionService.storeOrUpdateSession(
+                    session.setNewAccount(EXISTING_DOC_APP_JOURNEY), sessionId);
             orchSessionService.updateSession(
                     orchSession.withAccountState(
                             OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
         } else {
             sessionService.storeOrUpdateSession(
-                    session.setAuthenticated(true).setNewAccount(EXISTING));
+                    session.setAuthenticated(true).setNewAccount(EXISTING), sessionId);
             orchSessionService.updateSession(
                     orchSession
                             .withAuthenticated(true)

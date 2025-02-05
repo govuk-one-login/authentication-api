@@ -421,7 +421,7 @@ public class AuthenticationCallbackHandler
                 clientSession.setRpPairwiseId(
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
 
-                sessionService.storeOrUpdateSession(session);
+                sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
 
@@ -567,7 +567,7 @@ public class AuthenticationCallbackHandler
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
-                sessionService.storeOrUpdateSession(session);
+                sessionService.storeOrUpdateSession(session, sessionId);
                 var currentCredentialStrength =
                         userInfo.getStringClaim(
                                 AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());

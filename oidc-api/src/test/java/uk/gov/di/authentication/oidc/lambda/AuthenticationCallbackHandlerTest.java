@@ -560,7 +560,8 @@ class AuthenticationCallbackHandlerTest {
 
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
+        verify(sessionService, times(2))
+                .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 Session.AccountState.UNKNOWN,
@@ -932,7 +933,8 @@ class AuthenticationCallbackHandlerTest {
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
-                verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
+                verify(sessionService)
+                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
             }
@@ -955,7 +957,8 @@ class AuthenticationCallbackHandlerTest {
                                 CLIENT_ID.getValue(),
                                 intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
-                verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
+                verify(sessionService)
+                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
             }
@@ -983,7 +986,8 @@ class AuthenticationCallbackHandlerTest {
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
-                verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
+                verify(sessionService)
+                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
             }
@@ -1006,7 +1010,8 @@ class AuthenticationCallbackHandlerTest {
                                 CLIENT_ID.toString(),
                                 intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
-                verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
+                verify(sessionService)
+                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
             }
 
             @Test
@@ -1032,7 +1037,8 @@ class AuthenticationCallbackHandlerTest {
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
-                verify(sessionService).storeOrUpdateSession(argThat(Session::isAuthenticated));
+                verify(sessionService)
+                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
             }
@@ -1110,7 +1116,8 @@ class AuthenticationCallbackHandlerTest {
                     .updateSession(argThat(s -> s.getPreviousSessionId() == null));
             verify(sessionService, times(2))
                     .storeOrUpdateSession(
-                            argThat(s -> s.getClientSessions().equals(PREVIOUS_CLIENT_SESSIONS)));
+                            argThat(s -> s.getClientSessions().equals(PREVIOUS_CLIENT_SESSIONS)),
+                            anyString());
         }
 
         @Test
@@ -1143,7 +1150,8 @@ class AuthenticationCallbackHandlerTest {
             verify(orchSessionService, times(3))
                     .updateSession(argThat(s -> s.getPreviousSessionId() == null));
             verify(sessionService, times(2))
-                    .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
+                    .storeOrUpdateSession(
+                            argThat(s -> s.getClientSessions().equals(List.of())), anyString());
         }
 
         @Test
@@ -1176,7 +1184,8 @@ class AuthenticationCallbackHandlerTest {
             verify(orchSessionService, times(3))
                     .updateSession(argThat(s -> s.getPreviousSessionId() == null));
             verify(sessionService, times(2))
-                    .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
+                    .storeOrUpdateSession(
+                            argThat(s -> s.getClientSessions().equals(List.of())), anyString());
         }
 
         @Test
@@ -1211,7 +1220,8 @@ class AuthenticationCallbackHandlerTest {
             verify(orchSessionService, times(3))
                     .updateSession(argThat(s -> s.getPreviousSessionId() == null));
             verify(sessionService, times(2))
-                    .storeOrUpdateSession(argThat(s -> s.getClientSessions().equals(List.of())));
+                    .storeOrUpdateSession(
+                            argThat(s -> s.getClientSessions().equals(List.of())), anyString());
 
             verify(logoutService, times(1))
                     .handleMaxAgeLogout(
@@ -1384,7 +1394,8 @@ class AuthenticationCallbackHandlerTest {
 
     private void assertSessionUpdatedAuthJourney() {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
+        verify(sessionService, times(2))
+                .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
         assertThat(
                 sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
                 equalTo(lowestCredentialTrustLevel));

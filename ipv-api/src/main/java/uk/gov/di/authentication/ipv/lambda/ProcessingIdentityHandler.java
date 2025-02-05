@@ -174,7 +174,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
-            sessionService.storeOrUpdateSession(userContext.getSession());
+            sessionService.storeOrUpdateSession(
+                    userContext.getSession(), userContext.getSessionId());
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);

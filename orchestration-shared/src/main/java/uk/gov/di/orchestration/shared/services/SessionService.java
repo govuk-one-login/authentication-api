@@ -1,24 +1,12 @@
 package uk.gov.di.orchestration.shared.services;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.CookieHelper;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
-import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
-import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
-
 public class SessionService {
-
-    private static final Logger LOG = LogManager.getLogger(SessionService.class);
 
     private static final Json OBJECT_MAPPER = SerializationService.getInstance();
 
@@ -42,10 +30,6 @@ public class SessionService {
                         configurationService.getRedisPassword()));
     }
 
-    public Session generateSession() {
-        return generateSession(IdGenerator.generate());
-    }
-
     public Session generateSession(String sessionId) {
         return new Session(sessionId);
     }
@@ -58,11 +42,11 @@ public class SessionService {
         return copiedSession;
     }
 
-    public void storeOrUpdateSession(Session session) {
-        storeOrUpdateSession(session, session.getSessionId());
+    public void storeOrUpdateSession(Session session, String sessionId) {
+        storeOrUpdateSession(session, sessionId, sessionId);
     }
 
-    private void storeOrUpdateSession(Session session, String oldSessionId) {
+    private void storeOrUpdateSession(Session session, String oldSessionId, String newSessionId) {
         try {
             var newSession = OBJECT_MAPPER.writeValueAsString(session);
             if (redisConnectionService.keyExists(oldSessionId)) {
@@ -71,18 +55,10 @@ public class SessionService {
             }
 
             redisConnectionService.saveWithExpiry(
-                    session.getSessionId(), newSession, configurationService.getSessionExpiry());
+                    newSessionId, newSession, configurationService.getSessionExpiry());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public void updateWithNewSessionId(Session session) {
-        updateWithNewSessionId(session, IdGenerator.generate());
-    }
-
-    public void updateWithNewSessionId(Session session, String newSessionId) {
-        updateWithNewSessionId(session, session.getSessionId(), newSessionId);
     }
 
     public Session updateWithNewSessionId(
@@ -90,45 +66,9 @@ public class SessionService {
         try {
             session.setSessionId(newSessionId);
             session.resetProcessingIdentityAttempts();
-            storeOrUpdateSession(session, oldSessionId);
+            storeOrUpdateSession(session, oldSessionId, newSessionId);
             redisConnectionService.deleteValue(oldSessionId);
             return session;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public Optional<Session> getSessionFromRequestHeaders(Map<String, String> headers) {
-        if (!headersContainValidHeader(
-                headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
-            LOG.warn("Headers are missing Session-Id header");
-            return Optional.empty();
-        }
-        String sessionId =
-                getHeaderValueFromHeaders(
-                        headers,
-                        SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
-        if (sessionId == null) {
-            LOG.warn("Value not found for Session-Id header");
-            return Optional.empty();
-        }
-
-        return sanitiseBase64(sessionId)
-                .flatMap(
-                        id -> {
-                            try {
-                                return getSession(id);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            }
-                        });
-    }
-
-    public Optional<Session> getSessionFromSessionCookie(Map<String, String> headers) {
-        try {
-            Optional<CookieHelper.SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
-            return ids.flatMap(s -> getSession(s.getSessionId()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

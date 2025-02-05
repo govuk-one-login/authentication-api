@@ -167,7 +167,8 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                             .orElse(AuditService.UNKNOWN),
                     user);
 
-            sessionService.storeOrUpdateSession(userSession.getSession());
+            sessionService.storeOrUpdateSession(
+                    userSession.getSession(), userSession.getSessionId());
 
             LOG.info(
                     "Generating IdentityProgressResponse with IdentityProgressStatus: {}",
