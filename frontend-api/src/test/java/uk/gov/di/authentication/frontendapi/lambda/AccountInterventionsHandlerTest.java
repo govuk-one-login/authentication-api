@@ -93,7 +93,7 @@ class AccountInterventionsHandlerTest {
             String.valueOf(fixedDate.toEpochMilli());
     private static final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
             String.format(
-                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
+                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":%s}",
                     false, false, false, false, FIXED_DATE_UNIX_TIMESTAMP_STRING);
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private AccountInterventionsHandler handler;
@@ -428,7 +428,7 @@ class AccountInterventionsHandlerTest {
 
         assertEquals(
                 String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":%s}",
                         resetPassword, blocked, suspended, reproveIdentity, APPLIED_AT_TIMESTAMP),
                 result.getBody());
         var expectedMetricDimensions =
