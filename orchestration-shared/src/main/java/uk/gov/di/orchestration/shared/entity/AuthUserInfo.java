@@ -7,22 +7,22 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @DynamoDbBean
 public class AuthUserInfo {
 
-    private String subjectID;
+    private String internalCommonSubjectId;
     private String userInfo;
     private long timeToExist;
 
     @DynamoDbPartitionKey
-    @DynamoDbAttribute("SubjectID")
-    public String getSubjectID() {
-        return subjectID;
+    @DynamoDbAttribute("InternalCommonSubjectId")
+    public String getInternalCommonSubjectId() {
+        return internalCommonSubjectId;
     }
 
-    public void setSubjectID(String subjectID) {
-        this.subjectID = subjectID;
+    public void setInternalCommonSubjectId(String internalCommonSubjectId) {
+        this.internalCommonSubjectId = internalCommonSubjectId;
     }
 
-    public AuthUserInfo withSubjectID(String subjectID) {
-        this.subjectID = subjectID;
+    public AuthUserInfo withInternalCommonSubjectId(String internalCommonSubjectId) {
+        this.internalCommonSubjectId = internalCommonSubjectId;
         return this;
     }
 
