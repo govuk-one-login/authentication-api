@@ -24,7 +24,8 @@ dependencies {
             configurations.nimbus,
             configurations.cloudwatch,
             configurations.bouncycastle,
-            configurations.kms
+            configurations.kms,
+            configurations.jetbrains_annotations
 
     runtimeOnly configurations.logging_runtime
 

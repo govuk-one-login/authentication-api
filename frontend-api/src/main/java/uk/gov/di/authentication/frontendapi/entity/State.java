@@ -1,9 +1,10 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public record State(
-        @Expose boolean blocked,
-        @Expose boolean suspended,
-        @Expose boolean reproveIdentity,
-        @Expose boolean resetPassword) {}
+        @Expose @Required Boolean blocked,
+        @Expose @Required Boolean suspended,
+        @Expose @Required Boolean reproveIdentity,
+        @Expose @Required Boolean resetPassword) {}

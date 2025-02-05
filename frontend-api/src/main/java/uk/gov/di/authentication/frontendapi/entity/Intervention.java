@@ -1,11 +1,6 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
+import uk.gov.di.authentication.shared.validation.Required;
 
-import java.util.Objects;
-
-public record Intervention(@Expose Long appliedAt) {
-    public Intervention {
-        Objects.requireNonNull(appliedAt);
-    }
-}
+public record Intervention(@Expose @Required Long appliedAt) {}
