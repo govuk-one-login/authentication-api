@@ -32,6 +32,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static java.util.function.Predicate.not;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
@@ -243,7 +244,12 @@ public class StartService {
         return clientService
                 .getClient(clientID)
                 .map(ClientRegistry::isCookieConsentShared)
-                .orElseThrow(() -> new ClientNotFoundException(clientID));
+                .orElseThrow(
+                        () ->
+                                new ClientNotFoundException(
+                                        format(
+                                                "Could not find client for clientID: %s",
+                                                clientID)));
     }
 
     private boolean validCookieConsentValueIsPresent(
