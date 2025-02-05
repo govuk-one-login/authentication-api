@@ -35,35 +35,6 @@ class HttpStub {
         this(port, false, keyStorePath, keyStorePassword, null, null);
     }
 
-    public HttpStub(
-            String keyStorePath,
-            String keyStorePassword,
-            String trustStorePath,
-            String trustStorePassword) {
-        this(
-                RANDOM_PORT,
-                false,
-                keyStorePath,
-                keyStorePassword,
-                trustStorePath,
-                trustStorePassword);
-    }
-
-    public HttpStub(
-            boolean needSSL,
-            String keyStorePath,
-            String keyStorePassword,
-            String trustStorePath,
-            String trustStorePassword) {
-        this(
-                RANDOM_PORT,
-                needSSL,
-                keyStorePath,
-                keyStorePassword,
-                trustStorePath,
-                trustStorePassword);
-    }
-
     private HttpStub(
             int port,
             boolean needSSL,
@@ -120,15 +91,6 @@ class HttpStub {
         return ((ServerConnector) server.getConnectors()[0]).getLocalPort();
     }
 
-    public int getHttpsPort() {
-        return ((ServerConnector) server.getConnectors()[1]).getLocalPort();
-    }
-
-    public void reset() {
-        registeredResponses.clear();
-        clearRequests();
-    }
-
     public void clearRequests() {
         recordedRequests.clear();
     }
@@ -139,40 +101,24 @@ class HttpStub {
                 path, new RegisteredResponse(responseStatus, contentType, responseBody));
     }
 
-    public int getCountOfRequestsTo(final String path) {
-        return recordedRequests.stream()
-                .filter(input -> input.getPath().equals(path))
-                .toList()
-                .size();
-    }
-
-    public RecordedRequest getLastRequest() {
-        return recordedRequests.get(recordedRequests.size() - 1);
-    }
-
     public int getCountOfRequests() {
         return recordedRequests.size();
-    }
-
-    public List<RecordedRequest> getRecordedRequests() {
-        return recordedRequests;
     }
 
     private class Handler extends org.eclipse.jetty.server.Handler.Abstract {
 
         @Override
-        public boolean handle(Request request, Response response, Callback callback)
-                throws Exception {
+        public boolean handle(Request request, Response response, Callback callback) {
             recordedRequests.add(new RecordedRequest(request));
 
             RegisteredResponse registeredResponse =
                     registeredResponses.get(request.getHttpURI().getPath());
 
             if (registeredResponse != null) {
-                response.setStatus(registeredResponse.getStatus());
+                response.setStatus(registeredResponse.status());
                 response.getHeaders()
-                        .put(HttpHeader.CONTENT_TYPE, registeredResponse.getContentType());
-                ByteBuffer content = UTF_8.encode(registeredResponse.getBody());
+                        .put(HttpHeader.CONTENT_TYPE, registeredResponse.contentType());
+                ByteBuffer content = UTF_8.encode(registeredResponse.body());
                 response.write(true, content, callback);
                 callback.succeeded();
             }

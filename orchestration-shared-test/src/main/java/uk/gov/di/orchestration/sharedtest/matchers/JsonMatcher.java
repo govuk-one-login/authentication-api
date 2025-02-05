@@ -9,8 +9,6 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import java.util.function.Function;
 
 import static java.lang.String.format;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
 
 public class JsonMatcher<T> extends TypeSafeDiagnosingMatcher<JsonElement> {
 
@@ -48,13 +46,6 @@ public class JsonMatcher<T> extends TypeSafeDiagnosingMatcher<JsonElement> {
 
     public static JsonElement asJson(String payload) {
         return JsonParser.parseString(payload);
-    }
-
-    public static JsonMatcher<JsonElement> hasField(final String fieldName) {
-        return new JsonMatcher<>(
-                fieldName,
-                node -> node.getAsJsonObject().get(fieldName),
-                is(notNullValue(JsonElement.class)));
     }
 
     public static JsonMatcher<String> hasFieldWithValue(
