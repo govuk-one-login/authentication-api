@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
 
@@ -61,8 +62,9 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             CloudwatchMetricsService cloudwatchMetricsService,
             SessionService sessionService,
             AuthenticationUserInfoStorageService userInfoStorageService,
-            ClientSessionService clientSessionService) {
-        super(configurationService, sessionService, clientSessionService);
+            ClientSessionService clientSessionService,
+            OrchSessionService orchSessionService) {
+        super(configurationService, sessionService, clientSessionService, orchSessionService);
         this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -83,7 +85,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
         LOG.info("IdentityProgress request received");
         try {
             var internalCommonSubjectIdentifier =
-                    userSession.getSession().getInternalCommonSubjectIdentifier();
+                    userSession.getOrchSession().getInternalCommonSubjectId();
 
             AuthenticationRequest authenticationRequest;
             try {
@@ -100,6 +102,12 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             }
 
             UserInfo userInfo;
+
+            if (Objects.isNull(internalCommonSubjectIdentifier)
+                    || internalCommonSubjectIdentifier.isBlank()) {
+                LOG.warn("InternalCommonSubjectId is null on orch session");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
             try {
                 Optional<UserInfo> userInfoFromStorage =
                         userInfoStorageService.getAuthenticationUserInfo(

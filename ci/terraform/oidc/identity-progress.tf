@@ -11,6 +11,7 @@ module "identity_progress_role" {
     aws_iam_policy.authentication_callback_userinfo_encryption_key_kms_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
+    aws_iam_policy.dynamo_orch_session_cross_account_read_access_policy[0].arn
   ]
   extra_tags = {
     Service = "identity-progress"
@@ -30,7 +31,8 @@ module "identity_progress" {
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = "false"
     REDIS_KEY                = local.redis_key
-    OIDC_API_BASE_URL        = local.api_base_url
+    OIDC_API_BASE_URL        = local.api_base_url,
+    ORCH_DYNAMO_ARN_PREFIX   = "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-"
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IdentityProgressFrontendHandler::handleRequest"
 

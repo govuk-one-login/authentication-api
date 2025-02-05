@@ -22,6 +22,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -31,6 +32,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -90,8 +92,11 @@ public class IdentityProgressFrontendHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final Session session =
             new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private IdentityProgressFrontendHandler handler;
@@ -114,11 +119,40 @@ public class IdentityProgressFrontendHandlerTest {
                         cloudwatchMetricsService,
                         sessionService,
                         userInfoStorageService,
-                        clientSessionService);
+                        clientSessionService,
+                        orchSessionService);
     }
 
     @Test
     void shouldReturnErrorIfSessionIsNotFound() throws Json.JsonException {
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        verifyNoInteractions(cloudwatchMetricsService, auditService);
+    }
+
+    @Test
+    void shouldReturnErrorIfOrchSessionIsNotFound() throws Json.JsonException {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.empty());
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        verifyNoInteractions(cloudwatchMetricsService, auditService);
+    }
+
+    @Test
+    void shouldReturnErrorWhenInternalCommonSubjectIdIsNullOnOrchSession()
+            throws Json.JsonException {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(null)));
+        when(clientSessionService.getClientSession(any()))
+                .thenReturn(Optional.of(getClientSession()));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -305,5 +339,6 @@ public class IdentityProgressFrontendHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 }

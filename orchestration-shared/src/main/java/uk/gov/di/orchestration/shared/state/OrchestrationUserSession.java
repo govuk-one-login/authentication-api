@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.state;
 
 import org.jetbrains.annotations.Nullable;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 
 public class OrchestrationUserSession {
@@ -10,18 +11,21 @@ public class OrchestrationUserSession {
     @Nullable private final String clientId;
     @Nullable private final ClientSession clientSession;
     private final String clientSessionId;
+    private final OrchSessionItem orchSessionItem;
 
     protected OrchestrationUserSession(
             Session session,
             String sessionId,
             @Nullable String clientId,
             @Nullable ClientSession clientSession,
-            String clientSessionId) {
+            String clientSessionId,
+            OrchSessionItem orchSession) {
         this.session = session;
         this.sessionId = sessionId;
         this.clientId = clientId;
         this.clientSession = clientSession;
         this.clientSessionId = clientSessionId;
+        this.orchSessionItem = orchSession;
     }
 
     public Session getSession() {
@@ -44,6 +48,10 @@ public class OrchestrationUserSession {
         return clientSessionId;
     }
 
+    public OrchSessionItem getOrchSession() {
+        return orchSessionItem;
+    }
+
     public static Builder builder(Session session) {
         return new Builder(session);
     }
@@ -54,6 +62,7 @@ public class OrchestrationUserSession {
         private String clientId;
         private ClientSession clientSession;
         private String clientSessionId;
+        private OrchSessionItem orchSession;
 
         protected Builder(Session session) {
             this.session = session;
@@ -79,9 +88,14 @@ public class OrchestrationUserSession {
             return this;
         }
 
+        public Builder withOrchSession(OrchSessionItem orchSession) {
+            this.orchSession = orchSession;
+            return this;
+        }
+
         public OrchestrationUserSession build() {
             return new OrchestrationUserSession(
-                    session, sessionId, clientId, clientSession, clientSessionId);
+                    session, sessionId, clientId, clientSession, clientSessionId, orchSession);
         }
     }
 }

@@ -13,6 +13,7 @@ import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
 
@@ -33,20 +34,24 @@ public abstract class BaseOrchestrationFrontendHandler
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
     protected final ClientSessionService clientSessionService;
+    protected final OrchSessionService orchSessionService;
 
     protected BaseOrchestrationFrontendHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService) {
+            ClientSessionService clientSessionService,
+            OrchSessionService orchSessionService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
+        this.orchSessionService = orchSessionService;
     }
 
     protected BaseOrchestrationFrontendHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
     }
 
     @Override
@@ -85,6 +90,14 @@ public abstract class BaseOrchestrationFrontendHandler
             LOG.warn("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
+
+        var orchSessionOpt = orchSessionService.getSession(sessionId);
+
+        if (orchSessionOpt.isEmpty()) {
+            LOG.warn("Orch session cannot be found");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
         var clientSession = clientSessionIdOpt.flatMap(clientSessionService::getClientSession);
 
         attachSessionIdToLogs(sessionId);
@@ -96,7 +109,8 @@ public abstract class BaseOrchestrationFrontendHandler
                 OrchestrationUserSession.builder(sessionOpt.get())
                         .withSessionId(sessionId)
                         .withClientSessionId(clientSessionIdOpt.orElse(null))
-                        .withClientSession(clientSession.orElse(null));
+                        .withClientSession(clientSession.orElse(null))
+                        .withOrchSession(orchSessionOpt.get());
 
         var clientID =
                 clientSession
