@@ -483,7 +483,7 @@ Resources:
 
   #region AuthUserInfo DynamoDB Table
 
-  AuthUserInfoEncryptionKey:
+  AuthUserInfoTableEncryptionKey:
     Type: AWS::KMS::Key
     Properties:
       Description: KMS encryption key for AuthUserInfo DynamoDB table
@@ -529,7 +529,7 @@ Resources:
       BillingMode: PAY_PER_REQUEST
       SSESpecification:
         SSEEnabled: true
-        KMSMasterKeyId: !GetAtt AuthUserInfoEncryptionKey.Arn
+        KMSMasterKeyId: !GetAtt AuthUserInfoTableEncryptionKey.Arn
         SSEType: KMS
       TimeToLiveSpecification:
         AttributeName: ttl
@@ -1946,6 +1946,8 @@ Resources:
         - !Ref UserProfileTableWriteAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableWriteAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
+        - !Ref AuthUserInfoTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref StorageTokenSigningKmsAccessPolicy
@@ -2808,6 +2810,7 @@ Resources:
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
@@ -3651,6 +3654,7 @@ Resources:
         - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -4288,6 +4292,42 @@ Resources:
             Action:
               - dynamodb:DeleteItem
             Resource: !GetAtt OrchSessionTable.Arn
+
+  AuthUserInfoTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthUserInfoTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt AuthUserInfoTable.Arn
+          - Sid: AllowAuthUserInfoTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
+
+  AuthUserInfoTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthUserInfoTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt AuthUserInfoTable.Arn
+          - Sid: AllowAuthUserInfoTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
 
   IdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
