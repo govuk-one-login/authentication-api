@@ -219,6 +219,11 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         AuthCodeExchangeData authCodeExchangeData = authCodeExchangeDataMaybe.get();
+        if (!Objects.equals(authCodeExchangeData.getClientId(), clientRegistry.getClientID())) {
+            LOG.warn("Client ID from auth code does not match client ID from request body");
+            // ATO-646: Make this return 400 error when we are confident that
+            // it won't cause issues with existing clients
+        }
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
         updateAttachedLogFieldToLogs(
                 GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
