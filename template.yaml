@@ -1946,6 +1946,8 @@ Resources:
         - !Ref UserProfileTableWriteAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableWriteAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
+        - !Ref AuthUserInfoTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref StorageTokenSigningKmsAccessPolicy
@@ -2808,6 +2810,7 @@ Resources:
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
@@ -3651,6 +3654,7 @@ Resources:
         - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
