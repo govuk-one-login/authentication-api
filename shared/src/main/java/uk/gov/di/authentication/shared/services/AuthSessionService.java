@@ -59,50 +59,46 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
     }
 
-    public void addOrUpdateSessionIncludingSessionId(
+    public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
             Optional<String> previousSessionId,
             String newSessionId,
-            CredentialTrustLevel currentCredentialStrength,
-            boolean upliftRequired) {
+            CredentialTrustLevel currentCredentialStrength) {
+
         try {
-            Optional<AuthSessionItem> oldItem = Optional.empty();
+            Optional<AuthSessionItem> previousAuthSession = Optional.empty();
             if (previousSessionId.isPresent()) {
-                LOG.info("previousSessionId is present");
-                oldItem = getSession(previousSessionId.get());
+                previousAuthSession = getSession(previousSessionId.get());
             }
-            if (oldItem.isPresent()) {
-                AuthSessionItem newItem =
-                        oldItem.get()
+
+            if (previousAuthSession.isPresent()) {
+                var updatedSession =
+                        previousAuthSession
+                                .get()
                                 .withSessionId(newSessionId)
                                 .withCurrentCredentialStrength(currentCredentialStrength)
-                                .withUpliftRequired(upliftRequired)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
                                                 .getEpochSecond());
-                put(newItem);
+
                 delete(previousSessionId.get());
                 LOG.info(
-                        "Session ID updated in Auth session table. previousSessionId: {}, sessionId: {}",
+                        "Existing Auth session updated from previousSessionId: {}, sessionId: {}",
                         previousSessionId,
                         newSessionId);
+
+                return updatedSession;
             } else {
-                AuthSessionItem newItem =
-                        new AuthSessionItem()
-                                .withSessionId(newSessionId)
-                                .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                .withCurrentCredentialStrength(currentCredentialStrength)
-                                .withUpliftRequired(upliftRequired)
-                                .withTimeToLive(
-                                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
-                                                .toInstant()
-                                                .getEpochSecond());
-                put(newItem);
-                LOG.info("New item added to Auth session table. sessionId: {}", newSessionId);
+                LOG.info("New Auth session item created with sessionId: {}", newSessionId);
+                return generateNewAuthSession(newSessionId)
+                        .withCurrentCredentialStrength(currentCredentialStrength);
             }
         } catch (Exception e) {
-            logAndThrowAuthSessionException(
-                    "Failed to add or update session ID of Auth session item", newSessionId, e);
+            LOG.error(
+                    "Failed to generate new or update previous Auth session. Session ID: {}. Error message: {}",
+                    newSessionId,
+                    e.getMessage());
+            throw new AuthSessionException(e.getMessage());
         }
     }
 

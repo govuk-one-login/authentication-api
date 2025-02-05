@@ -17,6 +17,7 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -36,7 +37,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -172,6 +172,18 @@ public class StartHandler
                                         CLIENT_SESSION_ID_HEADER,
                                         configurationService.getHeadersCaseInsensitive()));
             }
+            var client = startService.getClient(clientSession.get());
+            var upliftRequired =
+                    startService.isUpliftRequired(
+                            clientSession.get(), client, startRequest.currentCredentialStrength());
+
+            var authSession =
+                    authSessionService.getUpdatedPreviousSessionOrCreateNew(
+                            Optional.ofNullable(startRequest.previousSessionId()),
+                            session.getSessionId(),
+                            startRequest.currentCredentialStrength());
+
+            authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
             var userContext = startService.buildUserContext(session, clientSession.get());
 
@@ -203,18 +215,6 @@ public class StartHandler
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
-
-            CredentialTrustLevel currentCredentialStrength =
-                    startRequest.currentCredentialStrength();
-
-            boolean upliftRequired =
-                    startService.isUpliftRequired(userContext, currentCredentialStrength);
-
-            authSessionService.addOrUpdateSessionIncludingSessionId(
-                    Optional.ofNullable(startRequest.previousSessionId()),
-                    session.getSessionId(),
-                    currentCredentialStrength,
-                    upliftRequired);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
@@ -295,7 +295,7 @@ public class StartHandler
             var errorMessage = "Unable to serialize start response";
             LOG.error(errorMessage, e);
             return generateApiGatewayProxyResponse(400, errorMessage);
-        } catch (NoSuchElementException e) {
+        } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
