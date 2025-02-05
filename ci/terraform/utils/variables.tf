@@ -1,5 +1,6 @@
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "deployer_role_arn" {
@@ -36,12 +37,6 @@ variable "utils_release_zip_file" {
 variable "shared_state_bucket" {
   type    = string
   default = "digital-identity-dev-tfstate"
-}
-
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
 
 variable "logging_endpoint_arns" {
@@ -141,11 +136,6 @@ variable "bulk_user_email_audience_loader_schedule_expression" {
   default     = "cron(0 13 ? * FRI 2049)"
 }
 
-variable "txma_account_id" {
-  default = ""
-  type    = string
-}
-
 variable "performance_tuning" {
   type = map(object({
     memory : number,
@@ -174,10 +164,12 @@ variable "email_check_results_writer_provisioned_concurrency" {
 
 variable "email_check_results_sqs_queue_arn" {
   description = "ARN of the SQS email results check queue"
+  type        = string
 }
 
 variable "email_check_results_sqs_queue_encryption_key_arn" {
   description = "ARN of the CMK used for server side encryption on the SQS email results check queue"
+  type        = string
 }
 
 variable "support_email_check_enabled" {

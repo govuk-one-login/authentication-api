@@ -38,7 +38,6 @@ provider "aws" {
 }
 
 locals {
-  request_tracing_allowed = contains(["build", "sandpit"], var.environment)
 
   access_logging_template = jsonencode({
     requestId            = "$context.requestId"
@@ -55,7 +54,3 @@ locals {
     integrationRequestId = "$context.integration.requestId"
   })
 }
-
-data "aws_caller_identity" "current" {}
-
-data "aws_partition" "current" {}

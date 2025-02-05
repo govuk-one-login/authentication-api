@@ -69,9 +69,6 @@ resource "aws_api_gateway_rest_api" "di_account_management_api" {
   name = "${var.environment}-di-account-management-api"
 }
 
-data "aws_region" "current" {
-}
-
 locals {
   oidc_api_base_url = "https://${local.oidc_api_fqdn}/"
 }

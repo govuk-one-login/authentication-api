@@ -18,57 +18,9 @@ variable "aws_dynamodb_endpoint" {
   default = null
 }
 
-variable "lambda_dynamo_endpoint" {
-  type        = string
-  default     = "http://dynamodb:8000"
-  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
-}
-
-variable "external_redis_host" {
-  type    = string
-  default = "redis"
-}
-
 variable "terms_and_conditions" {
   type    = string
   default = "1.12"
-}
-
-variable "external_redis_port" {
-  type    = number
-  default = 6379
-}
-
-variable "external_redis_password" {
-  type    = string
-  default = null
-}
-
-variable "redis_use_tls" {
-  type    = string
-  default = "true"
-}
-
-variable "enable_api_gateway_execution_logging" {
-  default     = true
-  description = "Whether to enable logging of API gateway runs"
-}
-
-variable "enable_api_gateway_execution_request_tracing" {
-  default     = false
-  description = "Whether to enable capturing of requests/responses from API gateway runs (ONLY ENABLE IN NON-PROD ENVIRONMENTS)"
-}
-
-variable "logging_endpoint_enabled" {
-  type        = bool
-  default     = true
-  description = "Whether the service should ship its Lambda logs to the `logging_endpoint_arn`"
-}
-
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
 
 variable "logging_endpoint_arns" {
@@ -99,18 +51,16 @@ variable "orch_stub_deployed" {
 
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "redis_node_size" {
   default = "cache.t2.small"
+  type    = string
 }
 
 variable "provision_dynamo" {
   type    = bool
-  default = false
-}
-
-variable "ipv_api_enabled" {
   default = false
 }
 
@@ -147,6 +97,7 @@ variable "common_state_bucket" {
 variable "di_tools_signing_profile_version_arn" {
   description = "The AWS Signer profile version to use from the `di-tools-prod` account"
   default     = "arn:aws:signer:eu-west-2:114407264696:/signing-profiles/di_auth_lambda_signing_20220215170204371800000001/zLiNn2Hi1I"
+  type        = string
 }
 
 variable "tools_account_id" {
@@ -158,6 +109,7 @@ variable "tools_account_id" {
 variable "enforce_code_signing" {
   default     = true
   description = "Whether the code signing policy will reject unsigned code. (only set to false in sandpit environments)"
+  type        = bool
 }
 
 variable "enable_user_profile_stream" {

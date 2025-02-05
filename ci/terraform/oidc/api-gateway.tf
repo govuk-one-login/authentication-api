@@ -64,9 +64,6 @@ resource "aws_api_gateway_resource" "register_resource" {
   path_part   = var.orch_register_enabled ? "register-auth" : "register"
 }
 
-data "aws_region" "current" {
-}
-
 locals {
   api_base_url = "https://${local.oidc_api_fqdn}/"
 

@@ -21,11 +21,13 @@ variable "auth_ext_lambda_zip_file" {
 
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "enable_api_gateway_execution_request_tracing" {
   default     = false
   description = "Whether to enable capturing of requests/responses from API gateway runs (ONLY ENABLE IN NON-PROD ENVIRONMENTS)"
+  type        = bool
 }
 
 variable "txma_account_id" {
@@ -36,6 +38,7 @@ variable "txma_account_id" {
 variable "enable_api_gateway_execution_logging" {
   default     = true
   description = "Whether to enable logging of API gateway runs"
+  type        = bool
 }
 
 variable "cloudwatch_log_retention" {
@@ -69,10 +72,12 @@ variable "performance_tuning" {
 
 variable "lambda_max_concurrency" {
   default = 0
+  type    = number
 }
 
 variable "scaling_trigger" {
   default = 0.7
+  type    = number
 }
 
 variable "lambda_min_concurrency" {
@@ -96,12 +101,6 @@ variable "orch_client_id" {
   default     = ""
   type        = string
   description = "The client ID used by the orchestrator in two situations: 1) when passing an authorize request to the authentication frontend - see OIDC module 2) when calling the authentication token endpoint - in this second case there is no real client registry or defined scopes, but it is a part of OAuth2 formalities."
-}
-
-variable "authentication_backend_uri" {
-  default     = ""
-  type        = string
-  description = "The base URL for the authentication API (all endpoints). This is not used for HTTP(S) routing within the context of this module, but is used to calculate the expected 'aud(ience)' in the signed client_assertion JWT in the orchestrator's token request to authentication's token endpoint"
 }
 
 variable "orch_to_auth_public_signing_key" {

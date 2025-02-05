@@ -60,10 +60,6 @@ variable "environment" {
   type = string
 }
 
-variable "authentication_vpc_arn" {
-  type = string
-}
-
 variable "security_group_ids" {
   type        = list(string)
   description = "The list of security group IDs to apply to the lambda"
@@ -76,18 +72,6 @@ variable "subnet_id" {
 
 variable "lambda_role_arn" {
   type = string
-}
-
-variable "logging_endpoint_enabled" {
-  type        = bool
-  default     = false
-  description = "Whether the Lambda should ship its logs to the `logging_endpoint_arn`"
-}
-
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
 
 variable "logging_endpoint_arns" {
@@ -144,6 +128,7 @@ variable "lambda_env_vars_encryption_kms_key_arn" {
 
 variable "code_signing_config_arn" {
   default = null
+  type    = string
 }
 
 variable "memory_size" {
@@ -152,14 +137,17 @@ variable "memory_size" {
 
 variable "provisioned_concurrency" {
   default = 0
+  type    = number
 }
 
 variable "max_provisioned_concurrency" {
   default = 5
+  type    = number
 }
 
 variable "scaling_trigger" {
   default = 0.7
+  type    = number
 }
 
 variable "slack_event_topic_arn" {

@@ -40,18 +40,6 @@ variable "ipv_p1_alarm_error_time_period" {
   default     = 600
 }
 
-variable "doc_app_p1_alarm_error_threshold" {
-  type        = number
-  description = "The number of Doc App errors raised before generating a Cloudwatch alarm"
-  default     = 20
-}
-
-variable "doc_app_p1_alarm_error_time_period" {
-  type        = number
-  description = "The time period in seconds for when the Doc App errors need to occur"
-  default     = 600
-}
-
 variable "account_interventions_error_metric_name" {
   type        = string
   description = "The name of the CloudWatch metric which counts Account Intervention Service errors"
@@ -111,10 +99,6 @@ variable "environment" {
   type = string
 }
 
-variable "service_domain" {
-  default = null
-}
-
 variable "aws_endpoint" {
   type    = string
   default = null
@@ -127,12 +111,7 @@ variable "aws_dynamodb_endpoint" {
 
 variable "custom_doc_app_claim_enabled" {
   default = false
-}
-
-variable "lambda_dynamo_endpoint" {
-  type        = string
-  default     = "http://dynamodb:8000"
-  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
+  type    = bool
 }
 
 variable "terms_and_conditions" {
@@ -140,31 +119,16 @@ variable "terms_and_conditions" {
   default = "1.12"
 }
 
-variable "redis_use_tls" {
-  type    = string
-  default = "true"
-}
-
 variable "enable_api_gateway_execution_logging" {
   default     = true
   description = "Whether to enable logging of API gateway runs"
+  type        = bool
 }
 
 variable "enable_api_gateway_execution_request_tracing" {
   default     = false
   description = "Whether to enable capturing of requests/responses from API gateway runs (ONLY ENABLE IN NON-PROD ENVIRONMENTS)"
-}
-
-variable "logging_endpoint_enabled" {
   type        = bool
-  default     = true
-  description = "Whether the service should ship its Lambda logs to the `logging_endpoint_arn`"
-}
-
-variable "logging_endpoint_arn" {
-  type        = string
-  default     = ""
-  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
 }
 
 variable "logging_endpoint_arns" {
@@ -173,14 +137,9 @@ variable "logging_endpoint_arns" {
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
 
-variable "stub_rp_clients" {
-  default     = []
-  type        = list(object({ client_name : string, callback_urls : list(string), logout_urls : list(string) }))
-  description = "The details of RP clients to provision in the Client table"
-}
-
 variable "aws_region" {
   default = "eu-west-2"
+  type    = string
 }
 
 variable "reset_password_route" {
@@ -286,12 +245,6 @@ variable "dlq_alarm_threshold" {
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
 }
 
-variable "waf_alarm_blocked_reqeuest_threshold" {
-  default     = 1000
-  type        = number
-  description = "The number of blocked requests caught by the WAF before a Cloudwatch alarm is generated"
-}
-
 variable "test_client_verify_email_otp" {
   type = string
 }
@@ -307,6 +260,7 @@ variable "test_clients_enabled" {
 
 variable "client_registry_api_enabled" {
   default = true
+  type    = bool
 }
 
 variable "evcs_audience" {
@@ -321,10 +275,12 @@ variable "auth_issuer_claim_for_evcs" {
 
 variable "ipv_api_enabled" {
   default = false
+  type    = bool
 }
 
 variable "ipv_capacity_allowed" {
   default = false
+  type    = bool
 }
 
 variable "ipv_authorisation_uri" {
@@ -389,11 +345,6 @@ variable "spot_enabled" {
   type    = bool
 }
 
-variable "spot_queue_url" {
-  default = "undefined"
-  type    = string
-}
-
 variable "ipv_auth_public_encryption_key" {
   type    = string
   default = "undefined"
@@ -403,12 +354,6 @@ variable "auth_frontend_public_encryption_key" {
   type        = string
   default     = "undefined"
   description = "Public encryption key which should be used to encrypt JWTs sent to Authentication (frontend)"
-}
-
-variable "auth_to_orch_token_signing_public_key" {
-  type        = string
-  default     = "undefined"
-  description = "Public signing key which should be used to sign token responses sent from Authentication (external API) to Orchestration (callback lambda)"
 }
 
 variable "doc_app_authorisation_uri" {
@@ -506,10 +451,12 @@ variable "performance_tuning" {
 
 variable "lambda_max_concurrency" {
   default = 0
+  type    = number
 }
 
 variable "scaling_trigger" {
   default = 0.7
+  type    = number
 }
 
 variable "use_robots_txt" {

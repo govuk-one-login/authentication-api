@@ -8,6 +8,7 @@
 | <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
 
 ## Providers
 
@@ -27,7 +28,6 @@
 |------|-------------|------|---------|:--------:|
 | <a name="input_dns_state_bucket"></a> [dns\_state\_bucket](#input\_dns\_state\_bucket) | n/a | `string` | n/a | yes |
 | <a name="input_dns_state_key"></a> [dns\_state\_key](#input\_dns\_state\_key) | n/a | `string` | n/a | yes |
-| <a name="input_dns_state_role"></a> [dns\_state\_role](#input\_dns\_state\_role) | n/a | `string` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | n/a | `string` | n/a | yes |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | n/a | `string` | `"eu-west-2"` | no |
 | <a name="input_is_sandpit"></a> [is\_sandpit](#input\_is\_sandpit) | n/a | `bool` | `false` | no |

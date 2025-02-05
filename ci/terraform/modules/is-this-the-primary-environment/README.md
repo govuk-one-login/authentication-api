@@ -15,6 +15,17 @@ This module is intended to standardize the way we determine if an environment is
 Some resources are only deployed to the primary environment, and this module can be used to conditionally deploy those resources without recreating the check everywhere,
 which could lead to inconsistencies.
 
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.8 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | 5.75.1 |
+| <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
+| <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
+
 ## Inputs
 
 | Name | Description | Type | Default | Required |
