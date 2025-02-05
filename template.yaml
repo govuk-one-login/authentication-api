@@ -483,7 +483,7 @@ Resources:
 
   #region AuthUserInfo DynamoDB Table
 
-  AuthUserInfoEncryptionKey:
+  AuthUserInfoTableEncryptionKey:
     Type: AWS::KMS::Key
     Properties:
       Description: KMS encryption key for AuthUserInfo DynamoDB table
@@ -529,7 +529,7 @@ Resources:
       BillingMode: PAY_PER_REQUEST
       SSESpecification:
         SSEEnabled: true
-        KMSMasterKeyId: !GetAtt AuthUserInfoEncryptionKey.Arn
+        KMSMasterKeyId: !GetAtt AuthUserInfoTableEncryptionKey.Arn
         SSEType: KMS
       TimeToLiveSpecification:
         AttributeName: ttl
