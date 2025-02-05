@@ -34,9 +34,8 @@ public class SessionService {
         return new Session(sessionId);
     }
 
-    public Session copySessionForMaxAge(Session previousSession, String newSessionId) {
+    public Session copySessionForMaxAge(Session previousSession) {
         var copiedSession = new Session(previousSession);
-        copiedSession.setSessionId(newSessionId);
         copiedSession.setAuthenticated(false).setCurrentCredentialStrength(null);
         copiedSession.resetClientSessions();
         return copiedSession;
@@ -64,7 +63,6 @@ public class SessionService {
     public Session updateWithNewSessionId(
             Session session, String oldSessionId, String newSessionId) {
         try {
-            session.setSessionId(newSessionId);
             session.resetProcessingIdentityAttempts();
             storeOrUpdateSession(session, oldSessionId, newSessionId);
             redisConnectionService.deleteValue(oldSessionId);

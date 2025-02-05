@@ -322,12 +322,7 @@ class AuthorisationHandlerTest {
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(sessionService.updateWithNewSessionId(any(Session.class), anyString(), anyString()))
-                .then(
-                        invocation -> {
-                            Session sessionToUpdate = invocation.getArgument(0);
-                            sessionToUpdate.setSessionId(invocation.getArgument(2));
-                            return sessionToUpdate;
-                        });
+                .then(invocation -> invocation.<Session>getArgument(0));
     }
 
     @Nested
@@ -2592,8 +2587,7 @@ class AuthorisationHandlerTest {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
             withExistingSession(session);
-            when(sessionService.copySessionForMaxAge(any(Session.class), anyString()))
-                    .thenCallRealMethod();
+            when(sessionService.copySessionForMaxAge(any(Session.class))).thenCallRealMethod();
         }
 
         @Test
