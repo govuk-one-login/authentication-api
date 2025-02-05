@@ -140,7 +140,7 @@ class AuthCodeHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private AuthCodeHandler handler;
 
-    private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
+    private final Session session = new Session().addClientSession(CLIENT_SESSION_ID);
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.NEW)

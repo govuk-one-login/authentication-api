@@ -40,7 +40,7 @@ public class Session {
 
     @Expose private String internalCommonSubjectIdentifier;
 
-    public Session(String sessionId) {
+    public Session() {
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
         this.processingIdentityAttempts = 0;
