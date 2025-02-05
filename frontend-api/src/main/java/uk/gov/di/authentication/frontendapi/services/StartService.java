@@ -226,16 +226,16 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            UserContext userContext, CredentialTrustLevel currentCredentialStrength) {
-        if (DocAppUserHelper.isDocCheckingAppUser(userContext)
+            ClientSession clientSession,
+            ClientRegistry client,
+            CredentialTrustLevel currentCredentialStrength) {
+        if (DocAppUserHelper.isDocCheckingAppUser(
+                        clientSession.getAuthRequestParams(), Optional.of(client))
                 || Objects.isNull(currentCredentialStrength)) {
             return false;
         }
         return (currentCredentialStrength.compareTo(
-                        userContext
-                                .getClientSession()
-                                .getEffectiveVectorOfTrust()
-                                .getCredentialTrustLevel())
+                        clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel())
                 < 0);
     }
 
