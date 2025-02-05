@@ -28,7 +28,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -70,11 +69,7 @@ public class StartService {
         var builder = UserContext.builder(session).withClientSession(clientSession);
         UserContext userContext;
         try {
-            var clientId =
-                    clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
-                            .findFirst()
-                            .orElseThrow();
-            var clientRegistry = clientService.getClient(clientId).orElseThrow();
+            var clientRegistry = getClient(clientSession);
             Optional.of(session)
                     .map(Session::getEmailAddress)
                     .flatMap(dynamoService::getUserProfileByEmailMaybe)
@@ -88,7 +83,7 @@ public class StartService {
                                                                             session
                                                                                     .getEmailAddress()))));
             userContext = builder.withClient(clientRegistry).build();
-        } catch (NoSuchElementException e) {
+        } catch (ClientNotFoundException e) {
             LOG.error("Error creating UserContext");
             throw new RuntimeException("Error when creating UserContext", e);
         }
@@ -238,6 +233,16 @@ public class StartService {
         return (currentCredentialStrength.compareTo(
                         clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel())
                 < 0);
+    }
+
+    public ClientRegistry getClient(ClientSession clientSession) throws ClientNotFoundException {
+        return clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
+                .findFirst()
+                .flatMap(clientService::getClient)
+                .orElseThrow(
+                        () ->
+                                new ClientNotFoundException(
+                                        "Could not find client for start service"));
     }
 
     private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {
