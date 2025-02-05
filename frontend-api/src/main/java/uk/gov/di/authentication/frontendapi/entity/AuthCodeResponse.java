@@ -1,6 +1,12 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
+import org.jetbrains.annotations.NotNull;
 
-public record AuthCodeResponse(@Expose @Required String location) {}
+import java.util.Objects;
+
+public record AuthCodeResponse(@Expose @NotNull String location) {
+    public AuthCodeResponse {
+        Objects.requireNonNull(location);
+    }
+}

@@ -2,9 +2,16 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
+import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 
+import java.util.Objects;
+
 public record ResetPasswordRequestHandlerResponse(
-        @SerializedName("mfaMethodType") @Expose @Required MFAMethodType mfaMethodType,
-        @SerializedName("phoneNumberLastThree") @Expose String phoneNumberLastThree) {}
+        @SerializedName("mfaMethodType") @Expose @NotNull MFAMethodType mfaMethodType,
+        @SerializedName("phoneNumberLastThree") @Expose String phoneNumberLastThree) {
+
+    public ResetPasswordRequestHandlerResponse {
+        Objects.requireNonNull(mfaMethodType);
+    }
+}
