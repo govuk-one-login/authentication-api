@@ -4289,6 +4289,42 @@ Resources:
               - dynamodb:DeleteItem
             Resource: !GetAtt OrchSessionTable.Arn
 
+  AuthUserInfoTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthUserInfoTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt AuthUserInfoTable.Arn
+          - Sid: AllowAuthUserInfoTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
+
+  AuthUserInfoTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthUserInfoTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt AuthUserInfoTable.Arn
+          - Sid: AllowAuthUserInfoTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
+
   IdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
