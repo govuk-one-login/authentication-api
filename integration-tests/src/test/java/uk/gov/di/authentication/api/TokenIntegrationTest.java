@@ -44,7 +44,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
@@ -62,7 +61,6 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
@@ -499,99 +497,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
-    @Test
-    void
-            shouldCallTokenResourceUsingClientSecretPostAndWarnWhenClientIdInAuthCodeDoesNotMatchRequest()
-                    throws Exception {
-        var clientSecret = new Secret();
-        Scope scope =
-                new Scope(
-                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
-        registerClientSecretClient(
-                "test-client-1",
-                clientSecret.getValue(),
-                ClientAuthenticationMethod.CLIENT_SECRET_POST,
-                scope);
-        registerClientSecretClient(
-                "test-client-2",
-                clientSecret.getValue(),
-                ClientAuthenticationMethod.CLIENT_SECRET_POST,
-                scope);
-
-        createAuthCodeForClient(Optional.of("test-client-1"), "test-auth-code-1");
-        createAuthCodeForClient(Optional.of("test-client-2"), "test-auth-code-2");
-
-        var baseTokenRequest =
-                constructBaseTokenRequest(
-                        scope,
-                        Optional.of("Cl.Cm"),
-                        Optional.empty(),
-                        Optional.of("test-client-1"),
-                        "test-auth-code-2");
-        var response =
-                makeTokenRequestWithClientSecretPost(
-                        "test-client-1", baseTokenRequest, clientSecret);
-
-        assertThat(response, hasStatus(200));
-        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
-    @Test
-    void shouldCallTokenResourceUsingPrivateKeyJwtAndWarnWhenClientIdInAuthCodeDoesNotMatchRequest()
-            throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        Scope scope =
-                new Scope(
-                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
-        registerClientWithPrivateKeyJwtAuthentication(
-                "test-client-1", keyPair.getPublic(), scope, SubjectType.PAIRWISE);
-
-        createAuthCodeForClient(Optional.of("test-client-1"), "test-auth-code-1");
-        createAuthCodeForClient(Optional.of("test-client-2"), "test-auth-code-2");
-
-        var baseTokenRequest =
-                constructBaseTokenRequest(
-                        scope,
-                        Optional.of("Cl.Cm"),
-                        Optional.empty(),
-                        Optional.of("test-client-1"),
-                        "test-auth-code-2");
-        var response =
-                makeTokenRequestWithPrivateKeyJWT(
-                        "test-client-1", baseTokenRequest, keyPair.getPrivate());
-
-        assertThat(response, hasStatus(200));
-        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
         Date expiryDate = NowHelper.nowPlus(60, ChronoUnit.MINUTES);
         JWTClaimsSet claimsSet =
@@ -609,13 +514,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void registerClientWithPrivateKeyJwtAuthentication(
             PublicKey publicKey, Scope scope, SubjectType subjectType) {
-        registerClientWithPrivateKeyJwtAuthentication(CLIENT_ID, publicKey, scope, subjectType);
-    }
-
-    private void registerClientWithPrivateKeyJwtAuthentication(
-            String clientId, PublicKey publicKey, Scope scope, SubjectType subjectType) {
         clientStore.registerClient(
-                clientId,
+                CLIENT_ID,
                 "test-client",
                 singletonList(REDIRECT_URI),
                 singletonList(TEST_EMAIL),
@@ -637,16 +537,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             String clientSecret,
             ClientAuthenticationMethod clientAuthenticationMethod,
             Scope scope) {
-        registerClientSecretClient(CLIENT_ID, clientSecret, clientAuthenticationMethod, scope);
-    }
-
-    private void registerClientSecretClient(
-            String clientId,
-            String clientSecret,
-            ClientAuthenticationMethod clientAuthenticationMethod,
-            Scope scope) {
         clientStore.registerClient(
-                clientId,
+                CLIENT_ID,
                 "test-client",
                 singletonList(REDIRECT_URI),
                 singletonList(TEST_EMAIL),
@@ -685,16 +577,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWT(
             Map<String, List<String>> requestParams, PrivateKey privateKey) throws JOSEException {
-        return makeTokenRequestWithPrivateKeyJWT(CLIENT_ID, requestParams, privateKey);
-    }
-
-    private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWT(
-            String clientId, Map<String, List<String>> requestParams, PrivateKey privateKey)
-            throws JOSEException {
         var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
-                        new ClientID(clientId), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
@@ -706,12 +592,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
             Map<String, List<String>> requestParams, Secret clientSecret) {
-        return makeTokenRequestWithClientSecretPost(CLIENT_ID, requestParams, clientSecret);
-    }
-
-    private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
-            String clientId, Map<String, List<String>> requestParams, Secret clientSecret) {
-        var clientSecretPost = new ClientSecretPost(new ClientID(clientId), clientSecret);
+        var clientSecretPost = new ClientSecretPost(new ClientID(CLIENT_ID), clientSecret);
         clientSecretPost.toParameters();
         requestParams.putAll(clientSecretPost.toParameters());
         var requestBody = URLUtils.serializeParameters(requestParams);
@@ -724,43 +605,21 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId)
             throws Json.JsonException {
-        return constructBaseTokenRequest(
-                scope, vtr, oidcClaimsRequest, clientId, new AuthorizationCode().toString());
-    }
-
-    private Map<String, List<String>> constructBaseTokenRequest(
-            Scope scope,
-            Optional<String> vtr,
-            Optional<OIDCClaimsRequest> oidcClaimsRequest,
-            Optional<String> clientId,
-            String code)
-            throws Json.JsonException {
+        String code = new AuthorizationCode().toString();
         List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
         if (vtr.isPresent()) {
             vtrList =
                     VectorOfTrust.parseFromAuthRequestAttribute(
                             singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
-        var clientSession =
-                new ClientSession(
-                        generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
-                        LocalDateTime.now(),
-                        vtrList,
-                        "client-name");
-        redis.createClientSession("a-client-session-id", clientSession);
-        redis.addAuthCode(
-                code, CLIENT_ID, "a-client-session-id", clientSession, TEST_EMAIL, AUTH_TIME);
-        Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put(
-                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-        clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
-        customParams.put("code", Collections.singletonList(code));
-        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
-        return customParams;
-    }
-
-    private Map<String, List<String>> createAuthCodeForClient(
-            Optional<String> clientId, String code) {
+        redis.addAuthCodeAndCreateClientSession(
+                code,
+                "a-client-session-id",
+                TEST_EMAIL,
+                generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
+                vtrList,
+                "client-name",
+                AUTH_TIME);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
