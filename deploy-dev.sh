@@ -3,14 +3,6 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
-TMPDIR="${TMPDIR:-/tmp}"
-TF_DATA_DIR_BASE="${TMPDIR}/authentication-api-tf"
-
-CURRENT_BRANCH_B64="$(git rev-parse --abbrev-ref HEAD | base64 -b0)"
-TF_DATA_DIR_CURRENT_BRANCH_BASE="${TF_DATA_DIR_BASE}/${CURRENT_BRANCH_B64}"
-
-mkdir -p "${TF_DATA_DIR_CURRENT_BRANCH_BASE}"
-
 environments=("authdev1" "authdev2" "sandpit")
 
 function usage() {
@@ -140,7 +132,7 @@ fi
 
 if [[ ${O_CLEAN} == "clean" ]]; then
   echo "Cleaning Terraform cache ..."
-  rm -rf "${TF_DATA_DIR_BASE}"
+  rm -rf "${DIR}/ci/terraform/${component}/.terraform"
   echo "done!"
 fi
 
@@ -165,9 +157,8 @@ echo "done!"
 function run_terraform() {
   local component="${1}"
   echo "Running ${component} Terraform ..."
-  export TF_DATA_DIR="${TF_DATA_DIR_CURRENT_BRANCH_BASE}/${component}"
   pushd "${DIR}/ci/terraform/${component}" > /dev/null
-  terraform init -backend-config="${ENVIRONMENT}".hcl
+  terraform init -reconfigure -backend-config="${ENVIRONMENT}".hcl
 
   if [[ ${O_SHELL} -eq 1 ]]; then
     ${SHELL} -i
