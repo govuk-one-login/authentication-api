@@ -184,19 +184,17 @@ public class TokenHandlerTest {
 
     private static Stream<Arguments> validVectorValues() {
         return Stream.of(
-                Arguments.of("Cl.Cm", true, CLIENT_ID),
-                Arguments.of("Cl", true, CLIENT_ID),
-                Arguments.of("P2.Cl.Cm", true, CLIENT_ID),
-                Arguments.of("Cl.Cm", false, CLIENT_ID),
-                Arguments.of("Cl", false, CLIENT_ID),
-                Arguments.of("P2.Cl.Cm", false, CLIENT_ID),
-                Arguments.of("Cl.Cm", true, "some-other-client"));
+                Arguments.of("Cl.Cm", true),
+                Arguments.of("Cl", true),
+                Arguments.of("P2.Cl.Cm", true),
+                Arguments.of("Cl.Cm", false),
+                Arguments.of("Cl", false),
+                Arguments.of("P2.Cl.Cm", false));
     }
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    void shouldReturn200ForSuccessfulTokenRequest(
-            String vectorValue, boolean clientIdInHeader, String clientIdInAuthCode)
+    void shouldReturn200ForSuccessfulTokenRequest(String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
@@ -236,8 +234,7 @@ public class TokenHandlerTest {
                                                         LocalDateTime.now(),
                                                         vtr,
                                                         CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(clientIdInAuthCode)));
+                                        .setAuthTime(AUTH_TIME)));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,

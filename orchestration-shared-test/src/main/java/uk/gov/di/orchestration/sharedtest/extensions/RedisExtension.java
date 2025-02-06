@@ -179,14 +179,17 @@ public class RedisExtension
         }
     }
 
-    public void addAuthCode(
+    public void addAuthCodeAndCreateClientSession(
             String authCode,
-            String clientId,
             String clientSessionId,
-            ClientSession clientSession,
             String email,
+            Map<String, List<String>> authRequest,
+            List<VectorOfTrust> vtrList,
+            String clientName,
             Long authTime)
             throws Json.JsonException {
+        var clientSession =
+                new ClientSession(authRequest, LocalDateTime.now(), vtrList, clientName);
         redis.saveWithExpiry(
                 AUTH_CODE_PREFIX.concat(authCode),
                 objectMapper.writeValueAsString(
@@ -194,8 +197,12 @@ public class RedisExtension
                                 .setClientSessionId(clientSessionId)
                                 .setEmail(email)
                                 .setClientSession(clientSession)
-                                .setAuthTime(authTime)
-                                .setClientId(clientId)),
+                                .setAuthTime(authTime)),
+                300);
+
+        redis.saveWithExpiry(
+                CLIENT_SESSION_PREFIX.concat(clientSessionId),
+                objectMapper.writeValueAsString(clientSession),
                 300);
     }
 
