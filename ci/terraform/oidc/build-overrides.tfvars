@@ -11,6 +11,9 @@ doc_app_encryption_key_id                   = "dcmaw-cri-stubs-build-INqHBvMYWmN
 spot_enabled                                = false
 internal_sector_uri                         = "https://identity.build.account.gov.uk"
 custom_doc_app_claim_enabled                = true
+ipv_audience                                = "https://ipvstub.signin.build.account.gov.uk"
+evcs_audience                               = "https://credential-store.build.account.gov.uk"
+auth_issuer_claim_for_evcs                  = "https://signin-sp.build.account.gov.uk"
 doc_app_cri_data_v2_endpoint                = "credentials/issue"
 orch_client_id                              = "orchestrationAuth"
 account_intervention_service_call_enabled   = true
@@ -28,6 +31,19 @@ fhyq0aLm8HP06lCT7csGUoRav2xybsCsypufvJHbuD5SLkg25/VGFt21KH2g60u8
 KsVnLksPKV10Z0/XvpJ6oHtOjseetk8TRdekRWBvqCX5MqLjdi1TfiaDu2Tjg2N0
 dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
 1wIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+# The IPV public encrypting key that is specific to auth.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmZX3zqqtMpPidaeaSxQj
+nn5/Uc53VzZCYoaCejQfjDJf3ez9D0x7rpTuZepG566xr50nkKdW7s/UWGKAc8+w
+wagazGi5dmaUjks2Kx5AUAnwy803KNqEEguS49GDaliSUIwPIOvekGvBGpwt/IW6
+k56B/SU1eeMXaaSTgmTiILHkvN4znYMvihlg2TXOdfBXJvgCL/p4D4DXvJ3AoL33
+SZ9gmgcJTGYQDYYXUFSI5/iNAGUrFIy3A6l0gFt33C7Yqrm69qPnpB1jbaEC8ZXp
+Jjkeija5UzWqUQVTzLPTonx2VZ6C/duCTSD8OqdrM4TAAa2zBDP9b1KH2hh2nlmw
+2QIDAQAB
 -----END PUBLIC KEY-----
 EOT
 

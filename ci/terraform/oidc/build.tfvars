@@ -10,6 +10,14 @@ test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.build.account.gov.uk"
 ipv_api_enabled                      = true
 call_ticf_cri                        = true
+ipv_backend_uri                      = "https://ipvstub.signin.build.account.gov.uk"
+
+# AUTH to IPV reverification
+# Shared with orch
+ipv_authorisation_uri = "https://ipvstub.signin.build.account.gov.uk/authorize/"
+# auth only
+ipv_auth_authorize_callback_uri = "https://signin-sp.build.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_client_id    = "authTestClient"
 
 # lockout config
 lockout_duration                          = 60
