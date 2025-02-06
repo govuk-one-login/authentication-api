@@ -135,3 +135,9 @@ variable "vpc_environment" {
   type        = string
   default     = null
 }
+
+variable "new_auth_api_vpc_endpoint_id" {
+  default     = ""
+  type        = string
+  description = "The ID of the Execute API Gateway vpc endpoint in the new Auth account"
+}

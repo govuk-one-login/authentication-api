@@ -1,7 +1,8 @@
 locals {
-  orch_api_vpc_endpoint = var.orch_api_vpc_endpoint_id != "" ? [var.orch_api_vpc_endpoint_id] : []
-  api_vpc_endpoints     = concat(local.orch_api_vpc_endpoint, [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id])
-  vpc_environment       = var.vpc_environment == null ? var.environment : var.vpc_environment
+  orch_api_vpc_endpoint     = var.orch_api_vpc_endpoint_id != "" ? [var.orch_api_vpc_endpoint_id] : []
+  new_auth_api_vpc_endpoint = var.new_auth_api_vpc_endpoint_id != "" ? [var.new_auth_api_vpc_endpoint_id] : []
+  api_vpc_endpoints         = concat(local.orch_api_vpc_endpoint, local.new_auth_api_vpc_endpoint, [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id])
+  vpc_environment           = var.vpc_environment == null ? var.environment : var.vpc_environment
 }
 
 data "aws_vpc" "auth_shared_vpc" {
