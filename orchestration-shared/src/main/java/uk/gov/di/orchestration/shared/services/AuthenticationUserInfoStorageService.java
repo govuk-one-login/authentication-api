@@ -7,15 +7,12 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-public class AuthenticationUserInfoStorageService {
+public class AuthenticationUserInfoStorageService extends BaseDynamoService<AuthUserInfo> {
 
     private final long timeToExist;
-    private final BaseDynamoService<AuthUserInfo> authUserInfoDynamoService;
 
     public AuthenticationUserInfoStorageService(ConfigurationService configurationService) {
-        authUserInfoDynamoService =
-                new BaseDynamoService<>(
-                        AuthUserInfo.class, "Auth-User-Info", configurationService, true);
+        super(AuthUserInfo.class, "Auth-User-Info", configurationService, true);
         this.timeToExist = 21600L; // 6 hours
     }
 
@@ -31,7 +28,7 @@ public class AuthenticationUserInfoStorageService {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
-        authUserInfoDynamoService.put(userInfoDbObject);
+        put(userInfoDbObject);
     }
 
     public Optional<UserInfo> getAuthenticationUserInfo(String subjectID, String clientSessionId)
@@ -45,8 +42,7 @@ public class AuthenticationUserInfoStorageService {
     }
 
     private Optional<AuthUserInfo> getAuthUserInfoData(String subjectID, String clientSessionId) {
-        return authUserInfoDynamoService
-                .get(subjectID, clientSessionId)
+        return get(subjectID, clientSessionId)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 }
