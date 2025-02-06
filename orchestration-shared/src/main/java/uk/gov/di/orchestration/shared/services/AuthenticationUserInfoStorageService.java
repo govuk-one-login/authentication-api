@@ -30,17 +30,6 @@ public class AuthenticationUserInfoStorageService {
     public void addAuthenticationUserInfoData(
             String subjectID, String clientSessionId, UserInfo userInfo) {
         String userInfoJson = userInfo.toJSONString();
-
-        var oldUserInfoDbObject =
-                new OldAuthenticationUserInfo()
-                        .withSubjectID(subjectID)
-                        .withUserInfo(userInfoJson)
-                        .withTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
-        oldAuthenticationUserInfoDynamoService.put(oldUserInfoDbObject);
-
         var userInfoDbObject =
                 new AuthUserInfo()
                         .withInternalCommonSubjectId(subjectID)
