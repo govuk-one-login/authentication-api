@@ -221,8 +221,8 @@ public class TokenHandler
         AuthCodeExchangeData authCodeExchangeData = authCodeExchangeDataMaybe.get();
         if (!Objects.equals(authCodeExchangeData.getClientId(), clientRegistry.getClientID())) {
             LOG.warn("Client ID from auth code does not match client ID from request body");
-            // ATO-646: Make this return 400 error when we are confident that
-            // it won't cause issues with existing clients
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
         updateAttachedLogFieldToLogs(
