@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.state;
 
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserCredentials;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -19,6 +20,7 @@ public class UserContext {
     private final ClientSession clientSession;
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
+    private final OrchSessionItem orchSession;
 
     protected UserContext(
             Session session,
@@ -29,7 +31,8 @@ public class UserContext {
             Optional<ClientRegistry> client,
             ClientSession clientSession,
             SupportedLanguage userLanguage,
-            String clientSessionId) {
+            String clientSessionId,
+            OrchSessionItem orchSession) {
         this.session = session;
         this.sessionId = sessionId;
         this.userProfile = userProfile;
@@ -39,6 +42,7 @@ public class UserContext {
         this.clientSession = clientSession;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
+        this.orchSession = orchSession;
     }
 
     public Session getSession() {
@@ -85,6 +89,10 @@ public class UserContext {
         return clientSessionId;
     }
 
+    public OrchSessionItem getOrchSession() {
+        return orchSession;
+    }
+
     public static Builder builder(Session session) {
         return new Builder(session);
     }
@@ -99,6 +107,7 @@ public class UserContext {
         private ClientSession clientSession = null;
         private SupportedLanguage userLanguage;
         private String clientSessionId;
+        private OrchSessionItem orchSession;
 
         protected Builder(Session session) {
             this.session = session;
@@ -152,6 +161,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withOrchSession(OrchSessionItem orchSession) {
+            this.orchSession = orchSession;
+            return this;
+        }
+
         public UserContext build() {
             return new UserContext(
                     session,
@@ -162,7 +176,8 @@ public class UserContext {
                     client,
                     clientSession,
                     userLanguage,
-                    clientSessionId);
+                    clientSessionId,
+                    orchSession);
         }
     }
 }

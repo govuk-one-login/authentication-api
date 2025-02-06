@@ -327,7 +327,7 @@ public class IPVCallbackHandler
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
                             new DestroySessionsRequest(sessionId, session),
-                            session.getInternalCommonSubjectIdentifier(),
+                            orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId,
                             intervention);
@@ -437,7 +437,7 @@ public class IPVCallbackHandler
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
                             new DestroySessionsRequest(sessionId, session),
-                            session.getInternalCommonSubjectIdentifier(),
+                            orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId,
                             intervention);

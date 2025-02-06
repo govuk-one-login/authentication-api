@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -37,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -106,7 +108,9 @@ class ProcessingIdentityHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final Session session = new Session(SESSION_ID);
+    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private ProcessingIdentityHandler handler;
@@ -138,11 +142,24 @@ class ProcessingIdentityHandlerTest {
                         configurationService,
                         auditService,
                         cloudwatchMetricsService,
-                        logoutService);
+                        logoutService,
+                        orchSessionService);
     }
 
     @Test
     void shouldReturnErrorIfSessionIsNotFound() throws Json.JsonException {
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
+    void shouldReturnErrorIfOrchSessionIsNotFound() throws Json.JsonException {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.empty());
+
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -368,6 +385,7 @@ class ProcessingIdentityHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 
     private ClientRegistry generateClientRegistry() {

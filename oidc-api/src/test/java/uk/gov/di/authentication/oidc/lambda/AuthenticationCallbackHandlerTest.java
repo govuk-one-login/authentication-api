@@ -761,6 +761,7 @@ class AuthenticationCallbackHandlerTest {
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
+            when(USER_INFO.getSubject()).thenReturn(new Subject(TEST_INTERNAL_COMMON_SUBJECT_ID));
             when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
             usingValidSession();
@@ -816,7 +817,7 @@ class AuthenticationCallbackHandlerTest {
                         .handleAccountInterventionLogout(
                                 new DestroySessionsRequest(
                                         SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
-                                null,
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);
@@ -835,7 +836,7 @@ class AuthenticationCallbackHandlerTest {
                         .handleAccountInterventionLogout(
                                 new DestroySessionsRequest(
                                         SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
-                                null,
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);
@@ -854,7 +855,7 @@ class AuthenticationCallbackHandlerTest {
                         .handleAccountInterventionLogout(
                                 new DestroySessionsRequest(
                                         SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
-                                null,
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);
@@ -894,7 +895,7 @@ class AuthenticationCallbackHandlerTest {
                         .handleAccountInterventionLogout(
                                 new DestroySessionsRequest(
                                         SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
-                                null,
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.getValue(),
                                 intervention);
@@ -952,7 +953,7 @@ class AuthenticationCallbackHandlerTest {
                         .handleAccountInterventionLogout(
                                 new DestroySessionsRequest(
                                         SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
-                                null,
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.getValue(),
                                 intervention);
@@ -1005,7 +1006,7 @@ class AuthenticationCallbackHandlerTest {
                         .handleAccountInterventionLogout(
                                 new DestroySessionsRequest(
                                         SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
-                                null,
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);
@@ -1056,7 +1057,7 @@ class AuthenticationCallbackHandlerTest {
                         .handleAccountInterventionLogout(
                                 new DestroySessionsRequest(
                                         SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
-                                null,
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);

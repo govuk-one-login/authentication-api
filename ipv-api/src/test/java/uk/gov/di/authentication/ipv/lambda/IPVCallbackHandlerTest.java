@@ -195,7 +195,9 @@ class IPVCallbackHandlerTest {
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
 
-    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID)
+                    .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
 
     private final ClientSession clientSession =
             new ClientSession(
