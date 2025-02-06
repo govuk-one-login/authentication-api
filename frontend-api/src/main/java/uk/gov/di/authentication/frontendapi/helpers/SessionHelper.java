@@ -28,14 +28,26 @@ public class SessionHelper {
                 userContext.getUserProfile().isPresent()
                         ? userContext.getUserProfile().get()
                         : authenticationService.getUserProfileByEmail(session.getEmailAddress());
-        var internalCommonSubjectId =
-                session.getInternalCommonSubjectIdentifier() != null
-                        ? session.getInternalCommonSubjectIdentifier()
-                        : ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                        userProfile,
-                                        configurationService.getInternalSectorUri(),
-                                        authenticationService)
-                                .getValue();
+        String internalCommonSubjectId;
+        if (configurationService.getUseAuthSessionInternalCommonSubjectId()) {
+            internalCommonSubjectId =
+                    authSession.getInternalCommonSubjectId() != null
+                            ? authSession.getInternalCommonSubjectId()
+                            : ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                            userProfile,
+                                            configurationService.getInternalSectorUri(),
+                                            authenticationService)
+                                    .getValue();
+        } else {
+            internalCommonSubjectId =
+                    session.getInternalCommonSubjectIdentifier() != null
+                            ? session.getInternalCommonSubjectIdentifier()
+                            : ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                            userProfile,
+                                            configurationService.getInternalSectorUri(),
+                                            authenticationService)
+                                    .getValue();
+        }
         LOG.info("Setting internal common subject identifier in user session");
         session.setInternalCommonSubjectIdentifier(internalCommonSubjectId);
         sessionService.storeOrUpdateSession(session);
