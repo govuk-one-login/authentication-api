@@ -4,15 +4,16 @@ module "identity_progress_role" {
   role_name   = "identity-progress-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_authentication_callback_userinfo_read_policy.arn,
     aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.authentication_callback_userinfo_encryption_key_kms_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
+    ], var.is_orch_stubbed ? [] : [
     aws_iam_policy.dynamo_orch_session_cross_account_read_access_policy[0].arn
-  ]
+  ])
   extra_tags = {
     Service = "identity-progress"
   }
