@@ -585,7 +585,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         "local_account_id",
                                         TEST_SUBJECT.getValue())));
 
-        userInfoStorageExtension.addAuthenticationUserInfoData(internalCommonSubjectId, userInfo);
+        userInfoStorageExtension.addAuthenticationUserInfoData(
+                internalCommonSubjectId, CLIENT_SESSION_ID, userInfo);
     }
 
     private void assertSessionUpdatedWhenReturnCodeRequestedAndPresent() throws Json.JsonException {

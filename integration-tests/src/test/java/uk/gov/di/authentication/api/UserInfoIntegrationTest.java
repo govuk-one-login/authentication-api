@@ -133,7 +133,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         DOC_APP_CREDENTIAL = generateSignedJWT(new JWTClaimsSet.Builder().build()).serialize();
 
         userInfoStorageExtension.addAuthenticationUserInfoData(
-                INTERNAL_PAIRWISE_SUBJECT.getValue(), AUTH_USER_INFO);
+                INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID, AUTH_USER_INFO);
     }
 
     @Test

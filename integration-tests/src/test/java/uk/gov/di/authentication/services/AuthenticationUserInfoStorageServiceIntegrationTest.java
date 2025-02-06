@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.equalTo;
 class AuthenticationUserInfoStorageServiceIntegrationTest {
 
     private static final String SUBJECT_ID = "test-subject-id";
+    private static final String CLIENT_SESSION_ID = "test-client-session-id";
 
     @RegisterExtension
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoExtension =
@@ -24,7 +25,7 @@ class AuthenticationUserInfoStorageServiceIntegrationTest {
     void shouldAddAndRetrieveUserInfo() throws ParseException {
         UserInfo userInfo = new UserInfo(new Subject(SUBJECT_ID));
 
-        userInfoExtension.addAuthenticationUserInfoData(SUBJECT_ID, userInfo);
+        userInfoExtension.addAuthenticationUserInfoData(SUBJECT_ID, CLIENT_SESSION_ID, userInfo);
 
         Optional<UserInfo> retrievedUserInfo =
                 userInfoExtension.getAuthenticationUserInfo(SUBJECT_ID);
