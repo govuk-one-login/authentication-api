@@ -61,10 +61,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -169,7 +166,7 @@ public class InitiateIPVAuthorisationServiceTest {
                                         event,
                                         authenticationRequest,
                                         userInfo,
-                                        SESSION_ID,
+                                        session,
                                         client,
                                         CLIENT_ID,
                                         CLIENT_SESSION_ID,
@@ -202,7 +199,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         event,
                         authRequest,
                         userInfo,
-                        SESSION_ID,
+                        session,
                         client,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
@@ -215,7 +212,7 @@ public class InitiateIPVAuthorisationServiceTest {
         assertThat(redirectLocation, startsWith(IPV_AUTHORISATION_URI.toString()));
 
         assertThat(splitQuery(redirectLocation).get("request"), equalTo(encryptedJWT.serialize()));
-        verify(authorisationService).storeState(eq(SESSION_ID), any(State.class));
+        verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
         verify(authorisationService)
@@ -256,7 +253,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         event,
                         authRequestWithStorageClaim,
                         userInfo,
-                        SESSION_ID,
+                        session,
                         client,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,

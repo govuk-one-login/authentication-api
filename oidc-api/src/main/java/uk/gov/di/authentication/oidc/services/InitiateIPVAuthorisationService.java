@@ -19,6 +19,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -65,7 +66,7 @@ public class InitiateIPVAuthorisationService {
             APIGatewayProxyRequestEvent input,
             AuthenticationRequest authRequest,
             UserInfo userInfo,
-            String sessionId,
+            Session session,
             ClientRegistry client,
             String rpClientID,
             String clientSessionId,
@@ -103,7 +104,7 @@ public class InitiateIPVAuthorisationService {
                         .requestObject(encryptedJWT);
 
         var ipvAuthorisationRequest = authRequestBuilder.build();
-        authorisationService.storeState(sessionId, state);
+        authorisationService.storeState(session.getSessionId(), state);
         noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
 
         var rpPairwiseId = userInfo.getClaim("rp_pairwise_id");
@@ -113,7 +114,7 @@ public class InitiateIPVAuthorisationService {
                 rpClientID,
                 TxmaAuditUser.user()
                         .withGovukSigninJourneyId(clientSessionId)
-                        .withSessionId(sessionId)
+                        .withSessionId(session.getSessionId())
                         .withUserId(internalCommonSubjectId.getValue())
                         .withEmail(userInfo.getEmailAddress())
                         .withIpAddress(IpAddressHelper.extractIpAddress(input))
