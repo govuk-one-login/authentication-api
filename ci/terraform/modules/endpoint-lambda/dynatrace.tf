@@ -10,5 +10,10 @@ locals {
     DT_LOG_COLLECTION_AUTH_TOKEN = var.dynatrace_secret.DT_LOG_COLLECTION_AUTH_TOKEN
 
     DT_OPEN_TELEMETRY_ENABLE_INTEGRATION = "true"
+
+    OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING = "true"
+
+    DT_LOGGING_DESTINATION = "stdout"
+    DT_LOGGING_JAVA_FLAGS  = "log-Transformer=true,log-OpenTelemetryUtils=true,log-AsyncClassRetransformer=true,log-ClassValue=true"
   }
 }
