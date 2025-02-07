@@ -30,8 +30,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import static uk.gov.di.orchestration.shared.tracing.Tracing.TRACING_ENABLED;
-
 // Implementation of java.net.HttpClient that includes AWS X-Ray tracing
 @ExcludeFromGeneratedCoverageReport
 public class TracingHttpClient extends HttpClient {
@@ -50,13 +48,10 @@ public class TracingHttpClient extends HttpClient {
     }
 
     public static HttpClient newHttpClient() {
-        if (TRACING_ENABLED) {
-            return new TracingHttpClient(
-                    JavaHttpClientTelemetry.builder(GlobalOpenTelemetry.get())
-                            .build()
-                            .newHttpClient(HttpClient.newHttpClient()));
-        }
-        return HttpClient.newHttpClient();
+        return new TracingHttpClient(
+                JavaHttpClientTelemetry.builder(GlobalOpenTelemetry.get())
+                        .build()
+                        .newHttpClient(HttpClient.newHttpClient()));
     }
 
     // Synchronize to prevent race conditions when multiple threads attempt to recreate client
