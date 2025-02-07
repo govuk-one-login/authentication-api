@@ -21,4 +21,6 @@ for dir in configuration/"${ENVIRONMENT}"/*/; do
 done
 
 ### Provision secure pipelines
+PARAMETERS_FILE="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-orch-be-pipeline/parameters.json"
+export PARAMETERS_FILE
 ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-orch-be-pipeline" sam-deploy-pipeline LATEST

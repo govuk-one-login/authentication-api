@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "InitialNotificationStack",
+    "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "SlackWorkspaceId",
+    "ParameterValue": "T8GT9416G"
+  },
+  {
+    "ParameterKey": "SlackChannelId",
+    "ParameterValue": "C072F1QUKQV"
+  },
+  {
+    "ParameterKey": "EnrichedNotifications",
+    "ParameterValue": "True"
+  }
+]
