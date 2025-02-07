@@ -58,7 +58,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 
 class IPVReverificationServiceTest {
@@ -68,7 +68,7 @@ class IPVReverificationServiceTest {
     private static final String TEST_STATE_VALUE = "testState";
     public static final State STATE = State.parse(TEST_STATE_VALUE);
     private static final String TEST_CLIENT_SESSION_ID = "journeyId";
-    private static final Subject TEST_SUBJECT = new Subject(COMMON_SUBJECT_ID);
+    private static final Subject TEST_SUBJECT = new Subject(INTERNAL_COMMON_SUBJECT_ID);
     private static final String TEST_AUDIENCE_CLAIM = "someAud";
     private static final String TEST_ISSUER_CLAIM = "someIssuer";
     private static final String TEST_UUID = "someSuperUniqueUUID";
