@@ -1884,7 +1884,7 @@ Resources:
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
-              - https://identity.${ServiceDomain}/.well-known/jwks.json
+              - https://api.identity.${ServiceDomain}/.well-known/jwks.json
               - ServiceDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
