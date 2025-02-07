@@ -33,8 +33,7 @@ ext {
         junit: "5.11.4",
         xray: "2.18.2",
         pact: "4.6.16",
-        opentelemetry_instrumentation: "2.12.0-alpha",
-        opentelemetry_api: "1.46.0"
+        opentelemetry_instrumentation: "2.12.0-alpha"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -215,17 +214,24 @@ subprojects {
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
 
-        otel_aws_instrumentation "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure:${dependencyVersions.opentelemetry_instrumentation}"
+        otel_aws_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry:opentelemetry-api",
+                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
 
-        otel platform("io.opentelemetry:opentelemetry-bom:${dependencyVersions.opentelemetry_api}"),
-                "io.opentelemetry:opentelemetry-api:${dependencyVersions.opentelemetry_api}",
-                "io.opentelemetry.instrumentation:opentelemetry-java-http-client:${dependencyVersions.opentelemetry_instrumentation}"
+        otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry:opentelemetry-api",
+                "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }
 }
 
 subprojects {
-    dependencies {
-        runtimeOnly configurations.otel_aws_instrumentation
+    afterEvaluate { subproject ->
+        if (subproject.plugins.hasPlugin('java')) {
+            dependencies {
+                runtimeOnly configurations.otel_aws_instrumentation
+                implementation configurations.otel_aws_instrumentation
+            }
+        }
     }
 }
 
