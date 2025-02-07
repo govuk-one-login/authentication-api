@@ -2,45 +2,23 @@ package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfo;
-import uk.gov.di.orchestration.shared.entity.OldAuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-public class AuthenticationUserInfoStorageService {
+public class AuthenticationUserInfoStorageService extends BaseDynamoService<AuthUserInfo> {
 
     private final long timeToExist;
-    private final BaseDynamoService<OldAuthenticationUserInfo>
-            oldAuthenticationUserInfoDynamoService;
-    private final BaseDynamoService<AuthUserInfo> authUserInfoDynamoService;
 
     public AuthenticationUserInfoStorageService(ConfigurationService configurationService) {
-        oldAuthenticationUserInfoDynamoService =
-                new BaseDynamoService<>(
-                        OldAuthenticationUserInfo.class,
-                        "authentication-callback-userinfo",
-                        configurationService);
-        authUserInfoDynamoService =
-                new BaseDynamoService<>(
-                        AuthUserInfo.class, "Auth-User-Info", configurationService, true);
+        super(AuthUserInfo.class, "Auth-User-Info", configurationService, true);
         this.timeToExist = 21600L; // 6 hours
     }
 
     public void addAuthenticationUserInfoData(
             String subjectID, String clientSessionId, UserInfo userInfo) {
         String userInfoJson = userInfo.toJSONString();
-
-        var oldUserInfoDbObject =
-                new OldAuthenticationUserInfo()
-                        .withSubjectID(subjectID)
-                        .withUserInfo(userInfoJson)
-                        .withTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
-        oldAuthenticationUserInfoDynamoService.put(oldUserInfoDbObject);
-
         var userInfoDbObject =
                 new AuthUserInfo()
                         .withInternalCommonSubjectId(subjectID)
@@ -50,7 +28,7 @@ public class AuthenticationUserInfoStorageService {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
-        authUserInfoDynamoService.put(userInfoDbObject);
+        put(userInfoDbObject);
     }
 
     public Optional<UserInfo> getAuthenticationUserInfo(String subjectID, String clientSessionId)
@@ -64,8 +42,7 @@ public class AuthenticationUserInfoStorageService {
     }
 
     private Optional<AuthUserInfo> getAuthUserInfoData(String subjectID, String clientSessionId) {
-        return authUserInfoDynamoService
-                .get(subjectID, clientSessionId)
+        return get(subjectID, clientSessionId)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 }
