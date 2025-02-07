@@ -70,4 +70,5 @@ jobs:
         run: ./gradlew pactPublish
 
       - name: Verify pacts
+        if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
         run: ./gradlew pactProviderTests
