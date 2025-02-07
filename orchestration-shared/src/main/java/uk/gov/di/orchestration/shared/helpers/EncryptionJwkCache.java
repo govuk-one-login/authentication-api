@@ -7,16 +7,16 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-public class JwkCache {
-    private static final Logger LOG = LogManager.getLogger(JwkCache.class);
-    private static final JwkCache instance = new JwkCache();
+public class EncryptionJwkCache {
+    private static final Logger LOG = LogManager.getLogger(EncryptionJwkCache.class);
+    private static final EncryptionJwkCache instance = new EncryptionJwkCache();
     private final Map<String, JwkCacheEntry> cacheEntryByUrl;
 
-    private JwkCache() {
+    private EncryptionJwkCache() {
         cacheEntryByUrl = new HashMap<>();
     }
 
-    public static JwkCache getInstance() {
+    public static EncryptionJwkCache getInstance() {
         return instance;
     }
 
@@ -27,7 +27,7 @@ public class JwkCache {
                     "Cache entry does not exist for JWKS URL {}, creating new one with expiration of {} seconds",
                     url,
                     cacheExpiration);
-            jwkCacheEntry = JwkCacheEntry.withUrlAndExpiration(url, cacheExpiration);
+            jwkCacheEntry = JwkCacheEntry.forEncryptionKeys(url, cacheExpiration);
             cacheEntryByUrl.put(url.toString(), jwkCacheEntry);
         } else {
             LOG.info("Cache entry exists for JWKS URL {}", url);

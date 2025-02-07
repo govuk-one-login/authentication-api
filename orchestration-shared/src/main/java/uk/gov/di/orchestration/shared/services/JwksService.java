@@ -13,7 +13,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.orchestration.shared.helpers.CryptoProviderHelper;
-import uk.gov.di.orchestration.shared.helpers.JwkCache;
+import uk.gov.di.orchestration.shared.helpers.EncryptionJwkCache;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
 import java.net.URL;
@@ -68,9 +68,9 @@ public class JwksService {
     }
 
     public JWK getIpvJwk() {
-        JwkCache jwkCache = JwkCache.getInstance();
+        EncryptionJwkCache encryptionJwkCache = EncryptionJwkCache.getInstance();
         var ipvJwkCacheEntry =
-                jwkCache.getOrCreateEntry(
+                encryptionJwkCache.getOrCreateEntry(
                         configurationService.getIPVJwksUrl(),
                         configurationService.getIPVJwkCacheExpirationInSeconds());
         return ipvJwkCacheEntry.getKey();
