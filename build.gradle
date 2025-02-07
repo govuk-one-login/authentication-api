@@ -231,6 +231,12 @@ subprojects {
     }
 }
 
+subprojects {
+    dependencies {
+        runtimeOnly configurations.otel_aws_instrumentation
+    }
+}
+
 allprojects {
     gradle.projectsEvaluated {
         tasks.withType(JavaCompile) {
