@@ -26,8 +26,7 @@ dependencies {
             configurations.bouncycastle,
             configurations.kms
 
-    runtimeOnly configurations.logging_runtime,
-            configurations.otel_aws_instrumentation
+    runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
