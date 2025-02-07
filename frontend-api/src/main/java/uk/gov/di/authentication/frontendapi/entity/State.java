@@ -1,10 +1,10 @@
 package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
+import uk.gov.di.authentication.shared.validation.Required;
 
 public record State(
-        @Expose @Required boolean blocked,
-        @Expose @Required boolean suspended,
-        @Expose @Required boolean reproveIdentity,
-        @Expose @Required boolean resetPassword) {}
+        @Expose @Required Boolean blocked,
+        @Expose @Required Boolean suspended,
+        @Expose @Required Boolean reproveIdentity,
+        @Expose @Required Boolean resetPassword) {}

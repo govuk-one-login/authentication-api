@@ -85,7 +85,7 @@ class AccountInterventionsHandlerTest {
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
-    private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
+    private static final Long APPLIED_AT_TIMESTAMP = 1696869005821L;
 
     private static final Instant fixedDate = Instant.now();
 
@@ -93,7 +93,7 @@ class AccountInterventionsHandlerTest {
             String.valueOf(fixedDate.toEpochMilli());
     private static final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
             String.format(
-                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
+                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":%s}",
                     false, false, false, false, FIXED_DATE_UNIX_TIMESTAMP_STRING);
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private AccountInterventionsHandler handler;
@@ -428,7 +428,7 @@ class AccountInterventionsHandlerTest {
 
         assertEquals(
                 String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":%s}",
                         resetPassword, blocked, suspended, reproveIdentity, APPLIED_AT_TIMESTAMP),
                 result.getBody());
         var expectedMetricDimensions =
@@ -493,13 +493,7 @@ class AccountInterventionsHandlerTest {
     private AccountInterventionsInboundResponse generateAccountInterventionResponse(
             boolean blocked, boolean suspended, boolean reproveIdentity, boolean resetPassword) {
         return new AccountInterventionsInboundResponse(
-                new Intervention(
-                        "1696969322935",
-                        AccountInterventionsHandlerTest.APPLIED_AT_TIMESTAMP,
-                        "1696869003456",
-                        "AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED",
-                        "1696969322935",
-                        "1696875903456"),
+                new Intervention(AccountInterventionsHandlerTest.APPLIED_AT_TIMESTAMP),
                 new State(blocked, suspended, reproveIdentity, resetPassword));
     }
 
