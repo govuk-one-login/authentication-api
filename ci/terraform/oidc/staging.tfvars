@@ -46,6 +46,7 @@ orch_auth_code_enabled               = true
 orch_userinfo_enabled                = true
 orch_storage_token_jwk_enabled       = true
 orch_trustmark_enabled               = true
+orch_ipv_jwks_enabled                = true
 
 reauth_enter_email_count_ttl         = 300
 reauth_enter_password_count_ttl      = 300
