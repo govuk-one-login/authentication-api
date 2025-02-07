@@ -77,13 +77,14 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_TEMP_SUSPENDED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.LoginHandler.INTERNAL_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AccountInterventionsHandlerTest {
     private static final String TEST_CLIENT_ID = "test_client_id";
-    private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
@@ -113,22 +114,25 @@ class AccountInterventionsHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
-    private final AuthSessionService mockAuthSessionService = mock(AuthSessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setSessionId(SESSION_ID)
-                    .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
                     CommonTestVariables.CLIENT_ID,
                     CommonTestVariables.CLIENT_SESSION_ID,
                     CommonTestVariables.SESSION_ID,
-                    TEST_INTERNAL_SUBJECT_ID,
+                    INTERNAL_SUBJECT_ID,
                     EMAIL,
                     CommonTestVariables.IP_ADDRESS,
                     AuditService.UNKNOWN,
@@ -141,7 +145,7 @@ class AccountInterventionsHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-        when(mockAuthSessionService.getSessionFromRequestHeaders(anyMap()))
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         UserProfile userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -154,6 +158,7 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(userContext.getSession()).thenReturn(session);
+        when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
@@ -175,7 +180,7 @@ class AccountInterventionsHandlerTest {
                         cloudwatchMetricsService,
                         new NowHelper.NowClock(fixed(fixedDate, systemDefault())),
                         mockLambdaInvokerService,
-                        mockAuthSessionService);
+                        authSessionService);
     }
 
     @Test
