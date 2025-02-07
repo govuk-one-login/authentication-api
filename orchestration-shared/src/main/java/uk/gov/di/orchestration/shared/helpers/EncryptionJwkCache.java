@@ -7,16 +7,16 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-public class JwkCache {
-    private static final Logger LOG = LogManager.getLogger(JwkCache.class);
-    private static final JwkCache instance = new JwkCache();
+public class EncryptionJwkCache {
+    private static final Logger LOG = LogManager.getLogger(EncryptionJwkCache.class);
+    private static final EncryptionJwkCache instance = new EncryptionJwkCache();
     private final Map<String, JwkCacheEntry> cacheEntryByUrl;
 
-    private JwkCache() {
+    private EncryptionJwkCache() {
         cacheEntryByUrl = new HashMap<>();
     }
 
-    public static JwkCache getInstance() {
+    public static EncryptionJwkCache getInstance() {
         return instance;
     }
 

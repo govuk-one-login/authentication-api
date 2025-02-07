@@ -9,7 +9,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.orchestration.shared.helpers.JwkCache;
+import uk.gov.di.orchestration.shared.helpers.EncryptionJwkCache;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
 import java.net.URL;
@@ -91,7 +91,7 @@ class JwksServiceTest {
 
     @Test
     void shouldUseJwkCacheToGetKeyWhenFeatureFlagEnabled() throws Exception {
-        JwkCache.getInstance().clear();
+        EncryptionJwkCache.getInstance().clear();
         when(configurationService.isUseIPVJwksEndpointEnabled()).thenReturn(true);
         URL testJwksUrl = new URL("http://localhost/.well-known/jwks.json");
         int testTimeout = 123;

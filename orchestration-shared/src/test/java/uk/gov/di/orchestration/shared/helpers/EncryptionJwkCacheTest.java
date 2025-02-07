@@ -8,12 +8,12 @@ import java.net.URL;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
-class JwkCacheTest {
-    private static final JwkCache jwkCache = JwkCache.getInstance();
+class EncryptionJwkCacheTest {
+    private static final EncryptionJwkCache ENCRYPTION_JWK_CACHE = EncryptionJwkCache.getInstance();
 
     @BeforeEach
     void setup() {
-        jwkCache.clear();
+        ENCRYPTION_JWK_CACHE.clear();
     }
 
     @Test
@@ -22,7 +22,7 @@ class JwkCacheTest {
             URL testJwksUrl = new URL("http://localhost/.well-known/jwks.json");
             int testExpiry = 123;
 
-            jwkCache.getOrCreateEntry(testJwksUrl, testExpiry);
+            ENCRYPTION_JWK_CACHE.getOrCreateEntry(testJwksUrl, testExpiry);
             mockJwkCacheEntry.verify(
                     () -> JwkCacheEntry.withUrlAndExpiration(testJwksUrl, testExpiry));
         }
@@ -34,8 +34,8 @@ class JwkCacheTest {
             URL testJwksUrl = new URL("http://localhost/.well-known/jwks.json");
             int testExpiry = 123;
 
-            jwkCache.getOrCreateEntry(testJwksUrl, testExpiry);
-            jwkCache.getOrCreateEntry(testJwksUrl, testExpiry);
+            ENCRYPTION_JWK_CACHE.getOrCreateEntry(testJwksUrl, testExpiry);
+            ENCRYPTION_JWK_CACHE.getOrCreateEntry(testJwksUrl, testExpiry);
             mockJwkCacheEntry.verify(
                     () -> JwkCacheEntry.withUrlAndExpiration(testJwksUrl, testExpiry), times(1));
         }
