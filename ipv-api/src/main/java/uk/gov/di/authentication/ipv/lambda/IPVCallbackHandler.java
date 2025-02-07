@@ -350,7 +350,8 @@ public class IPVCallbackHandler
                 Optional<UserInfo> authUserInfo =
                         getAuthUserInfo(
                                 authUserInfoStorageService,
-                                orchSession.getInternalCommonSubjectId());
+                                orchSession.getInternalCommonSubjectId(),
+                                clientSessionId);
 
                 if (authUserInfo.isEmpty()) {
                     LOG.info("authUserInfo not found");
@@ -546,9 +547,11 @@ public class IPVCallbackHandler
 
     private static Optional<UserInfo> getAuthUserInfo(
             AuthenticationUserInfoStorageService authUserInfoStorageService,
-            String internalCommonSubjectId) {
+            String internalCommonSubjectId,
+            String clientSessionId) {
         try {
-            return authUserInfoStorageService.getAuthenticationUserInfo(internalCommonSubjectId);
+            return authUserInfoStorageService.getAuthenticationUserInfo(
+                    internalCommonSubjectId, clientSessionId);
         } catch (ParseException e) {
             // TODO: ATO-1117: temporary logs. authUserInfo is not essential, so we don't want this
             // to exit the lambda yet.

@@ -104,7 +104,8 @@ public class IdentityProgressFrontendHandlerTest {
     @BeforeEach
     void setup() throws ParseException {
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(userInfoStorageService.getAuthenticationUserInfo(INTERNAL_COMMON_SUBJECT_ID))
+        when(userInfoStorageService.getAuthenticationUserInfo(
+                        INTERNAL_COMMON_SUBJECT_ID, CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(AUTH_USER_INFO));
         Map<String, String> headers = new HashMap<>();
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);

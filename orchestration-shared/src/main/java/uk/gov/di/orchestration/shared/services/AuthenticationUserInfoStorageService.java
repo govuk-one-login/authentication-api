@@ -53,9 +53,9 @@ public class AuthenticationUserInfoStorageService {
         authUserInfoDynamoService.put(userInfoDbObject);
     }
 
-    public Optional<UserInfo> getAuthenticationUserInfo(String subjectID)
+    public Optional<UserInfo> getAuthenticationUserInfo(String subjectID, String clientSessionId)
             throws com.nimbusds.oauth2.sdk.ParseException {
-        var userInfoData = getAuthenticationUserInfoData(subjectID);
+        var userInfoData = getAuthUserInfoData(subjectID, clientSessionId);
         if (userInfoData.isEmpty()) {
             return Optional.empty();
         }
@@ -63,9 +63,9 @@ public class AuthenticationUserInfoStorageService {
         return Optional.of(userInfo);
     }
 
-    private Optional<OldAuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
-        return oldAuthenticationUserInfoDynamoService
-                .get(subjectID)
+    private Optional<AuthUserInfo> getAuthUserInfoData(String subjectID, String clientSessionId) {
+        return authUserInfoDynamoService
+                .get(subjectID, clientSessionId)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 }

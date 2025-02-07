@@ -111,7 +111,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             try {
                 Optional<UserInfo> userInfoFromStorage =
                         userInfoStorageService.getAuthenticationUserInfo(
-                                internalCommonSubjectIdentifier);
+                                internalCommonSubjectIdentifier, userSession.getClientSessionId());
 
                 if (userInfoFromStorage.isEmpty()) {
                     LOG.warn("Unable to find user info for subject");

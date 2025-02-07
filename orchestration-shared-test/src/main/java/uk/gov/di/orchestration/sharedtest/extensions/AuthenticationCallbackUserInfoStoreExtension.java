@@ -113,8 +113,9 @@ public class AuthenticationCallbackUserInfoStoreExtension extends DynamoExtensio
         dynamoDB.createTable(request);
     }
 
-    public Optional<UserInfo> getAuthenticationUserInfo(String subjectId) throws ParseException {
-        return userInfoService.getAuthenticationUserInfo(subjectId);
+    public Optional<UserInfo> getAuthenticationUserInfo(String subjectId, String clientSessionId)
+            throws ParseException {
+        return userInfoService.getAuthenticationUserInfo(subjectId, clientSessionId);
     }
 
     public void addAuthenticationUserInfoData(

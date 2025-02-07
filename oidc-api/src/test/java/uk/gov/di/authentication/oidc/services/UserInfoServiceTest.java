@@ -586,7 +586,8 @@ class UserInfoServiceTest {
     private void givenThereIsUserInfo() throws ParseException {
         var testUserInfo = generateUserInfo();
 
-        when(userInfoStorageService.getAuthenticationUserInfo(INTERNAL_PAIRWISE_SUBJECT.getValue()))
+        when(userInfoStorageService.getAuthenticationUserInfo(
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID))
                 .thenReturn(Optional.of(testUserInfo));
     }
 }

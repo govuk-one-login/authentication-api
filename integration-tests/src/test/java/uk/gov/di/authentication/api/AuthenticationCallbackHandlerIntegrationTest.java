@@ -205,7 +205,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 txmaAuditQueue, List.of(AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
 
         Optional<UserInfo> userInfo =
-                userInfoStoreExtension.getAuthenticationUserInfo(SUBJECT_ID.getValue());
+                userInfoStoreExtension.getAuthenticationUserInfo(
+                        SUBJECT_ID.getValue(), CLIENT_SESSION_ID);
         assertTrue(userInfo.isEmpty());
     }
 
@@ -1066,7 +1067,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         OidcAuditableEvent.AUTH_CODE_ISSUED));
 
         Optional<UserInfo> userInfo =
-                userInfoStoreExtension.getAuthenticationUserInfo(SUBJECT_ID.getValue());
+                userInfoStoreExtension.getAuthenticationUserInfo(
+                        SUBJECT_ID.getValue(), CLIENT_SESSION_ID);
         assertTrue(userInfo.isPresent());
         assertEquals(SUBJECT_ID, userInfo.get().getSubject());
         assertEquals(true, userInfo.get().getBooleanClaim("new_account"));
