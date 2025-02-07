@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.helpers;
 
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.KeyUse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 class JwkCacheEntryTest {
     private URL testJwksUrl;
@@ -24,6 +26,8 @@ class JwkCacheEntryTest {
     @BeforeEach
     void setup() throws Exception {
         testJwksUrl = new URL("http://localhost/.well-known/jwks.json");
+        when(TEST_KEY_1.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
+        when(TEST_KEY_2.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
     }
 
     @Test
@@ -59,6 +63,19 @@ class JwkCacheEntryTest {
 
             var cacheEntry = createCacheWithNoExpiration();
             assertEquals(TEST_KEY_1, cacheEntry.getKey());
+        }
+    }
+
+    @Test
+    void shouldIgnoreFirstKeyIfKeyHasDifferentUse() {
+        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
+            when(TEST_KEY_1.getKeyUse()).thenReturn(KeyUse.SIGNATURE);
+            mockJwksUtils
+                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
+                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
+
+            var cacheEntry = createCacheWithNoExpiration();
+            assertEquals(TEST_KEY_2, cacheEntry.getKey());
         }
     }
 
@@ -106,10 +123,14 @@ class JwkCacheEntryTest {
     }
 
     private JwkCacheEntry createCacheWithNoExpiration() {
-        return createCacheWithExpiration(Integer.MAX_VALUE);
+        return createCacheWithExpiration(KeyUse.ENCRYPTION, Integer.MAX_VALUE);
     }
 
     private JwkCacheEntry createCacheWithExpiration(int expiration) {
-        return JwkCacheEntry.withUrlAndExpiration(testJwksUrl, expiration);
+        return JwkCacheEntry.forKeyUse(KeyUse.ENCRYPTION, testJwksUrl, expiration);
+    }
+
+    private JwkCacheEntry createCacheWithExpiration(KeyUse keyUse, int expiration) {
+        return JwkCacheEntry.forKeyUse(keyUse, testJwksUrl, expiration);
     }
 }

@@ -27,7 +27,7 @@ public class EncryptionJwkCache {
                     "Cache entry does not exist for JWKS URL {}, creating new one with expiration of {} seconds",
                     url,
                     cacheExpiration);
-            jwkCacheEntry = JwkCacheEntry.withUrlAndExpiration(url, cacheExpiration);
+            jwkCacheEntry = JwkCacheEntry.forEncryptionKeys(url, cacheExpiration);
             cacheEntryByUrl.put(url.toString(), jwkCacheEntry);
         } else {
             LOG.info("Cache entry exists for JWKS URL {}", url);

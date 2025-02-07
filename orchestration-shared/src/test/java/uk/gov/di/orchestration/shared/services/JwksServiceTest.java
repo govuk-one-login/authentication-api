@@ -100,6 +100,7 @@ class JwksServiceTest {
 
         try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
             JWK testKey1 = mock(JWK.class);
+            when(testKey1.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
             mockJwksUtils
                     .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
                     .thenReturn(List.of(testKey1));

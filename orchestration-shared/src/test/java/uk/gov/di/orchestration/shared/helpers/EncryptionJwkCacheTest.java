@@ -24,7 +24,7 @@ class EncryptionJwkCacheTest {
 
             ENCRYPTION_JWK_CACHE.getOrCreateEntry(testJwksUrl, testExpiry);
             mockJwkCacheEntry.verify(
-                    () -> JwkCacheEntry.withUrlAndExpiration(testJwksUrl, testExpiry));
+                    () -> JwkCacheEntry.forEncryptionKeys(testJwksUrl, testExpiry));
         }
     }
 
@@ -37,7 +37,7 @@ class EncryptionJwkCacheTest {
             ENCRYPTION_JWK_CACHE.getOrCreateEntry(testJwksUrl, testExpiry);
             ENCRYPTION_JWK_CACHE.getOrCreateEntry(testJwksUrl, testExpiry);
             mockJwkCacheEntry.verify(
-                    () -> JwkCacheEntry.withUrlAndExpiration(testJwksUrl, testExpiry), times(1));
+                    () -> JwkCacheEntry.forEncryptionKeys(testJwksUrl, testExpiry), times(1));
         }
     }
 }
