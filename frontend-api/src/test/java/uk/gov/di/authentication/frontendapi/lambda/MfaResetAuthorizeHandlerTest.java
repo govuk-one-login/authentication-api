@@ -42,10 +42,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
@@ -100,7 +100,7 @@ class MfaResetAuthorizeHandlerTest {
     static void globalSetup() {
         when(userContext.getSession()).thenReturn(new Session(SESSION_ID));
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(session.getInternalCommonSubjectIdentifier()).thenReturn(COMMON_SUBJECT_ID);
+        when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_COMMON_SUBJECT_ID);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(session.getSessionId()).thenReturn(SESSION_ID);
@@ -130,7 +130,7 @@ class MfaResetAuthorizeHandlerTest {
         String expectedBody =
                 objectMapper.writeValueAsString(new MfaResetResponse(TEST_REDIRECT_URI));
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        eq(new Subject(COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
+                        eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
                 .thenReturn(TEST_REDIRECT_URI);
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
@@ -161,7 +161,7 @@ class MfaResetAuthorizeHandlerTest {
     @Test
     void returnsA500WithErrorMessageWhenServiceThrowsJwtServiceException() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        eq(new Subject(COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
+                        eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
                 .thenThrow(new JwtServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
@@ -173,7 +173,7 @@ class MfaResetAuthorizeHandlerTest {
     @Test
     void returns500WithErrorMessageWhenIpvReverificationServiceExceptionIsThrown() {
         when(ipvReverificationService.buildIpvReverificationRedirectUri(
-                        eq(new Subject(COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
+                        eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
                 .thenThrow(new IPVReverificationServiceException("SomeError"));
 
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
