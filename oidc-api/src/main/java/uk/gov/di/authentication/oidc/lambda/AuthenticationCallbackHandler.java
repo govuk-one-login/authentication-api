@@ -526,7 +526,7 @@ public class AuthenticationCallbackHandler
                             input,
                             authenticationRequest,
                             userInfo,
-                            session,
+                            sessionId,
                             client,
                             clientId,
                             clientSessionId,
