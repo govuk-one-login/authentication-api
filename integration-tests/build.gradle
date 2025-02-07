@@ -98,6 +98,10 @@ pactPublish.enabled = false
 task pactProviderTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include 'uk/gov/di/authentication/contract/**'
+
+    systemProperties['pact.provider.branch'] = "${System.env.GIT_BRANCH}"
+    systemProperties['pact.provider.version'] = "${System.env.GIT_SHA}"
+
     environment "PROVIDER_UNDER_TEST", "ClientRegistryProvider"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
