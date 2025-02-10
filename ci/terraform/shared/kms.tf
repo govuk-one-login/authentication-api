@@ -595,10 +595,6 @@ resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
   policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
 }
 
-resource "aws_kms_alias" "authentication_callback_userinfo_encryption_key_alias" {
-  name          = "alias/${var.environment}-authentication-callback-userinfo-encryption-key-alias"
-  target_key_id = aws_kms_key.authentication_callback_userinfo_encryption_key.key_id
-}
 resource "aws_kms_key" "account_modifiers_table_encryption_key" {
   description              = "KMS encryption key for account modifiers table in DynamoDB"
   deletion_window_in_days  = 30
