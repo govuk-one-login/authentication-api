@@ -688,11 +688,6 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
   )
 }
 
-resource "aws_dynamodb_resource_policy" "authentication_callback_userinfo_table_policy" {
-  resource_arn = aws_dynamodb_table.authentication_callback_userinfo.arn
-  policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
-}
-
 resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
   resource_arn = aws_dynamodb_table.client_registry_table.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
