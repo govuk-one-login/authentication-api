@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -106,6 +107,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UserContext userContext) {
 
         Session session = userContext.getSession();
+        AuthSessionItem authSession = userContext.getAuthSession();
 
         String persistentSessionId =
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
@@ -133,7 +135,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        session.getInternalCommonSubjectIdentifier(),
+                        authSession.getInternalCommonSubjectId(),
                         session.getEmailAddress(),
                         ipAddress,
                         auditablePhoneNumber,
