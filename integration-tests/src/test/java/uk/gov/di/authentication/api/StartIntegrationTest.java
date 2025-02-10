@@ -382,7 +382,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReplaceSessionInDynamoWhenPreviousSessionIsProvidedInRequestBody() {
-            authSessionExtension.addSession(Optional.empty(), PREVIOUS_SESSION_ID);
+            authSessionExtension.addSession(PREVIOUS_SESSION_ID);
             assertThat(
                     authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
                     equalTo(true));

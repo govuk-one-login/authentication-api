@@ -28,10 +28,10 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static java.util.function.Predicate.not;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
@@ -69,11 +69,7 @@ public class StartService {
         var builder = UserContext.builder(session).withClientSession(clientSession);
         UserContext userContext;
         try {
-            var clientId =
-                    clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
-                            .findFirst()
-                            .orElseThrow();
-            var clientRegistry = clientService.getClient(clientId).orElseThrow();
+            var clientRegistry = getClient(clientSession);
             Optional.of(session)
                     .map(Session::getEmailAddress)
                     .flatMap(dynamoService::getUserProfileByEmailMaybe)
@@ -87,7 +83,7 @@ public class StartService {
                                                                             session
                                                                                     .getEmailAddress()))));
             userContext = builder.withClient(clientRegistry).build();
-        } catch (NoSuchElementException e) {
+        } catch (ClientNotFoundException e) {
             LOG.error("Error creating UserContext");
             throw new RuntimeException("Error when creating UserContext", e);
         }
@@ -226,24 +222,39 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            UserContext userContext, CredentialTrustLevel currentCredentialStrength) {
-        if (DocAppUserHelper.isDocCheckingAppUser(userContext)
+            ClientSession clientSession,
+            ClientRegistry client,
+            CredentialTrustLevel currentCredentialStrength) {
+        if (DocAppUserHelper.isDocCheckingAppUser(
+                        clientSession.getAuthRequestParams(), Optional.of(client))
                 || Objects.isNull(currentCredentialStrength)) {
             return false;
         }
         return (currentCredentialStrength.compareTo(
-                        userContext
-                                .getClientSession()
-                                .getEffectiveVectorOfTrust()
-                                .getCredentialTrustLevel())
+                        clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel())
                 < 0);
+    }
+
+    public ClientRegistry getClient(ClientSession clientSession) throws ClientNotFoundException {
+        return clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
+                .findFirst()
+                .flatMap(clientService::getClient)
+                .orElseThrow(
+                        () ->
+                                new ClientNotFoundException(
+                                        "Could not find client for start service"));
     }
 
     private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {
         return clientService
                 .getClient(clientID)
                 .map(ClientRegistry::isCookieConsentShared)
-                .orElseThrow(() -> new ClientNotFoundException(clientID));
+                .orElseThrow(
+                        () ->
+                                new ClientNotFoundException(
+                                        format(
+                                                "Could not find client for clientID: %s",
+                                                clientID)));
     }
 
     private boolean validCookieConsentValueIsPresent(

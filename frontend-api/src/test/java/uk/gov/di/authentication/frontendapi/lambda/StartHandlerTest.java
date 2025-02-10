@@ -30,6 +30,7 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -149,6 +150,7 @@ class StartHandlerTest {
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
+        when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
         handler =
                 new StartHandler(
                         clientSessionService,
@@ -625,6 +627,8 @@ class StartHandlerTest {
         when(startService.createNewSessionWithExistingIdAndClientSession(
                         session, CLIENT_SESSION_ID))
                 .thenReturn(session);
+        when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any(), any()))
+                .thenReturn(new AuthSessionItem().withSessionId(SESSION_ID));
     }
 
     private void usingInvalidSession() {

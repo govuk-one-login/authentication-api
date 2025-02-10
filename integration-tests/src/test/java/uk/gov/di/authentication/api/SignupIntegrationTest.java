@@ -167,6 +167,6 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void withAuthSession() {
-        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
+        authSessionExtension.addSession(SESSION_ID);
     }
 }

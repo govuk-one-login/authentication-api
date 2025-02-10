@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
@@ -71,9 +72,16 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
         return authSessionService.getSession(sessionId);
     }
 
-    public void addSession(Optional<String> previousSessionId, String sessionId) {
-        authSessionService.addOrUpdateSessionIncludingSessionId(
-                previousSessionId, sessionId, null, false);
+    public void addSession(String sessionId) {
+        authSessionService.addSession(authSessionService.generateNewAuthSession(sessionId));
+    }
+
+    public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
+            Optional<String> previousSessionId,
+            String sessionId,
+            CredentialTrustLevel credentialTrustLevel) {
+        return authSessionService.getUpdatedPreviousSessionOrCreateNew(
+                previousSessionId, sessionId, credentialTrustLevel);
     }
 
     public void updateSession(AuthSessionItem sessionItem) {
