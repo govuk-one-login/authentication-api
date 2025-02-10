@@ -29,6 +29,7 @@ public class ClientSessionService {
     public static final String CLIENT_SESSION_PREFIX = "client-session-";
 
     private final RedisConnectionService redisConnectionService;
+    private final BaseDynamoService<ClientSession> baseDynamoService;
     private final ConfigurationService configurationService;
     private final Json objectMapper;
 
@@ -40,6 +41,9 @@ public class ClientSessionService {
                         configurationService.getRedisPort(),
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword());
+        this.baseDynamoService =
+                new BaseDynamoService<>(
+                        ClientSession.class, "Client-Session", configurationService, true);
         objectMapper = SerializationService.getInstance();
     }
 
@@ -48,6 +52,9 @@ public class ClientSessionService {
             RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
+        this.baseDynamoService =
+                new BaseDynamoService<>(
+                        ClientSession.class, "Client-Session", configurationService, true);
         objectMapper = SerializationService.getInstance();
     }
 
@@ -55,8 +62,10 @@ public class ClientSessionService {
             Map<String, List<String>> authRequestParams,
             LocalDateTime creationDate,
             List<VectorOfTrust> vtrList,
-            String clientName) {
-        return new ClientSession(authRequestParams, creationDate, vtrList, clientName);
+            String clientName,
+            String clientSessionId) {
+        return new ClientSession(authRequestParams, creationDate, vtrList, clientName)
+                .withClientSessionId(clientSessionId);
     }
 
     public void storeClientSession(String clientSessionId, ClientSession clientSession) {
@@ -65,6 +74,7 @@ public class ClientSessionService {
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
+            baseDynamoService.put(clientSession);
         } catch (JsonException e) {
             LOG.error("Error saving client session to Redis");
             throw new RuntimeException(e);
@@ -95,6 +105,10 @@ public class ClientSessionService {
             LOG.error("Unable to deserialize client session from redis");
             throw new RuntimeException(e);
         }
+    }
+
+    public Optional<ClientSession> getClientSessionFromDynamo(String clientSessionId) {
+        return baseDynamoService.get(clientSessionId);
     }
 
     public void updateStoredClientSession(String clientSessionId, ClientSession clientSession) {

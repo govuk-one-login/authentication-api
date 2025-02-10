@@ -426,7 +426,8 @@ public class AuthorisationHandler
                         authRequest.toParameters(),
                         LocalDateTime.now(),
                         vtrList,
-                        client.getClientName());
+                        client.getClientName(),
+                        clientSessionId);
 
         if (DocAppUserHelper.isDocCheckingAppUser(
                 authRequest.toParameters(), Optional.of(client))) {

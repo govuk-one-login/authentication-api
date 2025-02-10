@@ -357,6 +357,18 @@ public class AuthenticationCallbackHandler
 
                 String internalCommonSubjectId = userInfo.getSubject().getValue();
 
+                try {
+                    var dynamoClientSession =
+                            clientSessionService.getClientSessionFromDynamo(clientSessionId);
+                    if (dynamoClientSession.isPresent()) {
+                        LOG.info("dynamo entry for ClientSession: {}", dynamoClientSession.get());
+                    } else {
+                        LOG.info("dynamo entry for ClientSession not found");
+                    }
+                } catch (Exception e) {
+                    LOG.info("cannot get dynamo client session: {}", e.getMessage());
+                }
+
                 userInfoStorageService.addAuthenticationUserInfoData(
                         internalCommonSubjectId, clientSessionId, userInfo);
                 addClaimsToOrchSession(orchSession, userInfo);

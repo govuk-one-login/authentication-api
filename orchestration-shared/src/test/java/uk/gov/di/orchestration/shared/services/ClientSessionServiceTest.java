@@ -122,7 +122,8 @@ class ClientSessionServiceTest {
                         Map.of("authparam", List.of("v1", "v2")),
                         LocalDateTime.now(),
                         List.of(VectorOfTrust.getDefaults()),
-                        "client-name");
+                        "client-name",
+                        clientSessionId);
 
         assertEquals(
                 Map.of("authparam", List.of("v1", "v2")), clientSession.getAuthRequestParams());
