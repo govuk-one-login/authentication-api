@@ -24,8 +24,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -59,6 +57,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.C
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
@@ -78,9 +77,6 @@ class UpdateProfileHandlerTest {
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String COOKIE = "Cookie";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    INTERNAL_SUBJECT, "test.account.gov.uk", SaltHelper.generateNewSalt());
 
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
@@ -98,15 +94,18 @@ class UpdateProfileHandlerTest {
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
 
     private final AuditContext auditContextWithAllUserInfo =
             new AuditContext(
                     CLIENT_ID.getValue(),
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    expectedCommonSubject,
+                    INTERNAL_COMMON_SUBJECT_ID,
                     EMAIL,
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
