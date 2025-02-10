@@ -380,7 +380,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             ClientRegistry client,
-            Optional<String> maybePairwiseId) {
+            Optional<String> maybeRpPairwiseId) {
         var session = userContext.getSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -413,9 +413,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    journeyType, subjectId, session, maybePairwiseId);
+                    journeyType, subjectId, session, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-            maybePairwiseId.ifPresentOrElse(
+            maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
                     () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }

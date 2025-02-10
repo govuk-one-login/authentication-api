@@ -111,6 +111,7 @@ class VerifyCodeHandlerTest {
     private static final String CLIENT_ID = "client-id";
     private static final String CLIENT_NAME = "client-name";
     private static final String TEST_CLIENT_ID = "test-client-id";
+    private static final String CLIENT_SECTOR_HOST = "client.test.account.gov.uk";
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String TEST_CLIENT_EMAIL =
             "testclient.user1@digital.cabinet-office.gov.uk";
@@ -128,6 +129,9 @@ class VerifyCodeHandlerTest {
     private final UserProfile userProfile = mock(UserProfile.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
+    private final String expectedPairwiseId =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
@@ -153,7 +157,7 @@ class VerifyCodeHandlerTest {
                     .withTestClient(false)
                     .withClientID(CLIENT_ID)
                     .withClientName(CLIENT_NAME)
-                    .withSectorIdentifierUri("https://" + SECTOR_HOST);
+                    .withSectorIdentifierUri("https://" + CLIENT_SECTOR_HOST);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -773,7 +777,7 @@ class VerifyCodeHandlerTest {
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
-        List.of(TEST_SUBJECT_ID, expectedCommonSubject)
+        List.of(TEST_SUBJECT_ID, expectedPairwiseId)
                 .forEach(
                         identifier ->
                                 verify(
