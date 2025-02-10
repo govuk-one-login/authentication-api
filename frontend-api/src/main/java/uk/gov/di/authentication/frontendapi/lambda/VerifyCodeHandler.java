@@ -162,7 +162,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            session.getInternalCommonSubjectIdentifier(),
+                            authSession.getInternalCommonSubjectId(),
                             session.getEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
@@ -401,7 +401,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.setVerifiedMfaMethodType(MFAMethodType.SMS));
             authSessionService.updateSession(
                     authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
-            clearAccountRecoveryBlockIfPresent(session, auditContext);
+            clearAccountRecoveryBlockIfPresent(authSession, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     authSession.getIsNewAccount(),
                     clientId,
@@ -530,14 +530,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         };
     }
 
-    private void clearAccountRecoveryBlockIfPresent(Session session, AuditContext auditContext) {
+    private void clearAccountRecoveryBlockIfPresent(
+            AuthSessionItem authSession, AuditContext auditContext) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
-                        session.getInternalCommonSubjectIdentifier());
+                        authSession.getInternalCommonSubjectId());
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    session.getInternalCommonSubjectIdentifier());
+                    authSession.getInternalCommonSubjectId());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
                     auditContext,
