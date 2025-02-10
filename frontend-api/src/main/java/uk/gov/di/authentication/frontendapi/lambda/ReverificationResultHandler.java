@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
@@ -138,7 +139,11 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                                             .getBearerAccessToken()));
 
             LOG.info("Successful IPV ReverificationResult");
-            auditService.submitAuditEvent(AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED, auditContext);
+            var pairs =
+                    AuditService.MetadataPair.pair(
+                            "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue());
+            auditService.submitAuditEvent(
+                    AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED, auditContext, pairs);
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
         } catch (UnsuccessfulReverificationResponseException e) {
             LOG.error("Error getting reverification result", e);

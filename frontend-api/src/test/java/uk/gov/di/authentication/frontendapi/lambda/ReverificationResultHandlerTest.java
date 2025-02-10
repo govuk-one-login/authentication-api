@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.entity.IDReverificationState;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
@@ -203,7 +204,12 @@ class ReverificationResultHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED, auditContextWithAllUserInfo);
+                            eq(AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED),
+                            any(),
+                            eq(
+                                    AuditService.MetadataPair.pair(
+                                            "journey_type",
+                                            JourneyType.ACCOUNT_RECOVERY.getValue())));
         }
     }
 
