@@ -13,7 +13,7 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -105,8 +105,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             UserContext userContext) {
         LOG.info("MFA Reset Authorization request received");
         try {
-            Session userSession = userContext.getSession();
             String clientSessionId = userContext.getClientSessionId();
+            AuthSessionItem authSession = userContext.getAuthSession();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
             AuditContext auditContext =
@@ -118,8 +118,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                             AuditService.UNKNOWN,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-            Subject internalCommonSubjectId =
-                    new Subject(userSession.getInternalCommonSubjectIdentifier());
+            Subject internalCommonSubjectId = new Subject(authSession.getInternalCommonSubjectId());
 
             State authenticationState = new State();
             var ipvReverificationRequestURI =
