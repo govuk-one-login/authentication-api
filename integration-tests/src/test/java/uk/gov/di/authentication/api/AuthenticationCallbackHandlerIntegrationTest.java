@@ -1309,6 +1309,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Override
+        public String getAccountInterventionsErrorMetricName() {
+            return "AISException";
+        }
+
+        @Override
         public boolean abortOnAccountInterventionsErrorResponse() {
             return this.abortOnAisErrorResponse;
         }

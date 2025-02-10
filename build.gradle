@@ -142,7 +142,7 @@ subprojects {
 
         bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.80"
 
-        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:2.0.0"
+        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
 
         dynamodb "software.amazon.awssdk:dynamodb:${dependencyVersions.aws_sdk_v2_version}",
                 "software.amazon.awssdk:dynamodb-enhanced:${dependencyVersions.aws_sdk_v2_version}"
