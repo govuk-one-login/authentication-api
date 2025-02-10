@@ -118,12 +118,16 @@ class VerifyMfaCodeHandlerTest {
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
     private static final String SECTOR_HOST = "test.account.gov.uk";
+    private static final String CLIENT_SECTOR_HOST = "client.test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
     private static final int MAX_RETRIES = 6;
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
+    private final String expectedRpPairwiseSubjectId =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
     private final Session session =
             new Session()
                     .setEmailAddress(EMAIL)
@@ -886,7 +890,7 @@ class VerifyMfaCodeHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
-        when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + SECTOR_HOST);
+        when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + CLIENT_SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
 
         var codeRequest =
@@ -894,7 +898,7 @@ class VerifyMfaCodeHandlerTest {
                         MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
         makeCallWithCode(codeRequest);
 
-        List.of(TEST_SUBJECT_ID, expectedCommonSubject)
+        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSubjectId)
                 .forEach(
                         identifier ->
                                 verify(
