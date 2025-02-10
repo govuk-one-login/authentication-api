@@ -1948,7 +1948,6 @@ Resources:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
-        - !Ref AuthenticationCallbackUserInfoTableWriteAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref AuthUserInfoTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -4727,48 +4726,6 @@ Resources:
                 EnvironmentConfiguration,
                 !Ref Environment,
                 userProfileTableKeyArn,
-              ]
-
-  AuthenticationCallbackUserInfoTableWriteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowAuthenticationCallbackUserInfoTableWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-              - dynamodb:BatchWriteItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
-          - Sid: AllowAuthenticationCallbackUserInfoTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                authenticationCallbackUserinfoKeyArn,
               ]
 
   RpPublicKeyCacheTableReadAccessPolicy:
