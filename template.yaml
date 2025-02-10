@@ -1948,7 +1948,6 @@ Resources:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
-        - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
         - !Ref AuthenticationCallbackUserInfoTableWriteAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref AuthUserInfoTableWriteAccessPolicy
@@ -2813,7 +2812,6 @@ Resources:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
-        - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
@@ -3657,7 +3655,6 @@ Resources:
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
-        - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
@@ -4730,66 +4727,6 @@ Resources:
                 EnvironmentConfiguration,
                 !Ref Environment,
                 userProfileTableKeyArn,
-              ]
-
-  AuthenticationCallbackUserInfoTableReadAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowAuthenticationCallbackUserInfoTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:DescribeStream
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo
-                - AccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
-                  AuthEnvironment:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authEnvironment,
-                    ]
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo/index/*
-                - AccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
-                  AuthEnvironment:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authEnvironment,
-                    ]
-          - Sid: AllowAuthenticationCallbackUserInfoTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                authenticationCallbackUserinfoKeyArn,
               ]
 
   AuthenticationCallbackUserInfoTableWriteAccessPolicy:
