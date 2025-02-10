@@ -215,7 +215,7 @@ public class StartHandler
             Optional<String> maybeInternalSubjectId =
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
             Optional<String> maybeInternalCommonSubjectIdentifier =
-                    Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
+                    Optional.ofNullable(authSession.getInternalCommonSubjectId());
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
