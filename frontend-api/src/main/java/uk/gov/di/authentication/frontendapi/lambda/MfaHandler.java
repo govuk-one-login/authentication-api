@@ -146,7 +146,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            userContext.getAuthSession().getInternalCommonSubjectId(),
                             email,
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
