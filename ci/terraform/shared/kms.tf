@@ -586,15 +586,6 @@ resource "aws_kms_key" "bulk_email_users_encryption_key" {
   })
 }
 
-resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
-  description              = "KMS encryption key for authentication callback user info table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-}
-
 resource "aws_kms_key" "account_modifiers_table_encryption_key" {
   description              = "KMS encryption key for account modifiers table in DynamoDB"
   deletion_window_in_days  = 30
