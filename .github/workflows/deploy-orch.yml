@@ -30,13 +30,13 @@ jobs:
           use-installer: true
 
       - name: Set up AWS creds
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        uses: aws-actions/configure-aws-credentials@4fc4975a852c8cd99761e2de1f4ba73402e44dd9 # v4.0.3
         with:
           role-to-assume: ${{ secrets.ORCH_GH_ACTIONS_ROLE_ARN }}
           aws-region: eu-west-2
 
       - name: Set up JDK 17
-        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b #v4.6.0
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 #v4.7.0
         with:
           java-version: "17"
           distribution: "corretto"
