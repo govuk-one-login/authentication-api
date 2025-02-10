@@ -11,7 +11,6 @@ module "oidc_api_authentication_callback_role" {
     aws_iam_policy.ipv_token_auth_kms_policy.arn,
     aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
     aws_iam_policy.orch_to_auth_kms_policy.arn,
-    aws_iam_policy.authentication_callback_userinfo_encryption_key_kms_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn
