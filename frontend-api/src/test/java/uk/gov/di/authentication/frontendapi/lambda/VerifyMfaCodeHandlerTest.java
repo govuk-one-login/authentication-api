@@ -91,6 +91,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.C
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
@@ -118,17 +119,22 @@ class VerifyMfaCodeHandlerTest {
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
     private static final String SECTOR_HOST = "test.account.gov.uk";
+    private static final String CLIENT_SECTOR_HOST = "client.test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
     private static final int MAX_RETRIES = 6;
 
-    private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
+    private final String expectedRpPairwiseSubjectId =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
     private final Json objectMapper = SerializationService.getInstance();
     public VerifyMfaCodeHandler handler;
 
@@ -163,7 +169,7 @@ class VerifyMfaCodeHandlerTest {
                     CLIENT_ID,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    expectedCommonSubject,
+                    INTERNAL_COMMON_SUBJECT_ID,
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
@@ -886,7 +892,7 @@ class VerifyMfaCodeHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
-        when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + SECTOR_HOST);
+        when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + CLIENT_SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
 
         var codeRequest =
@@ -894,7 +900,7 @@ class VerifyMfaCodeHandlerTest {
                         MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
         makeCallWithCode(codeRequest);
 
-        List.of(TEST_SUBJECT_ID, expectedCommonSubject)
+        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSubjectId)
                 .forEach(
                         identifier ->
                                 verify(

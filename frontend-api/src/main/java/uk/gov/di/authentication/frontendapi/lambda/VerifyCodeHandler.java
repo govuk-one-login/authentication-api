@@ -163,7 +163,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            session.getInternalCommonSubjectIdentifier(),
+                            authSession.getInternalCommonSubjectId(),
                             session.getEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
@@ -386,7 +386,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             ClientRegistry client,
-            Optional<String> maybePairwiseId) {
+            Optional<String> maybeRpPairwiseId) {
         var session = userContext.getSession();
         var sessionId = userContext.getAuthSession().getSessionId();
         var notificationType = codeRequest.notificationType();
@@ -408,7 +408,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     session.setVerifiedMfaMethodType(MFAMethodType.SMS), sessionId);
             authSessionService.updateSession(
                     authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
-            clearAccountRecoveryBlockIfPresent(session, auditContext);
+            clearAccountRecoveryBlockIfPresent(authSession, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     authSession.getIsNewAccount(),
                     clientId,
@@ -420,9 +420,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    journeyType, subjectId, session, sessionId, maybePairwiseId);
+                    journeyType, subjectId, session, sessionId, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-            maybePairwiseId.ifPresentOrElse(
+            maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
                     () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }
@@ -440,16 +440,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             Session session,
             String sessionId,
-            Optional<String> maybePairwiseId) {
+            Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
-                    maybePairwiseId.isPresent()
+                    maybeRpPairwiseId.isPresent()
                             ? authenticationAttemptsService
                                     .getCountsByJourneyForSubjectIdAndRpPairwiseId(
                                             subjectId,
-                                            maybePairwiseId.get(),
+                                            maybeRpPairwiseId.get(),
                                             JourneyType.REAUTHENTICATION)
                             : authenticationAttemptsService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
@@ -538,14 +538,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         };
     }
 
-    private void clearAccountRecoveryBlockIfPresent(Session session, AuditContext auditContext) {
+    private void clearAccountRecoveryBlockIfPresent(
+            AuthSessionItem authSession, AuditContext auditContext) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
-                        session.getInternalCommonSubjectIdentifier());
+                        authSession.getInternalCommonSubjectId());
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    session.getInternalCommonSubjectIdentifier());
+                    authSession.getInternalCommonSubjectId());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
                     auditContext,
