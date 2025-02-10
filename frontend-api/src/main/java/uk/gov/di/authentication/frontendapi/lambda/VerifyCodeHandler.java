@@ -386,7 +386,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             ClientRegistry client,
-            Optional<String> maybePairwiseId) {
+            Optional<String> maybeRpPairwiseId) {
         var session = userContext.getSession();
         var sessionId = userContext.getAuthSession().getSessionId();
         var notificationType = codeRequest.notificationType();
@@ -420,9 +420,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    journeyType, subjectId, session, sessionId, maybePairwiseId);
+                    journeyType, subjectId, session, sessionId, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-            maybePairwiseId.ifPresentOrElse(
+            maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
                     () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }
@@ -440,16 +440,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             Session session,
             String sessionId,
-            Optional<String> maybePairwiseId) {
+            Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
-                    maybePairwiseId.isPresent()
+                    maybeRpPairwiseId.isPresent()
                             ? authenticationAttemptsService
                                     .getCountsByJourneyForSubjectIdAndRpPairwiseId(
                                             subjectId,
-                                            maybePairwiseId.get(),
+                                            maybeRpPairwiseId.get(),
                                             JourneyType.REAUTHENTICATION)
                             : authenticationAttemptsService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
