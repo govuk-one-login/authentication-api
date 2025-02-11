@@ -126,7 +126,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             Context context,
             ResetPasswordRequest request,
             UserContext userContext) {
-        attachSessionIdToLogs(userContext.getSession().getSessionId());
+        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
         LOG.info("Processing request");
         try {

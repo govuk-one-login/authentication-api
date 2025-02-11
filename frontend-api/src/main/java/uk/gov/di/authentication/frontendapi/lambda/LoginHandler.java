@@ -173,7 +173,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 request.getJourneyType() != null ? request.getJourneyType().getValue() : "missing";
         var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
 
-        attachSessionIdToLogs(userContext.getSession().getSessionId());
+        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
         attachLogFieldToLogs(JOURNEY_TYPE, journeyType);
 
         Optional<UserProfile> userProfileMaybe =
