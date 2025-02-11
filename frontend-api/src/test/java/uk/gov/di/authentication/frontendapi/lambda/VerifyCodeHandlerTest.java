@@ -83,6 +83,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.C
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
@@ -128,8 +129,6 @@ class VerifyCodeHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
-    private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final String expectedPairwiseId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
@@ -137,9 +136,12 @@ class VerifyCodeHandlerTest {
     private final Session session =
             new Session()
                     .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final Session sessionForTestClient = new Session().setEmailAddress(TEST_CLIENT_EMAIL);
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -174,7 +176,7 @@ class VerifyCodeHandlerTest {
                     CLIENT_ID,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    expectedCommonSubject,
+                    INTERNAL_COMMON_SUBJECT_ID,
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
@@ -394,7 +396,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         sessionForTestClient.setEmailAddress(email);
-        sessionForTestClient.setInternalCommonSubjectIdentifier(expectedCommonSubject);
+        sessionForTestClient.setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
@@ -430,7 +432,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         sessionForTestClient.setEmailAddress(email);
-        sessionForTestClient.setInternalCommonSubjectIdentifier(expectedCommonSubject);
+        sessionForTestClient.setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
         String body =
                 format("{ \"code\": \"%s\", \"notificationType\": \"%s\"  }", CODE, VERIFY_EMAIL);
         var result = makeCallWithCode(body, Optional.of(sessionForTestClient), TEST_CLIENT_ID);
@@ -562,7 +564,8 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
-        verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
+        verify(accountModifiersService)
+                .removeAccountRecoveryBlockIfPresent(INTERNAL_COMMON_SUBJECT_ID);
         var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
         verify(sessionService, times(saveSessionCount)).storeOrUpdateSession(session, SESSION_ID);
         verify(auditService)
@@ -598,7 +601,7 @@ class VerifyCodeHandlerTest {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES - 1);
-        when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
+        when(accountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(false);
         withReauthTurnedOn();
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
@@ -635,7 +638,7 @@ class VerifyCodeHandlerTest {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES - 1);
-        when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
+        when(accountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(false);
         withReauthTurnedOn();
         session.setNewAccount(Session.AccountState.EXISTING);
