@@ -489,7 +489,7 @@ resource "aws_dynamodb_table" "authentication_callback_userinfo" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
-  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+  deletion_protection_enabled = false
 
   attribute {
     name = "SubjectID"
