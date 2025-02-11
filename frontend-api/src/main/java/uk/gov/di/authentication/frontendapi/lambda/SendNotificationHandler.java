@@ -296,6 +296,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             AuditContext auditContext)
             throws JsonException, ClientNotFoundException {
         var session = userContext.getSession();
+        var sessionId = userContext.getAuthSession().getSessionId();
 
         String code =
                 requestNewCode != null && requestNewCode
@@ -323,7 +324,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
             var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(destination);
             if (emailCheckResult.isEmpty()) {
-                String sessionId = userContext.getSession().getSessionId();
                 String clientSessionId = userContext.getClientSessionId();
                 String persistentSessionId =
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
@@ -370,7 +370,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             notificationType,
                             code,
                             userContext.getUserLanguage(),
-                            session.getSessionId(),
+                            sessionId,
                             userContext.getClientSessionId());
             emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("{} placed on queue", request.getNotificationType());

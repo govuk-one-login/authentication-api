@@ -133,7 +133,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
-            attachSessionIdToLogs(userContext.getSession().getSessionId());
+            attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
             LOG.info("MfaHandler received request");
 
