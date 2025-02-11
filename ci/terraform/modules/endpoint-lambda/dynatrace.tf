@@ -12,9 +12,8 @@ locals {
     DT_OPEN_TELEMETRY_ENABLE_INTEGRATION                                   = "true"
     OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING = "true"
     OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED                                 = "true"
-    OTEL_JAVAAGENT_DEBUG                                                   = "true"
 
     DT_LOGGING_DESTINATION = "stdout"
-    DT_LOGGING_JAVA_FLAGS  = "log-Transformer=true,log-OpenTelemetryUtils=true,log-AsyncClassRetransformer=true,log-ClassValue=true"
+    DT_LOGGING_JAVA_FLAGS  = "log-AwsLambdaIntrospection=true,log-Transformer=true,log-OpenTelemetryUtils=true,log-AsyncClassRetransformer=true,log-ClassValue=true,log-dt-http-requests=true,log-span-content=true,log-debug-communication=true,log-debug-app-spans=true,log-debug-tags=true,log-debug-communication=true,log-debug-periodic-tasks=true"
   }
 }

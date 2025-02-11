@@ -221,7 +221,6 @@ subprojects {
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
 
         otel_aws_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
-                "io.opentelemetry:opentelemetry-api",
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
 
         otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
@@ -235,7 +234,7 @@ subprojects {
         if (subproject.plugins.hasPlugin('java')) {
             dependencies {
                 runtimeOnly configurations.otel_aws_instrumentation
-                implementation configurations.otel_aws_instrumentation
+                // testRuntimeOnly configurations.otel_aws_instrumentation
             }
         }
     }
