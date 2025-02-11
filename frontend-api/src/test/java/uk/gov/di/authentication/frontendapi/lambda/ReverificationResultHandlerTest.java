@@ -136,18 +136,21 @@ class ReverificationResultHandlerTest {
     @Nested
     class SuccessfulRequest {
 
-        @Test
-        void shouldReturn200AndIPVResponseOnValidRequest()
-                throws ParseException, UnsuccessfulReverificationResponseException {
-            HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContentType("application/json");
-            userInfo.setContent(
-                    "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
-
+        @BeforeEach
+        void setUp() throws ParseException {
             when(idReverificationStateService.get(any()))
                     .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
+        }
+
+        @Test
+        void shouldReturn200AndIPVResponseOnValidRequest()
+                throws ParseException, UnsuccessfulReverificationResponseException {
+            var userInfo =
+                    successfulResponseWithBody(
+                            "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
@@ -156,7 +159,7 @@ class ReverificationResultHandlerTest {
 
             var result =
                     handler.handleRequestWithUserContext(
-                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL),
+                            apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
                             context,
                             request,
                             USER_CONTEXT);
@@ -168,14 +171,10 @@ class ReverificationResultHandlerTest {
         @Test
         void shouldSubmitSuccessfulTokenReceivedAuditEvent()
                 throws ParseException, UnsuccessfulReverificationResponseException {
-            HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContentType("application/json");
-            userInfo.setContent(
-                    "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
-            when(idReverificationStateService.get(any()))
-                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getSuccessfulTokenResponse());
+            var userInfo =
+                    successfulResponseWithBody(
+                            "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
@@ -196,14 +195,10 @@ class ReverificationResultHandlerTest {
         @Test
         void shouldSubmitReverificationInfoAuditEventForReverificationSuccessResponse()
                 throws ParseException, UnsuccessfulReverificationResponseException {
-            HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContentType("application/json");
-            userInfo.setContent(
-                    "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
-            when(idReverificationStateService.get(any()))
-                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getSuccessfulTokenResponse());
+            var userInfo =
+                    successfulResponseWithBody(
+                            "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
@@ -227,14 +222,9 @@ class ReverificationResultHandlerTest {
         @Test
         void shouldSubmitReverificationInfoAuditEventForReverificationFailureResponse()
                 throws ParseException, UnsuccessfulReverificationResponseException {
-            HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContentType("application/json");
-            userInfo.setContent(
-                    "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": false, \"failure_code\": \"no_identity_available\"}");
-            when(idReverificationStateService.get(any()))
-                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getSuccessfulTokenResponse());
+            var userInfo =
+                    successfulResponseWithBody(
+                            "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": false, \"failure_code\": \"no_identity_available\"}");
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
@@ -260,16 +250,12 @@ class ReverificationResultHandlerTest {
         void shouldSubmitReverificationInfoAuditEventAndLogWarningWhenFailureCodeUnknown()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             var unknownFailureCode = "foo";
-            HTTPResponse userInfo = new HTTPResponse(200);
-            userInfo.setContentType("application/json");
-            userInfo.setContent(
+            var responseBody =
                     format(
                             "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": false, \"failure_code\": \"%s\"}",
-                            unknownFailureCode));
-            when(idReverificationStateService.get(any()))
-                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getSuccessfulTokenResponse());
+                            unknownFailureCode);
+            var userInfo = successfulResponseWithBody(responseBody);
+
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
@@ -434,6 +420,13 @@ class ReverificationResultHandlerTest {
         tokenHTTPResponse.setContent(tokenResponseContent);
 
         return TokenResponse.parse(tokenHTTPResponse);
+    }
+
+    private HTTPResponse successfulResponseWithBody(String body) throws ParseException {
+        HTTPResponse userInfo = new HTTPResponse(200);
+        userInfo.setContentType("application/json");
+        userInfo.setContent(body);
+        return userInfo;
     }
 
     public TokenResponse getUnsuccessfulTokenResponse() throws ParseException {
