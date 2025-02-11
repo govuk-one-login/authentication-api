@@ -4,13 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
@@ -139,13 +140,22 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                                             .getBearerAccessToken()));
 
             LOG.info("Successful IPV ReverificationResult");
-            var pairs =
-                    AuditService.MetadataPair.pair(
-                            "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue());
+
+            var result = reverificationResult.getContentAsJSONObject().get("success");
+
+            if (result == null) {
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
+            }
+
             auditService.submitAuditEvent(
-                    AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED, auditContext, pairs);
+                    AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
+                    auditContext,
+                    AuditService.MetadataPair.pair(
+                            "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue()),
+                    AuditService.MetadataPair.pair("success", result));
+
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
-        } catch (UnsuccessfulReverificationResponseException e) {
+        } catch (UnsuccessfulReverificationResponseException | ParseException e) {
             LOG.error("Error getting reverification result", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
         }

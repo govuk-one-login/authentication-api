@@ -9,12 +9,13 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.entity.IDReverificationState;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
@@ -54,6 +55,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.V
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -129,6 +131,7 @@ class ReverificationResultHandlerTest {
         void shouldReturn200AndIPVResponseOnValidRequest()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
+            userInfo.setContentType("application/json");
             userInfo.setContent(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
 
@@ -157,6 +160,7 @@ class ReverificationResultHandlerTest {
         void shouldSubmitSuccessfulTokenReceivedAuditEvent()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
+            userInfo.setContentType("application/json");
             userInfo.setContent(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
             when(idReverificationStateService.get(any()))
@@ -184,6 +188,7 @@ class ReverificationResultHandlerTest {
         void shouldSubmitSuccessfulReverificationInfoAuditEvent()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
+            userInfo.setContentType("application/json");
             userInfo.setContent(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
             when(idReverificationStateService.get(any()))
@@ -204,12 +209,10 @@ class ReverificationResultHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED),
-                            any(),
-                            eq(
-                                    AuditService.MetadataPair.pair(
-                                            "journey_type",
-                                            JourneyType.ACCOUNT_RECOVERY.getValue())));
+                            AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey_type", "ACCOUNT_RECOVERY"),
+                            pair("success", true));
         }
     }
 
@@ -300,6 +303,34 @@ class ReverificationResultHandlerTest {
                     .thenThrow(
                             new UnsuccessfulReverificationResponseException(
                                     "Error getting reverification result"));
+
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ERROR_1059));
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "",
+                    "{",
+                    "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\"}"
+                })
+        void shouldReturnA400ForInvalidReverificationResponse(String responseContent)
+                throws ParseException, UnsuccessfulReverificationResponseException {
+            HTTPResponse userInfo = new HTTPResponse(200);
+            userInfo.setContentType("application/json");
+            userInfo.setContent(responseContent);
+
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
+            when(reverificationResultService.getToken(any()))
+                    .thenReturn(getSuccessfulTokenResponse());
+            when(reverificationResultService.sendIpvReverificationRequest(any()))
+                    .thenReturn(userInfo);
 
             var result =
                     handler.handleRequest(
