@@ -102,7 +102,7 @@ variable "contact_us_link_route" {
 }
 
 variable "endpoint_memory_size" {
-  default = 1536
+  default = 2000
   type    = number
 }
 
