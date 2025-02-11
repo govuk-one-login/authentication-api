@@ -19,7 +19,6 @@ class ValidClaimsTest {
                 "https://vocab.account.gov.uk/v1/passport",
                 "https://vocab.account.gov.uk/v1/coreIdentityJWT",
                 "https://vocab.account.gov.uk/v1/drivingPermit",
-                "https://vocab.account.gov.uk/v1/socialSecurityRecord",
                 "https://vocab.account.gov.uk/v1/returnCode",
                 "https://vocab.account.gov.uk/v1/inheritedIdentityJWT");
     }
@@ -27,12 +26,13 @@ class ValidClaimsTest {
     static Stream<String> unsupportedClaims() {
         return Stream.of(
                 "https://vocab.account.gov.uk/v1/name",
-                "https://vocab.account.gov.uk/v1/birthdate");
+                "https://vocab.account.gov.uk/v1/birthdate",
+                "https://vocab.account.gov.uk/v1/socialSecurityRecord");
     }
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        MatcherAssert.assertThat(ValidClaims.getAllValidClaims().size(), equalTo(7));
+        MatcherAssert.assertThat(ValidClaims.getAllValidClaims().size(), equalTo(6));
     }
 
     @ParameterizedTest
