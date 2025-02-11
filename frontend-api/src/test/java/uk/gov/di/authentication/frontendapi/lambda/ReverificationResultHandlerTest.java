@@ -185,7 +185,7 @@ class ReverificationResultHandlerTest {
         }
 
         @Test
-        void shouldSubmitSuccessfulReverificationInfoAuditEvent()
+        void shouldSubmitReverificationInfoAuditEventForReverificationSuccessResponse()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
             userInfo.setContentType("application/json");
@@ -213,6 +213,38 @@ class ReverificationResultHandlerTest {
                             auditContextWithAllUserInfo,
                             pair("journey_type", "ACCOUNT_RECOVERY"),
                             pair("success", true));
+        }
+
+        @Test
+        void shouldSubmitReverificationInfoAuditEventForReverificationFailureResponse()
+                throws ParseException, UnsuccessfulReverificationResponseException {
+            HTTPResponse userInfo = new HTTPResponse(200);
+            userInfo.setContentType("application/json");
+            userInfo.setContent(
+                    "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": false, \"failure_code\": \"no_identity_available\"}");
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
+            when(reverificationResultService.getToken(any()))
+                    .thenReturn(getSuccessfulTokenResponse());
+            when(reverificationResultService.sendIpvReverificationRequest(any()))
+                    .thenReturn(userInfo);
+
+            ReverificationResultRequest request =
+                    new ReverificationResultRequest("1234", AUTHENTICATION_STATE, EMAIL);
+
+            handler.handleRequestWithUserContext(
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                    context,
+                    request,
+                    USER_CONTEXT);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey_type", "ACCOUNT_RECOVERY"),
+                            pair("success", false),
+                            pair("failure_code", "no_identity_available"));
         }
     }
 

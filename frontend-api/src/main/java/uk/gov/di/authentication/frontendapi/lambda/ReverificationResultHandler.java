@@ -27,6 +27,8 @@ import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
+
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
@@ -141,18 +143,28 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             LOG.info("Successful IPV ReverificationResult");
 
-            var result = reverificationResult.getContentAsJSONObject().get("success");
+            var reverificationResultJson = reverificationResult.getContentAsJSONObject();
+            var success = reverificationResultJson.get("success");
+            var failureCode = reverificationResultJson.get("failure_code");
+            //TODO add enum for failure code
 
-            if (result == null) {
+            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair(
+                            "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+            metadataPairs.add(AuditService.MetadataPair.pair("success", success));
+            if (failureCode != null) {
+                metadataPairs.add(AuditService.MetadataPair.pair("failure_code", failureCode));
+            }
+
+            if (success == null) {
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
             }
 
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
                     auditContext,
-                    AuditService.MetadataPair.pair(
-                            "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue()),
-                    AuditService.MetadataPair.pair("success", result));
+                    metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {
