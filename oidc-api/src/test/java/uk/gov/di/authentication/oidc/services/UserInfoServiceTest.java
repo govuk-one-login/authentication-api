@@ -96,7 +96,6 @@ class UserInfoServiceTest {
                     .add(ValidClaims.ADDRESS.getValue())
                     .add(ValidClaims.PASSPORT.getValue())
                     .add(ValidClaims.DRIVING_PERMIT.getValue())
-                    .add(ValidClaims.SOCIAL_SECURITY_RECORD.getValue())
                     .add(ValidClaims.RETURN_CODE.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -156,7 +155,6 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
     }
 
@@ -200,7 +198,6 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
     }
@@ -236,7 +233,6 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
@@ -260,8 +256,6 @@ class UserInfoServiceTest {
                                             PASSPORT_CLAIM,
                                             ValidClaims.DRIVING_PERMIT.getValue(),
                                             DRIVING_PERMIT,
-                                            ValidClaims.SOCIAL_SECURITY_RECORD.getValue(),
-                                            SOCIAL_SECURITY_RECORD,
                                             ValidClaims.RETURN_CODE.getValue(),
                                             RETURN_CODE));
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
@@ -299,20 +293,16 @@ class UserInfoServiceTest {
             var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
             var drivingPermitClaim =
                     (JSONArray) userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
-            var socialSecurityRecordClaim =
-                    (JSONArray) userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue());
             var returnCodeClaim = (JSONArray) userInfo.getClaim(ValidClaims.RETURN_CODE.getValue());
             assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
             assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
             assertThat(((LinkedTreeMap) drivingPermitClaim.get(0)).size(), equalTo(6));
-            assertThat(((LinkedTreeMap) socialSecurityRecordClaim.get(0)).size(), equalTo(1));
             assertThat(((LinkedTreeMap) returnCodeClaim.get(0)).size(), equalTo(1));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/passport");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/drivingPermit");
-            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/socialSecurityRecord");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/returnCode");
         }
 
@@ -348,7 +338,6 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
@@ -383,7 +372,6 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
@@ -433,7 +421,6 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
