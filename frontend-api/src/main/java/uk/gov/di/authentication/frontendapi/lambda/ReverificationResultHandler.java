@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.entity.IpvReverificationFailureCode;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -146,7 +147,6 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             var reverificationResultJson = reverificationResult.getContentAsJSONObject();
             var success = reverificationResultJson.get("success");
             var failureCode = reverificationResultJson.get("failure_code");
-            //TODO add enum for failure code
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
             metadataPairs.add(
@@ -154,7 +154,15 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                             "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue()));
             metadataPairs.add(AuditService.MetadataPair.pair("success", success));
             if (failureCode != null) {
-                metadataPairs.add(AuditService.MetadataPair.pair("failure_code", failureCode));
+                try {
+                    var parsedFailureCode =
+                            IpvReverificationFailureCode.fromValue(failureCode.toString());
+                    metadataPairs.add(
+                            AuditService.MetadataPair.pair(
+                                    "failure_code", parsedFailureCode.getValue()));
+                } catch (IllegalArgumentException e) {
+                    LOG.warn("Unknown ipv reverification failure code of {}", failureCode);
+                }
             }
 
             if (success == null) {

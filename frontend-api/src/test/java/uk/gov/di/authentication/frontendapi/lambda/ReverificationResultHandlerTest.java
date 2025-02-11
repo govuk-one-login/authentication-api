@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,6 +37,7 @@ import java.util.Optional;
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
@@ -56,6 +59,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -89,6 +93,11 @@ class ReverificationResultHandlerTest {
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
                     Optional.empty());
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(ReverificationResultHandler.class);
+
     private static final UserContext USER_CONTEXT = mock(UserContext.class);
 
     private static final String AUTHENTICATION_STATE = "abcdefg";
@@ -245,6 +254,46 @@ class ReverificationResultHandlerTest {
                             pair("journey_type", "ACCOUNT_RECOVERY"),
                             pair("success", false),
                             pair("failure_code", "no_identity_available"));
+        }
+
+        @Test
+        void shouldSubmitReverificationInfoAuditEventAndLogWarningWhenFailureCodeUnknown()
+                throws ParseException, UnsuccessfulReverificationResponseException {
+            var unknownFailureCode = "foo";
+            HTTPResponse userInfo = new HTTPResponse(200);
+            userInfo.setContentType("application/json");
+            userInfo.setContent(
+                    format(
+                            "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": false, \"failure_code\": \"%s\"}",
+                            unknownFailureCode));
+            when(idReverificationStateService.get(any()))
+                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
+            when(reverificationResultService.getToken(any()))
+                    .thenReturn(getSuccessfulTokenResponse());
+            when(reverificationResultService.sendIpvReverificationRequest(any()))
+                    .thenReturn(userInfo);
+
+            ReverificationResultRequest request =
+                    new ReverificationResultRequest("1234", AUTHENTICATION_STATE, EMAIL);
+
+            handler.handleRequestWithUserContext(
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                    context,
+                    request,
+                    USER_CONTEXT);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey_type", "ACCOUNT_RECOVERY"),
+                            pair("success", false));
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Unknown ipv reverification failure code of foo")));
         }
     }
 
