@@ -172,8 +172,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     userContext
                             .getSession()
                             .setEmailAddress(request.getEmail())
-                            .setInternalCommonSubjectIdentifier(
-                                    internalCommonSubjectId.getValue()));
+                            .setInternalCommonSubjectIdentifier(internalCommonSubjectId.getValue()),
+                    userContext.getAuthSession().getSessionId());
 
             authSessionService.updateSession(
                     authSessionItem
