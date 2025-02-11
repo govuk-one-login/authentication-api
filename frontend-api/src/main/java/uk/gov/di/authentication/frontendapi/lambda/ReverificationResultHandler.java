@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
@@ -89,10 +90,13 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        AuditService.UNKNOWN,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
                         request.email(),
                         IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
+                        userContext
+                                .getUserProfile()
+                                .map(UserProfile::getPhoneNumber)
+                                .orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         var idReverificationStateMaybe = idReverificationStateService.get(request.state());

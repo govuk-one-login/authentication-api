@@ -9,9 +9,13 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.entity.IDReverificationState;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -20,6 +24,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -38,8 +43,11 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
@@ -62,7 +70,23 @@ class ReverificationResultHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final IDReverificationStateService idReverificationStateService =
             mock(IDReverificationStateService.class);
-    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final String subjectId = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
+    private final Session session =
+            new Session(SESSION_ID)
+                    .setEmailAddress(EMAIL)
+                    .setInternalCommonSubjectIdentifier(subjectId);
+    private final AuditContext auditContextWithAllUserInfo =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    subjectId,
+                    EMAIL,
+                    IP_ADDRESS,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.empty());
+    private static final UserContext USER_CONTEXT = mock(UserContext.class);
 
     private static final String AUTHENTICATION_STATE = "abcdefg";
     private static final IDReverificationState ID_REVERIFICATION_STATE =
@@ -75,8 +99,15 @@ class ReverificationResultHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(USER_CONTEXT.getSession()).thenReturn(session);
         when(configurationService.getIPVBackendURI())
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
+        when(USER_CONTEXT.getSession()).thenReturn(session);
+        when(USER_CONTEXT.getClientId()).thenReturn(CLIENT_ID);
+        when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        var userProfile = mock(UserProfile.class);
+        when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
+        when(USER_CONTEXT.getUserProfile()).thenReturn(Optional.of(userProfile));
 
         handler =
                 new ReverificationResultHandler(
@@ -92,12 +123,14 @@ class ReverificationResultHandlerTest {
 
     @Nested
     class SuccessfulRequest {
+
         @Test
         void shouldReturn200AndIPVResponseOnValidRequest()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             HTTPResponse userInfo = new HTTPResponse(200);
             userInfo.setContent(
                     "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"success\": true}");
+
             when(idReverificationStateService.get(any()))
                     .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
@@ -105,9 +138,15 @@ class ReverificationResultHandlerTest {
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
+            ReverificationResultRequest request =
+                    new ReverificationResultRequest("1234", AUTHENTICATION_STATE, EMAIL);
+
             var result =
-                    handler.handleRequest(
-                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+                    handler.handleRequestWithUserContext(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL),
+                            context,
+                            request,
+                            USER_CONTEXT);
 
             assertThat(result, hasStatus(200));
             assertThat(result, hasBody(userInfo.getContent()));
@@ -126,11 +165,18 @@ class ReverificationResultHandlerTest {
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
-            handler.handleRequest(
-                    apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+            ReverificationResultRequest request =
+                    new ReverificationResultRequest("1234", AUTHENTICATION_STATE, EMAIL);
+
+            handler.handleRequestWithUserContext(
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                    context,
+                    request,
+                    USER_CONTEXT);
 
             verify(auditService)
-                    .submitAuditEvent(eq(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED), any());
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED, auditContextWithAllUserInfo);
         }
 
         @Test
@@ -146,11 +192,18 @@ class ReverificationResultHandlerTest {
             when(reverificationResultService.sendIpvReverificationRequest(any()))
                     .thenReturn(userInfo);
 
-            handler.handleRequest(
-                    apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+            ReverificationResultRequest request =
+                    new ReverificationResultRequest("1234", AUTHENTICATION_STATE, EMAIL);
+
+            handler.handleRequestWithUserContext(
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                    context,
+                    request,
+                    USER_CONTEXT);
 
             verify(auditService)
-                    .submitAuditEvent(eq(AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED), any());
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED, auditContextWithAllUserInfo);
         }
     }
 
