@@ -16,7 +16,10 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
-import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -37,13 +40,13 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -53,6 +56,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -132,13 +136,20 @@ public class StartHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         LOG.info("Start request received");
-        var session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
-        if (Objects.isNull(session)) {
+        var sessionIdOpt =
+                getOptionalHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        var sessionOpt = sessionIdOpt.flatMap(sessionService::getSession);
+        if (sessionIdOpt.isEmpty() || sessionOpt.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            attachSessionIdToLogs(session);
-            LOG.info("Start session retrieved");
         }
+        var sessionId = sessionIdOpt.get();
+        var session = sessionOpt.get();
+
+        attachSessionIdToLogs(sessionId);
+        LOG.info("Start session retrieved");
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
 
@@ -180,7 +191,7 @@ public class StartHandler
             var authSession =
                     authSessionService.getUpdatedPreviousSessionOrCreateNew(
                             Optional.ofNullable(startRequest.previousSessionId()),
-                            session.getSessionId(),
+                            sessionId,
                             startRequest.currentCredentialStrength());
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
@@ -230,7 +241,7 @@ public class StartHandler
                     new AuditContext(
                             userContext.getClient().get().getClientID(),
                             clientSessionId,
-                            session.getSessionId(),
+                            sessionId,
                             internalCommonSubjectIdentifierForAuditEvent,
                             userContext
                                     .getUserProfile()
