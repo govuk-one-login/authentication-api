@@ -135,11 +135,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var userExists = userProfile.isPresent();
             userContext.getSession().setEmailAddress(emailAddress);
 
+            var session = userContext.getSession();
+            var sessionId = userContext.getAuthSession().getSessionId();
+
             if (codeStorageService.isBlockedForEmail(
                     emailAddress,
                     CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
                 LOG.info("User account is locked");
-                sessionService.storeOrUpdateSession(userContext.getSession());
+                sessionService.storeOrUpdateSession(session, sessionId);
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -154,7 +157,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = new UserMfaDetail();
-            var session = userContext.getSession();
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
@@ -222,7 +224,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation);
-            sessionService.storeOrUpdateSession(session);
+            sessionService.storeOrUpdateSession(session, sessionId);
             authSessionService.updateSession(authSession);
 
             LOG.info("Successfully processed request");
