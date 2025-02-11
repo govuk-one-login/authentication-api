@@ -58,11 +58,11 @@ public class StartService {
     }
 
     public Session createNewSessionWithExistingIdAndClientSession(
-            Session session, String clientSessionId) {
+            String sessionId, String clientSessionId) {
         LOG.info("Creating new session with existing sessionID");
-        session = new Session(session.getSessionId());
+        Session session = new Session(sessionId);
         session.addClientSession(clientSessionId);
-        sessionService.storeOrUpdateSession(session);
+        sessionService.storeOrUpdateSession(session, sessionId);
         return session;
     }
 
