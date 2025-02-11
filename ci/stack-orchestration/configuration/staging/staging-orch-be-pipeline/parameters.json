@@ -44,6 +44,10 @@
     "ParameterValue": "arn:aws:iam::767397776536:role/PL-build-orch-be-pipeline-PromoTrigRole-069c01797277"
   },
   {
+    "ParameterKey": "BuildNotificationStackName",
+    "ParameterValue": "build-notifications"
+  },
+  {
     "ParameterKey": "CustomKmsKeyArns",
     "ParameterValue": "arn:aws:kms:eu-west-2:216552277552:key/4bc58ab5-c9bb-4702-a2c3-5d339604a8fe"
   },
