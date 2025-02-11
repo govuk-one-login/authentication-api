@@ -253,7 +253,8 @@ class ResetPasswordRequestHandlerTest {
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
-            verify(sessionService).storeOrUpdateSession(argThat(this::isSessionWithEmailSent));
+            verify(sessionService)
+                    .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
         }
 
         @Test
@@ -343,7 +344,8 @@ class ResetPasswordRequestHandlerTest {
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
-            verify(sessionService).storeOrUpdateSession(argThat(this::isSessionWithEmailSent));
+            verify(sessionService)
+                    .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -500,7 +502,7 @@ class ResetPasswordRequestHandlerTest {
             verify(awsSqsClient, never()).send(anyString());
             verify(codeStorageService, never())
                     .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
-            verify(sessionService, never()).storeOrUpdateSession(any());
+            verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
             verifyNoInteractions(awsSqsClient);
         }
 
