@@ -176,7 +176,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        authSession.getInternalCommonSubjectId(),
                         userContext.getSession().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
@@ -351,7 +351,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        session.getInternalCommonSubjectIdentifier(),
+                        authSession.getInternalCommonSubjectId(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
