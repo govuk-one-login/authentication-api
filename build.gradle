@@ -130,6 +130,10 @@ subprojects {
                 add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
                     because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
+
+                add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
+                    because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
+                }
             }
         }
 
