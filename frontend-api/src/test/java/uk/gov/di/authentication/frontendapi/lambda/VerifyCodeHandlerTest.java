@@ -177,7 +177,7 @@ class VerifyCodeHandlerTest {
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     private final AuditContext AUDIT_CONTEXT_FOR_TEST_CLIENT =
-            AUDIT_CONTEXT.withSessionId(testSession.getSessionId()).withClientId(TEST_CLIENT_ID);
+            AUDIT_CONTEXT.withSessionId(authSession.getSessionId()).withClientId(TEST_CLIENT_ID);
 
     private VerifyCodeHandler handler;
 

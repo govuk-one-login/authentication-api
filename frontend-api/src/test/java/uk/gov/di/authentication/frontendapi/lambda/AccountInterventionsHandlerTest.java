@@ -154,6 +154,7 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(userContext.getSession()).thenReturn(session);
+        when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
