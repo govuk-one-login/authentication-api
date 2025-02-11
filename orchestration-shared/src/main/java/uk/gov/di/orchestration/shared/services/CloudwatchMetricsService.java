@@ -1,5 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
@@ -20,6 +22,8 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 
 public class CloudwatchMetricsService {
 
+    private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
+
     private final ConfigurationService configurationService;
 
     public CloudwatchMetricsService() {
@@ -34,15 +38,19 @@ public class CloudwatchMetricsService {
         segmentedFunctionCall(
                 "Metrics::EMF",
                 () -> {
-                    var metrics = new MetricsLogger();
-                    var dimensionsSet = new DimensionSet();
+                    try {
+                        var metrics = new MetricsLogger();
+                        var dimensionsSet = new DimensionSet();
 
-                    dimensions.forEach(dimensionsSet::addDimension);
+                        dimensions.forEach(dimensionsSet::addDimension);
 
-                    metrics.setNamespace("Authentication");
-                    metrics.putDimensions(dimensionsSet);
-                    metrics.putMetric(name, value, Unit.NONE);
-                    metrics.flush();
+                        metrics.setNamespace("Authentication");
+                        metrics.putDimensions(dimensionsSet);
+                        metrics.putMetric(name, value, Unit.NONE);
+                        metrics.flush();
+                    } catch (IllegalArgumentException e) {
+                        LOG.error("Error emitting metric: {} ({})", e.getMessage(), e.getClass());
+                    }
                 });
     }
 
