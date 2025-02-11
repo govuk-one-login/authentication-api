@@ -295,7 +295,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         sessionService.storeOrUpdateSession(
                 userContext
                         .getSession()
-                        .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
+                        .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier),
+                userContext.getAuthSession().getSessionId());
 
         authSessionService.updateSession(
                 authSessionItem
