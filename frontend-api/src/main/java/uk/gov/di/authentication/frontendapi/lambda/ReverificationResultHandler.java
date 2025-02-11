@@ -142,7 +142,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                                             .getTokens()
                                             .getBearerAccessToken()));
 
-            LOG.info("Successful IPV ReverificationResult");
+            LOG.info("ReverificationResult response received from IPV");
 
             var reverificationResultJson = reverificationResult.getContentAsJSONObject();
             var success = reverificationResultJson.get("success");
