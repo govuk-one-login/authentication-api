@@ -128,7 +128,11 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             return generateApiGatewayProxyErrorResponse(400, ERROR_1058);
         }
         LOG.info("Successful IPV TokenResponse");
-        auditService.submitAuditEvent(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED, auditContext);
+        auditService.submitAuditEvent(
+                AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
+                auditContext,
+                AuditService.MetadataPair.pair(
+                        "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
 
         try {
             var reverificationResult =

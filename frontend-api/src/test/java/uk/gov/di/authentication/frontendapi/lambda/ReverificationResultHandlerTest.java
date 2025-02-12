@@ -189,7 +189,9 @@ class ReverificationResultHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED, auditContextWithAllUserInfo);
+                            AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey-type", "ACCOUNT_RECOVERY"));
         }
 
         @Test
