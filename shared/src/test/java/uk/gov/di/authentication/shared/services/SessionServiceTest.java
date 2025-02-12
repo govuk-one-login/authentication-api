@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
@@ -10,6 +9,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SessionServiceTest {
-
+    private static final String SESSION_ID = "test-session-id";
     private final RedisConnectionService redis = mock(RedisConnectionService.class);
     private final ConfigurationService configuration = mock(ConfigurationService.class);
     private final Json objectMapper = SerializationService.getInstance();
@@ -33,34 +33,38 @@ class SessionServiceTest {
     void shouldPersistSessionToRedisWithExpiry() throws Json.JsonException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
-        var session = new Session("session-id").addClientSession("client-session-id");
+        var session = new Session(SESSION_ID).addClientSession("client-session-id");
 
-        sessionService.storeOrUpdateSession(session, "session-id");
+        sessionService.storeOrUpdateSession(session, SESSION_ID);
 
         verify(redis, times(1))
-                .saveWithExpiry("session-id", objectMapper.writeValueAsString(session), 1234L);
+                .saveWithExpiry(SESSION_ID, objectMapper.writeValueAsString(session), 1234L);
     }
 
     @Test
     void shouldRetrieveSessionUsingRequestHeaders() throws Json.JsonException {
-        when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
+        var serialisedSession = generateSearlizedSession();
+        when(redis.keyExists(SESSION_ID)).thenReturn(true);
+        when(redis.getValue(SESSION_ID)).thenReturn(serialisedSession);
 
         var sessionInRedis =
-                sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", "session-id"));
+                sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", SESSION_ID));
 
-        sessionInRedis.ifPresentOrElse(
-                session -> assertThat(session.getSessionId(), is("session-id")),
-                () -> fail("Could not retrieve result"));
+        if (sessionInRedis.isPresent()) {
+            assertThat(
+                    objectMapper.writeValueAsString(sessionInRedis.get()), is(serialisedSession));
+        } else {
+            fail("Could not retrieve result");
+        }
     }
 
     @Test
     void shouldNotRetrieveSessionForLowerCaseHeaderName() throws Json.JsonException {
-        when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
+        when(redis.keyExists(SESSION_ID)).thenReturn(true);
+        when(redis.getValue(SESSION_ID)).thenReturn(generateSearlizedSession());
 
         var sessionInRedis =
-                sessionService.getSessionFromRequestHeaders(Map.of("session-id", "session-id"));
+                sessionService.getSessionFromRequestHeaders(Map.of("session-id", SESSION_ID));
         assertTrue(sessionInRedis.isEmpty());
     }
 
@@ -84,10 +88,9 @@ class SessionServiceTest {
 
     @Test
     void shouldNotRetrieveSessionIfNotPresentInRedis() {
-        when(redis.keyExists("session-id")).thenReturn(false);
+        when(redis.keyExists(SESSION_ID)).thenReturn(false);
 
-        var session =
-                sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", "session-id"));
+        var session = sessionService.getSessionFromRequestHeaders(Map.of("Session-Id", SESSION_ID));
 
         assertTrue(session.isEmpty());
     }
@@ -98,50 +101,53 @@ class SessionServiceTest {
         assertEquals(
                 Optional.empty(),
                 sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(CookieHelper.REQUEST_COOKIE_HEADER, "gs=this is bad"))));
+                        Map.of(CookieHelper.REQUEST_COOKIE_HEADER, "gs=this is bad")));
     }
 
     @Test
     void shouldReturnSessionFromSessionCookieCalledWithValidCookieHeaderValues()
             throws Json.JsonException {
-        when(redis.keyExists("session-id")).thenReturn(true);
-        when(redis.getValue("session-id")).thenReturn(generateSearlizedSession());
+        var serialisedSession = generateSearlizedSession();
+        when(redis.keyExists(SESSION_ID)).thenReturn(true);
+        when(redis.getValue(SESSION_ID)).thenReturn(serialisedSession);
 
         Optional<Session> sessionFromSessionCookie =
                 sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(
-                                        CookieHelper.REQUEST_COOKIE_HEADER, "gs=session-id.456;")));
+                        Map.of(
+                                CookieHelper.REQUEST_COOKIE_HEADER,
+                                format("gs=%s.456;", SESSION_ID)));
 
-        assertTrue(sessionFromSessionCookie.isPresent());
-        Assertions.assertEquals("session-id", sessionFromSessionCookie.get().getSessionId());
+        if (sessionFromSessionCookie.isPresent()) {
+            assertThat(
+                    objectMapper.writeValueAsString(sessionFromSessionCookie.get()),
+                    is(serialisedSession));
+        } else {
+            fail("Could not retrieve result");
+        }
     }
 
     @Test
     void shouldNotReturnSessionFromSessionCookieCalledWithMissingSessionId() {
-        when(redis.keyExists("session-id")).thenReturn(false);
+        when(redis.keyExists(SESSION_ID)).thenReturn(false);
         Optional<Session> session =
                 sessionService.getSessionFromSessionCookie(
-                        Map.ofEntries(
-                                Map.entry(
-                                        CookieHelper.REQUEST_COOKIE_HEADER, "gs=session-id.456;")));
+                        Map.of(CookieHelper.REQUEST_COOKIE_HEADER, "gs=session-id.456;"));
 
         assertFalse(session.isPresent());
     }
 
     @Test
     void shouldDeleteSessionIdFromRedis() {
-        var session = new Session("session-id").addClientSession("client-session-id");
+        var session = new Session(SESSION_ID).addClientSession("client-session-id");
 
         sessionService.storeOrUpdateSession(session, "session-id");
-        sessionService.deleteSessionFromRedis(session.getSessionId());
+        sessionService.deleteSessionFromRedis(SESSION_ID);
 
-        verify(redis).deleteValue("session-id");
+        verify(redis).deleteValue(SESSION_ID);
     }
 
     private String generateSearlizedSession() throws Json.JsonException {
-        var session = new Session("session-id").addClientSession("client-session-id");
+        var session = new Session(SESSION_ID).addClientSession("client-session-id");
 
         return objectMapper.writeValueAsString(session);
     }
