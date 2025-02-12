@@ -151,7 +151,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
             metadataPairs.add(
                     AuditService.MetadataPair.pair(
-                            "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+                            "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
             metadataPairs.add(AuditService.MetadataPair.pair("success", success));
             if (failureCode != null) {
                 try {

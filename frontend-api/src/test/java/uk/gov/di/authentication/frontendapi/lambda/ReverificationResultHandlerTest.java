@@ -215,7 +215,7 @@ class ReverificationResultHandlerTest {
                     .submitAuditEvent(
                             AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
                             auditContextWithAllUserInfo,
-                            pair("journey_type", "ACCOUNT_RECOVERY"),
+                            pair("journey-type", "ACCOUNT_RECOVERY"),
                             pair("success", true));
         }
 
@@ -241,7 +241,7 @@ class ReverificationResultHandlerTest {
                     .submitAuditEvent(
                             AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
                             auditContextWithAllUserInfo,
-                            pair("journey_type", "ACCOUNT_RECOVERY"),
+                            pair("journey-type", "ACCOUNT_RECOVERY"),
                             pair("success", false),
                             pair("failure_code", "no_identity_available"));
         }
@@ -272,7 +272,7 @@ class ReverificationResultHandlerTest {
                     .submitAuditEvent(
                             AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
                             auditContextWithAllUserInfo,
-                            pair("journey_type", "ACCOUNT_RECOVERY"),
+                            pair("journey-type", "ACCOUNT_RECOVERY"),
                             pair("success", false));
 
             assertThat(
