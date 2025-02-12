@@ -4,11 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.entity.IpvReverificationFailureCode;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
@@ -24,6 +27,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.ArrayList;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
@@ -137,10 +142,40 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                                             .getTokens()
                                             .getBearerAccessToken()));
 
-            LOG.info("Successful IPV ReverificationResult");
-            auditService.submitAuditEvent(AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED, auditContext);
+            LOG.info("ReverificationResult response received from IPV");
+
+            var reverificationResultJson = reverificationResult.getContentAsJSONObject();
+            var success = reverificationResultJson.get("success");
+            var failureCode = reverificationResultJson.get("failure_code");
+
+            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair(
+                            "journey_type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+            metadataPairs.add(AuditService.MetadataPair.pair("success", success));
+            if (failureCode != null) {
+                try {
+                    var parsedFailureCode =
+                            IpvReverificationFailureCode.fromValue(failureCode.toString());
+                    metadataPairs.add(
+                            AuditService.MetadataPair.pair(
+                                    "failure_code", parsedFailureCode.getValue()));
+                } catch (IllegalArgumentException e) {
+                    LOG.warn("Unknown ipv reverification failure code of {}", failureCode);
+                }
+            }
+
+            if (success == null) {
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
+            }
+
+            auditService.submitAuditEvent(
+                    AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
+                    auditContext,
+                    metadataPairs.toArray(AuditService.MetadataPair[]::new));
+
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
-        } catch (UnsuccessfulReverificationResponseException e) {
+        } catch (UnsuccessfulReverificationResponseException | ParseException e) {
             LOG.error("Error getting reverification result", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
         }
