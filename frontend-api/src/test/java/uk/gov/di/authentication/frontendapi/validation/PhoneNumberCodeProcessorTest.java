@@ -45,6 +45,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -52,7 +53,10 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 class PhoneNumberCodeProcessorTest {
 
     private PhoneNumberCodeProcessor phoneNumberCodeProcessor;
-    private final Session session = mock(Session.class);
+    private final Session session =
+            new Session(SESSION_ID)
+                    .setEmailAddress(EMAIL)
+                    .setInternalCommonSubjectIdentifier(INTERNAL_SUB_ID);
     private final AuthSessionItem authSession = mock(AuthSessionItem.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
@@ -393,9 +397,6 @@ class PhoneNumberCodeProcessorTest {
 
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
-        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
-        when(session.getSessionId()).thenReturn(SESSION_ID);
-        when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(authSession.getSessionId()).thenReturn(SESSION_ID);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getClientId()).thenReturn(CLIENT_ID);
@@ -428,7 +429,6 @@ class PhoneNumberCodeProcessorTest {
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
                 .thenReturn(6);
-        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(userContext.getSession()).thenReturn(session);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
@@ -451,7 +451,6 @@ class PhoneNumberCodeProcessorTest {
 
     public void setUpBlockedPhoneNumberCode(
             CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(userContext.getSession()).thenReturn(session);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
