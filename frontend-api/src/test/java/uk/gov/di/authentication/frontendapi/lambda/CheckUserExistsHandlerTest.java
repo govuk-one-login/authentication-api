@@ -96,7 +96,8 @@ class CheckUserExistsHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
-    private final Session session = mock(Session.class);
+    private final Session session =
+            new Session(SESSION_ID).setInternalCommonSubjectIdentifier("test-subject-id");
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -133,7 +134,6 @@ class CheckUserExistsHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
-        when(session.getSessionId()).thenReturn(SESSION_ID);
 
         handler =
                 new CheckUserExistsHandler(
@@ -184,7 +184,8 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
-            verify(session).setInternalCommonSubjectIdentifier(getExpectedInternalPairwiseId());
+            assertEquals(
+                    getExpectedInternalPairwiseId(), session.getInternalCommonSubjectIdentifier());
         }
 
         @Test
@@ -303,7 +304,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
-        verify(session).setInternalCommonSubjectIdentifier(null);
+        assertNull(session.getInternalCommonSubjectIdentifier());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
