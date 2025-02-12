@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.MockedStatic;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -28,6 +29,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -52,9 +54,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -168,7 +172,18 @@ class SignUpHandlerTest {
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        var EXPECTED_RP_PAIRWISE_ID = "EXPECTED_RP_PAIRWISE_ID";
+
+        APIGatewayProxyResponseEvent result;
+        try (MockedStatic<TxmaAuditHelper> mockTxmaAuditHelper =
+                mockStatic(TxmaAuditHelper.class, CALLS_REAL_METHODS)) {
+            mockTxmaAuditHelper
+                    .when(() -> TxmaAuditHelper.getRpPairwiseId(any(), any(), any()))
+                    .thenReturn(EXPECTED_RP_PAIRWISE_ID);
+
+            result = handler.handleRequest(event, context);
+        }
 
         verify(authenticationService)
                 .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
@@ -182,15 +197,13 @@ class SignUpHandlerTest {
                         eq("computer-1"),
                         any(Subject.class),
                         any(TermsAndConditions.class));
-        var expectedRpPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
+
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
                         AUDIT_CONTEXT.withSubjectId(expectedCommonSubject),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        pair("rpPairwiseId", expectedRpPairwiseId));
+                        pair("rpPairwiseId", EXPECTED_RP_PAIRWISE_ID));
 
         verify(authSessionService)
                 .updateSession(
@@ -246,12 +259,19 @@ class SignUpHandlerTest {
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var EXPECTED_RP_PAIRWISE_ID = "EXPECTED_RP_PAIRWISE_ID";
+
+        APIGatewayProxyResponseEvent result;
+        try (MockedStatic<TxmaAuditHelper> mockTxmaAuditHelper =
+                mockStatic(TxmaAuditHelper.class, CALLS_REAL_METHODS)) {
+            mockTxmaAuditHelper
+                    .when(() -> TxmaAuditHelper.getRpPairwiseId(any(), any(), any()))
+                    .thenReturn(EXPECTED_RP_PAIRWISE_ID);
+
+            result = handler.handleRequest(event, context);
+        }
 
         assertThat(result, hasStatus(200));
-        var expectedRpPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
@@ -259,7 +279,7 @@ class SignUpHandlerTest {
                                 .withSubjectId(expectedCommonSubject)
                                 .withTxmaAuditEncoded(Optional.empty()),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        pair("rpPairwiseId", expectedRpPairwiseId));
+                        pair("rpPairwiseId", EXPECTED_RP_PAIRWISE_ID));
     }
 
     @Test
