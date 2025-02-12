@@ -59,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -80,6 +81,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
@@ -554,16 +556,12 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {
-        Session sessionWithPasswordResetCount = mock(Session.class);
-        when(sessionWithPasswordResetCount.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
-        when(sessionWithPasswordResetCount.getSessionId()).thenReturn(SESSION_ID);
-        when(sessionWithPasswordResetCount.validateSession(CommonTestVariables.EMAIL))
-                .thenReturn(true);
-        when(sessionWithPasswordResetCount.getPasswordResetCount())
-                .thenReturn(passwordResetCount)
-                .thenReturn(passwordResetCount + 1);
+        Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+        IntStream.range(0, passwordResetCount)
+                .forEach((i) -> session.incrementPasswordResetCount());
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(sessionWithPasswordResetCount));
+                .thenReturn(Optional.of(session))
+                .thenReturn(Optional.of(session.incrementPasswordResetCount()));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }
