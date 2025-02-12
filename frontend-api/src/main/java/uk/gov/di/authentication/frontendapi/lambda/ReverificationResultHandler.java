@@ -32,7 +32,6 @@ import java.util.ArrayList;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
@@ -124,7 +123,6 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             LOG.error(
                     "IPV TokenResponse was not successful: {}",
                     tokenResponse.toErrorResponse().toJSONObject());
-            auditService.submitAuditEvent(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED, auditContext);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1058);
         }
         LOG.info("Successful IPV TokenResponse");

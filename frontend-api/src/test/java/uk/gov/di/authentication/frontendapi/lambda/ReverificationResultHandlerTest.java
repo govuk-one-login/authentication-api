@@ -40,12 +40,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
@@ -337,25 +335,6 @@ class ReverificationResultHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ERROR_1058));
-        }
-
-        @Test
-        void shouldSubmitUnsuccessfulTokenReceivedAuditEvent()
-                throws ParseException, UnsuccessfulReverificationResponseException {
-            when(idReverificationStateService.get(any()))
-                    .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
-            when(reverificationResultService.getToken(any()))
-                    .thenReturn(getUnsuccessfulTokenResponse());
-            when(reverificationResultService.sendIpvReverificationRequest(any()))
-                    .thenThrow(
-                            new UnsuccessfulReverificationResponseException(
-                                    "Error getting reverification result"));
-
-            handler.handleRequest(
-                    apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
-
-            verify(auditService)
-                    .submitAuditEvent(eq(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED), any());
         }
     }
 
