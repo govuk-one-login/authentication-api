@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -56,6 +57,7 @@ class AuthAppCodeProcessorTest {
     AuditService mockAuditService;
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
+    private Session session;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -81,6 +83,10 @@ class AuthAppCodeProcessorTest {
 
     @BeforeEach
     void setUp() {
+        this.session =
+                new Session(SESSION_ID)
+                        .setEmailAddress(EMAIL)
+                        .setInternalCommonSubjectIdentifier(INTERNAL_SUB_ID);
         this.mockSession = mock(Session.class);
         this.mockAuthSession = mock(AuthSessionItem.class);
         this.mockCodeStorageService = mock(CodeStorageService.class);
@@ -89,7 +95,7 @@ class AuthAppCodeProcessorTest {
         this.mockAuditService = mock(AuditService.class);
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
-        when(mockUserContext.getSession()).thenReturn(mock(Session.class));
+        when(mockUserContext.getSession()).thenReturn(session);
         when(mockUserContext.getAuthSession()).thenReturn(mock(AuthSessionItem.class));
     }
 
@@ -277,12 +283,9 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpSuccessfulCodeRequest(CodeRequest codeRequest) {
-        when(mockSession.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
-        when(mockSession.getSessionId()).thenReturn(SESSION_ID);
-        when(mockSession.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(mockAuthSession.getSessionId()).thenReturn(SESSION_ID);
         when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(mockUserContext.getSession()).thenReturn(mockSession);
+        when(mockUserContext.getSession()).thenReturn(session);
         when(mockUserContext.getAuthSession()).thenReturn(mockAuthSession);
         when(mockUserContext.getClientId()).thenReturn(CLIENT_ID);
         when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
@@ -300,9 +303,8 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpBlockedUser(CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(mockUserContext.getSession().getEmailAddress()).thenReturn("blocked-email-address");
         when(mockCodeStorageService.isBlockedForEmail(
-                        "blocked-email-address", CODE_BLOCKED_KEY_PREFIX + codeRequestType))
+                        EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
 
         this.authAppCodeProcessor =
@@ -318,11 +320,9 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpRetryLimitExceededUser(CodeRequest codeRequest) {
-        when(mockUserContext.getSession().getEmailAddress()).thenReturn("email-address");
-        when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
+        when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(
-                        "email-address", MFAMethodType.AUTH_APP))
+        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
                 .thenReturn(MAX_RETRIES + 1);
 
         this.authAppCodeProcessor =
@@ -338,11 +338,9 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpNoAuthCodeForUser(CodeRequest codeRequest) {
-        when(mockUserContext.getSession().getEmailAddress()).thenReturn("email-address");
-
-        when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
+        when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
+        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(mock(UserCredentials.class));
 
         this.authAppCodeProcessor =
@@ -358,9 +356,7 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpValidAuthCode(CodeRequest codeRequest) {
-        when(mockUserContext.getSession().getEmailAddress()).thenReturn("email-address");
-        when(mockSession.getEmailAddress()).thenReturn("email-address");
-        when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
+        when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockConfigurationService.getAuthAppCodeAllowedWindows()).thenReturn(9);
         when(mockConfigurationService.getAuthAppCodeWindowLength()).thenReturn(30);
@@ -372,8 +368,7 @@ class AuthAppCodeProcessorTest {
         when(mockMfaMethod.isEnabled()).thenReturn(true);
         List<MFAMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
         when(mockUserCredentials.getMfaMethods()).thenReturn(mockMfaMethodList);
-        when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
-                .thenReturn(mockUserCredentials);
+        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(mockUserCredentials);
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
