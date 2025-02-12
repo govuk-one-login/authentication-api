@@ -130,6 +130,9 @@ subprojects {
                 add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
                     because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
+                resolutionStrategy {
+                    force 'net.minidev:json-smart:2.5.2'
+                }
             }
         }
 
