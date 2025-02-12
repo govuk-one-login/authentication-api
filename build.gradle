@@ -107,6 +107,12 @@ subprojects {
         pact_provider
     }
 
+    configurations.all {
+        resolutionStrategy {
+            force 'net.minidev:json-smart:2.5.2'
+        }
+    }
+
     // Check dependencies using:
     //
     // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration testRuntimeClasspath
