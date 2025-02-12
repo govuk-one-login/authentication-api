@@ -146,7 +146,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest codeRequest,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getSession());
+        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
         try {
             LOG.info("Processing request");

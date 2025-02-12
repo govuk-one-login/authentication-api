@@ -110,7 +110,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         String persistentSessionId =
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
-        LogLineHelper.attachSessionIdToLogs(session);
+        LogLineHelper.attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
         LOG.info("Processing request");
 
