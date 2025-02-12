@@ -149,7 +149,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         } else {
             LOG.error(
                     "Encountered unexpected error while processing session: {}",
-                    session.getSessionId());
+                    userContext.getAuthSession().getSessionId());
             return generateErrorResponse(ErrorResponse.ERROR_1013, auditContext);
         }
 
