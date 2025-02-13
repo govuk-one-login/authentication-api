@@ -23,6 +23,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyReques
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class IDReverificationStateHandlerTest {
     public static final String AUTHENTICATION_STATE = "state";
@@ -67,7 +68,8 @@ public class IDReverificationStateHandlerTest {
                         AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED,
                         AuditContext.emptyAuditContext()
                                 .withClientSessionId(CLIENT_SESSION_ID)
-                                .withTxmaAuditEncoded(Optional.of(ENCODED_DEVICE_DETAILS)));
+                                .withTxmaAuditEncoded(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("journey-type", "ACCOUNT_RECOVERY"));
     }
 
     private static APIGatewayProxyRequestEvent generateRequest(String authenticationState) {

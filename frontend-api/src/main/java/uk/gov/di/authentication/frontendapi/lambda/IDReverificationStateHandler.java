@@ -7,6 +7,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.IDReverificationStateRequest;
 import uk.gov.di.authentication.frontendapi.entity.IDReverificationStateResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -64,7 +65,11 @@ public class IDReverificationStateHandler {
 
         var auditContext =
                 baseAuditContext.withClientSessionId(idReverificationState.getClientSessionId());
-        auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED, auditContext);
+        auditService.submitAuditEvent(
+                AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED,
+                auditContext,
+                AuditService.MetadataPair.pair(
+                        "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
         var response =
                 new IDReverificationStateResponse(
                         idReverificationState.getOrchestrationRedirectUrl());
