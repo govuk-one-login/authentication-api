@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -125,6 +126,8 @@ class AuthCodeHandlerTest {
             mock(OrchestrationAuthorizationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
+    private final AuthenticationUserInfoStorageService authUserInfoService =
+            mock(AuthenticationUserInfoStorageService.class);
     private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
 
     private static final String SESSION_ID = IdGenerator.generate();
@@ -176,6 +179,7 @@ class AuthCodeHandlerTest {
                 new AuthCodeHandler(
                         sessionService,
                         orchSessionService,
+                        authUserInfoService,
                         authCodeResponseService,
                         authorisationCodeService,
                         orchestrationAuthorizationService,

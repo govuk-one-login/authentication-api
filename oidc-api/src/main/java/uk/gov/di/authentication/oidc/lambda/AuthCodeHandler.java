@@ -32,6 +32,7 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -74,6 +75,7 @@ public class AuthCodeHandler
 
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
+    private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
@@ -88,6 +90,7 @@ public class AuthCodeHandler
     public AuthCodeHandler(
             SessionService sessionService,
             OrchSessionService orchSessionService,
+            AuthenticationUserInfoStorageService authUserInfoStorageService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
@@ -100,6 +103,7 @@ public class AuthCodeHandler
             DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
+        this.authUserInfoStorageService = authUserInfoStorageService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
@@ -115,6 +119,7 @@ public class AuthCodeHandler
     public AuthCodeHandler(ConfigurationService configurationService) {
         sessionService = new SessionService(configurationService);
         orchSessionService = new OrchSessionService(configurationService);
+        authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -133,6 +138,7 @@ public class AuthCodeHandler
             ConfigurationService configurationService, RedisConnectionService redis) {
         sessionService = new SessionService(configurationService, redis);
         orchSessionService = new OrchSessionService(configurationService);
+        authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
