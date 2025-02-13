@@ -98,13 +98,20 @@ pactPublish.enabled = false
 task pactProviderTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include 'uk/gov/di/authentication/contract/**'
-    environment "PROVIDER_UNDER_TEST", "ClientRegistryProvider"
 
+    systemProperties['pact.provider.branch'] = "${System.env.GIT_BRANCH}"
+    systemProperties['pact.provider.version'] = "${System.env.GIT_SHA}"
+
+    environment "PROVIDER_UNDER_TEST", "ClientRegistryProvider"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "REDIS_KEY", "session"
     environment "TRACING_ENABLED", "false"
+    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "OIDC_API_BASE_URL", "http://localhost"
+    environment "ENVIRONMENT", "local"
+    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
 
     dependsOn ":composeUp"
     finalizedBy ":composeDown"

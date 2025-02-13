@@ -7,6 +7,7 @@ env:
   # The branch name for a pull request is in a property that only exists on pull request runs. If it doesn't exist
   # fall back to the branch name property for pushes.
   GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+  GIT_SHA: ${{ github.sha }}
   CONSUMER_APP_VERSION: ${{ github.event.pull_request.head.sha }}
   PACT_BROKER_SOURCE_HEADER: ${{ secrets.PACT_BROKER_SOURCE_HEADER }}
 
@@ -67,5 +68,7 @@ jobs:
         env:
           CONSUMER_APP_VERSION: ${{ github.sha }}
         run: ./gradlew pactPublish
-#      - name: Verify pacts
-#        run: ./gradlew pactProviderTests
+
+      - name: Verify pacts
+        if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
+        run: ./gradlew pactProviderTests

@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.sharedtest.basetest;
 import au.com.dius.pact.provider.junit5.HttpTestTarget;
 import au.com.dius.pact.provider.junit5.PactVerificationContext;
 import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvider;
-import au.com.dius.pact.provider.junitsupport.IgnoreNoPactsToVerify;
 import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactBroker;
 import au.com.dius.pact.provider.junitsupport.loader.PactBrokerAuth;
@@ -24,12 +23,17 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+// To run these tests locally you need to:
+// - Obtain the relevant pact file (from the pact broker or another team) and put it in
+//   /resources/pacts.
+// - Comment out the @PactBroker annotation below
+// - Uncomment @PactFolder annotation below
 @TestInstance(PER_CLASS)
-@IgnoreNoPactsToVerify
 @Provider("${PROVIDER_UNDER_TEST}")
 @PactBroker(
         url = "${PACT_URL}?testSource=${PACT_BROKER_SOURCE_HEADER}",
         authentication = @PactBrokerAuth(username = "${PACT_USER}", password = "${PACT_PASSWORD}"))
+// @PactFolder("pacts")
 @ExtendWith(PactVerificationInvocationContextProvider.class)
 public abstract class PactProviderTest extends IntegrationTest {
     private static final String HOST = "localhost";
