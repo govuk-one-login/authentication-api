@@ -28,6 +28,8 @@ dependencies {
             configurations.apache,
             "org.apache.httpcomponents.core5:httpcore5:5.3.4"
 
+    implementation configurations.open_telemetry
+
     testImplementation configurations.tests,
             configurations.lambda_tests,
             project(":orchestration-shared-test")
