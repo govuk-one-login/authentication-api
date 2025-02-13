@@ -11,11 +11,13 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
+import uk.gov.di.authentication.oidc.exceptions.AuthCodeException;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -200,6 +202,8 @@ public class AuthCodeHandler
 
         LOG.info("Processing request");
 
+        Optional<String> emailOptional;
+        boolean isDocAppJourney;
         AuthenticationRequest authenticationRequest = null;
         ClientSession clientSession;
         ClientID clientID;
@@ -221,6 +225,21 @@ public class AuthCodeHandler
 
             var redirectUri = authenticationRequest.getRedirectionURI();
             var state = authenticationRequest.getState();
+
+            isDocAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+
+            if (!isDocAppJourney) {
+                var authUserInfo =
+                        getAuthUserInfo(
+                                        authUserInfoStorageService,
+                                        orchSession.getInternalCommonSubjectId(),
+                                        clientSessionId)
+                                .orElseThrow(() -> new AuthCodeException("authUserInfo not found"));
+                emailOptional = Optional.of(authUserInfo.getEmailAddress());
+            } else {
+                emailOptional = Optional.empty();
+            }
+
             authCode =
                     generateAuthCode(
                             clientID,
@@ -236,6 +255,8 @@ public class AuthCodeHandler
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         } catch (ClientNotFoundException e) {
             return processClientNotFoundException(authenticationRequest);
+        } catch (AuthCodeException e) {
+            return processUserNotFoundException(authenticationRequest);
         } catch (ParseException e) {
             return processParseException(e);
         }
@@ -246,19 +267,19 @@ public class AuthCodeHandler
             var isTestJourney =
                     orchestrationAuthorizationService.isTestJourney(
                             clientID, session.getEmailAddress());
-            var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+
             var dimensions =
                     authCodeResponseService.getDimensions(
                             orchSession,
                             clientSession,
                             clientID.getValue(),
                             isTestJourney,
-                            docAppJourney);
+                            isDocAppJourney);
 
             var subjectId = AuditService.UNKNOWN;
             var rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonSubjectId;
-            if (docAppJourney) {
+            if (isDocAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
                 internalCommonSubjectId = clientSession.getDocAppSubjectId().getValue();
             } else {
@@ -303,7 +324,7 @@ public class AuthCodeHandler
                     clientSession.getClientName(),
                     isTestJourney);
             authCodeResponseService.saveSession(
-                    docAppJourney,
+                    isDocAppJourney,
                     sessionService,
                     session,
                     sessionId,
@@ -322,6 +343,24 @@ public class AuthCodeHandler
             throw new RuntimeException(e);
         } catch (JsonException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static Optional<UserInfo> getAuthUserInfo(
+            AuthenticationUserInfoStorageService authUserInfoStorageService,
+            String internalCommonSubjectId,
+            String clientSessionId) {
+
+        if (internalCommonSubjectId == null || internalCommonSubjectId.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            return authUserInfoStorageService.getAuthenticationUserInfo(
+                    internalCommonSubjectId, clientSessionId);
+        } catch (ParseException e) {
+            LOG.warn("error parsing authUserInfo. Message: {}", e.getMessage());
+            return Optional.empty();
         }
     }
 
@@ -393,6 +432,17 @@ public class AuthCodeHandler
                         authenticationRequest.getRedirectionURI(),
                         authenticationRequest.getState());
         return generateResponse(500, new AuthCodeResponse(errorResponse.toURI().toString()));
+    }
+
+    private APIGatewayProxyResponseEvent processUserNotFoundException(
+            AuthenticationRequest authenticationRequest) {
+        var errorResponse =
+                orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        authenticationRequest,
+                        OAuth2Error.ACCESS_DENIED,
+                        authenticationRequest.getRedirectionURI(),
+                        authenticationRequest.getState());
+        return generateResponse(400, new AuthCodeResponse(errorResponse.toURI().toString()));
     }
 
     private AuthorizationCode generateAuthCode(
