@@ -20,11 +20,15 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.shared.exceptions.HttpRequestErrorException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -36,6 +40,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.function.*;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -93,6 +98,51 @@ public class IPVTokenService {
                 Map.of(
                         "client_id",
                         singletonList(configurationService.getIPVAuthorisationClientId())));
+    }
+
+    public TokenResponse retrySendTokenRequest(TokenRequest tokenRequest) throws Exception {
+        LOG.info("Sending IPV token request");
+
+        // TODO - AUT-4009 - Only retry when exception is for certain type of error code (5xx)
+        //  https://reflectoring.io/retry-with-resilience4j/#exception-based-conditional-retry
+        // TODO - AUT-4009 - sendTokenRequest2 - timeout
+        //
+        // https://javadoc.io/static/com.nimbusds/oauth2-oidc-sdk/5.12/com/nimbusds/oauth2/sdk/http/HTTPRequest.html#setConnectTimeout-int-
+        //
+        // https://javadoc.io/static/com.nimbusds/oauth2-oidc-sdk/5.12/com/nimbusds/oauth2/sdk/http/HTTPRequest.html#setReadTimeout-int-
+        // TODO - logging (on error, on abandon, on each try)
+
+        RetryConfig config =
+                RetryConfig.custom()
+                        .maxAttempts(2)
+                        .retryExceptions(HttpRequestErrorException.class)
+                        .build();
+        RetryRegistry registry = RetryRegistry.of(config);
+        Retry retry = registry.retry("sendTokenRequest");
+
+        try {
+            return retry.executeCallable(() -> sendTokenRequest2(tokenRequest));
+        } catch (IOException e) {
+            LOG.error("Error whilst sending TokenRequest", e);
+            throw new RuntimeException(e);
+        } catch (ParseException e) {
+            LOG.error("Error whilst parsing TokenResponse", e);
+            throw new RuntimeException(e);
+        }
+
+        // TODO - AUT-4009 - what happens when we abandon?
+        // TODO - AUT-4009 - what happens when we error out in a different way?
+        // TODO - AUT-4009 - is this a graceful way of handling the io/parse exceptions?
+    }
+
+    private TokenResponse sendTokenRequest2(TokenRequest tokenRequest)
+            throws IOException, ParseException {
+        var httpResponse = tokenRequest.toHTTPRequest().send();
+
+        if (!httpResponse.indicatesSuccess())
+            throw new HttpRequestErrorException(httpResponse.getStatusCode());
+
+        return TokenResponse.parse(httpResponse);
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
