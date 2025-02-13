@@ -32,6 +32,8 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.tracing.JavaHttpRequestSender;
+import uk.gov.di.orchestration.shared.tracing.TracingHttpClient;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -85,6 +87,7 @@ public class AuthenticationTokenService {
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
+        var tracingHttpClient = new JavaHttpRequestSender(TracingHttpClient.newHttpClient());
         try {
             LOG.info("Sending TokenRequest");
             int count = 0;
@@ -93,7 +96,8 @@ public class AuthenticationTokenService {
             do {
                 if (count > 0) LOG.warn("Retrying Authentication token request");
                 count++;
-                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+                tokenResponse =
+                        TokenResponse.parse(tokenRequest.toHTTPRequest().send(tracingHttpClient));
                 if (!tokenResponse.indicatesSuccess()) {
                     HTTPResponse response = tokenResponse.toHTTPResponse();
                     LOG.warn(
@@ -114,6 +118,7 @@ public class AuthenticationTokenService {
 
     public UserInfo sendUserInfoDataRequest(HTTPRequest request)
             throws UnsuccessfulCredentialResponseException {
+        var tracingHttpClient = new JavaHttpRequestSender(TracingHttpClient.newHttpClient());
         try {
             LOG.info("Sending userinfo request");
             int count = 0;
@@ -122,7 +127,7 @@ public class AuthenticationTokenService {
             do {
                 if (count > 0) LOG.warn("Retrying Authentication userinfo request");
                 count++;
-                response = request.send();
+                response = request.send(tracingHttpClient);
                 if (!response.indicatesSuccess()) {
                     LOG.warn(
                             format(
