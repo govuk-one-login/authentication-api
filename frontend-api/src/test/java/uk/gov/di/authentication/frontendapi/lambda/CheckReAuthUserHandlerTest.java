@@ -9,6 +9,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -92,6 +93,7 @@ class CheckReAuthUserHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL_USED_TO_SIGN_IN)
                     .setInternalCommonSubjectIdentifier(TEST_SUBJECT_ID);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(
@@ -132,6 +134,7 @@ class CheckReAuthUserHandlerTest {
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
+        when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 

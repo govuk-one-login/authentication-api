@@ -118,6 +118,7 @@ class ReverificationResultHandlerTest {
         when(configurationService.getIPVBackendURI())
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
         when(USER_CONTEXT.getSession()).thenReturn(session);
+        when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
         when(USER_CONTEXT.getClientId()).thenReturn(CLIENT_ID);
         when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         var userProfile = mock(UserProfile.class);

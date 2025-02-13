@@ -26,7 +26,7 @@ public record AuditContext(
         return new AuditContext(
                 userContext.getClientId(),
                 userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
+                userContext.getAuthSession().getSessionId(),
                 subjectId,
                 email,
                 ipAddress,
