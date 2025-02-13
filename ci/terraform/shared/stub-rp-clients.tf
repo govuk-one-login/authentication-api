@@ -74,9 +74,6 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
           S = "https://vocab.account.gov.uk/v1/drivingPermit"
         },
         {
-          S = "https://vocab.account.gov.uk/v1/socialSecurityRecord"
-        },
-        {
           S = "https://vocab.account.gov.uk/v1/returnCode"
         },
         {
