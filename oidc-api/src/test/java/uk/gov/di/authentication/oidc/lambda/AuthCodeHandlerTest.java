@@ -7,6 +7,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -18,6 +19,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +65,7 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -129,6 +133,7 @@ class AuthCodeHandlerTest {
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String PHONE_NUMBER = "012345678902";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
@@ -140,6 +145,7 @@ class AuthCodeHandlerTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(SALT);
     private static final Json objectMapper = SerializationService.getInstance();
     private AuthCodeHandler handler;
 
@@ -231,7 +237,8 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel,
             MFAMethodType mfaMethodType)
-            throws ClientNotFoundException, Json.JsonException, JOSEException {
+            throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
+        generateAuthUserInfo();
         var userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT.getValue());
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
@@ -498,8 +505,8 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
-            throws ClientNotFoundException, JOSEException {
-        session.setEmailAddress(EMAIL);
+            throws ClientNotFoundException, JOSEException, ParseException {
+        generateAuthUserInfo();
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(false);
@@ -513,8 +520,8 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenClientIsNotFound()
-            throws ClientNotFoundException, Json.JsonException, JOSEException {
-        session.setEmailAddress(EMAIL);
+            throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
+        generateAuthUserInfo();
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
@@ -538,6 +545,33 @@ class AuthCodeHandlerTest {
                 authCodeResponse.getLocation(),
                 equalTo(
                         "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed"));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldGenerateErrorResponseWhenAuthUserInfoIsNotFound()
+            throws Json.JsonException, JOSEException {
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.ACCESS_DENIED, null, null);
+        when(orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        any(AuthenticationRequest.class),
+                        eq(OAuth2Error.ACCESS_DENIED),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authenticationErrorResponse);
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+
+        APIGatewayProxyResponseEvent response = generateApiRequest();
+
+        assertThat(response, hasStatus(400));
+        AuthCodeResponse authCodeResponse =
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(
+                authCodeResponse.getLocation(),
+                equalTo(
+                        "http://localhost/redirect?error=access_denied&error_description=Access+denied+by+resource+owner+or+authorization+server"));
 
         verifyNoInteractions(auditService);
     }
@@ -604,7 +638,8 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    void shouldUpdateOrchSession() throws JOSEException, ClientNotFoundException {
+    void shouldUpdateOrchSession() throws JOSEException, ClientNotFoundException, ParseException {
+        generateAuthUserInfo();
 
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
@@ -748,5 +783,27 @@ class AuthCodeHandlerTest {
                 .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .withTestClient(false)
                 .withScopes(singletonList("openid"));
+    }
+
+    private void generateAuthUserInfo() throws ParseException {
+        var authUserInfo =
+                new UserInfo(
+                        new JSONObject(
+                                Map.of(
+                                        "sub",
+                                        INTERNAL_COMMON_SUBJECT_ID,
+                                        "client_session_id",
+                                        CLIENT_SESSION_ID,
+                                        "email",
+                                        EMAIL,
+                                        "phone_number",
+                                        PHONE_NUMBER,
+                                        "salt",
+                                        BASE_64_ENCODED_SALT,
+                                        "local_account_id",
+                                        SUBJECT.getValue())));
+        when(authUserInfoService.getAuthenticationUserInfo(
+                        INTERNAL_COMMON_SUBJECT_ID, CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(authUserInfo));
     }
 }

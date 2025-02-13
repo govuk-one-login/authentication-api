@@ -14,6 +14,8 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -28,6 +30,7 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
@@ -57,6 +60,10 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
 
+    @RegisterExtension
+    public static final AuthenticationCallbackUserInfoStoreExtension authUserInfoExtension =
+            new AuthenticationCallbackUserInfoStoreExtension(180);
+
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
@@ -67,6 +74,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Nonce NONCE = new Nonce();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    private static final String INTERNAL_COMMON_SUBJECT_ID = "internalCommonSubjectId";
     private String sessionID;
 
     @BeforeEach
@@ -74,12 +82,13 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler = new AuthCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
         sessionID = redis.createSession();
-        setupOrchSession();
     }
 
     @Test
     void shouldReturn200WithSuccessfulAuthResponse() throws Json.JsonException {
+        setupOrchSession();
         var clientSessionId = "some-client-session-id";
+        setupAuthUserInfo(clientSessionId);
         redis.addEmailToSession(sessionID, EMAIL);
         redis.setVerifiedMfaMethodType(sessionID, MFAMethodType.AUTH_APP);
         redis.addAuthRequestToSession(
@@ -113,6 +122,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200WithSuccessfulAuthResponseForDocAppJourney()
             throws Json.JsonException, JOSEException {
+        setupDocAppOrchSession();
         var clientSessionId = "some-client-session-id";
         Map<String, List<String>> authRequestParams = generateDocAppAuthRequest().toParameters();
         var clientSession =
@@ -208,6 +218,28 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private void setupOrchSession() {
         orchSessionExtension.addSession(
                 new OrchSessionItem(sessionID)
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                        .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID));
+    }
+
+    private void setupDocAppOrchSession() {
+        orchSessionExtension.addSession(
+                new OrchSessionItem(sessionID)
                         .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
+    }
+
+    private void setupAuthUserInfo(String clientSessionId) {
+        var authUserInfo =
+                new UserInfo(
+                        new JSONObject(
+                                Map.of(
+                                        "sub",
+                                        INTERNAL_COMMON_SUBJECT_ID,
+                                        "client_session_id",
+                                        clientSessionId,
+                                        "email",
+                                        EMAIL)));
+        authUserInfoExtension.addAuthenticationUserInfoData(
+                INTERNAL_COMMON_SUBJECT_ID, clientSessionId, authUserInfo);
     }
 }
