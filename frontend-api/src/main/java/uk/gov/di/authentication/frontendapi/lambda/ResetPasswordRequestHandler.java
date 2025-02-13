@@ -203,7 +203,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
