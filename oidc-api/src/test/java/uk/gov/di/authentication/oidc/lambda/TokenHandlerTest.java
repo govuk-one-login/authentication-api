@@ -89,6 +89,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -184,19 +185,17 @@ public class TokenHandlerTest {
 
     private static Stream<Arguments> validVectorValues() {
         return Stream.of(
-                Arguments.of("Cl.Cm", true, CLIENT_ID),
-                Arguments.of("Cl", true, CLIENT_ID),
-                Arguments.of("P2.Cl.Cm", true, CLIENT_ID),
-                Arguments.of("Cl.Cm", false, CLIENT_ID),
-                Arguments.of("Cl", false, CLIENT_ID),
-                Arguments.of("P2.Cl.Cm", false, CLIENT_ID),
-                Arguments.of("Cl.Cm", true, "some-other-client"));
+                Arguments.of("Cl.Cm", true),
+                Arguments.of("Cl", true),
+                Arguments.of("P2.Cl.Cm", true),
+                Arguments.of("Cl.Cm", false),
+                Arguments.of("Cl", false),
+                Arguments.of("P2.Cl.Cm", false));
     }
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    void shouldReturn200ForSuccessfulTokenRequest(
-            String vectorValue, boolean clientIdInHeader, String clientIdInAuthCode)
+    void shouldReturn200ForSuccessfulTokenRequest(String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
@@ -237,7 +236,7 @@ public class TokenHandlerTest {
                                                         vtr,
                                                         CLIENT_NAME))
                                         .setAuthTime(AUTH_TIME)
-                                        .setClientId(clientIdInAuthCode)));
+                                        .setClientId(CLIENT_ID)));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -267,6 +266,73 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+    }
+
+    @Test
+    void shouldReturn400ForTokenRequestIfClientIdInAuthCodeIsDifferentFromRequestParams()
+            throws JOSEException, TokenAuthInvalidException {
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID,
+                        RP_PAIRWISE_SUBJECT,
+                        "issuer-url",
+                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        AuthenticationRequest authenticationRequest =
+                generateAuthRequest(JsonArrayHelper.jsonArrayOf("Cl.Cm"));
+        List<VectorOfTrust> vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        authenticationRequest.toParameters(),
+                                                        LocalDateTime.now(),
+                                                        vtr,
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId("a-different-client-id")));
+        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES,
+                        Map.of("nonce", NONCE),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        null,
+                        false,
+                        JWSAlgorithm.ES256,
+                        CLIENT_SESSION_ID,
+                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        AUTH_TIME))
+                .thenReturn(tokenResponse);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
     }
 
     @ParameterizedTest
@@ -316,7 +382,8 @@ public class TokenHandlerTest {
                                                         LocalDateTime.now(),
                                                         vtr,
                                                         CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)));
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -613,7 +680,8 @@ public class TokenHandlerTest {
                                                         LocalDateTime.now(),
                                                         List.of(mock(VectorOfTrust.class)),
                                                         CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)));
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
@@ -672,7 +740,8 @@ public class TokenHandlerTest {
                                 new AuthCodeExchangeData()
                                         .setEmail(TEST_EMAIL)
                                         .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(clientSession)));
+                                        .setClientSession(clientSession)
+                                        .setClientId(DOC_APP_CLIENT_ID.getValue())));
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         DOC_APP_CLIENT_ID.getValue(),

@@ -533,21 +533,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeTokenRequestWithClientSecretPost(
                         "test-client-1", baseTokenRequest, clientSecret);
 
-        assertThat(response, hasStatus(200));
-        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
     }
 
     @Test
@@ -575,21 +562,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeTokenRequestWithPrivateKeyJWT(
                         "test-client-1", baseTokenRequest, keyPair.getPrivate());
 
-        assertThat(response, hasStatus(200));
-        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
