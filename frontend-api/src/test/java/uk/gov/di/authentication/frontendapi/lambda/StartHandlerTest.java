@@ -101,7 +101,7 @@ class StartHandlerTest {
     private static final String TEST_RP_PAIRWISE_ID = "test_rp_pairwise_id";
     private static final String TEST_PREVIOUS_SIGN_IN_JOURNEY_ID = "test_journey_id";
     private static final int MAX_ALLOWED_RETRIES = 6;
-    private static final String SESSION_ID = "some-session-id";
+    private static final String SESSION_ID = "session-id";
     public static final State STATE = new State();
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
     private static final Scope DOC_APP_SCOPE =
@@ -146,8 +146,6 @@ class StartHandlerTest {
         when(configurationService.isIdentityEnabled()).thenReturn(true);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(sessionService.getSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(new Session("session-id")));
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
@@ -538,6 +536,7 @@ class StartHandlerTest {
 
     @Test
     void shouldReturn400WhenClientSessionIsNotFound() throws Json.JsonException {
+        usingValidSession();
         usingInvalidClientSession();
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -614,8 +613,7 @@ class StartHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(startService.createNewSessionWithExistingIdAndClientSession(
                         session, CLIENT_SESSION_ID))
                 .thenReturn(session);
@@ -624,7 +622,7 @@ class StartHandlerTest {
     }
 
     private void usingInvalidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
+        when(sessionService.getSession(anyString())).thenReturn(Optional.empty());
     }
 
     private ClientSession getClientSession() {
