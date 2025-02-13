@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
@@ -101,6 +102,7 @@ class JwksServiceTest {
         try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
             JWK testKey1 = mock(JWK.class);
             when(testKey1.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
+            when(testKey1.getAlgorithm()).thenReturn(JWEAlgorithm.RSA_OAEP_256);
             mockJwksUtils
                     .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
                     .thenReturn(List.of(testKey1));
