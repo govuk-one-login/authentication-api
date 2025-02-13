@@ -16,7 +16,8 @@ dependencies {
             configurations.dynamodb
 
     implementation configurations.gson,
-            configurations.nimbus
+            configurations.nimbus,
+            configurations.resilience4j_retry
 
     implementation project(":orchestration-shared")
 
