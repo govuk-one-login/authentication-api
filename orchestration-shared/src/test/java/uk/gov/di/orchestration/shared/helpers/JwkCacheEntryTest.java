@@ -127,10 +127,10 @@ class JwkCacheEntryTest {
     }
 
     private JwkCacheEntry createCacheWithExpiration(int expiration) {
-        return JwkCacheEntry.forKeyUse(KeyUse.ENCRYPTION, testJwksUrl, expiration);
+        return JwkCacheEntry.forKeyUse(testJwksUrl, expiration, KeyUse.ENCRYPTION);
     }
 
     private JwkCacheEntry createCacheWithExpiration(KeyUse keyUse, int expiration) {
-        return JwkCacheEntry.forKeyUse(keyUse, testJwksUrl, expiration);
+        return JwkCacheEntry.forKeyUse(testJwksUrl, expiration, keyUse);
     }
 }

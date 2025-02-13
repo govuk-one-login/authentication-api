@@ -14,9 +14,9 @@ import java.util.List;
 
 public class JwkCacheEntry {
     private static final Logger LOG = LogManager.getLogger(JwkCacheEntry.class);
-    private final KeyUse keyUse;
     private final URL jwksUrl;
     private final int expirationInSeconds;
+    private final KeyUse keyUse;
     private JWK latestKey;
     private Date expireTime;
 
@@ -28,12 +28,12 @@ public class JwkCacheEntry {
         this.latestKey = getKeyFromUrl();
     }
 
-    public static JwkCacheEntry forKeyUse(KeyUse keyUse, URL url, int expirationInSeconds) {
+    public static JwkCacheEntry forKeyUse(URL url, int expirationInSeconds, KeyUse keyUse) {
         return new JwkCacheEntry(url, expirationInSeconds, keyUse);
     }
 
     public static JwkCacheEntry forEncryptionKeys(URL url, int expirationInSeconds) {
-        return new JwkCacheEntry(url, expirationInSeconds, KeyUse.ENCRYPTION);
+        return forKeyUse(url, expirationInSeconds, KeyUse.ENCRYPTION);
     }
 
     public JWK getKey() {
