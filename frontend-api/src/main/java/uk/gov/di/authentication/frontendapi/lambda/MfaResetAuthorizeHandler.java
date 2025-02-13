@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -54,14 +55,16 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             IPVReverificationService ipvReverificationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            IDReverificationStateService idReverificationStateService) {
+            IDReverificationStateService idReverificationStateService,
+            AuthSessionService authSessionService) {
         super(
                 MfaResetRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.ipvReverificationService = ipvReverificationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;

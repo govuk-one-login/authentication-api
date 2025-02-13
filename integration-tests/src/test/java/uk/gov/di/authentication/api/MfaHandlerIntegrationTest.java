@@ -39,6 +39,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
         String subjectId = "new-subject";
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
+        authSessionStore.addSession(SESSION_ID);
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
         userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
     }
@@ -104,6 +105,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenReauthenticating()
             throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        authSessionStore.addSession(authenticatedSessionId);
 
         var response =
                 makeRequest(
@@ -125,6 +127,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn400WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
             throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        authSessionStore.addSession(authenticatedSessionId);
 
         aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 
@@ -154,6 +157,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        authSessionStore.addSession(authenticatedSessionId);
 
         var response =
                 makeRequest(

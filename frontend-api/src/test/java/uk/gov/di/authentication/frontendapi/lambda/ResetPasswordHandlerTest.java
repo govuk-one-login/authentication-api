@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -36,6 +37,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -91,6 +93,7 @@ class ResetPasswordHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
@@ -132,6 +135,7 @@ class ResetPasswordHandlerTest {
 
     private ResetPasswordHandler handler;
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -165,7 +169,8 @@ class ResetPasswordHandlerTest {
                         auditService,
                         commonPasswordsService,
                         passwordValidator,
-                        accountModifiersService);
+                        accountModifiersService,
+                        authSessionService);
     }
 
     @Test
@@ -472,5 +477,7 @@ class ResetPasswordHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
     }
 }

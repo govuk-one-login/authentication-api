@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +37,9 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     @RegisterExtension
     protected static final AuthCodeExtension authCodeExtension = new AuthCodeExtension(180);
 
+    @RegisterExtension
+    protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+
     @BeforeEach
     void setup() throws Json.JsonException {
         handler =
@@ -59,6 +63,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn200StatusAndReturnMatchingAuthCodeForAuthCodeRequest()
             throws Json.JsonException {
         setUpDynamo();
+        var sessionId = setupSession();
         var authRequest =
                 new AuthCodeRequest(
                         TEST_REDIRECT_URI,
@@ -68,7 +73,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         false,
                         null,
                         null);
-        var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
+        var response = makeRequest(Optional.of(authRequest), getHeaders(sessionId), Map.of());
         assertThat(response, hasStatus(200));
     }
 
@@ -76,6 +81,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn200StatusAndReturnMatchingAuthCodeForAuthCodeRequestWithNoClaims()
             throws Json.JsonException {
         setUpDynamo();
+        var sessionId = setupSession();
         var authRequest =
                 new AuthCodeRequest(
                         TEST_REDIRECT_URI,
@@ -85,13 +91,14 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         false,
                         null,
                         null);
-        var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
+        var response = makeRequest(Optional.of(authRequest), getHeaders(sessionId), Map.of());
         assertThat(response, hasStatus(200));
     }
 
     @Test
     void shouldReturn400StatusForInvalidRedirectUri() throws Json.JsonException {
         setUpDynamo();
+        var sessionId = setupSession();
         var authRequest =
                 new AuthCodeRequest(
                         null,
@@ -101,13 +108,14 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         false,
                         null,
                         null);
-        var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
+        var response = makeRequest(Optional.of(authRequest), getHeaders(sessionId), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
     }
 
     @Test
     void shouldReturn400StatusForInvalidState() throws Json.JsonException {
+        var sessionId = setupSession();
         setUpDynamo();
         var authRequest =
                 new AuthCodeRequest(
@@ -118,18 +126,22 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         false,
                         null,
                         null);
-        var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
+        var response = makeRequest(Optional.of(authRequest), getHeaders(sessionId), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
     }
 
-    private Map<String, String> getHeaders() throws Json.JsonException {
+    private Map<String, String> getHeaders(String sessionId) {
         Map<String, String> headers = new HashMap<>();
-        // TODO: Not appropriate place to do this.
-        var sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         headers.put("Session-Id", sessionId);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
         return headers;
+    }
+
+    private String setupSession() throws Json.JsonException {
+        var sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        authSessionExtension.addSession(sessionId);
+        return sessionId;
     }
 }

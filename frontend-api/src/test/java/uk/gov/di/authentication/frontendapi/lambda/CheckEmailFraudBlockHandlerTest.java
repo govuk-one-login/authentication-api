@@ -14,6 +14,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -68,8 +70,10 @@ class CheckEmailFraudBlockHandlerTest {
     private static SessionService sessionServiceMock;
     private static ClientRegistry clientRegistry;
     private static UserContext userContext;
+    private static AuthSessionService authSessionServiceMock;
 
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private CheckEmailFraudBlockHandler handler;
 
     @BeforeAll
@@ -84,6 +88,7 @@ class CheckEmailFraudBlockHandlerTest {
         clientSessionServiceMock = mock(ClientSessionService.class);
         clientRegistry = mock(ClientRegistry.class);
         userContext = mock(UserContext.class);
+        authSessionServiceMock = mock(AuthSessionService.class);
     }
 
     @BeforeEach
@@ -109,7 +114,8 @@ class CheckEmailFraudBlockHandlerTest {
                         clientServiceMock,
                         authenticationServiceMock,
                         dbMock,
-                        auditServiceMock);
+                        auditServiceMock,
+                        authSessionServiceMock);
     }
 
     @ParameterizedTest
@@ -199,6 +205,8 @@ class CheckEmailFraudBlockHandlerTest {
     private void usingValidSession() {
         when(sessionServiceMock.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(authSessionServiceMock.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
     }
 
     private UserProfile generateUserProfile() {

@@ -26,6 +26,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -59,7 +61,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -255,13 +256,12 @@ class StartHandlerTest {
         usingValidClientSession();
 
         var body =
-                format(
-                        """
-               { "rp-pairwise-id-for-reauth": %s,
-               "previous-govuk-signin-journey-id": %s,
-                "authenticated": %s}
-                """,
-                        TEST_RP_PAIRWISE_ID, TEST_PREVIOUS_SIGN_IN_JOURNEY_ID, isAuthenticated);
+                makeRequestBody(
+                        null,
+                        TEST_PREVIOUS_SIGN_IN_JOURNEY_ID,
+                        TEST_RP_PAIRWISE_ID,
+                        isAuthenticated,
+                        null);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
@@ -289,7 +289,8 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldNotCallAuthenticationAttemptsServiceWhenFeatureFlagIsOff() throws ParseException {
+    void shouldNotCallAuthenticationAttemptsServiceWhenFeatureFlagIsOff()
+            throws ParseException, Json.JsonException {
         var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
@@ -303,12 +304,7 @@ class StartHandlerTest {
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
-        var body =
-                format(
-                        """
-               { "rp-pairwise-id-for-reauth": %s, "authenticated": %s }
-                """,
-                        TEST_RP_PAIRWISE_ID, isAuthenticated);
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated, null);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
@@ -316,7 +312,8 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldUseCountsAgainstTheRpPairwiseIdWhenThereIsNoSubjectId() throws ParseException {
+    void shouldUseCountsAgainstTheRpPairwiseIdWhenThereIsNoSubjectId()
+            throws ParseException, Json.JsonException {
         var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userProfile.getSubjectID()).thenReturn(null);
@@ -326,12 +323,7 @@ class StartHandlerTest {
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
-        var body =
-                format(
-                        """
-               { "rp-pairwise-id-for-reauth": %s, "authenticated": %s }
-                """,
-                        TEST_RP_PAIRWISE_ID, isAuthenticated);
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated, null);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
@@ -340,7 +332,8 @@ class StartHandlerTest {
     }
 
     @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws ParseException {
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided()
+            throws ParseException, Json.JsonException {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -373,7 +366,7 @@ class StartHandlerTest {
 
     @Test
     void shouldCreateNewSessionAndConsiderUserNotAuthenticatedWhenUserProfileNotPresent()
-            throws ParseException {
+            throws ParseException, Json.JsonException {
         withNoUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -403,7 +396,7 @@ class StartHandlerTest {
 
     @Test
     void retainsExistingSessionAndConsidersUserAuthenticatedWhenUserProfilePresent()
-            throws ParseException {
+            throws ParseException, Json.JsonException {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -500,7 +493,7 @@ class StartHandlerTest {
             int expectedPasswordAttemptCount,
             int expectedOtpAttemptCount,
             String expectedFailureReason)
-            throws ParseException {
+            throws ParseException, Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, true);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
@@ -514,12 +507,8 @@ class StartHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
-        var body =
-                format(
-                        """
-               { "rp-pairwise-id-for-reauth": %s, "authenticated": %s }
-                """,
-                        TEST_RP_PAIRWISE_ID, isAuthenticated);
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated, null);
+
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
 
         var result = handler.handleRequest(event, context);
@@ -583,7 +572,9 @@ class StartHandlerTest {
     @Test
     void shouldReturn400WhenBuildClientStartInfoThrowsException()
             throws ParseException, Json.JsonException {
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
+        when(startService.buildUserContext(
+                        eq(session), eq(clientSession), any(AuthSessionItem.class)))
+                .thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
                 .thenThrow(new ParseException("Unable to parse authentication request"));
         usingValidClientSession();
@@ -602,8 +593,9 @@ class StartHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    private String makeRequestBodyWithAuthenticatedField(boolean authenticated) {
-        return String.format("{\"authenticated\": %s}", authenticated);
+    private String makeRequestBodyWithAuthenticatedField(boolean authenticated)
+            throws Json.JsonException {
+        return makeRequestBody(null, null, null, authenticated, null);
     }
 
     private void usingValidClientSession() {
@@ -706,7 +698,8 @@ class StartHandlerTest {
     private void usingStartServiceThatReturns(
             UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo)
             throws ParseException {
-        when(startService.buildUserContext(eq(session), any())).thenReturn(userContext);
+        when(startService.buildUserContext(eq(session), any(), any(AuthSessionItem.class)))
+                .thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
@@ -735,5 +728,21 @@ class StartHandlerTest {
         headers.putAll(VALID_HEADERS);
         headers.put(REAUTHENTICATE_HEADER, reauthenticate);
         return headers;
+    }
+
+    private String makeRequestBody(
+            String previousSessionId,
+            String previousGovUkSignInJourneyId,
+            String rpPairwiseIdForReauth,
+            boolean authenticated,
+            CredentialTrustLevel currentCredentialStrength)
+            throws Json.JsonException {
+        return objectMapper.writeValueAsString(
+                new StartRequest(
+                        previousSessionId,
+                        rpPairwiseIdForReauth,
+                        previousGovUkSignInJourneyId,
+                        authenticated,
+                        currentCredentialStrength));
     }
 }

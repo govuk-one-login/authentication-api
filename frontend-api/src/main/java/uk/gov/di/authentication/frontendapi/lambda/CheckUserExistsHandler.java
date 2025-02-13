@@ -52,7 +52,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
-    private final AuthSessionService authSessionService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
@@ -69,10 +68,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
-        this.authSessionService = authSessionService;
     }
 
     public CheckUserExistsHandler() {
@@ -83,7 +82,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public CheckUserExistsHandler(
@@ -91,7 +89,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -159,14 +156,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var userMfaDetail = new UserMfaDetail();
             var session = userContext.getSession();
 
-            var optionalAuthSession =
-                    authSessionService.getSessionFromRequestHeaders(input.getHeaders());
-
-            if (optionalAuthSession.isEmpty()) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-
-            AuthSessionItem authSession = optionalAuthSession.get();
+            AuthSessionItem authSession = userContext.getAuthSession();
 
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;

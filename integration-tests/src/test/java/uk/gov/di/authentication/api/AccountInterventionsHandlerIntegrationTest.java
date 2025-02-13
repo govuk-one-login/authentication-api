@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -64,6 +65,10 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
             ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE =
                     new AccountInterventionsTestConfigurationService(
                             accountInterventionsStubExtension);
+
+    @RegisterExtension
+    public static final AuthSessionExtension authSessionServiceExtension =
+            new AuthSessionExtension();
 
     protected static final LambdaClient mockLambdaClient = mock(LambdaClient.class);
 
@@ -133,6 +138,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     private Map<String, String> getHeadersForAuthenticatedSession() throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
         var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL_ADDRESS);
+        authSessionServiceExtension.addSession(sessionId);
 
         var clientSession =
                 new ClientSession(

@@ -18,6 +18,7 @@ import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -96,8 +98,10 @@ class AuthenticationAuthCodeHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private Session session;
+    private AuthSessionItem authSession;
     private final AuditService auditService = mock(AuditService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -114,6 +118,7 @@ class AuthenticationAuthCodeHandlerTest {
     @BeforeEach
     void setUp() throws Json.JsonException {
         session = new Session(SESSION_ID).setEmailAddress(CommonTestVariables.EMAIL);
+        authSession = new AuthSessionItem().withSessionId(SESSION_ID);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -122,6 +127,8 @@ class AuthenticationAuthCodeHandlerTest {
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
         UserProfile userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -135,7 +142,8 @@ class AuthenticationAuthCodeHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        authSessionService);
     }
 
     @Test

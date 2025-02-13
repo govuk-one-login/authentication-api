@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -47,14 +48,16 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             ClientService clientService,
             AuthenticationService authenticationService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
-            AuditService auditService) {
+            AuditService auditService,
+            AuthSessionService authSessionService) {
         super(
                 CheckEmailFraudBlockRequest.class,
                 configurationService,
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                authSessionService);
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
     }

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.state;
 
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 public class UserContext {
     private final Session session;
+    private final AuthSessionItem authSession;
     private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
@@ -29,7 +31,8 @@ public class UserContext {
             ClientSession clientSession,
             SupportedLanguage userLanguage,
             String clientSessionId,
-            String txmaAuditEncoded) {
+            String txmaAuditEncoded,
+            AuthSessionItem authSession) {
         this.session = session;
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
@@ -39,6 +42,7 @@ public class UserContext {
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
         this.txmaAuditEncoded = txmaAuditEncoded;
+        this.authSession = authSession;
     }
 
     public Session getSession() {
@@ -85,12 +89,17 @@ public class UserContext {
         return txmaAuditEncoded;
     }
 
+    public AuthSessionItem getAuthSession() {
+        return authSession;
+    }
+
     public static Builder builder(Session session) {
         return new Builder(session);
     }
 
     public static class Builder {
         private Session session;
+        private AuthSessionItem authSession;
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
@@ -102,6 +111,11 @@ public class UserContext {
 
         protected Builder(Session session) {
             this.session = session;
+        }
+
+        protected Builder(Session session, AuthSessionItem authSession) {
+            this.session = session;
+            this.authSession = authSession;
         }
 
         public Builder withUserProfile(UserProfile userProfile) {
@@ -152,6 +166,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withAuthSession(AuthSessionItem authSession) {
+            this.authSession = authSession;
+            return this;
+        }
+
         public UserContext build() {
             return new UserContext(
                     session,
@@ -162,7 +181,8 @@ public class UserContext {
                     clientSession,
                     userLanguage,
                     clientSessionId,
-                    txmaAuditEncoded);
+                    txmaAuditEncoded,
+                    authSession);
         }
     }
 }

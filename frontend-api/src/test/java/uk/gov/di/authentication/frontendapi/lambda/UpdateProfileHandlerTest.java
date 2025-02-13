@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -26,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -84,6 +86,7 @@ class UpdateProfileHandlerTest {
     private UpdateProfileHandler handler;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
@@ -96,6 +99,7 @@ class UpdateProfileHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
 
     private final AuditContext auditContextWithAllUserInfo =
             new AuditContext(
@@ -149,7 +153,8 @@ class UpdateProfileHandlerTest {
                         clientSessionService,
                         configurationService,
                         auditService,
-                        clientService);
+                        clientService,
+                        authSessionService);
     }
 
     @Test
@@ -257,6 +262,9 @@ class UpdateProfileHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSession));
     }
 
     private void usingValidClientSession() {
