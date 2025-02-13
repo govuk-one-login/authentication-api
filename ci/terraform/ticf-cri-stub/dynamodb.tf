@@ -18,7 +18,7 @@ resource "aws_dynamodb_table" "stub_ticf_cri_table" {
   tags = (
     var.environment == "integration" ?
     {
-      "BackupFrequency" = "BiHourly"
+      "BackupFrequency" = "Bihourly"
     } : {}
   )
   #  server_side_encryption has not been enabled as this table contains only test data
