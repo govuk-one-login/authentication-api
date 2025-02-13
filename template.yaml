@@ -2034,6 +2034,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          OTEL_SERVICE_NAME: !Sub ${Environment}-AuthenticationCallbackFunction
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
