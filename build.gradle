@@ -32,7 +32,8 @@ ext {
         nimbusds_jwt_version: "10.0.1",
         junit: "5.11.4",
         xray: "2.18.2",
-        pact: "4.6.17"
+        pact: "4.6.17",
+        resilience4j_retry: "2.3.0"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -109,6 +110,7 @@ subprojects {
         xray
         pact_consumer
         pact_provider
+        resilience4j_retry
     }
 
     // Check dependencies using:
@@ -218,6 +220,8 @@ subprojects {
         pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
+
+        resilience4j_retry "io.github.resilience4j:resilience4j-retry:${dependencyVersions.resilience4j_retry}"
     }
 }
 
