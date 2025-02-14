@@ -67,7 +67,6 @@ import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_ID
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.DRIVING_PERMIT;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.RETURN_CODE;
-import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.SOCIAL_SECURITY_RECORD;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -220,8 +219,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         PASSPORT_CLAIM,
                         ValidClaims.DRIVING_PERMIT.getValue(),
                         DRIVING_PERMIT,
-                        ValidClaims.SOCIAL_SECURITY_RECORD.getValue(),
-                        SOCIAL_SECURITY_RECORD,
                         ValidClaims.RETURN_CODE.getValue(),
                         RETURN_CODE),
                 180,
@@ -241,21 +238,17 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var passportClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue());
         var drivingPermitClaim =
                 (JSONArray) userInfoResponse.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
-        var socialSecurityRecordClaim =
-                (JSONArray)
-                        userInfoResponse.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue());
         var returnCodeClaim =
                 (JSONArray) userInfoResponse.getClaim(ValidClaims.RETURN_CODE.getValue());
         assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(7));
         assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
         assertThat(((JSONObject) drivingPermitClaim.get(0)).size(), equalTo(6));
-        assertThat(((JSONObject) socialSecurityRecordClaim.get(0)).size(), equalTo(1));
         assertThat(((JSONObject) returnCodeClaim.get(0)).size(), equalTo(1));
 
         assertThat(
                 userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                 equalTo(signedCredential.serialize()));
-        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(11));
+        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(10));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
     }
@@ -381,7 +374,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .add(ValidClaims.ADDRESS.getValue())
                         .add(ValidClaims.PASSPORT.getValue())
                         .add(ValidClaims.DRIVING_PERMIT.getValue())
-                        .add(ValidClaims.SOCIAL_SECURITY_RECORD.getValue())
                         .add(ValidClaims.RETURN_CODE.getValue());
         var oidcValidClaimsRequest =
                 new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
