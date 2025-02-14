@@ -1,5 +1,7 @@
 package uk.gov.di.orchestration.shared.helpers;
 
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +30,8 @@ class JwkCacheEntryTest {
         testJwksUrl = new URL("http://localhost/.well-known/jwks.json");
         when(TEST_KEY_1.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
         when(TEST_KEY_2.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
+        when(TEST_KEY_1.getAlgorithm()).thenReturn(JWEAlgorithm.RSA_OAEP_256);
+        when(TEST_KEY_2.getAlgorithm()).thenReturn(JWEAlgorithm.RSA_OAEP_256);
     }
 
     @Test
@@ -80,6 +84,19 @@ class JwkCacheEntryTest {
     }
 
     @Test
+    void shouldIgnoreFirstKeyIfKeyHasDifferentAlg() {
+        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
+            when(TEST_KEY_1.getAlgorithm()).thenReturn(JWEAlgorithm.ECDH_1PU);
+            mockJwksUtils
+                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
+                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
+
+            var cacheEntry = createCacheWithNoExpiration();
+            assertEquals(TEST_KEY_2, cacheEntry.getKey());
+        }
+    }
+
+    @Test
     void shouldRefreshCacheIfExpirationHasPassed() {
         try (var mockJwksUtils = mockStatic(JwksUtils.class);
                 var mockNowHelper = mockStatic(NowHelper.class)) {
@@ -122,15 +139,32 @@ class JwkCacheEntryTest {
         }
     }
 
+    @Test
+    void shouldGetEncryptionKeyIfKeyAlgIsRS256() {
+        // This test is temporary. At the moment IPV is sending up RSA-OAEP-256 keys with the alg
+        // RS256.
+        // Once they send us the correct alg, we can remove this test
+        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
+            when(TEST_KEY_1.getAlgorithm()).thenReturn(JWSAlgorithm.RS256);
+            mockJwksUtils
+                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
+                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
+
+            var cacheEntry = JwkCacheEntry.forEncryptionKeys(testJwksUrl, Integer.MAX_VALUE);
+            assertEquals(TEST_KEY_1, cacheEntry.getKey());
+        }
+    }
+
     private JwkCacheEntry createCacheWithNoExpiration() {
         return createCacheWithExpiration(KeyUse.ENCRYPTION, Integer.MAX_VALUE);
     }
 
     private JwkCacheEntry createCacheWithExpiration(int expiration) {
-        return JwkCacheEntry.forKeyUse(KeyUse.ENCRYPTION, testJwksUrl, expiration);
+        return createCacheWithExpiration(KeyUse.ENCRYPTION, expiration);
     }
 
     private JwkCacheEntry createCacheWithExpiration(KeyUse keyUse, int expiration) {
-        return JwkCacheEntry.forKeyUse(keyUse, testJwksUrl, expiration);
+        return JwkCacheEntry.forKeyUse(
+                testJwksUrl, expiration, keyUse, JWEAlgorithm.RSA_OAEP_256.getName());
     }
 }
