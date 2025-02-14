@@ -275,7 +275,6 @@ class AuthCodeHandlerTest {
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
         session.setCurrentCredentialStrength(initialLevel)
                 .setNewAccount(AccountState.NEW)
-                .setEmailAddress(EMAIL)
                 .setVerifiedMfaMethodType(mfaMethodType);
         orchSession.setCurrentCredentialStrength(initialLevel);
         var authSuccessResponse =
@@ -344,6 +343,14 @@ class AuthCodeHandlerTest {
                         pair("rpPairwiseId", expectedRpPairwiseId),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
+
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        eq(clientSession),
+                        any(Long.class));
 
         var dimensions =
                 Map.of(
@@ -460,6 +467,13 @@ class AuthCodeHandlerTest {
                         pair("rpPairwiseId", AuditService.UNKNOWN),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        eq(clientSession),
+                        any(Long.class));
 
         var expectedDimensions =
                 Map.of(
@@ -551,7 +565,6 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseIfUnableToParseAuthRequest() throws Json.JsonException {
-        session.setEmailAddress(EMAIL);
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
@@ -636,7 +649,7 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
-                        eq(null),
+                        eq(EMAIL),
                         eq(clientSession),
                         any(Long.class)))
                 .thenReturn(authorizationCode);
