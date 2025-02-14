@@ -29,7 +29,7 @@ variable "allow_bulk_test_users" {
 }
 
 variable "utils_release_zip_file" {
-  default     = "../../../utils/build/distributions/utils.zip"
+  default     = "./artifacts/utils.zip"
   description = "Location of the Utils distribution ZIP file"
   type        = string
 }

@@ -1,29 +1,29 @@
 variable "oidc_api_lambda_zip_file" {
-  default     = "../../../oidc-api/build/distributions/oidc-api.zip"
+  default     = "./artifacts/oidc-api.zip"
   description = "Location of the OIDC API Lambda ZIP file"
   type        = string
 }
 
 variable "frontend_api_lambda_zip_file" {
-  default     = "../../../frontend-api/build/distributions/frontend-api.zip"
+  default     = "./artifacts/frontend-api.zip"
   description = "Location of the Frontend API Lambda ZIP file"
   type        = string
 }
 
 variable "client_registry_api_lambda_zip_file" {
-  default     = "../../../client-registry-api/build/distributions/client-registry-api.zip"
+  default     = "./artifacts/client-registry-api.zip"
   description = "Location of the client registry API Lambda ZIP file"
   type        = string
 }
 
 variable "ipv_api_lambda_zip_file" {
-  default     = "../../../ipv-api/build/distributions/ipv-api.zip"
+  default     = "./artifacts/ipv-api.zip"
   description = "Location of the ipv API Lambda ZIP file"
   type        = string
 }
 
 variable "doc_checking_app_api_lambda_zip_file" {
-  default     = "../../../doc-checking-app-api/build/distributions/doc-checking-app-api.zip"
+  default     = "./artifacts/doc-checking-app-api.zip"
   description = "Location of the doc checking app API Lambda ZIP file"
   type        = string
 }
@@ -234,7 +234,7 @@ variable "cloudwatch_log_retention" {
 }
 
 variable "lambda_min_concurrency" {
-  default     = 1
+  default     = 0
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
@@ -254,8 +254,8 @@ variable "test_client_verify_phone_number_otp" {
 }
 
 variable "test_clients_enabled" {
-  type    = string
-  default = "false"
+  type    = bool
+  default = false
 }
 
 variable "client_registry_api_enabled" {
@@ -455,7 +455,7 @@ variable "lambda_max_concurrency" {
 }
 
 variable "scaling_trigger" {
-  default = 0.7
+  default = 0.6
   type    = number
 }
 
@@ -471,7 +471,7 @@ variable "txma_account_id" {
 
 variable "orch_client_id" {
   type    = string
-  default = ""
+  default = "orchestrationAuth"
 }
 
 variable "orch_frontend_api_gateway_integration_enabled" {

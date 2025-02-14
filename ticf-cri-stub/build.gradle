@@ -6,6 +6,8 @@ plugins {
 group = 'uk.gov.di.authentication.ticf-cri-stub'
 version = 'unspecified'
 
+File terraformDir = new File(project.rootDir, "ci/terraform/ticf-cri-stub")
+
 dependencies {
     compileOnly configurations.lambda
 
@@ -29,6 +31,9 @@ java {
 }
 
 task buildZip(type: Zip) {
+    if (isDevDeployBuild) {
+        destinationDirectory = new File(terraformDir, "artifacts")
+    }
     from compileJava
     from processResources
     into("lib") {
