@@ -118,9 +118,6 @@ public class IPVTokenService {
     public TokenResponse retrySendTokenRequest(TokenRequest tokenRequest) throws Exception {
         LOG.info("Sending IPV token request");
 
-        // TODO - AUT-4009 - sendTokenRequest2 - timeout
-        // https://javadoc.io/static/com.nimbusds/oauth2-oidc-sdk/5.12/com/nimbusds/oauth2/sdk/http/HTTPRequest.html#setConnectTimeout-int-
-        // https://javadoc.io/static/com.nimbusds/oauth2-oidc-sdk/5.12/com/nimbusds/oauth2/sdk/http/HTTPRequest.html#setReadTimeout-int-
         // TODO - logging (on error, on abandon, on each try)
 
         Predicate<Throwable> httpErrorPredicate =
@@ -135,7 +132,7 @@ public class IPVTokenService {
         try {
             return retryTask(config, "", () -> sendTokenRequest2(tokenRequest));
         } catch (MaxRetriesExceededException e) {
-            // TODO - AUT-4009 - Add any necessary abandon handling
+            // TODO - AUT-4009 - Add any necessary abandon handling. What happens when we abandon?
             throw new RuntimeException(e);
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
@@ -145,14 +142,19 @@ public class IPVTokenService {
             throw new RuntimeException(e);
         }
 
-        // TODO - AUT-4009 - what happens when we abandon?
         // TODO - AUT-4009 - what happens when we error out in a different way?
         // TODO - AUT-4009 - is this a graceful way of handling the io/parse exceptions?
     }
 
     private TokenResponse sendTokenRequest2(TokenRequest tokenRequest)
             throws IOException, ParseException {
-        var httpResponse = tokenRequest.toHTTPRequest().send();
+        var httpRequest = tokenRequest.toHTTPRequest();
+        httpRequest.setConnectTimeout(500);
+        httpRequest.setReadTimeout(2000);
+        // TODO - AUT-4009 - This may need to be adjusted. In this case, we might be better timing
+        // out after 25s and handling the fallout - that's what usually happens when IPV has issues.
+        // IPV also takes a long time in general, so having a short timeout might not be great.
+        var httpResponse = httpRequest.send();
 
         if (!httpResponse.indicatesSuccess())
             throw new HttpRequestErrorException(httpResponse.getStatusCode());
