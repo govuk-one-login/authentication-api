@@ -66,8 +66,9 @@ orch_userinfo_enabled                = true
 orch_storage_token_jwk_enabled       = true
 orch_ipv_jwks_enabled                = true
 
-orch_account_id                       = "816047645251"
-is_orch_stubbed                       = false
-orch_environment                      = "dev"
-orch_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:816047645251:key/645669ba-b288-4b63-bfe1-9d8bde9956ec"
-cmk_for_back_channel_logout_enabled   = true
+orch_account_id                              = "816047645251"
+is_orch_stubbed                              = false
+orch_environment                             = "dev"
+orch_session_table_encryption_key_arn        = "arn:aws:kms:eu-west-2:816047645251:key/645669ba-b288-4b63-bfe1-9d8bde9956ec"
+orch_client_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:816047645251:key/4cd7c551-128f-4579-99c2-a7f1bff64fb7"
+cmk_for_back_channel_logout_enabled          = true
