@@ -103,20 +103,19 @@ public class IPVTokenService {
     public TokenResponse retrySendTokenRequest(TokenRequest tokenRequest) throws Exception {
         LOG.info("Sending IPV token request");
 
-        // TODO - AUT-4009 - Only retry when exception is for certain type of error code (5xx)
-        //  https://reflectoring.io/retry-with-resilience4j/#exception-based-conditional-retry
         // TODO - AUT-4009 - sendTokenRequest2 - timeout
-        //
         // https://javadoc.io/static/com.nimbusds/oauth2-oidc-sdk/5.12/com/nimbusds/oauth2/sdk/http/HTTPRequest.html#setConnectTimeout-int-
-        //
         // https://javadoc.io/static/com.nimbusds/oauth2-oidc-sdk/5.12/com/nimbusds/oauth2/sdk/http/HTTPRequest.html#setReadTimeout-int-
         // TODO - logging (on error, on abandon, on each try)
 
+        Predicate<Throwable> httpErrorPredicate =
+                hep ->
+                        (hep instanceof HttpRequestErrorException)
+                                && ((HttpRequestErrorException) hep).getErrorCode() >= 500
+                                && ((HttpRequestErrorException) hep).getErrorCode() < 600;
+
         RetryConfig config =
-                RetryConfig.custom()
-                        .maxAttempts(2)
-                        .retryExceptions(HttpRequestErrorException.class)
-                        .build();
+                RetryConfig.custom().maxAttempts(2).retryOnException(httpErrorPredicate).build();
         RetryRegistry registry = RetryRegistry.of(config);
         Retry retry = registry.retry("sendTokenRequest");
 

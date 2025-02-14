@@ -1,7 +1,14 @@
 package uk.gov.di.authentication.shared.exceptions;
 
 public class HttpRequestErrorException extends RuntimeException {
-    public HttpRequestErrorException(int message) {
-        super(String.valueOf(message));
+    private final int errorCode;
+
+    public HttpRequestErrorException(int errorCode) {
+        super(String.valueOf(errorCode));
+        this.errorCode = errorCode;
+    }
+
+    public int getErrorCode() {
+        return errorCode;
     }
 }
