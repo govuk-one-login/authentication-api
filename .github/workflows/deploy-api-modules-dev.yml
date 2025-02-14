@@ -21,7 +21,7 @@ concurrency:
 jobs:
   set-up:
     name: Set up environment
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     outputs:
       aws_region: ${{ env.AWS_REGION }}
       deployer_role: ${{ steps.secrets.outputs.DEPLOYER_ROLE }}
@@ -46,7 +46,7 @@ jobs:
 
   pr-data:
     name: Get data for merged PR
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       pull-requests: read
@@ -63,7 +63,7 @@ jobs:
 
   build-cache:
     name: Set up build cache
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     outputs:
       java_version: ${{ env.JAVA_VERSION }}
       java_distribution: ${{ env.JAVA_DISTRIBUTION }}
@@ -192,7 +192,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

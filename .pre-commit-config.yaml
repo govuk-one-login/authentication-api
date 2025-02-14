@@ -68,7 +68,7 @@ repos:
         exclude: ./gradlew|./pre-commit.sh
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.6
+    rev: v1.7.7
     hooks:
       - id: actionlint
 
