@@ -320,7 +320,8 @@ public class TokenService {
                         .subject(rpPairwiseSubject.getValue())
                         .jwtID(jwtID);
 
-        if (Objects.nonNull(claimsRequest)) {
+        if (Objects.nonNull(claimsRequest)
+                && Objects.nonNull(claimsRequest.getUserInfoClaimsRequest())) {
             LOG.info("Populating identity claims in access token");
             claimSetBuilder.claim(
                     "claims",
