@@ -244,6 +244,7 @@ public class AuthCodeHandler
                     generateAuthCode(
                             clientID,
                             redirectUri,
+                            emailOptional,
                             clientSession,
                             clientSessionId,
                             session,
@@ -264,9 +265,14 @@ public class AuthCodeHandler
         LOG.info("Successfully processed request");
 
         try {
+
             var isTestJourney =
-                    orchestrationAuthorizationService.isTestJourney(
-                            clientID, session.getEmailAddress());
+                    emailOptional
+                            .filter(
+                                    email ->
+                                            orchestrationAuthorizationService.isTestJourney(
+                                                    clientID, email))
+                            .isPresent();
 
             var dimensions =
                     authCodeResponseService.getDimensions(
@@ -307,9 +313,7 @@ public class AuthCodeHandler
                             .withGovukSigninJourneyId(clientSessionId)
                             .withSessionId(sessionId)
                             .withUserId(internalCommonSubjectId)
-                            .withEmail(
-                                    Optional.ofNullable(session.getEmailAddress())
-                                            .orElse(AuditService.UNKNOWN))
+                            .withEmail(emailOptional.orElse(AuditService.UNKNOWN))
                             .withIpAddress(IpAddressHelper.extractIpAddress(input))
                             .withPersistentSessionId(
                                     PersistentIdHelper.extractPersistentIdFromHeaders(
@@ -448,6 +452,7 @@ public class AuthCodeHandler
     private AuthorizationCode generateAuthCode(
             ClientID clientID,
             URI redirectUri,
+            Optional<String> emailOptional,
             ClientSession clientSession,
             String clientSessionId,
             Session session,
@@ -473,7 +478,7 @@ public class AuthCodeHandler
         return authorisationCodeService.generateAndSaveAuthorisationCode(
                 clientID.getValue(),
                 clientSessionId,
-                session.getEmailAddress(),
+                emailOptional.orElse(null),
                 clientSession,
                 orchSession.getAuthTime());
     }
