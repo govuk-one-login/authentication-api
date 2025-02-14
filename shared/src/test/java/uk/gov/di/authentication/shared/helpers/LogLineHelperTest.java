@@ -7,6 +7,9 @@ import uk.gov.di.authentication.shared.entity.Session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.LOG_ERROR_CODE;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.LOG_ERROR_DESCRIPTION;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.LOG_MESSAGE_DESCRIPTION;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -65,5 +68,36 @@ class LogLineHelperTest {
 
         assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
         assertEquals("invalid-identifier", ThreadContext.get(SESSION_ID.getLogFieldName()));
+    }
+
+    @Test
+    void buildLogMessageShouldCorrectlyAddDescription() {
+        var logMessage = LogLineHelper.buildLogMessage("Test message");
+
+        assertEquals(logMessage.get(LOG_MESSAGE_DESCRIPTION.getLogFieldName()), "Test message");
+    }
+
+    @Test
+    void buildErrorMessageShouldAttachErrorDescription() {
+        var logMessage = LogLineHelper.buildErrorMessage("Test message", "Error description");
+
+        assertEquals(logMessage.get(LOG_MESSAGE_DESCRIPTION.getLogFieldName()), "Test message");
+        assertEquals(logMessage.get(LOG_ERROR_DESCRIPTION.getLogFieldName()), "Error description");
+    }
+
+    @Test
+    void buildErrorMessageShouldAttachErrorCode() {
+        var logMessage = LogLineHelper.buildErrorMessage("Test message", "Error description", 10);
+
+        assertEquals(logMessage.get(LOG_MESSAGE_DESCRIPTION.getLogFieldName()), "Test message");
+        assertEquals(logMessage.get(LOG_ERROR_DESCRIPTION.getLogFieldName()), "Error description");
+        assertEquals(logMessage.get(LOG_ERROR_CODE.getLogFieldName()), "10");
+
+        var logMessage2 =
+                LogLineHelper.buildErrorMessage("Test message", "Error description", "10");
+
+        assertEquals(logMessage2.get(LOG_MESSAGE_DESCRIPTION.getLogFieldName()), "Test message");
+        assertEquals(logMessage2.get(LOG_ERROR_DESCRIPTION.getLogFieldName()), "Error description");
+        assertEquals(logMessage2.get(LOG_ERROR_CODE.getLogFieldName()), "10");
     }
 }

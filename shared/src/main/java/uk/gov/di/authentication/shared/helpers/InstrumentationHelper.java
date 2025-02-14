@@ -3,19 +3,19 @@ package uk.gov.di.authentication.shared.helpers;
 import com.amazonaws.xray.AWSXRay;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.annotations.ExcludeFromGeneratedCoverageReport;
 
 import java.util.concurrent.Callable;
 
 import static java.util.Objects.nonNull;
+import static uk.gov.di.authentication.shared.tracing.Tracing.TRACING_ENABLED;
 
+@ExcludeFromGeneratedCoverageReport
 public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
 
-    private static final boolean tracingEnabled =
-            Boolean.parseBoolean(System.getenv().getOrDefault("TRACING_ENABLED", "true"));
-
     public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
-        if (tracingEnabled) {
+        if (TRACING_ENABLED) {
             var subSegment = AWSXRay.beginSubsegment(segmentName);
             try {
                 return callable.call();
@@ -40,7 +40,7 @@ public class InstrumentationHelper {
     }
 
     public static void segmentedFunctionCall(String segmentName, Runnable runnable) {
-        if (tracingEnabled) {
+        if (TRACING_ENABLED) {
             var subSegment = AWSXRay.beginSubsegment(segmentName);
             try {
                 runnable.run();
@@ -59,7 +59,7 @@ public class InstrumentationHelper {
     }
 
     public static void addAnnotation(final String key, final String value) {
-        if (tracingEnabled && nonNull(value)) {
+        if (TRACING_ENABLED && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key, value),
@@ -68,7 +68,7 @@ public class InstrumentationHelper {
     }
 
     public static void addAnnotation(final String key, final Number value) {
-        if (tracingEnabled && nonNull(value)) {
+        if (TRACING_ENABLED && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key, value),
@@ -77,7 +77,7 @@ public class InstrumentationHelper {
     }
 
     public static void addAnnotation(final String key, final Boolean value) {
-        if (tracingEnabled && nonNull(value)) {
+        if (TRACING_ENABLED && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key, value),
