@@ -102,35 +102,51 @@ public class IPVTokenService {
                         singletonList(configurationService.getIPVAuthorisationClientId())));
     }
 
-    public <T> T retryTask(RetryConfig retryConfig, String description, Callable<T> task)
+    // TODO - AUT-4009 - Extract this to a retrying service in 'shared'
+    public <T> T retryTask(
+            RetryConfig.Builder<Object> retryConfigBuilder, String description, Callable<T> task)
             throws Exception {
+        LOG.info("Retrying '{}'", description);
+        retryConfigBuilder.failAfterMaxAttempts(true);
+        RetryConfig retryConfig = retryConfigBuilder.build();
         RetryRegistry registry = RetryRegistry.of(retryConfig);
         Retry retry = registry.retry(description);
 
+        Callable<T> retryLoggingWrapper =
+                () -> {
+                    LOG.info(
+                            "'{}' attempt {} of {}",
+                            description,
+                            retry.getMetrics().getNumberOfTotalCalls(),
+                            retryConfig.getMaxAttempts());
+                    return task.call();
+                };
+
         try {
-            return retry.executeCallable(task);
+            return retry.executeCallable(retryLoggingWrapper);
         } catch (MaxRetriesExceededException e) {
-            // TODO - AUT-4009 - Add logging here for onAbandon
+            LOG.warn(
+                    "Maximum {} retries exceeded for '{}'",
+                    retryConfig.getMaxAttempts(),
+                    description,
+                    e);
             throw e;
         }
     }
 
     public TokenResponse retrySendTokenRequest(TokenRequest tokenRequest) throws Exception {
-        LOG.info("Sending IPV token request");
-
-        // TODO - logging (on error, on abandon, on each try)
-
         Predicate<Throwable> httpErrorPredicate =
                 hep ->
                         (hep instanceof HttpRequestErrorException)
                                 && ((HttpRequestErrorException) hep).getErrorCode() >= 500
                                 && ((HttpRequestErrorException) hep).getErrorCode() < 600;
 
-        RetryConfig config =
-                RetryConfig.custom().maxAttempts(2).retryOnException(httpErrorPredicate).build();
+        var retryConfigBuilder =
+                RetryConfig.custom().maxAttempts(2).retryOnException(httpErrorPredicate);
 
         try {
-            return retryTask(config, "", () -> sendTokenRequest2(tokenRequest));
+            return retryTask(
+                    retryConfigBuilder, "sendTokenRequest", () -> sendTokenRequest2(tokenRequest));
         } catch (MaxRetriesExceededException e) {
             // TODO - AUT-4009 - Add any necessary abandon handling. What happens when we abandon?
             throw new RuntimeException(e);
@@ -152,8 +168,9 @@ public class IPVTokenService {
         httpRequest.setConnectTimeout(500);
         httpRequest.setReadTimeout(2000);
         // TODO - AUT-4009 - This may need to be adjusted. In this case, we might be better timing
-        // out after 25s and handling the fallout - that's what usually happens when IPV has issues.
-        // IPV also takes a long time in general, so having a short timeout might not be great.
+        //  out after 25s and handling the fallout - that's what usually happens when IPV has
+        // issues.
+        //  IPV also takes a long time in general, so having a short timeout might not be great.
         var httpResponse = httpRequest.send();
 
         if (!httpResponse.indicatesSuccess())
