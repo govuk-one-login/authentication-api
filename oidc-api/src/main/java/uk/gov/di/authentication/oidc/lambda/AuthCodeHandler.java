@@ -11,14 +11,17 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
+import uk.gov.di.authentication.oidc.exceptions.AuthCodeException;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -26,12 +29,12 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -72,6 +75,7 @@ public class AuthCodeHandler
 
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
+    private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
@@ -85,6 +89,7 @@ public class AuthCodeHandler
     public AuthCodeHandler(
             SessionService sessionService,
             OrchSessionService orchSessionService,
+            AuthenticationUserInfoStorageService authUserInfoStorageService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
@@ -96,6 +101,7 @@ public class AuthCodeHandler
             DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
+        this.authUserInfoStorageService = authUserInfoStorageService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
@@ -110,6 +116,7 @@ public class AuthCodeHandler
     public AuthCodeHandler(ConfigurationService configurationService) {
         sessionService = new SessionService(configurationService);
         orchSessionService = new OrchSessionService(configurationService);
+        authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -127,6 +134,7 @@ public class AuthCodeHandler
             ConfigurationService configurationService, RedisConnectionService redis) {
         sessionService = new SessionService(configurationService, redis);
         orchSessionService = new OrchSessionService(configurationService);
+        authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -187,6 +195,9 @@ public class AuthCodeHandler
 
         LOG.info("Processing request");
 
+        Optional<String> emailOptional;
+        Optional<String> subjectIdOptional;
+        boolean isDocAppJourney;
         AuthenticationRequest authenticationRequest = null;
         ClientSession clientSession;
         ClientID clientID;
@@ -208,10 +219,31 @@ public class AuthCodeHandler
 
             var redirectUri = authenticationRequest.getRedirectionURI();
             var state = authenticationRequest.getState();
+
+            isDocAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+
+            if (!isDocAppJourney) {
+                var authUserInfo =
+                        getAuthUserInfo(
+                                        authUserInfoStorageService,
+                                        orchSession.getInternalCommonSubjectId(),
+                                        clientSessionId)
+                                .orElseThrow(() -> new AuthCodeException("authUserInfo not found"));
+                emailOptional = Optional.of(authUserInfo.getEmailAddress());
+                subjectIdOptional =
+                        Optional.of(
+                                authUserInfo.getStringClaim(
+                                        AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()));
+            } else {
+                emailOptional = Optional.empty();
+                subjectIdOptional = Optional.empty();
+            }
+
             authCode =
                     generateAuthCode(
                             clientID,
                             redirectUri,
+                            emailOptional,
                             clientSession,
                             clientSessionId,
                             session,
@@ -223,6 +255,8 @@ public class AuthCodeHandler
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         } catch (ClientNotFoundException e) {
             return processClientNotFoundException(authenticationRequest);
+        } catch (AuthCodeException e) {
+            return processUserNotFoundException(authenticationRequest);
         } catch (ParseException e) {
             return processParseException(e);
         }
@@ -230,35 +264,37 @@ public class AuthCodeHandler
         LOG.info("Successfully processed request");
 
         try {
+
             var isTestJourney =
-                    orchestrationAuthorizationService.isTestJourney(
-                            clientID, session.getEmailAddress());
-            var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+                    emailOptional
+                            .filter(
+                                    email ->
+                                            orchestrationAuthorizationService.isTestJourney(
+                                                    clientID, email))
+                            .isPresent();
+
             var dimensions =
                     authCodeResponseService.getDimensions(
                             orchSession,
                             clientSession,
                             clientID.getValue(),
                             isTestJourney,
-                            docAppJourney);
+                            isDocAppJourney);
 
-            var subjectId = AuditService.UNKNOWN;
             var rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonSubjectId;
-            if (docAppJourney) {
+            if (isDocAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
                 internalCommonSubjectId = clientSession.getDocAppSubjectId().getValue();
             } else {
                 authCodeResponseService.processVectorOfTrust(clientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
-                subjectId = authCodeResponseService.getSubjectId(session);
-                rpPairwiseId =
-                        authCodeResponseService.getRpPairwiseId(
-                                session, clientID, dynamoClientService);
+                rpPairwiseId = clientSession.getRpPairwiseId();
             }
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
-            metadataPairs.add(pair("internalSubjectId", subjectId));
+            metadataPairs.add(
+                    pair("internalSubjectId", subjectIdOptional.orElse(AuditService.UNKNOWN)));
             metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
             metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
             metadataPairs.add(pair("authCode", authCode));
@@ -273,9 +309,7 @@ public class AuthCodeHandler
                             .withGovukSigninJourneyId(clientSessionId)
                             .withSessionId(sessionId)
                             .withUserId(internalCommonSubjectId)
-                            .withEmail(
-                                    Optional.ofNullable(session.getEmailAddress())
-                                            .orElse(AuditService.UNKNOWN))
+                            .withEmail(emailOptional.orElse(AuditService.UNKNOWN))
                             .withIpAddress(IpAddressHelper.extractIpAddress(input))
                             .withPersistentSessionId(
                                     PersistentIdHelper.extractPersistentIdFromHeaders(
@@ -290,7 +324,7 @@ public class AuthCodeHandler
                     clientSession.getClientName(),
                     isTestJourney);
             authCodeResponseService.saveSession(
-                    docAppJourney,
+                    isDocAppJourney,
                     sessionService,
                     session,
                     sessionId,
@@ -302,13 +336,26 @@ public class AuthCodeHandler
                     200,
                     new uk.gov.di.orchestration.entity.AuthCodeResponse(
                             authenticationResponse.toURI().toString()));
-        } catch (ClientNotFoundException e) {
-            return processClientNotFoundException(authenticationRequest);
-        } catch (UserNotFoundException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
         } catch (JsonException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static Optional<UserInfo> getAuthUserInfo(
+            AuthenticationUserInfoStorageService authUserInfoStorageService,
+            String internalCommonSubjectId,
+            String clientSessionId) {
+
+        if (internalCommonSubjectId == null || internalCommonSubjectId.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            return authUserInfoStorageService.getAuthenticationUserInfo(
+                    internalCommonSubjectId, clientSessionId);
+        } catch (ParseException e) {
+            LOG.warn("error parsing authUserInfo. Message: {}", e.getMessage());
+            return Optional.empty();
         }
     }
 
@@ -377,9 +424,21 @@ public class AuthCodeHandler
         return generateResponse(500, new AuthCodeResponse(errorResponse.toURI().toString()));
     }
 
+    private APIGatewayProxyResponseEvent processUserNotFoundException(
+            AuthenticationRequest authenticationRequest) {
+        var errorResponse =
+                orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        authenticationRequest,
+                        OAuth2Error.ACCESS_DENIED,
+                        authenticationRequest.getRedirectionURI(),
+                        authenticationRequest.getState());
+        return generateResponse(400, new AuthCodeResponse(errorResponse.toURI().toString()));
+    }
+
     private AuthorizationCode generateAuthCode(
             ClientID clientID,
             URI redirectUri,
+            Optional<String> emailOptional,
             ClientSession clientSession,
             String clientSessionId,
             Session session,
@@ -405,7 +464,7 @@ public class AuthCodeHandler
         return authorisationCodeService.generateAndSaveAuthorisationCode(
                 clientID.getValue(),
                 clientSessionId,
-                session.getEmailAddress(),
+                emailOptional.orElse(null),
                 clientSession,
                 orchSession.getAuthTime());
     }
