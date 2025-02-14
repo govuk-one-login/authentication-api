@@ -325,7 +325,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
                         userContext.getSession().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         userContext
