@@ -234,7 +234,7 @@ variable "cloudwatch_log_retention" {
 }
 
 variable "lambda_min_concurrency" {
-  default     = 1
+  default     = 0
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
@@ -254,8 +254,8 @@ variable "test_client_verify_phone_number_otp" {
 }
 
 variable "test_clients_enabled" {
-  type    = string
-  default = "false"
+  type    = bool
+  default = false
 }
 
 variable "client_registry_api_enabled" {
@@ -455,7 +455,7 @@ variable "lambda_max_concurrency" {
 }
 
 variable "scaling_trigger" {
-  default = 0.7
+  default = 0.6
   type    = number
 }
 
@@ -471,7 +471,7 @@ variable "txma_account_id" {
 
 variable "orch_client_id" {
   type    = string
-  default = ""
+  default = "orchestrationAuth"
 }
 
 variable "orch_frontend_api_gateway_integration_enabled" {
