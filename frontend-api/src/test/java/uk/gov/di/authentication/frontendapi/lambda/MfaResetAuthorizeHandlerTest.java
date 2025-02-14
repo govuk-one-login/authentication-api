@@ -17,6 +17,7 @@ import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -49,6 +50,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -136,7 +138,11 @@ class MfaResetAuthorizeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
         verify(auditService)
-                .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, testAuditContext);
+                .submitAuditEvent(
+                        AUTH_REVERIFY_AUTHORISATION_REQUESTED,
+                        testAuditContext,
+                        pair("rpPairwiseId", AuditService.UNKNOWN),
+                        pair("journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
         verify(cloudwatchMetricsService).incrementMfaResetHandoffCount();
 
         assertThat(response, hasStatus(200));

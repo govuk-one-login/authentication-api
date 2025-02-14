@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -146,20 +147,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             authenticationService);
             auditContext = auditContext.withSubjectId(internalCommonSubjectId.getValue());
 
-            LOG.info("Calculating RP pairwise identifier");
             var rpPairwiseId =
-                    userContext
-                            .getClient()
-                            .map(
-                                    t ->
-                                            ClientSubjectHelper.getSubject(
-                                                            user.getUserProfile(),
-                                                            t,
-                                                            authenticationService,
-                                                            configurationService
-                                                                    .getInternalSectorUri())
-                                                    .getValue())
-                            .orElse(AuditService.UNKNOWN);
+                    TxmaAuditHelper.getRpPairwiseId(
+                            authenticationService, configurationService, userContext);
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
