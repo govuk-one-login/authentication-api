@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import io.github.resilience4j.retry.MaxRetriesExceededException;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
@@ -40,7 +41,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
-import java.util.function.*;
+import java.util.concurrent.Callable;
+import java.util.function.Predicate;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -100,6 +102,19 @@ public class IPVTokenService {
                         singletonList(configurationService.getIPVAuthorisationClientId())));
     }
 
+    public <T> T retryTask(RetryConfig retryConfig, String description, Callable<T> task)
+            throws Exception {
+        RetryRegistry registry = RetryRegistry.of(retryConfig);
+        Retry retry = registry.retry(description);
+
+        try {
+            return retry.executeCallable(task);
+        } catch (MaxRetriesExceededException e) {
+            // TODO - AUT-4009 - Add logging here for onAbandon
+            throw e;
+        }
+    }
+
     public TokenResponse retrySendTokenRequest(TokenRequest tokenRequest) throws Exception {
         LOG.info("Sending IPV token request");
 
@@ -116,11 +131,12 @@ public class IPVTokenService {
 
         RetryConfig config =
                 RetryConfig.custom().maxAttempts(2).retryOnException(httpErrorPredicate).build();
-        RetryRegistry registry = RetryRegistry.of(config);
-        Retry retry = registry.retry("sendTokenRequest");
 
         try {
-            return retry.executeCallable(() -> sendTokenRequest2(tokenRequest));
+            return retryTask(config, "", () -> sendTokenRequest2(tokenRequest));
+        } catch (MaxRetriesExceededException e) {
+            // TODO - AUT-4009 - Add any necessary abandon handling
+            throw new RuntimeException(e);
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
             throw new RuntimeException(e);
