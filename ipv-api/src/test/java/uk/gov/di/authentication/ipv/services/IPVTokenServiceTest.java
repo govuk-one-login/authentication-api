@@ -136,7 +136,7 @@ class IPVTokenServiceTest {
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         when(tokenRequest.toHTTPRequest().send()).thenReturn(getSuccessfulTokenHttpResponse());
 
-        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+        var tokenResponse = ipvTokenService.retrySendTokenRequest(tokenRequest);
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
     }
@@ -148,7 +148,7 @@ class IPVTokenServiceTest {
                 .thenReturn(new HTTPResponse(500))
                 .thenReturn(getSuccessfulTokenHttpResponse());
 
-        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+        var tokenResponse = ipvTokenService.retrySendTokenRequest(tokenRequest);
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
     }
@@ -158,10 +158,16 @@ class IPVTokenServiceTest {
         when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
         when(tokenRequest.toHTTPRequest().send()).thenReturn(new HTTPResponse(500));
 
-        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+        var tokenResponse = ipvTokenService.retrySendTokenRequest(tokenRequest);
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
         verify(tokenRequest.toHTTPRequest(), times(2)).send();
+        // TODO - AUT-4009
+        // This is failing. 'tokenResponse' is null for some reason, when it should've thrown a
+        // 'RuntimeException'. It's possibly because the 'httpErrorPredicate' catches the
+        // 'HttpRequestErrorException', meaning that an exception is not thrown from the last try,
+        // meaning that we don't land in the abandon logic.
+        // See here https://github.com/resilience4j/resilience4j/issues/1726#issuecomment-1186986761
     }
 
     @Test
