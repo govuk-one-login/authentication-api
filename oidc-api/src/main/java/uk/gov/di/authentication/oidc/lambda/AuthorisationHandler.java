@@ -1030,13 +1030,13 @@ public class AuthorisationHandler
 
         var claimsSet = new HashSet<AuthUserInfoClaims>();
         claimsSet.add(AuthUserInfoClaims.EMAIL);
+        claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
         claimsSet.add(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE);
         claimsSet.add(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH);
         claimsSet.add(AuthUserInfoClaims.UPLIFT_REQUIRED);
         if (identityRequired) {
             LOG.info(
-                    "Identity is required. Adding the local_account_id, salt, email_verified and phone_number claims");
-            claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
+                    "Identity is required. Adding the salt, email_verified and phone_number claims");
             claimsSet.add(AuthUserInfoClaims.SALT);
             // Email required for ID journeys for use in Face-to-Face flows
             claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
