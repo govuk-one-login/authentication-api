@@ -792,6 +792,43 @@ moved {
   to   = data.aws_iam_policy_document.dynamo_orch_session_cross_account_delete_access_policy_document[0]
 }
 
+data "aws_iam_policy_document" "dynamo_orch_client_session_cross_account_read_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+  statement {
+    sid    = "AllowOrchClientSessionCrossAccountReadAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Client-Session",
+    ]
+  }
+}
+moved {
+  from = data.aws_iam_policy_document.dynamo_orch_client_session_cross_account_read_access_policy_document
+  to   = data.aws_iam_policy_document.dynamo_orch_client_session_cross_account_read_access_policy_document[0]
+}
+
+data "aws_iam_policy_document" "dynamo_orch_client_session_cross_account_delete_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+  statement {
+    sid    = "AllowOrchClientSessionCrossAccountDeleteAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DeleteItem"
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Client-Session",
+    ]
+  }
+}
+moved {
+  from = data.aws_iam_policy_document.dynamo_orch_client_session_cross_account_delete_access_policy_document
+  to   = data.aws_iam_policy_document.dynamo_orch_client_session_cross_account_delete_access_policy_document[0]
+}
+
 data "aws_iam_policy_document" "dynamo_id_reverification_state_write_policy_document" {
   statement {
     sid    = "AllowWrite"
