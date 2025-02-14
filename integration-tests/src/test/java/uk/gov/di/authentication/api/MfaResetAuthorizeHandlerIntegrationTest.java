@@ -148,6 +148,10 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                         new Subject().getValue(),
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
+        authSessionStore
+                .getSession(sessionId)
+                .map(session -> session.withInternalCommonSubjectId(internalCommonSubjectId))
+                .ifPresent(authSessionStore::updateSession);
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
 
         String subjectId = "test-subject-id";
