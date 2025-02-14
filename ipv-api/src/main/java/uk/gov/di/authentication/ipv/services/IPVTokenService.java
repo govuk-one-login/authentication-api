@@ -13,7 +13,6 @@ import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
-import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
@@ -29,7 +28,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.shared.exceptions.HttpRequestErrorException;
+import uk.gov.di.orchestration.shared.exceptions.HttpRequestErrorException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -72,7 +71,7 @@ public class IPVTokenService {
 
     public TokenResponse getToken(String authCode) {
         var tokenRequest = constructTokenRequest(authCode);
-        return sendTokenRequest(tokenRequest);
+        return retrySendTokenRequest(tokenRequest);
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
@@ -134,7 +133,10 @@ public class IPVTokenService {
         }
     }
 
-    public TokenResponse retrySendTokenRequest(TokenRequest tokenRequest) throws Exception {
+    // TODO - AUT-4009 - We should think about what we do with these exceptions. We shouldn't throw
+    //  them up to the lambda. Instead, we should return a nicer error.
+    // TODO - AUT-4009 - Make this private - we should only need to test the class entrypoint
+    public TokenResponse retrySendTokenRequest(TokenRequest tokenRequest) {
         Predicate<Throwable> httpErrorPredicate =
                 hep ->
                         (hep instanceof HttpRequestErrorException)
@@ -146,7 +148,7 @@ public class IPVTokenService {
 
         try {
             return retryTask(
-                    retryConfigBuilder, "sendTokenRequest", () -> sendTokenRequest2(tokenRequest));
+                    retryConfigBuilder, "sendTokenRequest", () -> sendTokenRequest(tokenRequest));
         } catch (MaxRetriesExceededException e) {
             // TODO - AUT-4009 - Add any necessary abandon handling. What happens when we abandon?
             throw new RuntimeException(e);
@@ -156,56 +158,32 @@ public class IPVTokenService {
         } catch (ParseException e) {
             LOG.error("Error whilst parsing TokenResponse", e);
             throw new RuntimeException(e);
+        } catch (Exception e) {
+            // TODO - AUT-4009 - Currently swallowing this exception
+            //  Figure out a better way of handling this (and other) errors
+            LOG.error("Unhandled Exception", e);
+            return null;
         }
 
         // TODO - AUT-4009 - what happens when we error out in a different way?
         // TODO - AUT-4009 - is this a graceful way of handling the io/parse exceptions?
     }
 
-    private TokenResponse sendTokenRequest2(TokenRequest tokenRequest)
+    private TokenResponse sendTokenRequest(TokenRequest tokenRequest)
             throws IOException, ParseException {
         var httpRequest = tokenRequest.toHTTPRequest();
         httpRequest.setConnectTimeout(500);
         httpRequest.setReadTimeout(2000);
         // TODO - AUT-4009 - This may need to be adjusted. In this case, we might be better timing
         //  out after 25s and handling the fallout - that's what usually happens when IPV has
-        // issues.
-        //  IPV also takes a long time in general, so having a short timeout might not be great.
+        //  issues. IPV also takes a long time in general, so having a short timeout might not be
+        //  great.
         var httpResponse = httpRequest.send();
 
         if (!httpResponse.indicatesSuccess())
             throw new HttpRequestErrorException(httpResponse.getStatusCode());
 
         return TokenResponse.parse(httpResponse);
-    }
-
-    public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
-        try {
-            LOG.info("Sending IPV token request");
-            int count = 0;
-            int maxTries = 2;
-            TokenResponse tokenResponse;
-            do {
-                if (count > 0) LOG.warn("Retrying IPV access token request");
-                count++;
-                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
-                if (!tokenResponse.indicatesSuccess()) {
-                    HTTPResponse response = tokenResponse.toHTTPResponse();
-                    LOG.warn(
-                            format(
-                                    "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
-                }
-            } while (!tokenResponse.indicatesSuccess() && count < maxTries);
-
-            return tokenResponse;
-        } catch (IOException e) {
-            LOG.error("Error whilst sending TokenRequest", e);
-            throw new RuntimeException(e);
-        } catch (ParseException e) {
-            LOG.error("Error whilst parsing TokenResponse", e);
-            throw new RuntimeException(e);
-        }
     }
 
     public UserInfo sendIpvUserIdentityRequest(UserInfoRequest userInfoRequest)

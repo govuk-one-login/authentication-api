@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.exceptions;
+package uk.gov.di.orchestration.shared.exceptions;
 
 public class HttpRequestErrorException extends RuntimeException {
     private final int errorCode;
