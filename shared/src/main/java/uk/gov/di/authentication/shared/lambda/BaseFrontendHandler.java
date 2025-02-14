@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
@@ -42,6 +43,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSe
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
 
 public abstract class BaseFrontendHandler<T>
@@ -165,15 +167,20 @@ public abstract class BaseFrontendHandler<T>
                         configurationService.getHeadersCaseInsensitive());
         String txmaAuditEncoded = getTxmaAuditEncodedHeader(input).orElse(null);
 
+        var sessionId =
+                getOptionalHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         Optional<AuthSessionItem> authSession =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
 
-        if (session.isEmpty()) {
+        if (sessionId.isEmpty() || session.isEmpty()) {
             LOG.warn("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
-            attachSessionIdToLogs(session.get());
+            attachSessionIdToLogs(sessionId.get());
         }
 
         if (authSession.isEmpty()) {

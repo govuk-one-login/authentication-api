@@ -2,7 +2,6 @@ package uk.gov.di.authentication.shared.helpers;
 
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.Session;
 
 import static uk.gov.di.authentication.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AUTH_SESSION_ID;
@@ -49,10 +48,6 @@ public class LogLineHelper {
             ThreadContext.remove(logFieldName.getLogFieldName());
         }
         attachLogFieldToLogs(logFieldName, value);
-    }
-
-    public static void attachSessionIdToLogs(Session session) {
-        attachLogFieldToLogs(SESSION_ID, session.getSessionId());
     }
 
     public static void attachSessionIdToLogs(String sessionId) {

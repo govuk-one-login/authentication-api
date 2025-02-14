@@ -58,17 +58,15 @@ public class RedisExtension
             throws Json.JsonException {
         Session session = new Session(sessionId).setAuthenticated(isAuthenticated);
         email.ifPresent(session::setEmailAddress);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
-        return session.getSessionId();
+        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
+        return sessionId;
     }
 
     public void setVerifiedMfaMethodType(String sessionId, MFAMethodType mfaMethodType)
             throws Json.JsonException {
         var session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setVerifiedMfaMethodType(mfaMethodType);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public String createSession() throws Json.JsonException {
@@ -122,8 +120,7 @@ public class RedisExtension
             throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.addClientSession(clientSessionId);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public void incrementPasswordCount(String email) {
@@ -146,8 +143,7 @@ public class RedisExtension
             throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.addClientSession(clientSessionId);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(
@@ -171,16 +167,14 @@ public class RedisExtension
     public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setEmailAddress(emailAddress);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public void setSessionCredentialTrustLevel(
             String sessionId, CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public Session getSession(String sessionId) throws Json.JsonException {

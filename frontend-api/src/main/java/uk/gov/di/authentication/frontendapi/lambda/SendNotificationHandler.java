@@ -172,7 +172,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             SendNotificationRequest request,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getSession());
+        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
