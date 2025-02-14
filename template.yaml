@@ -1852,6 +1852,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-AuthenticationCallbackFunction
       AutoPublishAlias: latest
+      Tracing: Active
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
       LoggingConfig:
