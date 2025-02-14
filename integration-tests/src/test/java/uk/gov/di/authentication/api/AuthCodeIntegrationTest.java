@@ -74,6 +74,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Nonce NONCE = new Nonce();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    private static final String SUBJECT = "subject";
     private static final String INTERNAL_COMMON_SUBJECT_ID = "internalCommonSubjectId";
     private String sessionID;
 
@@ -237,7 +238,9 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         "client_session_id",
                                         clientSessionId,
                                         "email",
-                                        EMAIL)));
+                                        EMAIL,
+                                        "local_account_id",
+                                        SUBJECT)));
         authUserInfoExtension.addAuthenticationUserInfoData(
                 INTERNAL_COMMON_SUBJECT_ID, clientSessionId, authUserInfo);
     }
