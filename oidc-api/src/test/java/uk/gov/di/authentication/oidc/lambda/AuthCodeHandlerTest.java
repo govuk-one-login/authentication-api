@@ -42,7 +42,6 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -55,7 +54,6 @@ import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -118,7 +116,6 @@ class AuthCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
@@ -174,7 +171,7 @@ class AuthCodeHandlerTest {
     }
 
     @BeforeEach
-    void setUp() throws UserNotFoundException, ClientNotFoundException {
+    void setUp() {
         handler =
                 new AuthCodeHandler(
                         sessionService,
@@ -187,16 +184,10 @@ class AuthCodeHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService,
-                        dynamoClientService);
+                        dynamoService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(authCodeResponseService.getSubjectId(session)).thenReturn(SUBJECT.getValue());
-        when(authCodeResponseService.getRpPairwiseId(session, CLIENT_ID, dynamoClientService))
-                .thenReturn(
-                        ClientSubjectHelper.calculatePairwiseIdentifier(
-                                SUBJECT.getValue(), "rp-sector-uri", SALT));
         doAnswer(
                         (i) -> {
                             session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
@@ -238,8 +229,6 @@ class AuthCodeHandlerTest {
             MFAMethodType mfaMethodType)
             throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
         generateAuthUserInfo();
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
                             eq(orchSession),
@@ -300,6 +289,10 @@ class AuthCodeHandlerTest {
                 .thenReturn(authSuccessResponse);
         when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
+        when(clientSession.getRpPairwiseId())
+                .thenReturn(
+                        ClientSubjectHelper.calculatePairwiseIdentifier(
+                                SUBJECT.getValue(), "rp-sector-uri", SALT));
 
         var response = generateApiRequest();
 
@@ -561,7 +554,14 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenAuthUserInfoIsNotFound()
-            throws Json.JsonException, JOSEException {
+            throws Json.JsonException, JOSEException, ClientNotFoundException {
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.ACCESS_DENIED, null, null);

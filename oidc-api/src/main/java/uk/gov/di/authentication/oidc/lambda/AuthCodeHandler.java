@@ -21,6 +21,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthCodeException;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -28,7 +29,6 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -39,7 +39,6 @@ import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -84,7 +83,6 @@ public class AuthCodeHandler
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
-    private final DynamoClientService dynamoClientService;
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -97,8 +95,7 @@ public class AuthCodeHandler
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
-            DynamoService dynamoService,
-            DynamoClientService dynamoClientService) {
+            DynamoService dynamoService) {
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
@@ -110,7 +107,6 @@ public class AuthCodeHandler
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
-        this.dynamoClientService = dynamoClientService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
@@ -125,7 +121,6 @@ public class AuthCodeHandler
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
         dynamoService = new DynamoService(configurationService);
-        dynamoClientService = new DynamoClientService(configurationService);
         authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
     }
@@ -143,7 +138,6 @@ public class AuthCodeHandler
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
         dynamoService = new DynamoService(configurationService);
-        dynamoClientService = new DynamoClientService(configurationService);
         authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
     }
@@ -196,6 +190,7 @@ public class AuthCodeHandler
         LOG.info("Processing request");
 
         Optional<String> emailOptional;
+        Optional<String> subjectIdOptional;
         boolean isDocAppJourney;
         AuthenticationRequest authenticationRequest = null;
         ClientSession clientSession;
@@ -229,8 +224,13 @@ public class AuthCodeHandler
                                         clientSessionId)
                                 .orElseThrow(() -> new AuthCodeException("authUserInfo not found"));
                 emailOptional = Optional.of(authUserInfo.getEmailAddress());
+                subjectIdOptional =
+                        Optional.of(
+                                authUserInfo.getStringClaim(
+                                        AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()));
             } else {
                 emailOptional = Optional.empty();
+                subjectIdOptional = Optional.empty();
             }
 
             authCode =
@@ -275,7 +275,6 @@ public class AuthCodeHandler
                             isTestJourney,
                             isDocAppJourney);
 
-            var subjectId = AuditService.UNKNOWN;
             var rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonSubjectId;
             if (isDocAppJourney) {
@@ -284,14 +283,12 @@ public class AuthCodeHandler
             } else {
                 authCodeResponseService.processVectorOfTrust(clientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
-                subjectId = authCodeResponseService.getSubjectId(session);
-                rpPairwiseId =
-                        authCodeResponseService.getRpPairwiseId(
-                                session, clientID, dynamoClientService);
+                rpPairwiseId = clientSession.getRpPairwiseId();
             }
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
-            metadataPairs.add(pair("internalSubjectId", subjectId));
+            metadataPairs.add(
+                    pair("internalSubjectId", subjectIdOptional.orElse(AuditService.UNKNOWN)));
             metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
             metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
             metadataPairs.add(pair("authCode", authCode));
@@ -333,11 +330,6 @@ public class AuthCodeHandler
                     200,
                     new uk.gov.di.orchestration.entity.AuthCodeResponse(
                             authenticationResponse.toURI().toString()));
-        } catch (ClientNotFoundException e) {
-            return processClientNotFoundException(authenticationRequest);
-        } catch (UserNotFoundException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
         } catch (JsonException e) {
             throw new RuntimeException(e);
         }
