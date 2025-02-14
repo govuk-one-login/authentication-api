@@ -907,7 +907,8 @@ class VerifyMfaCodeHandlerTest {
 
         verify(sessionService, atLeastOnce())
                 .storeOrUpdateSession(
-                        argThat(s -> s.getPreservedReauthCountsForAudit().equals(existingCounts)));
+                        argThat(s -> s.getPreservedReauthCountsForAudit().equals(existingCounts)),
+                        eq(SESSION_ID));
     }
 
     @Test
@@ -940,7 +941,8 @@ class VerifyMfaCodeHandlerTest {
                                 s ->
                                         Objects.equals(
                                                 s.getPreservedReauthCountsForAudit(),
-                                                existingCounts)));
+                                                existingCounts)),
+                        eq(SESSION_ID));
     }
 
     @Test

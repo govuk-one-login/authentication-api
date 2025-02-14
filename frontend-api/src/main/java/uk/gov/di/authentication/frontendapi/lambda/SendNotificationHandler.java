@@ -204,6 +204,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     isCodeRequestAttemptValid(
                             request.getEmail(),
                             userContext.getSession(),
+                            userContext.getAuthSession().getSessionId(),
                             request.getNotificationType(),
                             request.getJourneyType());
 
@@ -215,12 +216,14 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         400, userHasExceededMaximumAllowedCodeRequests.get());
             }
 
-            incrementCountOfNotificationsSent(request, userContext.getSession());
+            incrementCountOfNotificationsSent(
+                    request, userContext.getSession(), userContext.getAuthSession().getSessionId());
 
             Optional<ErrorResponse> thisRequestExceedsMaxAllowed =
                     isCodeRequestAttemptValid(
                             request.getEmail(),
                             userContext.getSession(),
+                            userContext.getAuthSession().getSessionId(),
                             request.getNotificationType(),
                             request.getJourneyType());
 
@@ -279,11 +282,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     }
 
     private void incrementCountOfNotificationsSent(
-            SendNotificationRequest request, Session session) {
+            SendNotificationRequest request, Session session, String sessionId) {
         LOG.info("Incrementing code request count");
         sessionService.storeOrUpdateSession(
                 session.incrementCodeRequestCount(
-                        request.getNotificationType(), request.getJourneyType()));
+                        request.getNotificationType(), request.getJourneyType()),
+                sessionId);
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
@@ -400,6 +404,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private Optional<ErrorResponse> isCodeRequestAttemptValid(
             String email,
             Session session,
+            String sessionId,
             NotificationType notificationType,
             JourneyType journeyType) {
 
@@ -419,7 +424,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
             LOG.info("Resetting code request count");
             sessionService.storeOrUpdateSession(
-                    session.resetCodeRequestCount(notificationType, journeyType));
+                    session.resetCodeRequestCount(notificationType, journeyType), sessionId);
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {

@@ -162,7 +162,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                         Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
                 LOG.info("reauthentication successful");
                 sessionService.storeOrUpdateSession(
-                        userContext.getSession().setPreservedReauthCountsForAudit(null));
+                        userContext.getSession().setPreservedReauthCountsForAudit(null),
+                        userContext.getAuthSession().getSessionId());
             }
 
             return generateApiGatewayProxyResponse(

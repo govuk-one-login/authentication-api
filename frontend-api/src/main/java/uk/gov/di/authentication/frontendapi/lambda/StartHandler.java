@@ -177,7 +177,7 @@ public class StartHandler
             if (startRequest.authenticated() && isUserProfileEmpty) {
                 session =
                         startService.createNewSessionWithExistingIdAndClientSession(
-                                session,
+                                sessionId,
                                 getHeaderValueFromHeaders(
                                         input.getHeaders(),
                                         CLIENT_SESSION_ID_HEADER,

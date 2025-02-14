@@ -287,7 +287,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             ClientRegistry client) {
 
         var session = userContext.getSession();
-
+        var sessionId = userContext.getAuthSession().getSessionId();
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
                         .getMfaCodeProcessor(
@@ -340,7 +340,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             }
         } else {
             processSuccessfulCodeSession(
-                    session, input, subjectId, codeRequest, mfaCodeProcessor, maybeRpPairwiseId);
+                    session,
+                    sessionId,
+                    input,
+                    subjectId,
+                    codeRequest,
+                    mfaCodeProcessor,
+                    maybeRpPairwiseId);
         }
 
         var auditableEvent =
@@ -362,7 +368,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
-        sessionService.storeOrUpdateSession(session);
+        sessionService.storeOrUpdateSession(session, sessionId);
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
                 codeRequest.getJourneyType(),
@@ -404,7 +410,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         sessionService.storeOrUpdateSession(
                 session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
-                        .setVerifiedMfaMethodType(codeRequest.getMfaMethodType()));
+                        .setVerifiedMfaMethodType(codeRequest.getMfaMethodType()),
+                userContext.getAuthSession().getSessionId());
 
         authSessionService.updateSession(
                 authSession
@@ -426,6 +433,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private void processSuccessfulCodeSession(
             Session session,
+            String sessionId,
             APIGatewayProxyRequestEvent input,
             String subjectId,
             VerifyMfaCodeRequest codeRequest,
@@ -436,7 +444,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                 && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    codeRequest.getJourneyType(), subjectId, session, maybeRpPairwiseId);
+                    codeRequest.getJourneyType(), subjectId, session, sessionId, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -472,6 +480,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             String subjectId,
             Session session,
+            String sessionId,
             Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
@@ -486,7 +495,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             : authenticationAttemptsService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
-            sessionService.storeOrUpdateSession(updatedSession);
+            sessionService.storeOrUpdateSession(updatedSession, sessionId);
         }
     }
 

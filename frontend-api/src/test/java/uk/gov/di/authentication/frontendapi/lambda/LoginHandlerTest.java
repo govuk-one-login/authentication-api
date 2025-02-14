@@ -70,6 +70,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -455,7 +456,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any());
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
 
         verify(codeStorageService).getIncorrectPasswordCount(EMAIL);
         verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
@@ -513,7 +514,7 @@ class LoginHandlerTest {
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any());
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @ParameterizedTest
@@ -551,7 +552,7 @@ class LoginHandlerTest {
                                 configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any());
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @ParameterizedTest
@@ -606,7 +607,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any());
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @ParameterizedTest
@@ -659,7 +660,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any());
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -675,7 +676,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any());
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -690,7 +691,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any());
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -724,7 +725,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class));
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -906,7 +907,8 @@ class LoginHandlerTest {
                         argThat(
                                 t ->
                                         t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+                                                .equals(expectedCommonSubject)),
+                        eq(SESSION_ID));
     }
 
     private void verifyAuthSessionIsSaved() {

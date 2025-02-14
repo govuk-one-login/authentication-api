@@ -68,9 +68,10 @@ class StartServiceTest {
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
-    private static final Session SESSION = new Session("a-session-id").setEmailAddress(EMAIL);
+    private static final String SESSION_ID = "a-session-id";
+    private static final Session SESSION = new Session(SESSION_ID).setEmailAddress(EMAIL);
     private static final AuthSessionItem AUTH_SESSION =
-            new AuthSessionItem().withSessionId("a-session-id");
+            new AuthSessionItem().withSessionId(SESSION_ID);
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String AUDIENCE = "oidc-audience";
@@ -110,7 +111,7 @@ class StartServiceTest {
 
         var session =
                 startService.createNewSessionWithExistingIdAndClientSession(
-                        SESSION, currentClientSessionId);
+                        SESSION_ID, currentClientSessionId);
 
         assertFalse(session.isAuthenticated());
         assertThat(session.getCurrentCredentialStrength(), equalTo(null));
@@ -118,7 +119,7 @@ class StartServiceTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
         assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
-        verify(sessionService).storeOrUpdateSession(session);
+        verify(sessionService).storeOrUpdateSession(session, SESSION_ID);
     }
 
     @Test

@@ -152,6 +152,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
+            var sessionId = userContext.getAuthSession().getSessionId();
             AuthSessionItem authSession = userContext.getAuthSession();
 
             attachAuthSessionIdToLogs(authSession);
@@ -206,7 +207,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            sessionService.storeOrUpdateSession(session);
+            sessionService.storeOrUpdateSession(session, sessionId);
 
             if (errorResponse.isPresent()) {
                 handleInvalidVerificationCode(
@@ -382,6 +383,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             ClientRegistry client,
             Optional<String> maybePairwiseId) {
         var session = userContext.getSession();
+        var sessionId = userContext.getAuthSession().getSessionId();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
@@ -398,7 +400,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     MFAMethodType.SMS.getValue(),
                     false);
             sessionService.storeOrUpdateSession(
-                    session.setVerifiedMfaMethodType(MFAMethodType.SMS));
+                    session.setVerifiedMfaMethodType(MFAMethodType.SMS), sessionId);
             authSessionService.updateSession(
                     authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
             clearAccountRecoveryBlockIfPresent(session, auditContext);
@@ -413,7 +415,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    journeyType, subjectId, session, maybePairwiseId);
+                    journeyType, subjectId, session, sessionId, maybePairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             maybePairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -432,6 +434,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             String subjectId,
             Session session,
+            String sessionId,
             Optional<String> maybePairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
@@ -446,7 +449,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             : authenticationAttemptsService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
-            sessionService.storeOrUpdateSession(updatedSession);
+            sessionService.storeOrUpdateSession(updatedSession, sessionId);
         }
     }
 
