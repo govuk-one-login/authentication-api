@@ -554,7 +554,14 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenAuthUserInfoIsNotFound()
-            throws Json.JsonException, JOSEException {
+            throws Json.JsonException, JOSEException, ClientNotFoundException {
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.ACCESS_DENIED, null, null);
@@ -565,6 +572,46 @@ class AuthCodeHandlerTest {
                         any(State.class)))
                 .thenReturn(authenticationErrorResponse);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+
+        APIGatewayProxyResponseEvent response = generateApiRequest();
+
+        assertThat(response, hasStatus(400));
+        AuthCodeResponse authCodeResponse =
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(
+                authCodeResponse.getLocation(),
+                equalTo(
+                        "http://localhost/redirect?error=access_denied&error_description=Access+denied+by+resource+owner+or+authorization+server"));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldGenerateErrorResponseWhenOrchSessionHasNoInternalCommonSubjectId()
+            throws Json.JsonException, JOSEException, ParseException, ClientNotFoundException {
+        generateAuthUserInfo();
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+        when(orchSessionService.getSession(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new OrchSessionItem("KLAJSNDFLKJNSDF")
+                                        .withAccountState(OrchSessionItem.AccountState.NEW)
+                                        .withAuthTime(12345L)));
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.ACCESS_DENIED, null, null);
+        when(orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        any(AuthenticationRequest.class),
+                        eq(OAuth2Error.ACCESS_DENIED),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authenticationErrorResponse);
 
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
