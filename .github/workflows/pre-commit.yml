@@ -38,7 +38,7 @@ jobs:
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 
       - name: Run pre-commit
-        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+        uses: whi-tw/pre-commit-action@9a134f4f53ddd4071215facfc20ea754f9cb337b # v3.1.1
         with:
           extra_args: |
             --from-ref "${{ github.event.pull_request.base.sha }}" \
