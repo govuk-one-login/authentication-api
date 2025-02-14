@@ -48,8 +48,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
-    public static final int NUMBER_OF_LAST_DIGITS = 3;
-
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
 
