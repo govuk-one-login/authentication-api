@@ -41,7 +41,6 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
@@ -245,10 +244,8 @@ class AuthCodeHandlerTest {
             MFAMethodType mfaMethodType)
             throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
         generateAuthUserInfo();
-        var userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT.getValue());
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
                             eq(orchSession),
@@ -292,7 +289,6 @@ class AuthCodeHandlerTest {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
