@@ -21,6 +21,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthCodeException;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -28,7 +29,6 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -196,6 +196,7 @@ public class AuthCodeHandler
         LOG.info("Processing request");
 
         Optional<String> emailOptional;
+        Optional<String> subjectIdOptional;
         boolean isDocAppJourney;
         AuthenticationRequest authenticationRequest = null;
         ClientSession clientSession;
@@ -229,8 +230,13 @@ public class AuthCodeHandler
                                         clientSessionId)
                                 .orElseThrow(() -> new AuthCodeException("authUserInfo not found"));
                 emailOptional = Optional.of(authUserInfo.getEmailAddress());
+                subjectIdOptional =
+                        Optional.of(
+                                authUserInfo.getStringClaim(
+                                        AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()));
             } else {
                 emailOptional = Optional.empty();
+                subjectIdOptional = Optional.empty();
             }
 
             authCode =
@@ -275,7 +281,6 @@ public class AuthCodeHandler
                             isTestJourney,
                             isDocAppJourney);
 
-            var subjectId = AuditService.UNKNOWN;
             var rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonSubjectId;
             if (isDocAppJourney) {
@@ -284,14 +289,12 @@ public class AuthCodeHandler
             } else {
                 authCodeResponseService.processVectorOfTrust(clientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
-                subjectId = authCodeResponseService.getSubjectId(session);
-                rpPairwiseId =
-                        authCodeResponseService.getRpPairwiseId(
-                                session, clientID, dynamoClientService);
+                rpPairwiseId = clientSession.getRpPairwiseId();
             }
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
-            metadataPairs.add(pair("internalSubjectId", subjectId));
+            metadataPairs.add(
+                    pair("internalSubjectId", subjectIdOptional.orElse(AuditService.UNKNOWN)));
             metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
             metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
             metadataPairs.add(pair("authCode", authCode));
@@ -333,11 +336,6 @@ public class AuthCodeHandler
                     200,
                     new uk.gov.di.orchestration.entity.AuthCodeResponse(
                             authenticationResponse.toURI().toString()));
-        } catch (ClientNotFoundException e) {
-            return processClientNotFoundException(authenticationRequest);
-        } catch (UserNotFoundException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
         } catch (JsonException e) {
             throw new RuntimeException(e);
         }

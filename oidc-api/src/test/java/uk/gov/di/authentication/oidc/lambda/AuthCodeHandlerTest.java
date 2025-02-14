@@ -192,11 +192,6 @@ class AuthCodeHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(authCodeResponseService.getSubjectId(session)).thenReturn(SUBJECT.getValue());
-        when(authCodeResponseService.getRpPairwiseId(session, CLIENT_ID, dynamoClientService))
-                .thenReturn(
-                        ClientSubjectHelper.calculatePairwiseIdentifier(
-                                SUBJECT.getValue(), "rp-sector-uri", SALT));
         doAnswer(
                         (i) -> {
                             session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
@@ -300,6 +295,10 @@ class AuthCodeHandlerTest {
                 .thenReturn(authSuccessResponse);
         when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
+        when(clientSession.getRpPairwiseId())
+                .thenReturn(
+                        ClientSubjectHelper.calculatePairwiseIdentifier(
+                                SUBJECT.getValue(), "rp-sector-uri", SALT));
 
         var response = generateApiRequest();
 
