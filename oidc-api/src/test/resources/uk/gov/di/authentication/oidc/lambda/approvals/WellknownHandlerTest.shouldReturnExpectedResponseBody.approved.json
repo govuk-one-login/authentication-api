@@ -1,0 +1,69 @@
+{
+  "authorization_endpoint": "http://localhost:8080/authorize",
+  "token_endpoint": "http://localhost:8080/token",
+  "registration_endpoint": "http://localhost:8080/connect/register",
+  "issuer": "http://localhost:8080",
+  "jwks_uri": "http://localhost:8080/.well-known/jwks.json",
+  "scopes_supported": [
+    "openid",
+    "email",
+    "phone",
+    "offline_access"
+  ],
+  "response_types_supported": [
+    "code"
+  ],
+  "grant_types_supported": [
+    "authorization_code"
+  ],
+  "token_endpoint_auth_methods_supported": [
+    "private_key_jwt",
+    "client_secret_post"
+  ],
+  "token_endpoint_auth_signing_alg_values_supported": [
+    "RS256",
+    "RS384",
+    "RS512",
+    "PS256",
+    "PS384",
+    "PS512"
+  ],
+  "ui_locales_supported": [
+    "en",
+    "cy"
+  ],
+  "service_documentation": "https://docs.sign-in.service.gov.uk/",
+  "op_policy_uri": "http://localhost:8081/privacy-notice",
+  "op_tos_uri": "http://localhost:8081/terms-and-conditions",
+  "request_parameter_supported": true,
+  "trustmarks": "http://localhost:8080/trustmark",
+  "subject_types_supported": [
+    "public",
+    "pairwise"
+  ],
+  "userinfo_endpoint": "http://localhost:8080/userinfo",
+  "end_session_endpoint": "http://localhost:8080/logout",
+  "id_token_signing_alg_values_supported": [
+    "ES256"
+  ],
+  "claim_types_supported": [
+    "normal"
+  ],
+  "claims_supported": [
+    "sub",
+    "email",
+    "email_verified",
+    "phone_number",
+    "phone_number_verified",
+    "wallet_subject_id",
+    "https://vocab.account.gov.uk/v1/passport",
+    "https://vocab.account.gov.uk/v1/drivingPermit",
+    "https://vocab.account.gov.uk/v1/coreIdentityJWT",
+    "https://vocab.account.gov.uk/v1/address",
+    "https://vocab.account.gov.uk/v1/inheritedIdentityJWT",
+    "https://vocab.account.gov.uk/v1/returnCode"
+  ],
+  "request_uri_parameter_supported": false,
+  "backchannel_logout_supported": true,
+  "backchannel_logout_session_supported": false
+}

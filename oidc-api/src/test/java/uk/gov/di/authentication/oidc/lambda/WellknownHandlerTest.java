@@ -7,7 +7,7 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
-import org.approvaltests.Approvals;
+import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
@@ -57,10 +57,10 @@ class WellknownHandlerTest {
     }
 
     @Test
-    void shouldReturnExpectedResponseBody() {
+    void shouldReturnExpectedResponseBody() throws ParseException {
         APIGatewayProxyResponseEvent result = getWellKnown();
-
-        Approvals.verify(result.getBody());
+        var bodyAsJson = OIDCProviderMetadata.parse(result.getBody()).toJSONObject();
+        JsonApprovals.verifyAsJson(bodyAsJson);
     }
 
     private APIGatewayProxyResponseEvent getWellKnown() {
