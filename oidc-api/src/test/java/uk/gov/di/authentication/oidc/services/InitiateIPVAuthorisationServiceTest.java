@@ -38,9 +38,6 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -120,15 +117,8 @@ public class InitiateIPVAuthorisationServiceTest {
             new ClaimsSetRequest().add(nameEntry).add(birthDateEntry);
     private final ClaimsSetRequest claimsSetRequestWithStorageTokenClaim =
             claimsSetRequest.add(storageTokenEntry);
-    private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    SUBJECT_ID, "test.account.gov.uk", SaltHelper.generateNewSalt());
     private final AuthenticationRequest authenticationRequest = mock(AuthenticationRequest.class);
     private final UserInfo userInfo = generateUserInfo();
-    private final Session session =
-            new Session()
-                    .setEmailAddress(EMAIL_ADDRESS)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ClientRegistry client = generateClientRegistry();
 
     public InitiateIPVAuthorisationServiceTest() throws com.nimbusds.oauth2.sdk.ParseException {}
