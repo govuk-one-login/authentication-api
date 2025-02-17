@@ -146,7 +146,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest codeRequest,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getSession());
+        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
         try {
             LOG.info("Processing request");
@@ -168,7 +168,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
             var client =
-                    userContext.getClient().orElseThrow(() -> new ClientNotFoundException(session));
+                    userContext
+                            .getClient()
+                            .orElseThrow(
+                                    () ->
+                                            new ClientNotFoundException(
+                                                    "Could not find client in user context"));
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
             UserProfile userProfile = userProfileMaybe.orElse(null);

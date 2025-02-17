@@ -104,7 +104,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             CheckUserExistsRequest request,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getSession());
+        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
         try {
             LOG.info("Processing request");

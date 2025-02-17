@@ -28,7 +28,7 @@ public class TestClientHelper {
         var clientRegistry =
                 userContext
                         .getClient()
-                        .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
+                        .orElseThrow(() -> new ClientNotFoundException("Could not find client"));
 
         var isTestClientWithAllowedEmail =
                 (clientRegistry.isTestClient()

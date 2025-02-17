@@ -110,7 +110,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         String persistentSessionId =
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
-        LogLineHelper.attachSessionIdToLogs(session);
+        LogLineHelper.attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
         LOG.info("Processing request");
 
@@ -149,7 +149,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         } else {
             LOG.error(
                     "Encountered unexpected error while processing session: {}",
-                    session.getSessionId());
+                    userContext.getAuthSession().getSessionId());
             return generateErrorResponse(ErrorResponse.ERROR_1013, auditContext);
         }
 
