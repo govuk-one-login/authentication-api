@@ -13,6 +13,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
+    public static final String ATTRIBUTE_EMAIL = "Email";
 
     public enum AccountState {
         NEW,
@@ -28,6 +29,7 @@ public class AuthSessionItem {
     private CredentialTrustLevel currentCredentialStrength;
     private String internalCommonSubjectId;
     private boolean upliftRequired;
+    private String emailAddress;
 
     public AuthSessionItem() {}
 
@@ -128,6 +130,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withUpliftRequired(boolean upliftRequired) {
         this.upliftRequired = upliftRequired;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_EMAIL)
+    public String getEmailAddress() {
+        return emailAddress;
+    }
+
+    public void setEmailAddress(String emailAddress) {
+        this.emailAddress = emailAddress;
+    }
+
+    public AuthSessionItem withEmailAddress(String emailAddress) {
+        this.emailAddress = emailAddress;
         return this;
     }
 }
