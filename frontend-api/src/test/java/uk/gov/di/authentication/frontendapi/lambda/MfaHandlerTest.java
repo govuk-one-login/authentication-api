@@ -123,7 +123,7 @@ class MfaHandlerTest {
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =

@@ -83,7 +83,7 @@ class AuthAppCodeProcessorTest {
     @BeforeEach
     void setUp() {
         this.session =
-                new Session(SESSION_ID)
+                new Session()
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(INTERNAL_SUB_ID);
         this.authSession = new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);

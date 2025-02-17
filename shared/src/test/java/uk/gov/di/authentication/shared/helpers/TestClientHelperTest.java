@@ -135,8 +135,7 @@ class TestClientHelperTest {
                         .withClientName("some-client")
                         .withTestClient(isTestClient)
                         .withTestClientEmailAllowlist(allowedEmails);
-        return UserContext.builder(
-                        new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS))
+        return UserContext.builder(new Session().setEmailAddress(TEST_EMAIL_ADDRESS))
                 .withClient(clientRegistry)
                 .build();
     }

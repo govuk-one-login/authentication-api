@@ -126,7 +126,7 @@ class StartHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final Session session = new Session(SESSION_ID);
+    private final Session session = new Session();
     private final ClientSession clientSession = getClientSession();
     private final ClientSession docAppClientSession = getDocAppClientSession();
     private static final AuditContext AUDIT_CONTEXT =

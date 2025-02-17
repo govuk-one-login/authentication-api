@@ -60,7 +60,7 @@ class UserInfoHandlerTest {
     private static final UserInfo TEST_SUBJECT_USER_INFO = new UserInfo(TEST_SUBJECT);
     private final AuditService auditService = mock(AuditService.class);
     private final String sessionId = "a-session-id";
-    private final Session testSession = new Session(sessionId);
+    private final Session testSession = new Session();
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(sessionId);
     private final SerializationService objectMapper = SerializationService.getInstance();
     private final String testVerifiedMfaMethodType = MFAMethodType.AUTH_APP.getValue();
