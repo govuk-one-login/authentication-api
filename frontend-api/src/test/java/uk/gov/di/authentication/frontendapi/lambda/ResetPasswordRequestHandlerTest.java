@@ -80,7 +80,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
@@ -555,7 +554,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {
-        Session session = new Session().setEmailAddress(EMAIL);
+        session.resetPasswordResetCount();
         IntStream.range(0, passwordResetCount)
                 .forEach((i) -> session.incrementPasswordResetCount());
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
