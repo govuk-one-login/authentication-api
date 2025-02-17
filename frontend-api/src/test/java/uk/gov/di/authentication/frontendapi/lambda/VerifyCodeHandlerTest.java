@@ -280,7 +280,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(codeStorageService).deleteOtpCode(EMAIL, emailNotificationType);
-        verify(sessionService).storeOrUpdateSession(session);
+        verify(sessionService).storeOrUpdateSession(session, SESSION_ID);
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
@@ -559,7 +559,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
         verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
         var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
-        verify(sessionService, times(saveSessionCount)).storeOrUpdateSession(session);
+        verify(sessionService, times(saveSessionCount)).storeOrUpdateSession(session, SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -604,7 +604,7 @@ class VerifyCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
         verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
-        verify(sessionService, times(2)).storeOrUpdateSession(session);
+        verify(sessionService, times(2)).storeOrUpdateSession(session, SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -790,7 +790,8 @@ class VerifyCodeHandlerTest {
                             argThat(
                                     s ->
                                             s.getPreservedReauthCountsForAudit()
-                                                    .equals(existingCounts)));
+                                                    .equals(existingCounts)),
+                            eq(SESSION_ID));
         } else {
             verify(sessionService, never())
                     .storeOrUpdateSession(
@@ -798,7 +799,8 @@ class VerifyCodeHandlerTest {
                                     s ->
                                             Objects.equals(
                                                     s.getPreservedReauthCountsForAudit(),
-                                                    existingCounts)));
+                                                    existingCounts)),
+                            eq(SESSION_ID));
         }
 
         assertThat(result, hasStatus(204));

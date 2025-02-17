@@ -378,8 +378,7 @@ class StartHandlerTest {
         handler.handleRequest(event, context);
 
         verify(startService)
-                .createNewSessionWithExistingIdAndClientSession(
-                        any(Session.class), eq(CLIENT_SESSION_ID));
+                .createNewSessionWithExistingIdAndClientSession(SESSION_ID, CLIENT_SESSION_ID);
         verify(startService)
                 .buildUserStartInfo(
                         any(),
@@ -408,8 +407,7 @@ class StartHandlerTest {
         handler.handleRequest(event, context);
 
         verify(startService, never())
-                .createNewSessionWithExistingIdAndClientSession(
-                        any(Session.class), eq(CLIENT_SESSION_ID));
+                .createNewSessionWithExistingIdAndClientSession(SESSION_ID, CLIENT_SESSION_ID);
         verify(startService)
                 .buildUserStartInfo(
                         any(),
@@ -615,7 +613,7 @@ class StartHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(startService.createNewSessionWithExistingIdAndClientSession(
-                        session, CLIENT_SESSION_ID))
+                        SESSION_ID, CLIENT_SESSION_ID))
                 .thenReturn(session);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any(), any()))
                 .thenReturn(new AuthSessionItem().withSessionId(SESSION_ID));

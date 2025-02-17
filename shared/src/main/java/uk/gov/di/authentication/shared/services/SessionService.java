@@ -42,20 +42,16 @@ public class SessionService {
                         configurationService.getRedisPassword()));
     }
 
-    public void storeOrUpdateSession(Session session) {
-        storeOrUpdateSession(session, session.getSessionId());
-    }
-
-    private void storeOrUpdateSession(Session session, String oldSessionId) {
+    public void storeOrUpdateSession(Session session, String sessionId) {
         try {
             var newSession = OBJECT_MAPPER.writeValueAsString(session);
-            if (redisConnectionService.keyExists(oldSessionId)) {
-                var oldSession = redisConnectionService.getValue(oldSessionId);
+            if (redisConnectionService.keyExists(sessionId)) {
+                var oldSession = redisConnectionService.getValue(sessionId);
                 newSession = JsonUpdateHelper.updateJson(oldSession, newSession);
             }
 
             redisConnectionService.saveWithExpiry(
-                    session.getSessionId(), newSession, configurationService.getSessionExpiry());
+                    sessionId, newSession, configurationService.getSessionExpiry());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

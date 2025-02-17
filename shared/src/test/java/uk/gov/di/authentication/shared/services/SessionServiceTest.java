@@ -35,7 +35,7 @@ class SessionServiceTest {
 
         var session = new Session("session-id").addClientSession("client-session-id");
 
-        sessionService.storeOrUpdateSession(session);
+        sessionService.storeOrUpdateSession(session, "session-id");
 
         verify(redis, times(1))
                 .saveWithExpiry("session-id", objectMapper.writeValueAsString(session), 1234L);
@@ -134,7 +134,7 @@ class SessionServiceTest {
     void shouldDeleteSessionIdFromRedis() {
         var session = new Session("session-id").addClientSession("client-session-id");
 
-        sessionService.storeOrUpdateSession(session);
+        sessionService.storeOrUpdateSession(session, "session-id");
         sessionService.deleteSessionFromRedis(session.getSessionId());
 
         verify(redis).deleteValue("session-id");

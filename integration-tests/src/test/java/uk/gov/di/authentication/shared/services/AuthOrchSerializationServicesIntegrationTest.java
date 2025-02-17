@@ -60,7 +60,7 @@ class AuthOrchSerializationServicesIntegrationTest {
         var sessionId = "some-existing-session-id";
         var authSession = new Session(sessionId);
         authSession.addClientSession(CLIENT_SESSION_ID);
-        authSessionService.storeOrUpdateSession(authSession);
+        authSessionService.storeOrUpdateSession(authSession, sessionId);
         var orchSession = orchSessionService.getSession(sessionId).get();
         assertThat(orchSession.getClientSessions(), contains(CLIENT_SESSION_ID));
     }
@@ -71,7 +71,7 @@ class AuthOrchSerializationServicesIntegrationTest {
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
         authSession.addClientSession(CLIENT_SESSION_ID);
-        authSessionService.storeOrUpdateSession(authSession);
+        authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertThat(orchSession.getClientSessions(), contains(CLIENT_SESSION_ID));
     }
@@ -80,7 +80,7 @@ class AuthOrchSerializationServicesIntegrationTest {
     void orchCanUpdateSharedFieldInSessionCreatedByAuth() {
         var sessionId = "some-existing-session-id";
         var authSession = new Session(sessionId);
-        authSessionService.storeOrUpdateSession(authSession);
+        authSessionService.storeOrUpdateSession(authSession, sessionId);
         var orchSession = orchSessionService.getSession(sessionId).get();
         orchSession.addClientSession(CLIENT_SESSION_ID);
         orchSessionService.storeOrUpdateSession(orchSession, sessionId);
@@ -95,7 +95,7 @@ class AuthOrchSerializationServicesIntegrationTest {
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
         authSession.addClientSession(CLIENT_SESSION_ID);
-        authSessionService.storeOrUpdateSession(authSession);
+        authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));
     }
@@ -107,7 +107,7 @@ class AuthOrchSerializationServicesIntegrationTest {
         authSession.incrementPasswordResetCount();
         authSession.incrementPasswordResetCount();
         authSession.incrementPasswordResetCount();
-        authSessionService.storeOrUpdateSession(authSession);
+        authSessionService.storeOrUpdateSession(authSession, sessionId);
         var orchSession = orchSessionService.getSession(sessionId).get();
         orchSession.addClientSession(CLIENT_SESSION_ID);
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
@@ -123,7 +123,7 @@ class AuthOrchSerializationServicesIntegrationTest {
         orchSessionService.storeOrUpdateSession(orchSession, oldSessionId);
         var authSession = authSessionService.getSession(oldSessionId).get();
         authSession.addClientSession(CLIENT_SESSION_ID);
-        authSessionService.storeOrUpdateSession(authSession);
+        authSessionService.storeOrUpdateSession(authSession, oldSessionId);
         orchSession = orchSessionService.getSession(oldSessionId).get();
         orchSessionService.updateWithNewSessionId(orchSession, oldSessionId, newSessionId);
         authSessionService.getSession(newSessionId).get();
@@ -137,7 +137,7 @@ class AuthOrchSerializationServicesIntegrationTest {
         orchSession.incrementProcessingIdentityAttempts();
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = new Session(SESSION_ID);
-        authSessionService.storeOrUpdateSession(authSession);
+        authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertThat(orchSession.getClientSessions(), is(empty()));
         assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));

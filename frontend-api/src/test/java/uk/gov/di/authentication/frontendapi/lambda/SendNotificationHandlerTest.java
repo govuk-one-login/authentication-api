@@ -67,6 +67,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -285,7 +286,8 @@ class SendNotificationHandlerTest {
                                 argThat(
                                         session ->
                                                 isSessionWithEmailSent(
-                                                        session, notificationType, journeyType)));
+                                                        session, notificationType, journeyType)),
+                                eq(SESSION_ID));
                 verify(auditService)
                         .submitAuditEvent(
                                 notificationType.equals(VERIFY_EMAIL)
@@ -475,7 +477,8 @@ class SendNotificationHandlerTest {
                         argThat(
                                 session ->
                                         isSessionWithEmailSent(
-                                                session, notificationType, journeyType)));
+                                                session, notificationType, journeyType)),
+                        eq(SESSION_ID));
 
         var testClientAuditContext = auditContext.withClientId(TEST_CLIENT_ID);
 
@@ -507,7 +510,8 @@ class SendNotificationHandlerTest {
                         argThat(
                                 session ->
                                         isSessionWithEmailSent(
-                                                session, notificationType, journeyType)));
+                                                session, notificationType, journeyType)),
+                        eq(SESSION_ID));
         verifyNoInteractions(auditService);
     }
 

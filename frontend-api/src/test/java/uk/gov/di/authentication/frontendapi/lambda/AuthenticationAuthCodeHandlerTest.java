@@ -305,7 +305,8 @@ class AuthenticationAuthCodeHandlerTest {
                             Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
             verify(sessionService, atLeastOnce())
                     .storeOrUpdateSession(
-                            argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAudit())));
+                            argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAudit())),
+                            eq(SESSION_ID));
         }
     }
 
