@@ -80,7 +80,7 @@ class MfaResetAuthorizeHandlerTest {
                     AuditService.UNKNOWN,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    AuditService.UNKNOWN,
+                    INTERNAL_COMMON_SUBJECT_ID,
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,

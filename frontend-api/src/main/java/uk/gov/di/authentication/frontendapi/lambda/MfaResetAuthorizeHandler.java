@@ -112,7 +112,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             AuditContext auditContext =
                     AuditContext.auditContextFromUserContext(
                             userContext,
-                            AuditService.UNKNOWN,
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
                             request.email(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
