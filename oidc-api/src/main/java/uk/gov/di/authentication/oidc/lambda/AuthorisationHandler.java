@@ -783,7 +783,7 @@ public class AuthorisationHandler
             String newSessionId) {
         sessionService.updateWithNewSessionId(
                 previousSession, previousSessionId, newSessionIdForPreviousSession);
-        var newSession = sessionService.copySessionForMaxAge(previousSession, newSessionId);
+        var newSession = sessionService.copySessionForMaxAge(previousSession);
         sessionService.storeOrUpdateSession(newSession, newSessionId);
         return newSession;
     }

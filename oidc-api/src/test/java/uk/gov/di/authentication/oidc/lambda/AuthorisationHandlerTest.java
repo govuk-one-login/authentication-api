@@ -2586,8 +2586,7 @@ class AuthorisationHandlerTest {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
             withExistingSession(session);
-            when(sessionService.copySessionForMaxAge(any(Session.class), anyString()))
-                    .thenCallRealMethod();
+            when(sessionService.copySessionForMaxAge(any(Session.class))).thenCallRealMethod();
         }
 
         @Test
