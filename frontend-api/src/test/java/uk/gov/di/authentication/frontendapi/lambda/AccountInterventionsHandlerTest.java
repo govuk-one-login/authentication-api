@@ -118,7 +118,7 @@ class AccountInterventionsHandlerTest {
 
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =

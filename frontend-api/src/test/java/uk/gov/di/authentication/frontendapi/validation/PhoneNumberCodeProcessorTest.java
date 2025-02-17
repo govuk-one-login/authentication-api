@@ -54,7 +54,7 @@ class PhoneNumberCodeProcessorTest {
 
     private PhoneNumberCodeProcessor phoneNumberCodeProcessor;
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(INTERNAL_SUB_ID);
     private final AuthSessionItem authSession = mock(AuthSessionItem.class);

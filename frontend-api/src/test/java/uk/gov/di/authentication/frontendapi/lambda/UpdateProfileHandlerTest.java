@@ -92,7 +92,7 @@ class UpdateProfileHandlerTest {
     private final String TERMS_AND_CONDITIONS_VERSION =
             configurationService.getTermsAndConditionsVersion();
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =

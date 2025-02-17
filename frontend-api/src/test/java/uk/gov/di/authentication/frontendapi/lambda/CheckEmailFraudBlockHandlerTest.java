@@ -72,7 +72,7 @@ class CheckEmailFraudBlockHandlerTest {
     private static UserContext userContext;
     private static AuthSessionService authSessionServiceMock;
 
-    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private CheckEmailFraudBlockHandler handler;
 

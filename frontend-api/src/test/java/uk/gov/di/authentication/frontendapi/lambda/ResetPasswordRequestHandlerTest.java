@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -135,7 +134,7 @@ class ResetPasswordRequestHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =
@@ -478,7 +477,7 @@ class ResetPasswordRequestHandlerTest {
             when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                    .thenReturn(Optional.of(new Session(IdGenerator.generate())));
+                    .thenReturn(Optional.of(new Session()));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
@@ -556,7 +555,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {
-        Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+        Session session = new Session().setEmailAddress(EMAIL);
         IntStream.range(0, passwordResetCount)
                 .forEach((i) -> session.incrementPasswordResetCount());
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
