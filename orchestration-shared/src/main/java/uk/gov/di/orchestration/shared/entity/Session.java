@@ -165,11 +165,6 @@ public class Session {
         return this;
     }
 
-    public Session setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
-        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
-        return this;
-    }
-
     private void initializeCodeRequestMap() {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
