@@ -145,7 +145,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String SESSION_ID = "a-session-id";
 
     private static final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
                     .setAuthenticated(false)
                     .setCurrentCredentialStrength(null)
@@ -626,7 +626,7 @@ class AuthenticationCallbackHandlerTest {
     void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
             throws UnsuccessfulCredentialResponseException {
         Session mediumLevelSession =
-                new Session(SESSION_ID)
+                new Session()
                         .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
                         .setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
@@ -1245,7 +1245,7 @@ class AuthenticationCallbackHandlerTest {
         }
 
         private void withPreviousSharedSessionDueToMaxAge() {
-            var previousSharedSession = new Session(PREVIOUS_SESSION_ID);
+            var previousSharedSession = new Session();
             PREVIOUS_CLIENT_SESSIONS.forEach(previousSharedSession::addClientSession);
             previousSharedSession.setEmailAddress(TEST_EMAIL_ADDRESS);
             when(sessionService.getSession(PREVIOUS_SESSION_ID))
@@ -1270,7 +1270,7 @@ class AuthenticationCallbackHandlerTest {
         }
 
         private Session withMaxAgeSharedSession() {
-            var session = new Session(SESSION_ID);
+            var session = new Session();
             when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
             return session;
         }

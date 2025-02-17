@@ -311,10 +311,10 @@ class AuthorisationHandlerTest {
                         tokenValidationService,
                         authFrontend,
                         authorisationService);
-        session = new Session(SESSION_ID);
-        newSession = new Session(NEW_SESSION_ID);
+        session = new Session();
+        newSession = new Session();
         orchSession = new OrchSessionItem(SESSION_ID);
-        when(sessionService.generateSession(anyString())).thenReturn(newSession);
+        when(sessionService.generateSession()).thenReturn(newSession);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
                 .thenReturn(clientSession);
@@ -1687,7 +1687,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldAddPreviousSessionIdClaimIfThereIsAnExistingSession() throws ParseException {
-            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session(SESSION_ID)));
+            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
 
             var requestParams =
                     buildRequestParams(
@@ -2011,8 +2011,7 @@ class AuthorisationHandlerTest {
 
             @BeforeEach
             void setup() {
-                when(sessionService.generateSession(anyString()))
-                        .thenReturn(new Session(NEW_SESSION_ID));
+                when(sessionService.generateSession()).thenReturn(new Session());
             }
 
             @Test
@@ -2021,7 +2020,7 @@ class AuthorisationHandlerTest {
                 withExistingOrchSession(null);
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession(NEW_SESSION_ID);
+                verify(sessionService).generateSession();
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
@@ -2051,7 +2050,7 @@ class AuthorisationHandlerTest {
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession(NEW_SESSION_ID);
+                verify(sessionService).generateSession();
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
@@ -2080,7 +2079,7 @@ class AuthorisationHandlerTest {
                 withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
                 APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession(NEW_SESSION_ID);
+                verify(sessionService).generateSession();
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
@@ -2109,7 +2108,7 @@ class AuthorisationHandlerTest {
                 withExistingOrchSession(orchSession.withBrowserSessionId(null));
                 var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService, never()).generateSession(anyString());
+                verify(sessionService, never()).generateSession();
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
@@ -2144,7 +2143,7 @@ class AuthorisationHandlerTest {
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                verify(sessionService, never()).generateSession(anyString());
+                verify(sessionService, never()).generateSession();
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
@@ -2174,7 +2173,7 @@ class AuthorisationHandlerTest {
                 APIGatewayProxyResponseEvent response =
                         makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
 
-                verify(sessionService).generateSession(NEW_SESSION_ID);
+                verify(sessionService).generateSession();
                 verify(sessionService)
                         .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
