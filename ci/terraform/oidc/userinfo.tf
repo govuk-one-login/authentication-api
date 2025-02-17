@@ -1,3 +1,6 @@
+// There are two roles here. Only the "old" one is in use, but I need to deploy the new role
+// before using it, as I have removed a policy from part way through the policies_to_attach
+
 module "oidc_userinfo_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
