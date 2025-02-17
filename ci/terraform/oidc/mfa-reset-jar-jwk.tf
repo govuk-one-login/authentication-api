@@ -32,6 +32,7 @@ module "mfa_reset_jar_signing_jwk" {
     IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.name
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest"
+  runbook_link          = "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_resource.auth_frontend_wellknown_resource.id

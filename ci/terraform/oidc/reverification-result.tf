@@ -40,6 +40,7 @@ module "reverification_result" {
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler::handleRequest"
+  runbook_link          = "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
