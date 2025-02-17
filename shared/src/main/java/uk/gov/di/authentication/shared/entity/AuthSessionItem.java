@@ -14,6 +14,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
     public static final String ATTRIBUTE_EMAIL = "Email";
+    public static final String ATTRIBUTE_TTL = "ttl";
 
     public enum AccountState {
         NEW,
@@ -76,7 +77,7 @@ public class AuthSessionItem {
         return this;
     }
 
-    @DynamoDbAttribute("ttl")
+    @DynamoDbAttribute(ATTRIBUTE_TTL)
     public long getTimeToLive() {
         return timeToLive;
     }
