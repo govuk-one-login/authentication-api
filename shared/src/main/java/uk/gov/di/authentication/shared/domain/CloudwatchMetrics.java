@@ -20,7 +20,8 @@ public enum CloudwatchMetrics {
     ACCESS_TOKEN_SERVICE_CONSISTENT_READ_QUERY_SUCCESS(
             "AccessTokenServiceConsistentReadQueryAttemptSuccess"),
     USER_SUBMITTED_CREDENTIAL("UserSubmittedCredential"),
-    MFA_RESET_IPV_RESPONSE("MfaResetIpvResponse");
+    MFA_RESET_IPV_RESPONSE("MfaResetIpvResponse"),
+    MFA_RESET_AUTHORISATION_ERROR("ReverifyAuthorisationError");
     private String value;
 
     CloudwatchMetrics(String value) {

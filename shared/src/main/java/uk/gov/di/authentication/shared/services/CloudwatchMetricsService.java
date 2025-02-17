@@ -21,6 +21,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTIC
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -133,6 +134,12 @@ public class CloudwatchMetricsService {
                         configurationService.getEnvironment(),
                         IPV_RESPONSE.getValue(),
                         ipvResponse));
+    }
+
+    public void incrementReverifyAuthorisationErrorCount() {
+        incrementCounter(
+                MFA_RESET_AUTHORISATION_ERROR.getValue(),
+                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     public DimensionSet getDimensions(Map<String, String> dimensions) {
