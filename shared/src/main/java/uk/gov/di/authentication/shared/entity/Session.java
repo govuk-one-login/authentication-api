@@ -52,10 +52,6 @@ public class Session {
         initializeCodeRequestMap();
     }
 
-    public String getSessionId() {
-        return sessionId;
-    }
-
     public Session setSessionId(String sessionId) {
         this.sessionId = sessionId;
         return this;
