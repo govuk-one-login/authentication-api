@@ -1,4 +1,4 @@
-module "oidc_userinfo_role" {
+module "oidc_userinfo_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-userinfo-role"

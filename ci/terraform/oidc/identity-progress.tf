@@ -1,4 +1,4 @@
-module "identity_progress_role" {
+module "identity_progress_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "identity-progress-role"

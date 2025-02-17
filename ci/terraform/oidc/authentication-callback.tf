@@ -1,4 +1,4 @@
-module "oidc_api_authentication_callback_role" {
+module "oidc_api_authentication_callback_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-api-authentication-callback-role"
