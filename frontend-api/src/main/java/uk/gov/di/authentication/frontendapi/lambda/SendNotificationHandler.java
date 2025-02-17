@@ -176,7 +176,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
