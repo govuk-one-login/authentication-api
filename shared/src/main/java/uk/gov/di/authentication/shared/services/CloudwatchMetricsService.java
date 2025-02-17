@@ -13,6 +13,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IPV_RESPONSE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IS_TEST;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_REQUIRED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
@@ -21,6 +22,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTIC
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
@@ -121,6 +123,16 @@ public class CloudwatchMetricsService {
         incrementCounter(
                 MFA_RESET_HANDOFF.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+    }
+
+    public void incrementMfaResetIpvResponseCount(String ipvResponse) {
+        incrementCounter(
+                MFA_RESET_IPV_RESPONSE.getValue(),
+                Map.of(
+                        ENVIRONMENT.getValue(),
+                        configurationService.getEnvironment(),
+                        IPV_RESPONSE.getValue(),
+                        ipvResponse));
     }
 
     public DimensionSet getDimensions(Map<String, String> dimensions) {

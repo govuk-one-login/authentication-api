@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
@@ -26,6 +28,7 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -35,6 +38,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.lang.String.format;
@@ -78,6 +82,8 @@ class ReverificationResultHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final IDReverificationStateService idReverificationStateService =
             mock(IDReverificationStateService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final String subjectId = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
     private final Session session =
             new Session(SESSION_ID)
@@ -135,7 +141,8 @@ class ReverificationResultHandlerTest {
                         reverificationResultService,
                         auditService,
                         authSessionService,
-                        idReverificationStateService);
+                        idReverificationStateService,
+                        cloudwatchMetricsService);
     }
 
     @Nested
@@ -169,6 +176,7 @@ class ReverificationResultHandlerTest {
                             request,
                             USER_CONTEXT);
 
+            verify(cloudwatchMetricsService).incrementMfaResetIpvResponseCount("success");
             assertThat(result, hasStatus(200));
             assertThat(result, hasBody(userInfo.getContent()));
         }
@@ -438,5 +446,44 @@ class ReverificationResultHandlerTest {
                         "{ \"code\": \"%s\" , \"state\": \"%s\" , \"email\": \"%s\"}",
                         code, state, email);
         return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+    }
+
+    @ParameterizedTest
+    @MethodSource("ipvErrorResponses")
+    void shouldIncrementMfaResetIpvResponseCountWhenErrorReturned(
+            String responseContent, String failureCode)
+            throws ParseException, UnsuccessfulReverificationResponseException {
+
+        HTTPResponse userInfo = new HTTPResponse(200);
+        userInfo.setContentType("application/json");
+        userInfo.setContent(responseContent);
+
+        when(idReverificationStateService.get(any()))
+                .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
+        when(reverificationResultService.getToken(any())).thenReturn(getSuccessfulTokenResponse());
+        when(reverificationResultService.sendIpvReverificationRequest(any())).thenReturn(userInfo);
+
+        var result =
+                handler.handleRequest(
+                        apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+
+        verify(cloudwatchMetricsService).incrementMfaResetIpvResponseCount(failureCode);
+        assertThat(result, hasStatus(200));
+    }
+
+    static Stream<Arguments> ipvErrorResponses() {
+        return Stream.of(
+                Arguments.of(
+                        "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\", \"success\": false, \"failure_code\": \"no_identity_available\", \"failure_description\": \"some failure description\"}",
+                        "no_identity_available"),
+                Arguments.of(
+                        "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\", \"success\": false, \"failure_code\": \"identity_check_incomplete\", \"failure_description\": \"some failure description\"}",
+                        "identity_check_incomplete"),
+                Arguments.of(
+                        "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\", \"success\": false, \"failure_code\": \"identity_check_failed\", \"failure_description\": \"some failure description\"}",
+                        "identity_check_failed"),
+                Arguments.of(
+                        "{ \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\", \"success\": false, \"failure_code\": \"identity_did_not_match\", \"failure_description\": \"some failure description\"}",
+                        "identity_did_not_match"));
     }
 }
