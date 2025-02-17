@@ -126,10 +126,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldDestroySessionAndLogoutWhenSessionIsAvailable() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -196,10 +193,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
