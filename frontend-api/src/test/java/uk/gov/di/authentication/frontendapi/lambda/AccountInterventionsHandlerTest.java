@@ -120,7 +120,6 @@ class AccountInterventionsHandlerTest {
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setSessionId(SESSION_ID)
                     .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
