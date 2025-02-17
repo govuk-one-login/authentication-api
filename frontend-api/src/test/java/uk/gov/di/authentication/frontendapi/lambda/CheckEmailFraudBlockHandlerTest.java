@@ -187,7 +187,7 @@ class CheckEmailFraudBlockHandlerTest {
                             new AuditContext(
                                     CLIENT_ID,
                                     CLIENT_SESSION_ID,
-                                    session.getSessionId(),
+                                    SESSION_ID,
                                     AuditService.UNKNOWN,
                                     EMAIL,
                                     IP_ADDRESS,

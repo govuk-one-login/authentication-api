@@ -66,7 +66,8 @@ class MfaResetAuthorizeHandlerTest {
     private static final Context context = mock(Context.class);
     private static final SessionService sessionService = mock(SessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
-    private static final Session session = mock(Session.class);
+    private static final Session session =
+            new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private static final AuditService auditService = mock(AuditService.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -98,12 +99,10 @@ class MfaResetAuthorizeHandlerTest {
 
     @BeforeAll
     static void globalSetup() {
-        when(userContext.getSession()).thenReturn(new Session(SESSION_ID));
+        when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_COMMON_SUBJECT_ID);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-        when(session.getSessionId()).thenReturn(SESSION_ID);
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }
