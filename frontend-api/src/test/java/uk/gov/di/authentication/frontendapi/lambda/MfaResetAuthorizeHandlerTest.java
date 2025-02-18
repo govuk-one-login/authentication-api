@@ -94,7 +94,9 @@ class MfaResetAuthorizeHandlerTest {
                             "{ \"email\": \"%s\", \"orchestrationRedirectUrl\": \"%s\" }",
                             EMAIL, ORCHESTRATION_STATE));
     private static final AuthSessionItem authSession =
-            new AuthSessionItem().withSessionId(SESSION_ID);
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private static MfaResetAuthorizeHandler handler;
 
     @BeforeAll
