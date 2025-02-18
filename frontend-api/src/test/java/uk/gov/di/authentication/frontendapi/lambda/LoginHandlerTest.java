@@ -836,7 +836,8 @@ class LoginHandlerTest {
                         Optional.of(
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withEmailAddress(EMAIL)));
     }
 
     private void usingInvalidAuthSession() {
