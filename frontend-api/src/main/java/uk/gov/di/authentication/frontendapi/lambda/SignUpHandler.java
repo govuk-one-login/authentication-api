@@ -178,6 +178,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             authSessionService.updateSession(
                     authSessionItem
                             .withAccountState(AuthSessionItem.AccountState.NEW)
+                            .withEmailAddress(request.getEmail())
                             .withInternalCommonSubjectId(internalCommonSubjectId.getValue()));
             LOG.info("Successfully processed request");
             return generateApiGatewayProxyResponse(200, "");
