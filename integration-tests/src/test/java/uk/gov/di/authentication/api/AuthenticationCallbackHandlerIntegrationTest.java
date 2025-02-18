@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
@@ -54,6 +55,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
@@ -122,6 +124,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    public static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     @RegisterExtension
     public static final SqsQueueExtension backChannelLogoutQueueExtension =
@@ -1344,14 +1350,22 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         .state(RP_STATE)
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf(vtrStr1, vtrStr2));
+        var creationDate = LocalDateTime.now();
         var clientSession =
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
-                        LocalDateTime.now(),
+                        creationDate,
                         vtrList,
                         CLIENT_NAME);
 
         redis.createClientSession(clientSessionId, clientSession);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        creationDate,
+                        vtrList,
+                        CLIENT_NAME));
     }
 
     private void setUpClientSession() throws Json.JsonException {
