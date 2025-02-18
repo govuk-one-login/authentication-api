@@ -8,7 +8,7 @@ import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import uk.gov.di.authentication.shared.entity.IdentityCredentials;
+import uk.gov.di.authentication.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
@@ -67,7 +67,7 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
         dynamoService.saveIdentityClaims(subjectID, additionalClaims, ipvVot, ipvCoreIdentity);
     }
 
-    public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {
+    public Optional<AuthIdentityCredentials> getIdentityCredentials(String subjectID) {
         return dynamoService.getIdentityCredentials(subjectID);
     }
 
