@@ -76,12 +76,12 @@ variable "lambda_max_concurrency" {
 }
 
 variable "scaling_trigger" {
-  default = 0.7
+  default = 0.6
   type    = number
 }
 
 variable "lambda_min_concurrency" {
-  default     = 1
+  default     = 0
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
@@ -98,7 +98,7 @@ variable "authentication_auth_callback_uri" {
 }
 
 variable "orch_client_id" {
-  default     = ""
+  default     = "orchestrationAuth"
   type        = string
   description = "The client ID used by the orchestrator in two situations: 1) when passing an authorize request to the authentication frontend - see OIDC module 2) when calling the authentication token endpoint - in this second case there is no real client registry or defined scopes, but it is a part of OAuth2 formalities."
 }
