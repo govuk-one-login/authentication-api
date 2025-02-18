@@ -46,6 +46,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -53,6 +54,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper;
@@ -99,6 +101,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
             new RpPublicKeyCacheExtension(180);
+
+    @RegisterExtension
+    public static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     @BeforeEach
     void setup() {
@@ -715,13 +721,21 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     VectorOfTrust.parseFromAuthRequestAttribute(
                             singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
+        var creationDate = LocalDateTime.now();
         var clientSession =
                 new ClientSession(
                         generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
-                        LocalDateTime.now(),
+                        creationDate,
                         vtrList,
                         "client-name");
         redis.createClientSession("a-client-session-id", clientSession);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        "a-client-session-id",
+                        generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
+                        creationDate,
+                        vtrList,
+                        "client-name"));
         redis.addAuthCode(
                 code, CLIENT_ID, "a-client-session-id", clientSession, TEST_EMAIL, AUTH_TIME);
         Map<String, List<String>> customParams = new HashMap<>();
