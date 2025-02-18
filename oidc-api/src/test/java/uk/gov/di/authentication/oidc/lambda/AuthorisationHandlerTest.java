@@ -71,6 +71,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -89,6 +90,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -165,6 +167,9 @@ class AuthorisationHandlerTest {
             mock(DocAppAuthorisationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
+    private final OrchClientSessionService orchClientSessionService =
+            mock(OrchClientSessionService.class);
+    private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final UserContext userContext = mock(UserContext.class);
@@ -300,6 +305,7 @@ class AuthorisationHandlerTest {
                         sessionService,
                         orchSessionService,
                         clientSessionService,
+                        orchClientSessionService,
                         orchestrationAuthorizationService,
                         auditService,
                         queryParamsAuthorizeValidator,
@@ -318,6 +324,8 @@ class AuthorisationHandlerTest {
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
                 .thenReturn(clientSession);
+        when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
+                .thenReturn(orchClientSession);
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
@@ -354,6 +362,7 @@ class AuthorisationHandlerTest {
             verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
+            verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -638,6 +647,7 @@ class AuthorisationHandlerTest {
 
             verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
+            verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -680,6 +690,7 @@ class AuthorisationHandlerTest {
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
+            verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -752,6 +763,7 @@ class AuthorisationHandlerTest {
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
+            verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -794,6 +806,7 @@ class AuthorisationHandlerTest {
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
+            verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, false, false, "LOW_LEVEL");
@@ -841,6 +854,7 @@ class AuthorisationHandlerTest {
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
+            verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
