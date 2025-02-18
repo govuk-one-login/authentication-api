@@ -130,6 +130,7 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
@@ -160,6 +161,7 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
@@ -190,6 +192,7 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       defaultProvisionedConcurrency: 3
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
@@ -220,6 +223,7 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
@@ -250,6 +254,7 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
