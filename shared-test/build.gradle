@@ -5,20 +5,23 @@ plugins {
 group "uk.gov.di.authentication.sharedtest"
 version "unspecified"
 
+configurations.implementation {
+    extendsFrom(configurations.tests)
+    extendsFrom(configurations.lambda)
+    extendsFrom(configurations.apache)
+    extendsFrom(configurations.nimbus)
+    extendsFrom(configurations.lettuce)
+    extendsFrom(configurations.dynamodb)
+    extendsFrom(configurations.kms)
+    extendsFrom(configurations.sns)
+    extendsFrom(configurations.s3)
+    extendsFrom(configurations.sqs)
+    extendsFrom(configurations.ssm)
+    extendsFrom(configurations.cloudwatch)
+}
+
 dependencies {
-    implementation configurations.tests,
-            configurations.lambda,
-            configurations.apache,
-            configurations.nimbus,
-            configurations.lettuce,
-            configurations.dynamodb,
-            configurations.kms,
-            configurations.sns,
-            configurations.s3,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.cloudwatch,
-            "org.eclipse.jetty:jetty-server:12.0.16",
+    implementation "org.eclipse.jetty:jetty-server:12.0.16",
             "com.google.code.gson:gson:2.12.1"
 
     implementation project(":shared")

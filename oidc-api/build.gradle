@@ -2,44 +2,56 @@ plugins {
     id "java"
     id "jacoco"
     id "au.com.dius.pact" version "4.6.17"
+    id 'io.freefair.aspectj.post-compile-weaving' version '8.2.2'
 }
 
 group "uk.gov.di.authentication.oidc"
 version "unspecified"
 
+configurations.compileOnly {
+    extendsFrom(configurations.kms)
+    extendsFrom(configurations.lambda)
+    extendsFrom(configurations.sqs)
+    extendsFrom(configurations.sns)
+    extendsFrom(configurations.dynamodb)
+}
+
+configurations.implementation {
+    extendsFrom(configurations.govuk_notify)
+    extendsFrom(configurations.gson)
+    extendsFrom(configurations.nimbus)
+    extendsFrom(configurations.bouncycastle)
+    extendsFrom(configurations.cloudwatch)
+    extendsFrom(configurations.apache)
+    extendsFrom(configurations.jetbrains_annotations)
+}
+
+configurations.runtimeOnly.extendsFrom(configurations.open_telemetry)
+
+configurations.testImplementation {
+    extendsFrom(configurations.tests)
+    extendsFrom(configurations.lambda_tests)
+    extendsFrom(configurations.lambda)
+    extendsFrom(configurations.sqs)
+    extendsFrom(configurations.kms)
+    extendsFrom(configurations.dynamodb)
+    extendsFrom(configurations.pact_consumer)
+}
+
+configurations.testRuntimeOnly.extendsFrom(configurations.test_runtime)
+
 dependencies {
-    compileOnly configurations.kms,
-            configurations.lambda,
-            configurations.sqs,
-            configurations.sns,
-            configurations.dynamodb
-
-    implementation configurations.govuk_notify,
-            configurations.gson,
-            configurations.nimbus,
-            configurations.bouncycastle,
-            configurations.cloudwatch,
-            configurations.apache,
-            configurations.jetbrains_annotations,
-            project(":orchestration-shared"),
+    implementation project(":orchestration-shared"),
             project(":client-registry-api"),
-            project(":doc-checking-app-api")
+            project(":doc-checking-app-api"),
+            "org.aspectj:aspectjrt:1.9.20.1"
 
-    runtimeOnly configurations.open_telemetry
+    aspect "software.amazon.lambda:powertools-tracing:1.18.0"
 
     implementation project(path: ':ipv-api')
 
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(path: ':ipv-api'),
-            project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.kms,
-            configurations.dynamodb,
-            configurations.pact_consumer
-
-    testRuntimeOnly configurations.test_runtime
+    testImplementation project(path: ':ipv-api'),
+    project(":orchestration-shared-test")
 }
 
 test {
@@ -85,7 +97,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.setRequired true
     }
     dependsOn "test"
 }
