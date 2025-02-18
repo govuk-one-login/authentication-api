@@ -19,9 +19,9 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressResponse;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
-import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -165,7 +165,7 @@ public class IdentityProgressFrontendHandlerTest {
     void shouldReturnCOMPLETEDStatusWhenIdentityCredentialIsPresent() throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
-                new IdentityCredentials()
+                new AuthIdentityCredentials()
                         .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
@@ -204,7 +204,7 @@ public class IdentityProgressFrontendHandlerTest {
             throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
-                new IdentityCredentials()
+                new AuthIdentityCredentials()
                         .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
@@ -311,7 +311,7 @@ public class IdentityProgressFrontendHandlerTest {
     void shouldReturnExpectedResponseBody() {
         usingValidSession();
         var identityCredentials =
-                new IdentityCredentials()
+                new AuthIdentityCredentials()
                         .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
