@@ -1,8 +1,8 @@
 common_state_bucket = "digital-identity-dev-tfstate"
 
 # Account IDs
-tools_account_id         = 706615647326
-orchestration_account_id = 767397776536
+tools_account_id         = "706615647326"
+orchestration_account_id = "767397776536"
 auth_new_account_id      = "058264536367"
 
 # CIDR blocks
