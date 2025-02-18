@@ -3,6 +3,16 @@ Transform:
   - AWS::LanguageExtensions
   - AWS::Serverless-2016-10-31
 
+Metadata:
+  cfn-lint:
+    config:
+      configure_rules:
+        E3031:
+          exceptions:
+            - none
+      ignore_checks:
+        - E1011 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
+
 Parameters:
   Environment:
     Type: String
@@ -17,7 +27,7 @@ Parameters:
   PermissionsBoundary:
     Type: String
     Description: The ARN of the permissions boundary to apply when creating IAM roles
-    Default: none
+    Default: nonenonenonenonenone
   LoggingSubscriptionEndpointArn:
     Type: String
     Description: The ARN of the subscription endpoint to send logs to splunk
@@ -27,7 +37,8 @@ Parameters:
     Description: Specifies the configuration to enable gradual Lambda deployments
 
 Conditions:
-  UsePermissionsBoundary: !Not [!Equals [none, !Ref PermissionsBoundary]]
+  UsePermissionsBoundary:
+    !Not [!Equals [nonenonenonenonenone, !Ref PermissionsBoundary]]
   UseCodeSigning: !Not [!Equals [none, !Ref CodeSigningConfigArn]]
   IsNotDevEnvironment: !Not [!Equals [!Ref Environment, dev]]
   AisAbortOnError:
