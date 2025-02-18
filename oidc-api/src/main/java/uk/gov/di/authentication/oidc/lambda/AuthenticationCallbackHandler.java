@@ -20,6 +20,7 @@ import org.apache.logging.log4j.ThreadContext;
 import org.bouncycastle.jcajce.provider.digest.SHA256;
 import org.bouncycastle.util.encoders.Hex;
 import org.jetbrains.annotations.NotNull;
+import software.amazon.lambda.powertools.tracing.Tracing;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
@@ -244,6 +245,7 @@ public class AuthenticationCallbackHandler
         this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
+    @Tracing
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
