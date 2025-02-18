@@ -158,13 +158,13 @@ class StartServiceTest {
     @Test
     void returnsFalseIfUserProfilePresent() {
         withUserProfile();
-        assertFalse(startService.isUserProfileEmpty(SESSION));
+        assertFalse(startService.isUserProfileEmpty(AUTH_SESSION));
     }
 
     @Test
     void returnsTrueWhenUserProfileEmpty() {
         withNoUserProfile();
-        assertTrue(startService.isUserProfileEmpty(SESSION));
+        assertTrue(startService.isUserProfileEmpty(AUTH_SESSION));
     }
 
     private static Stream<Arguments> userStartInfo() {
