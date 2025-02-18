@@ -3,6 +3,10 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
+pushd "${DIR}" > /dev/null
+pre-commit run check-module-renamed-manual --all-files --hook-stage manual
+popd > /dev/null
+
 environments=("authdev1" "authdev2" "sandpit")
 
 function usage() {
