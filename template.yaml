@@ -2935,7 +2935,7 @@ Resources:
                   authEnvironment,
                 ]
       Policies:
-        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -3770,8 +3770,8 @@ Resources:
             - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
       Policies:
-        - !Ref IdentityCredentialsTableReadAccessPolicy
-        - !Ref IdentityCredentialsTableWriteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
+        - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
@@ -3978,9 +3978,9 @@ Resources:
                   authEnvironment,
                 ]
       Policies:
-        - !Ref IdentityCredentialsTableReadAccessPolicy
-        - !Ref IdentityCredentialsTableWriteAccessPolicy
-        - !Ref IdentityCredentialsTableDeleteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
+        - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableDeleteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       Tags:
