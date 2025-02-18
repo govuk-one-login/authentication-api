@@ -7,18 +7,24 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
-public class DynamoIdentityService extends BaseDynamoService<AuthIdentityCredentials> {
+public class DynamoIdentityService {
 
     private final long timeToExist;
+    private final BaseDynamoService<AuthIdentityCredentials> authIdentityCredentialsDynamoService;
 
     public DynamoIdentityService(ConfigurationService configurationService) {
-        super(AuthIdentityCredentials.class, "identity-credentials", configurationService);
+        authIdentityCredentialsDynamoService =
+                new BaseDynamoService<>(
+                        AuthIdentityCredentials.class,
+                        "identity-credentials",
+                        configurationService);
         this.timeToExist = configurationService.getAccessTokenExpiry();
     }
 
     public void addCoreIdentityJWT(String subjectID, String coreIdentityJWT) {
         var identityCredentials =
-                get(subjectID)
+                authIdentityCredentialsDynamoService
+                        .get(subjectID)
                         .orElse(new AuthIdentityCredentials())
                         .withSubjectID(subjectID)
                         .withCoreIdentityJWT(coreIdentityJWT)
@@ -27,16 +33,17 @@ public class DynamoIdentityService extends BaseDynamoService<AuthIdentityCredent
                                         .toInstant()
                                         .getEpochSecond());
 
-        update(identityCredentials);
+        authIdentityCredentialsDynamoService.update(identityCredentials);
     }
 
     public Optional<AuthIdentityCredentials> getIdentityCredentials(String subjectID) {
-        return get(subjectID)
+        return authIdentityCredentialsDynamoService
+                .get(subjectID)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void deleteIdentityCredentials(String subjectID) {
-        delete(subjectID);
+        authIdentityCredentialsDynamoService.delete(subjectID);
     }
 
     public void saveIdentityClaims(
@@ -55,6 +62,6 @@ public class DynamoIdentityService extends BaseDynamoService<AuthIdentityCredent
                                         .toInstant()
                                         .getEpochSecond());
 
-        put(identityCredentials);
+        authIdentityCredentialsDynamoService.put(identityCredentials);
     }
 }
