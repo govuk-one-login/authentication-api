@@ -169,7 +169,13 @@ public class StartHandler
 
         boolean isUserAuthenticatedWithValidProfile;
         try {
-            var isUserProfileEmpty = startService.isUserProfileEmpty(session);
+            var authSession =
+                    authSessionService.getUpdatedPreviousSessionOrCreateNew(
+                            Optional.ofNullable(startRequest.previousSessionId()),
+                            sessionId,
+                            startRequest.currentCredentialStrength());
+
+            var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
 
             isUserAuthenticatedWithValidProfile =
                     startRequest.authenticated() && !isUserProfileEmpty;
@@ -187,12 +193,6 @@ public class StartHandler
             var upliftRequired =
                     startService.isUpliftRequired(
                             clientSession.get(), client, startRequest.currentCredentialStrength());
-
-            var authSession =
-                    authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                            Optional.ofNullable(startRequest.previousSessionId()),
-                            sessionId,
-                            startRequest.currentCredentialStrength());
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
