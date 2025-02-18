@@ -9,6 +9,7 @@ import java.util.Map;
 @DynamoDbBean
 public class OrchIdentityCredentials {
 
+    private String clientSessionId;
     private String subjectID;
     private String coreIdentityJWT;
     private long timeToExist;
@@ -19,6 +20,20 @@ public class OrchIdentityCredentials {
     public OrchIdentityCredentials() {}
 
     @DynamoDbPartitionKey
+    @DynamoDbAttribute("ClientSessionId")
+    public String getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+    }
+
+    public OrchIdentityCredentials withClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+        return this;
+    }
+
     @DynamoDbAttribute("SubjectID")
     public String getSubjectID() {
         return subjectID;
