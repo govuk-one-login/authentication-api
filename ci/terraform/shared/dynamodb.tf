@@ -77,7 +77,7 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -169,7 +169,7 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -218,7 +218,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -259,7 +259,7 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -300,7 +300,7 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -360,7 +360,7 @@ resource "aws_dynamodb_table" "common_passwords_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -396,7 +396,7 @@ resource "aws_dynamodb_table" "account_modifiers_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -437,7 +437,7 @@ resource "aws_dynamodb_table" "access_token_store" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -478,7 +478,7 @@ resource "aws_dynamodb_table" "auth_code_store" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -542,7 +542,7 @@ resource "aws_dynamodb_table" "bulk_email_users" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -596,7 +596,7 @@ resource "aws_dynamodb_table" "authentication_callback_userinfo" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -638,7 +638,7 @@ resource "aws_dynamodb_table" "email-check-result" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -681,7 +681,7 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -780,7 +780,7 @@ resource "aws_dynamodb_table" "auth_session_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
@@ -817,7 +817,7 @@ resource "aws_dynamodb_table" "id_reverification_state" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
