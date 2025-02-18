@@ -41,7 +41,7 @@ module "send_notification" {
     PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
     TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
     REDIS_KEY                              = local.redis_key
-    TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
+    TEST_CLIENTS_ENABLED                   = var.test_clients_enabled ? "true" : "false"
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri

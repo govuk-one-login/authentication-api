@@ -38,7 +38,7 @@ module "mfa" {
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
     REDIS_KEY                              = local.redis_key
-    TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
+    TEST_CLIENTS_ENABLED                   = var.test_clients_enabled ? "true" : "false"
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri
     SUPPORT_REAUTH_SIGNOUT_ENABLED         = var.support_reauth_signout_enabled
   }

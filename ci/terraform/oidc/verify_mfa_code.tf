@@ -45,7 +45,7 @@ module "verify_mfa_code" {
     TERMS_CONDITIONS_VERSION                = var.terms_and_conditions
     TEST_CLIENT_VERIFY_EMAIL_OTP            = var.test_client_verify_email_otp
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP     = var.test_client_verify_phone_number_otp
-    TEST_CLIENTS_ENABLED                    = var.test_clients_enabled
+    TEST_CLIENTS_ENABLED                    = var.test_clients_enabled ? "true" : "false"
     INTERNAl_SECTOR_URI                     = var.internal_sector_uri
     EXPERIAN_PHONE_CHECKER_QUEUE_URL        = local.experian_phone_check_sqs_queue_id
     PHONE_CHECKER_WITH_RETRY                = var.phone_checker_with_retry
