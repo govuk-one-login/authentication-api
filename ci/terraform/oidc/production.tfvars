@@ -26,10 +26,11 @@ authorize_protected_subnet_enabled = true
 
 contra_state_bucket = "digital-identity-prod-tfstate"
 
-orch_account_id                       = "533266965190"
-is_orch_stubbed                       = false
-orch_environment                      = "production"
-orch_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6"
+orch_account_id                              = "533266965190"
+is_orch_stubbed                              = false
+orch_environment                             = "production"
+orch_session_table_encryption_key_arn        = "arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6"
+orch_client_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:533266965190:key/9b57120e-3bcd-4fce-ada8-89ea9d1412d6"
 
 orch_trustmark_enabled               = true
 orch_openid_configuration_enabled    = true
