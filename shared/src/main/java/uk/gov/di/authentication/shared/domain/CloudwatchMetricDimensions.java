@@ -10,7 +10,8 @@ public enum CloudwatchMetricDimensions {
     CLIENT_NAME("ClientName"),
     CREDENTIAL_TYPE("CredentialType"),
     JOURNEY_TYPE("JourneyType"),
-    FAILURE_REASON("FailureReason");
+    FAILURE_REASON("FailureReason"),
+    IPV_RESPONSE("IpvResponse");
 
     private String value;
 

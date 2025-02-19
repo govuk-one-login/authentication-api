@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -46,6 +47,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
     private final ReverificationResultService reverificationResultService;
     private final AuditService auditService;
     private final IDReverificationStateService idReverificationStateService;
+    private final CloudwatchMetricsService cloudwatchMetricService;
 
     public ReverificationResultHandler(
             ConfigurationService configurationService,
@@ -56,7 +58,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             ReverificationResultService reverificationResultService,
             AuditService auditService,
             AuthSessionService authSessionService,
-            IDReverificationStateService idReverificationStateService) {
+            IDReverificationStateService idReverificationStateService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 ReverificationResultRequest.class,
                 configurationService,
@@ -68,6 +71,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         this.reverificationResultService = reverificationResultService;
         this.auditService = auditService;
         this.idReverificationStateService = idReverificationStateService;
+        this.cloudwatchMetricService = cloudwatchMetricsService;
     }
 
     public ReverificationResultHandler() {
@@ -79,6 +83,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         this.reverificationResultService = new ReverificationResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
+        this.cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -165,6 +170,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                     metadataPairs.add(
                             AuditService.MetadataPair.pair(
                                     "failure_code", parsedFailureCode.getValue()));
+                    cloudwatchMetricService.incrementMfaResetIpvResponseCount(
+                            parsedFailureCode.getValue());
                 } catch (IllegalArgumentException e) {
                     LOG.warn("Unknown ipv reverification failure code of {}", failureCode);
                 }
@@ -172,6 +179,9 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             if (success == null) {
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
+            }
+            if (success.equals(true)) {
+                cloudwatchMetricService.incrementMfaResetIpvResponseCount("success");
             }
 
             auditService.submitAuditEvent(
