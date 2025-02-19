@@ -14,8 +14,10 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -37,6 +39,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -130,7 +133,15 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     request.orchestrationRedirectUrl(),
                     userContext.getClientSessionId());
 
-            auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
+            String rpPairwiseId =
+                    TxmaAuditHelper.getRpPairwiseId(
+                            authenticationService, configurationService, userContext);
+
+            auditService.submitAuditEvent(
+                    AUTH_REVERIFY_AUTHORISATION_REQUESTED,
+                    auditContext,
+                    pair("rpPairwiseId", rpPairwiseId),
+                    pair("journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
             cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
             return generateApiGatewayProxyResponse(
