@@ -99,7 +99,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             ReverificationResultRequest request,
             UserContext userContext) {
 
-        var auditContext =
+        var baseAuditContext =
                 auditContextFromUserContext(
                         userContext,
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
@@ -136,9 +136,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         LOG.info("Successful IPV TokenResponse");
         auditService.submitAuditEvent(
                 AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
-                auditContext,
-                AuditService.MetadataPair.pair(
-                        "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+                baseAuditContext,
+                metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
         try {
             var reverificationResult =
@@ -186,7 +185,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
-                    auditContext,
+                    baseAuditContext,
                     metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
