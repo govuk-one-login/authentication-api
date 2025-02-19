@@ -118,7 +118,10 @@ class AuthenticationAuthCodeHandlerTest {
     @BeforeEach
     void setUp() throws Json.JsonException {
         session = new Session(SESSION_ID).setEmailAddress(CommonTestVariables.EMAIL);
-        authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+        authSession =
+                new AuthSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withEmailAddress(CommonTestVariables.EMAIL);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
