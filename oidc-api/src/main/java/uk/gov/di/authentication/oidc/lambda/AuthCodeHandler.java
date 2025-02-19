@@ -53,8 +53,6 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSIO
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -148,9 +146,7 @@ public class AuthCodeHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> authCodeRequestHandler(input, context));
+        return authCodeRequestHandler(input, context);
     }
 
     public APIGatewayProxyResponseEvent authCodeRequestHandler(
@@ -202,9 +198,9 @@ public class AuthCodeHandler
             attachLogFieldToLogs(
                     PERSISTENT_SESSION_ID,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-            addAnnotation(
-                    "client_id",
-                    String.valueOf(clientSession.getAuthRequestParams().get("client_id")));
+            // addAnnotation(
+            //         "client_id",
+            //         String.valueOf(clientSession.getAuthRequestParams().get("client_id")));
 
             var redirectUri = authenticationRequest.getRedirectionURI();
             var state = authenticationRequest.getState();

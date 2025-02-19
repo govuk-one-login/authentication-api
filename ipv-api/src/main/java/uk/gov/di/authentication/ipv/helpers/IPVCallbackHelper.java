@@ -52,7 +52,6 @@ import java.util.Optional;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class IPVCallbackHelper {
@@ -204,9 +203,7 @@ public class IPVCallbackHelper {
             String clientId)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
-        segmentedFunctionCall(
-                "saveIdentityClaims",
-                () -> saveIdentityClaimsToDynamo(rpPairwiseSubject, userIdentityUserInfo));
+        saveIdentityClaimsToDynamo(rpPairwiseSubject, userIdentityUserInfo);
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
                         clientId,

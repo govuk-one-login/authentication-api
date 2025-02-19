@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-
 public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> {
     private static final Logger LOG = LogManager.getLogger(BulkTestUserCreateHandler.class);
     private static final String CSV_HEADER_ROW_TEXT =
@@ -71,35 +69,29 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
         ResponseInputStream<GetObjectResponse> fileContent = client.getObject(getObjectRequest);
 
-        segmentedFunctionCall(
-                "lineReader",
-                () -> {
-                    List<String> batch = new ArrayList<>();
-                    String line;
+        List<String> batch = new ArrayList<>();
+        String line;
 
-                    try (var bufferedReader =
-                            new BufferedReader(
-                                    new InputStreamReader(fileContent, Charset.forName("UTF-8")))) {
-                        while ((line = bufferedReader.readLine()) != null) {
-                            if (!line.isBlank() && !line.equals(CSV_HEADER_ROW_TEXT)) {
-                                batch.add(line.strip());
-                            }
+        try (var bufferedReader =
+                new BufferedReader(new InputStreamReader(fileContent, Charset.forName("UTF-8")))) {
+            while ((line = bufferedReader.readLine()) != null) {
+                if (!line.isBlank() && !line.equals(CSV_HEADER_ROW_TEXT)) {
+                    batch.add(line.strip());
+                }
 
-                            if (batch.size() % 500 == 0 && !batch.isEmpty()) {
-                                final List<String> finalBatch = batch;
-                                segmentedFunctionCall(
-                                        "dbWriteFullBatch", () -> addTestUsersBatch(finalBatch));
-                                batch = new ArrayList<>();
-                            }
-                        }
-                    } catch (IOException e) {
-                        LOG.error("Error reading S3 object", e);
-                    }
-
+                if (batch.size() % 500 == 0 && !batch.isEmpty()) {
                     final List<String> finalBatch = batch;
+                    addTestUsersBatch(finalBatch);
+                    batch = new ArrayList<>();
+                }
+            }
+        } catch (IOException e) {
+            LOG.error("Error reading S3 object", e);
+        }
 
-                    segmentedFunctionCall("dbWriteFinalBatch", () -> addTestUsersBatch(finalBatch));
-                });
+        final List<String> finalBatch = batch;
+
+        addTestUsersBatch(finalBatch);
 
         return null;
     }
@@ -108,29 +100,24 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
         String dateTime = LocalDateTime.now().toString();
         Map<UserProfile, UserCredentials> testUsers = new HashMap<>();
 
-        segmentedFunctionCall(
-                "parseTestUsersCsv",
-                () ->
-                        batchOfIndividualUsersAsRawCsv.forEach(
-                                rawCsvUserString -> {
-                                    String[] testUserCsvAsArray = rawCsvUserString.split(",", -1);
-                                    String subjectId = new Subject().getValue();
+        batchOfIndividualUsersAsRawCsv.forEach(
+                rawCsvUserString -> {
+                    String[] testUserCsvAsArray = rawCsvUserString.split(",", -1);
+                    String subjectId = new Subject().getValue();
 
-                                    var userProfile =
-                                            getUserProfileFromTestUserArrayList(
-                                                    testUserCsvAsArray, dateTime, subjectId);
+                    var userProfile =
+                            getUserProfileFromTestUserArrayList(
+                                    testUserCsvAsArray, dateTime, subjectId);
 
-                                    var userCredentials =
-                                            getUserCredentialsFromTestUserArrayList(
-                                                    testUserCsvAsArray, dateTime, subjectId);
+                    var userCredentials =
+                            getUserCredentialsFromTestUserArrayList(
+                                    testUserCsvAsArray, dateTime, subjectId);
 
-                                    testUsers.put(userProfile, userCredentials);
-                                }));
+                    testUsers.put(userProfile, userCredentials);
+                });
 
         try {
-            segmentedFunctionCall(
-                    "dynamoCreateBatchTestUsers",
-                    () -> dynamoService.createBatchTestUsers(testUsers));
+            dynamoService.createBatchTestUsers(testUsers);
         } catch (Exception e) {
             LOG.error("User Profile or Credentials Dynamo Table exception thrown", e);
         }

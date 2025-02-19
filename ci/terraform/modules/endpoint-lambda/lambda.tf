@@ -3,7 +3,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
   timeout       = 30
-  memory_size   = var.memory_size
+  memory_size   = local.memory_size
   publish       = true
 
   tracing_config {
@@ -27,7 +27,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
       var.handler_environment_variables,
       local.deploy_dynatrace ? local.dynatrace_environment_variables : {},
       {
-        JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+        JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'",
     })
   }
   kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn

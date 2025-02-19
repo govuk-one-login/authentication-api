@@ -32,7 +32,8 @@ ext {
         nimbusds_jwt_version: "10.0.1",
         junit: "5.11.4",
         xray: "2.18.2",
-        pact: "4.6.17"
+        pact: "4.6.17",
+        opentelemetry_instrumentation: "2.12.0-alpha"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -109,6 +110,8 @@ subprojects {
         xray
         pact_consumer
         pact_provider
+        otel
+        otel_aws_instrumentation
     }
 
     // Check dependencies using:
@@ -205,11 +208,7 @@ subprojects {
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 
         xray platform("com.amazonaws:aws-xray-recorder-sdk-bom:${dependencyVersions.xray}"),
-                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-instrumentor:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
+                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}"
 
         spotbugs "com.github.spotbugs:spotbugs:4.9.1"
 
@@ -218,6 +217,22 @@ subprojects {
         pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
+
+        otel_aws_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
+
+        otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
+    }
+}
+
+subprojects {
+    afterEvaluate { subproject ->
+        if (subproject.plugins.hasPlugin('java')) {
+            dependencies {
+                runtimeOnly configurations.otel_aws_instrumentation
+            }
+        }
     }
 }
 

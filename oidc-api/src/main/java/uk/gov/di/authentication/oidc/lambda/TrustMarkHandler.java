@@ -18,7 +18,6 @@ import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class TrustMarkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -37,9 +36,7 @@ public class TrustMarkHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> trustmarkRequestHandler(input, context));
+        return trustmarkRequestHandler(input, context);
     }
 
     public APIGatewayProxyResponseEvent trustmarkRequestHandler(

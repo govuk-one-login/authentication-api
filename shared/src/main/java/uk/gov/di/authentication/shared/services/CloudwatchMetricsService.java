@@ -24,7 +24,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHE
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
 
@@ -41,8 +40,7 @@ public class CloudwatchMetricsService {
     }
 
     public void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
-        segmentedFunctionCall(
-                "Metrics::EMF", () -> emitMetric(name, value, dimensions, new MetricsLogger()));
+        emitMetric(name, value, dimensions, new MetricsLogger());
     }
 
     protected void emitMetric(
