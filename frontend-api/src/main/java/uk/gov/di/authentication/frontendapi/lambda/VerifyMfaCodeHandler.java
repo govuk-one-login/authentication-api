@@ -177,7 +177,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 auditContextFromUserContext(
                         userContext,
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        userContext.getSession().getEmailAddress(),
+                        userContext.getAuthSession().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
@@ -197,13 +197,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input,
-                    codeRequest,
-                    userContext,
-                    subjectID,
-                    authSession,
-                    maybeRpPairwiseId,
-                    client);
+                    input, codeRequest, userContext, subjectID, maybeRpPairwiseId, client);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -282,12 +276,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
-            AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId,
             ClientRegistry client) {
 
         var session = userContext.getSession();
-        var sessionId = userContext.getAuthSession().getSessionId();
+        var authSession = userContext.getAuthSession();
+        var sessionId = authSession.getSessionId();
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
                         .getMfaCodeProcessor(
@@ -302,7 +296,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (JourneyType.PASSWORD_RESET_MFA.equals(codeRequest.getJourneyType())) {
             SessionHelper.updateSessionWithSubject(
                     userContext,
-                    authSession,
                     sessionService,
                     authSessionService,
                     authenticationService,
@@ -320,7 +313,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             if (errorResponse.equals(ErrorResponse.ERROR_1034)
                     || errorResponse.equals(ErrorResponse.ERROR_1042)) {
                 blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-                        userContext.getSession().getEmailAddress(),
+                        userContext.getAuthSession().getEmailAddress(),
                         codeRequest.getMfaMethodType(),
                         codeRequest.getJourneyType());
             }
@@ -358,13 +351,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 auditContextFromUserContext(
                         userContext,
                         session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
+                        authSession.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
 
         var metadataPairs =
-                metadataPairsForEvent(auditableEvent, session.getEmailAddress(), codeRequest);
+                metadataPairsForEvent(auditableEvent, authSession.getEmailAddress(), codeRequest);
 
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
@@ -425,7 +418,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 clientId,
                 userContext.getClientName(),
                 levelOfConfidence.getValue(),
-                clientService.isTestJourney(clientId, session.getEmailAddress()),
+                clientService.isTestJourney(clientId, authSession.getEmailAddress()),
                 true);
 
         return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();
