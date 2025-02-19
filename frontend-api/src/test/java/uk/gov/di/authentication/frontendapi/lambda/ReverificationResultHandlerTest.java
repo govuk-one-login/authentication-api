@@ -280,13 +280,14 @@ class ReverificationResultHandlerTest {
                             AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
                             auditContextWithAllUserInfo,
                             pair("journey-type", "ACCOUNT_RECOVERY"),
-                            pair("success", false));
+                            pair("success", false),
+                            pair("failure_code", unknownFailureCode));
 
             assertThat(
                     logging.events(),
                     hasItem(
                             withMessageContaining(
-                                    "Unknown ipv reverification failure code of foo")));
+                                    "Invalid re-verification result response from IPV: {sub=urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6, failure_code=foo, success=false}")));
         }
     }
 
