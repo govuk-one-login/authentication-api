@@ -76,6 +76,18 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
         authSessionService.addSession(authSessionService.generateNewAuthSession(sessionId));
     }
 
+    public void addEmailToSession(String sessionId, String email) {
+        updateSession(getSession(sessionId).orElseThrow().withEmailAddress(email));
+    }
+
+    public void addInternalCommonSubjectIdToSession(
+            String sessionId, String internalCommonSubjectIdl) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .withInternalCommonSubjectId(internalCommonSubjectIdl));
+    }
+
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
             Optional<String> previousSessionId,
             String sessionId,

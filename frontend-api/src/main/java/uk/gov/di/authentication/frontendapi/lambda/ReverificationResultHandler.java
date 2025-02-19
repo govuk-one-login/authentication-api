@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -78,6 +79,17 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
     public ReverificationResultHandler() {
         this(ConfigurationService.getInstance());
+    }
+
+    public ReverificationResultHandler(RedisConnectionService redisConnectionService) {
+        super(
+                ReverificationResultRequest.class,
+                ConfigurationService.getInstance(),
+                redisConnectionService);
+        this.reverificationResultService = new ReverificationResultService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.idReverificationStateService = new IDReverificationStateService(configurationService);
+        this.cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
     }
 
     public ReverificationResultHandler(ConfigurationService configurationService) {
@@ -163,7 +175,10 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             var reverificationResultJson = reverificationResult.getContentAsJSONObject();
 
-            var validMetadata = extractValidMetadata(reverificationResultJson);
+            var validMetadata =
+                    extractValidMetadata(
+                            reverificationResultJson,
+                            userContext.getAuthSession().getInternalCommonSubjectId());
 
             metadataPairs.addAll(validMetadata.metadataPairs());
 
@@ -173,6 +188,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                     metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
             if (!validMetadata.valid()) {
+                LOG.warn(validMetadata.errorMessage());
                 var logFriendlyResponse = reverificationResultJson.toJSONString();
                 LOG.warn(
                         "Invalid re-verification result response from IPV: {}",
@@ -187,8 +203,17 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         }
     }
 
-    private ValidationResult extractValidMetadata(JSONObject json) {
+    private ValidationResult extractValidMetadata(JSONObject json, String sub) {
         List<AuditService.MetadataPair> metadataPairs = new ArrayList<>();
+
+        if (!json.containsKey("sub") || !(json.get("sub") instanceof String subOfResponse)) {
+            return ValidationResult.failure(
+                    "Missing sub cannot verify response is for current user.", metadataPairs);
+        }
+
+        if (!sub.equalsIgnoreCase(subOfResponse)) {
+            return ValidationResult.failure("sub does not match current user.", metadataPairs);
+        }
 
         if (!json.containsKey("success") || !(json.get("success") instanceof Boolean)) {
             metadataPairs.add(AuditService.MetadataPair.pair("success", "missing or corrupt"));

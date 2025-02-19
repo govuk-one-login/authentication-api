@@ -123,7 +123,8 @@ class ReverificationResultHandlerTest {
             new CaptureLoggingExtension(ReverificationResultHandler.class);
 
     private static final UserContext USER_CONTEXT = mock(UserContext.class);
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID).withInternalCommonSubjectId(SUB);
 
     private static final String AUTHENTICATION_STATE = "abcdefg";
     private static final IDReverificationState ID_REVERIFICATION_STATE =
@@ -248,6 +249,93 @@ class ReverificationResultHandlerTest {
                             pair("journey-type", "ACCOUNT_RECOVERY"),
                             pair("success", false),
                             pair("failure_code", "no_identity_available"));
+        }
+
+        @Test
+        void reverificationResponseForDifferentUser()
+                throws ParseException, UnsuccessfulReverificationResponseException {
+            var failedValidation =
+                    FAILED_REVERIFICATION_IPV_RESPONSE_TEMPLATE.formatted(
+                            "other sub", false, "no_identity_available", "failure reason");
+            var userInfo = successfulResponseWithBody(failedValidation);
+
+            when(reverificationResultService.sendIpvReverificationRequest(any()))
+                    .thenReturn(userInfo);
+
+            ReverificationResultRequest request =
+                    new ReverificationResultRequest("1234", AUTHENTICATION_STATE, EMAIL);
+
+            var result =
+                    handler.handleRequestWithUserContext(
+                            apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                            context,
+                            request,
+                            USER_CONTEXT);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ERROR_1059));
+
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining("sub does not match current user.")));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey-type", "ACCOUNT_RECOVERY"));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey-type", "ACCOUNT_RECOVERY"));
+        }
+
+        @Test
+        void reverificationResponseWithoutSubjectId()
+                throws ParseException, UnsuccessfulReverificationResponseException {
+            var missingSub =
+                    """
+                {
+                    "success": true
+                }
+            """;
+            var userInfo = successfulResponseWithBody(missingSub);
+
+            when(reverificationResultService.sendIpvReverificationRequest(any()))
+                    .thenReturn(userInfo);
+
+            ReverificationResultRequest request =
+                    new ReverificationResultRequest("1234", AUTHENTICATION_STATE, EMAIL);
+
+            var result =
+                    handler.handleRequestWithUserContext(
+                            apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                            context,
+                            request,
+                            USER_CONTEXT);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ERROR_1059));
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Missing sub cannot verify response is for current user.")));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey-type", "ACCOUNT_RECOVERY"));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
+                            auditContextWithAllUserInfo,
+                            pair("journey-type", "ACCOUNT_RECOVERY"));
         }
 
         private static Stream<Arguments> scenariosWithFailureDetails() {
