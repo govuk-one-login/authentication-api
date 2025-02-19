@@ -164,7 +164,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     auditContextFromUserContext(
                             userContext,
                             authSession.getInternalCommonSubjectId(),
-                            session.getEmailAddress(),
+                            authSession.getEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
@@ -191,12 +191,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     journeyType, subjectId, auditContext, maybeRpPairwiseId))
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
-            if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
+            if (isCodeBlockedForSession(authSession, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
-            var code = getCode(notificationType, session, userContext);
+            var code = getCode(notificationType, authSession, userContext);
 
             var errorResponse =
                     ValidationHelper.validateVerificationCode(
@@ -205,7 +205,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             code,
                             codeRequest.code(),
                             codeStorageService,
-                            session.getEmailAddress(),
+                            authSession.getEmailAddress(),
                             configurationService);
 
             if (errorResponse.stream().anyMatch(ErrorResponse.ERROR_1002::equals)) {
@@ -221,7 +221,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         notificationType,
                         subjectId,
                         errorResponse.get(),
-                        session,
+                        authSession,
                         auditContext);
 
                 if (userHasExceededAllowedAttemptsForReauthenticationJourney(
@@ -267,12 +267,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private Optional<String> getCode(
-            NotificationType notificationType, Session session, UserContext userContext)
+            NotificationType notificationType, AuthSessionItem authSession, UserContext userContext)
             throws ClientNotFoundException {
         boolean isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);
         return isTestClient
                 ? getOtpCodeForTestClient(notificationType)
-                : codeStorageService.getOtpCode(session.getEmailAddress(), notificationType);
+                : codeStorageService.getOtpCode(authSession.getEmailAddress(), notificationType);
     }
 
     private void handleInvalidVerificationCode(
@@ -281,7 +281,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             NotificationType notificationType,
             String subjectId,
             ErrorResponse errorResponse,
-            Session session,
+            AuthSessionItem authSession,
             AuditContext auditContext) {
         if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
@@ -297,7 +297,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         } else {
             processBlockedCodeSession(
-                    errorResponse, session, codeRequest, journeyType, auditContext);
+                    errorResponse, authSession, codeRequest, journeyType, auditContext);
         }
     }
 
@@ -359,21 +359,22 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 .get(codeRequest.notificationType());
     }
 
-    private boolean isCodeBlockedForSession(Session session, String codeBlockedKeyPrefix) {
+    private boolean isCodeBlockedForSession(
+            AuthSessionItem authSession, String codeBlockedKeyPrefix) {
         return codeStorageService.isBlockedForEmail(
-                session.getEmailAddress(), codeBlockedKeyPrefix);
+                authSession.getEmailAddress(), codeBlockedKeyPrefix);
     }
 
-    private void blockCodeForSession(Session session, String codeBlockPrefix) {
+    private void blockCodeForSession(AuthSessionItem authSession, String codeBlockPrefix) {
         codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
+                authSession.getEmailAddress(),
                 codeBlockPrefix,
                 configurationService.getLockoutDuration());
         LOG.info("Email is blocked");
     }
 
-    private void resetIncorrectMfaCodeAttemptsCount(Session session) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
+    private void resetIncorrectMfaCodeAttemptsCount(AuthSessionItem authSession) {
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         LOG.info("IncorrectMfaCodeAttemptsCount reset");
     }
 
@@ -390,7 +391,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var sessionId = authSession.getSessionId();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
-                codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
+                codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         var clientSession = userContext.getClientSession();
         var clientId = client.getClientID();
         var levelOfConfidence =
@@ -413,7 +414,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     clientId,
                     userContext.getClientName(),
                     levelOfConfidence.getValue(),
-                    clientService.isTestJourney(clientId, session.getEmailAddress()),
+                    clientService.isTestJourney(clientId, authSession.getEmailAddress()),
                     true);
         }
 
@@ -426,7 +427,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }
 
-        codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
+        codeStorageService.deleteOtpCode(authSession.getEmailAddress(), notificationType);
 
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
@@ -488,7 +489,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private void processBlockedCodeSession(
             ErrorResponse errorResponse,
-            Session session,
+            AuthSessionItem authSession,
             VerifyCodeRequest codeRequest,
             JourneyType journeyType,
             AuditContext auditContext) {
@@ -502,13 +503,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             case ERROR_1048:
                 if (!configurationService.supportReauthSignoutEnabled()
                         || journeyType != JourneyType.REAUTHENTICATION) {
-                    blockCodeForSession(session, codeBlockedKeyPrefix);
+                    blockCodeForSession(authSession, codeBlockedKeyPrefix);
                 }
-                resetIncorrectMfaCodeAttemptsCount(session);
+                resetIncorrectMfaCodeAttemptsCount(authSession);
                 auditableEvent = FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
                 break;
             case ERROR_1033:
-                resetIncorrectMfaCodeAttemptsCount(session);
+                resetIncorrectMfaCodeAttemptsCount(authSession);
                 auditableEvent = FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
                 break;
             default:
@@ -516,7 +517,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 break;
         }
         var loginFailureCount =
-                codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
+                codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
