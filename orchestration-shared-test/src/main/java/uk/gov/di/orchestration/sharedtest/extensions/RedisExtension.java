@@ -202,12 +202,21 @@ public class RedisExtension
     public void createClientSession(
             String clientSessionId, String clientName, Map<String, List<String>> authRequest)
             throws Json.JsonException {
+        createClientSession(clientSessionId, clientName, authRequest, LocalDateTime.now());
+    }
+
+    public void createClientSession(
+            String clientSessionId,
+            String clientName,
+            Map<String, List<String>> authRequest,
+            LocalDateTime localDateTime)
+            throws Json.JsonException {
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(
                         new ClientSession(
                                 authRequest,
-                                LocalDateTime.now(),
+                                localDateTime,
                                 List.of(VectorOfTrust.getDefaults()),
                                 clientName)),
                 300);
