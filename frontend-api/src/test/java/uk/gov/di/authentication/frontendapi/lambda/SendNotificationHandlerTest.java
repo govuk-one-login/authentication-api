@@ -139,7 +139,8 @@ class SendNotificationHandlerTest {
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withEmailAddress(EMAIL);
 
     private final AuditContext auditContext =
             new AuditContext(
