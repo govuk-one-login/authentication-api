@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.lambda.DocAppCallbackHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
@@ -34,13 +35,16 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.CriStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +95,10 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @RegisterExtension
     protected static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    protected static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     protected static final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
@@ -348,14 +356,26 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         .state(RP_STATE)
                         .nonce(new Nonce());
         redis.createSession(SESSION_ID);
+        var clientSessionCreationDate =
+                LocalDateTime.ofInstant(
+                        Instant.parse("2025-02-19T15:00:00Z"), ZoneId.systemDefault());
         var clientSession =
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
-                        LocalDateTime.now(),
+                        clientSessionCreationDate,
                         List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
+        var orchClientSession =
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        clientSessionCreationDate,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME);
+        orchClientSession.setDocAppSubjectId(docAppSubjectId.getValue());
+        orchClientSessionExtension.storeClientSession(orchClientSession);
         redis.addStateToRedis(DOC_APP_STATE, SESSION_ID);
         orchSessionExtension.addSession(
                 new OrchSessionItem(SESSION_ID)
