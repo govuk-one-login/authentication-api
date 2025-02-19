@@ -59,6 +59,7 @@ import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCh
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
+import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -386,6 +387,7 @@ public class TokenHandler
             VectorOfTrust vtr, AuthenticationRequest authRequest) {
         OIDCClaimsRequest claimsRequest = null;
         if (Objects.nonNull(vtr.getLevelOfConfidence())
+                && !(vtr.getLevelOfConfidence().equals(NONE))
                 && Objects.nonNull(authRequest.getOIDCClaims())) {
             claimsRequest = authRequest.getOIDCClaims();
         }
