@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class MfaResetStorageTokenJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -42,9 +41,7 @@ public class MfaResetStorageTokenJwkHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent event, Context context) {
-        return segmentedFunctionCall(
-                "frontend-api::" + getClass().getSimpleName(),
-                this::mfaResetStorageTokenJwkHandler);
+        return mfaResetStorageTokenJwkHandler();
     }
 
     public APIGatewayProxyResponseEvent mfaResetStorageTokenJwkHandler() {
@@ -60,10 +57,7 @@ public class MfaResetStorageTokenJwkHandler
             LOG.info("Served Auth MFA storage token signature verification key JWK set.");
 
             return generateApiGatewayProxyResponse(
-                    200,
-                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
-                    Map.of("Cache-Control", "max-age=86400"),
-                    null);
+                    200, jwkSet.toString(true), Map.of("Cache-Control", "max-age=86400"), null);
         } catch (Exception e) {
             LOG.error("Failed to serve Auth MFA storage token signature verification key.", e);
             return generateApiGatewayProxyResponse(

@@ -35,7 +35,6 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
@@ -142,9 +141,7 @@ public abstract class BaseFrontendHandler<T>
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "frontend-api::" + getClass().getSimpleName(),
-                () -> validateAndHandleRequest(input, context));
+        return validateAndHandleRequest(input, context);
     }
 
     public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {}

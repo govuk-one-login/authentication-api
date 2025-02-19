@@ -40,7 +40,6 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -94,9 +93,7 @@ public class UpdatePasswordHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
-                "account-management-api::" + getClass().getSimpleName(),
-                () -> updatePasswordRequestHandler(input, context));
+        return updatePasswordRequestHandler(input, context);
     }
 
     public APIGatewayProxyResponseEvent updatePasswordRequestHandler(

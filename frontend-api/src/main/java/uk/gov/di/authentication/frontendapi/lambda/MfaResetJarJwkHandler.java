@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class MfaResetJarJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -41,8 +40,7 @@ public class MfaResetJarJwkHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent event, Context context) {
-        return segmentedFunctionCall(
-                "frontend-api::" + getClass().getSimpleName(), this::mfaResetJarJwkHandler);
+        return mfaResetJarJwkHandler();
     }
 
     public APIGatewayProxyResponseEvent mfaResetJarJwkHandler() {
@@ -59,10 +57,7 @@ public class MfaResetJarJwkHandler
             LOG.info("Served Auth reverification request JAR signature verification key JWK set.");
 
             return generateApiGatewayProxyResponse(
-                    200,
-                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
-                    Map.of("Cache-Control", "max-age=86400"),
-                    null);
+                    200, jwkSet.toString(true), Map.of("Cache-Control", "max-age=86400"), null);
         } catch (Exception e) {
             LOG.error(
                     "Failed to serve Auth reverification request JAR signature verification key.",

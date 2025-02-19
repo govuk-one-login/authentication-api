@@ -29,7 +29,6 @@ import java.util.NoSuchElementException;
 
 import static com.nimbusds.langtag.LangTagUtils.parseLangTagList;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -58,9 +57,7 @@ public class WellknownHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> wellknownRequestHandler(input, context));
+        return wellknownRequestHandler(input, context);
     }
 
     public APIGatewayProxyResponseEvent wellknownRequestHandler(

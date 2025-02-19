@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.validation.Validator;
 import java.time.LocalDateTime;
 
 import static java.util.Objects.isNull;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class SerializationService implements Json {
 
@@ -73,10 +72,7 @@ public class SerializationService implements Json {
     private <T> T deserializeJson(String jsonString, Class<T> clazz, Validator validator, Gson gson)
             throws JsonException {
         try {
-            T value =
-                    segmentedFunctionCall(
-                            "SerializationService::GSON::fromJson",
-                            () -> gson.fromJson(jsonString, clazz));
+            T value = gson.fromJson(jsonString, clazz);
             validateJson(value, validator);
             return value;
         } catch (JsonSyntaxException | IllegalArgumentException e) {
@@ -86,10 +82,7 @@ public class SerializationService implements Json {
     }
 
     private <T> void validateJson(T value, Validator validator) throws JsonException {
-        var violations =
-                segmentedFunctionCall(
-                        "SerializationService::validator::validate",
-                        () -> validator.validate(value));
+        var violations = validator.validate(value);
         if (!violations.isEmpty()) {
             String violationMessage =
                     "JSON validation error, missing required field(s): "
@@ -102,16 +95,16 @@ public class SerializationService implements Json {
 
     @Override
     public String writeValueAsString(Object object) {
-        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithUnderscores.toJson(object));
+        return gsonWithUnderscores.toJson(object);
     }
 
     @Override
     public String writeValueAsStringCamelCase(Object object) {
-        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithCamelCase.toJson(object));
+        return gsonWithCamelCase.toJson(object);
     }
 
     public String writeValueAsStringNoNulls(Object object) {
-        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithUnderscoresNoNulls.toJson(object));
+        return gsonWithUnderscoresNoNulls.toJson(object);
     }
 
     public static SerializationService getInstance() {

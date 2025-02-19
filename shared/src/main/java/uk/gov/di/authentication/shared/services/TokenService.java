@@ -54,7 +54,6 @@ import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class TokenService {
 
@@ -93,47 +92,36 @@ public class TokenService {
             String vot) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
-                segmentedFunctionCall(
-                        "generateAndStoreAccessToken",
-                        () ->
-                                generateAndStoreAccessToken(
-                                        clientID,
-                                        internalSubject,
-                                        scopesForToken,
-                                        rpPairwiseSubject,
-                                        internalPairwiseSubject,
-                                        claimsRequest,
-                                        signingAlgorithm));
+                generateAndStoreAccessToken(
+                        clientID,
+                        internalSubject,
+                        scopesForToken,
+                        rpPairwiseSubject,
+                        internalPairwiseSubject,
+                        claimsRequest,
+                        signingAlgorithm);
         AccessTokenHash accessTokenHash =
-                segmentedFunctionCall(
-                        "AccessTokenHash.compute",
-                        () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
+                AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null);
 
         SignedJWT idToken =
-                segmentedFunctionCall(
-                        "generateIDToken",
-                        () ->
-                                generateIDToken(
-                                        clientID,
-                                        rpPairwiseSubject,
-                                        additionalTokenClaims,
-                                        accessTokenHash,
-                                        vot,
-                                        isDocAppJourney,
-                                        signingAlgorithm,
-                                        journeyId));
+                generateIDToken(
+                        clientID,
+                        rpPairwiseSubject,
+                        additionalTokenClaims,
+                        accessTokenHash,
+                        vot,
+                        isDocAppJourney,
+                        signingAlgorithm,
+                        journeyId);
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
-                    segmentedFunctionCall(
-                            "generateAndStoreRefreshToken",
-                            () ->
-                                    generateAndStoreRefreshToken(
-                                            clientID,
-                                            internalSubject,
-                                            scopesForToken,
-                                            rpPairwiseSubject,
-                                            internalPairwiseSubject,
-                                            signingAlgorithm));
+                    generateAndStoreRefreshToken(
+                            clientID,
+                            internalSubject,
+                            scopesForToken,
+                            rpPairwiseSubject,
+                            internalPairwiseSubject,
+                            signingAlgorithm);
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));

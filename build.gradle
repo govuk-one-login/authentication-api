@@ -208,11 +208,7 @@ subprojects {
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 
         xray platform("com.amazonaws:aws-xray-recorder-sdk-bom:${dependencyVersions.xray}"),
-                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-instrumentor:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
+                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}"
 
         spotbugs "com.github.spotbugs:spotbugs:4.9.1"
 
@@ -226,7 +222,6 @@ subprojects {
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
 
         otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
-                "io.opentelemetry:opentelemetry-api",
                 "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }
 }
@@ -236,7 +231,6 @@ subprojects {
         if (subproject.plugins.hasPlugin('java')) {
             dependencies {
                 runtimeOnly configurations.otel_aws_instrumentation
-                // testRuntimeOnly configurations.otel_aws_instrumentation
             }
         }
     }

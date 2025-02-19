@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -56,9 +55,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
-        return segmentedFunctionCall(
-                "account-management-api::" + getClass().getSimpleName(),
-                () -> notificationRequestHandler(event, context));
+        return notificationRequestHandler(event, context);
     }
 
     public Void notificationRequestHandler(SQSEvent event, Context context) {

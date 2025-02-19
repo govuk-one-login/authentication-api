@@ -35,7 +35,6 @@ import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableE
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
@@ -85,9 +84,7 @@ public class UserInfoHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
-            return segmentedFunctionCall(
-                    "auth-external-api::" + getClass().getSimpleName(),
-                    () -> userInfoRequestHandler(input));
+            return userInfoRequestHandler(input);
         } catch (Exception e) {
             LOG.error("Unexpected exception: {}", e.getMessage());
             return generateApiGatewayProxyResponse(500, "server_error");

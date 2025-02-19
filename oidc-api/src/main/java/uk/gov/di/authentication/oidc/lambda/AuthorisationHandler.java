@@ -99,7 +99,6 @@ import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationS
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.getPrimaryLanguageFromUILocales;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -233,9 +232,12 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> authoriseRequestHandler(input, context));
+        try {
+            return authoriseRequestHandler(input, context);
+        } catch (java.text.ParseException e) {
+            LOG.warn("asdfasdfasdg");
+            throw new RuntimeException("Unauthorized");
+        }
     }
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
@@ -1137,13 +1139,8 @@ public class AuthorisationHandler
 
     private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
         boolean isTokenSignatureValid =
-                segmentedFunctionCall(
-                        "isTokenSignatureValid",
-                        () ->
-                                tokenValidationService.isTokenSignatureValid(
-                                        authenticationRequest
-                                                .getCustomParameter("id_token_hint")
-                                                .get(0)));
+                tokenValidationService.isTokenSignatureValid(
+                        authenticationRequest.getCustomParameter("id_token_hint").get(0));
         if (!isTokenSignatureValid) {
             LOG.warn("Unable to validate ID token signature");
             throw new RuntimeException("Unable to validate id_token_hint");
