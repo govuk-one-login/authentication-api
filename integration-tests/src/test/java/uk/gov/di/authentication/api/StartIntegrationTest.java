@@ -106,6 +106,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
         redis.addEmailToSession(sessionId, EMAIL);
+        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
+        authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -172,6 +175,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
         redis.addEmailToSession(sessionId, EMAIL);
+        authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -213,6 +217,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var isAuthenticated = true;
         var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, userEmail);
+        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+        authSessionExtension.addSession(sessionId);
 
         userStore.signUp(userEmail, "rubbbishPassword");
 
@@ -273,6 +280,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var state = new State();
         var sessionId = redis.createSession(isAuthenticated);
+        authSessionExtension.addSession(sessionId);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
         var authRequest =
                 new AuthenticationRequest.Builder(
@@ -327,6 +335,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, userEmail);
+        authSessionExtension.addSession(sessionId);
         redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
@@ -357,8 +366,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
             txmaAuditQueue.clear();
             sessionId = redis.createSession(false);
+            authSessionExtension.addSession(sessionId);
             userStore.signUp(EMAIL, "password");
             redis.addEmailToSession(sessionId, EMAIL);
+            authSessionExtension.addEmailToSession(sessionId, EMAIL);
             var state = new State();
             Scope scope = new Scope();
             scope.add(OIDCScopeValue.OPENID);

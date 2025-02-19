@@ -75,6 +75,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                         previousAuthSession
                                 .get()
                                 .withSessionId(newSessionId)
+                                .withEmailAddress(previousAuthSession.get().getEmailAddress())
                                 .withCurrentCredentialStrength(currentCredentialStrength)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
