@@ -62,9 +62,8 @@ public class ClientSessionServiceIntegrationTest {
                 new ClientSession(Map.of(), LocalDateTime.now(), VTR_LIST, CLIENT_NAME);
         orchClientSessionService.storeClientSession(clientSessionId, orchClientSession);
 
-        // Get Auth Client Session from Redis, set Subject ID, and update in Redis.
+        // Get Auth Client Session from Redis and update in Redis.
         var authClientSession = authClientSessionService.getClientSession(clientSessionId).get();
-        authClientSession.setDocAppSubjectId(SUBJECT_ID);
         authClientSessionService.updateStoredClientSession(clientSessionId, authClientSession);
 
         // Get Orch Client Session from Redis, set ID Token Hint, and update in Redis.
@@ -72,17 +71,15 @@ public class ClientSessionServiceIntegrationTest {
         orchClientSession.setIdTokenHint(ID_TOKEN_HINT);
         orchClientSessionService.updateStoredClientSession(clientSessionId, orchClientSession);
 
-        // Get Auth Client Session from Redis.
-        authClientSession = authClientSessionService.getClientSession(clientSessionId).get();
-
         // Check fields have expected values in Orch copy.
         assertThat(orchClientSession.getClientName(), is(equalTo(CLIENT_NAME)));
-        assertThat(orchClientSession.getDocAppSubjectId(), is(equalTo(SUBJECT_ID)));
         assertThat(orchClientSession.getVtrList(), is(equalTo(VTR_LIST)));
 
         // Check fields have expected values in Auth copy.
         assertThat(authClientSession.getClientName(), is(equalTo(CLIENT_NAME)));
-        assertThat(authClientSession.getDocAppSubjectId(), is(equalTo(SUBJECT_ID)));
+        assertThat(
+                authClientSession.getEffectiveVectorOfTrust().toString(),
+                is(equalTo(VTR_LIST.get(0).toString())));
     }
 
     @Test
@@ -95,14 +92,14 @@ public class ClientSessionServiceIntegrationTest {
         orchClientSession.setDocAppSubjectId(SUBJECT_ID);
         orchClientSessionService.storeClientSession(clientSessionId, orchClientSession);
 
-        // Get Auth Client Session from Redis, set Subject ID to null, and update in Redis.
+        // Get Auth Client Session from Redis and update in Redis.
         var authClientSession = authClientSessionService.getClientSession(clientSessionId).get();
-        authClientSession.setDocAppSubjectId(null);
         authClientSessionService.updateStoredClientSession(clientSessionId, authClientSession);
 
         // Get Orch Client Session from Redis, set ID Token Hint to null, and update in Redis.
         orchClientSession = orchClientSessionService.getClientSession(clientSessionId).get();
         orchClientSession.setIdTokenHint(null);
+        orchClientSession.setDocAppSubjectId(null);
         orchClientSessionService.updateStoredClientSession(clientSessionId, orchClientSession);
 
         // Get Orch / Auth client sessions from Redis.

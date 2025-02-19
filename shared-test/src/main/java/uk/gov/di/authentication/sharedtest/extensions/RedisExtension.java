@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -88,19 +87,6 @@ public class RedisExtension
 
     public String createAuthenticatedSessionWithEmail(String email) throws Json.JsonException {
         return createSession(IdGenerator.generate(), true, Optional.of(email));
-    }
-
-    public void addDocAppSubjectIdToClientSession(Subject subject, String clientSessionId)
-            throws Json.JsonException {
-        var clientSession =
-                objectMapper.readValue(
-                        redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId)),
-                        ClientSession.class);
-        clientSession.setDocAppSubjectId(subject);
-        redis.saveWithExpiry(
-                CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(clientSession),
-                3600);
     }
 
     public void addStateToRedis(State state, String sessionId) throws Json.JsonException {

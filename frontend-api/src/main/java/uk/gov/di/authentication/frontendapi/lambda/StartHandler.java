@@ -282,7 +282,7 @@ public class StartHandler
                                 configurationService.getDocAppDomain());
 
                 clientSessionService.updateStoredClientSession(
-                        clientSessionId, clientSession.get().setDocAppSubjectId(docAppSubjectId));
+                        clientSessionId, clientSession.get());
                 LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
             }
 

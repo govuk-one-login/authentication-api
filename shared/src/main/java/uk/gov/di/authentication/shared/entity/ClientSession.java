@@ -45,11 +45,6 @@ public class ClientSession {
         return docAppSubjectId;
     }
 
-    public ClientSession setDocAppSubjectId(Subject docAppSubjectId) {
-        this.docAppSubjectId = docAppSubjectId;
-        return this;
-    }
-
     public String getClientName() {
         return clientName;
     }
