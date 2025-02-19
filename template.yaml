@@ -1857,19 +1857,8 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - AuthenticationCallbackFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      SnapStart:
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
