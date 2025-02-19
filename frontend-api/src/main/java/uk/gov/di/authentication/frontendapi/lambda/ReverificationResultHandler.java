@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import net.minidev.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.IpvReverificationFailureCode;
@@ -31,6 +32,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
@@ -160,44 +162,84 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             LOG.info("ReverificationResult response received from IPV");
 
             var reverificationResultJson = reverificationResult.getContentAsJSONObject();
-            var success = reverificationResultJson.get("success");
-            var failureCode = reverificationResultJson.get("failure_code");
 
-            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
-            metadataPairs.add(
-                    AuditService.MetadataPair.pair(
-                            "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
-            metadataPairs.add(AuditService.MetadataPair.pair("success", success));
-            if (failureCode != null) {
-                try {
-                    var parsedFailureCode =
-                            IpvReverificationFailureCode.fromValue(failureCode.toString());
-                    metadataPairs.add(
-                            AuditService.MetadataPair.pair(
-                                    "failure_code", parsedFailureCode.getValue()));
-                    cloudwatchMetricService.incrementMfaResetIpvResponseCount(
-                            parsedFailureCode.getValue());
-                } catch (IllegalArgumentException e) {
-                    LOG.warn("Unknown ipv reverification failure code of {}", failureCode);
-                }
-            }
+            var validMetadata = extractValidMetadata(reverificationResultJson);
 
-            if (success == null) {
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
-            }
-            if (success.equals(true)) {
-                cloudwatchMetricService.incrementMfaResetIpvResponseCount("success");
-            }
+            metadataPairs.addAll(validMetadata.metadataPairs());
 
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
                     baseAuditContext,
                     metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
+            if (!validMetadata.valid()) {
+                var logFriendlyResponse = reverificationResultJson.toJSONString();
+                LOG.warn(
+                        "Invalid re-verification result response from IPV: {}",
+                        logFriendlyResponse);
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
+            }
+
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {
             LOG.error("Error getting reverification result", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
         }
+    }
+
+    private ValidationResult extractValidMetadata(JSONObject json) {
+        List<AuditService.MetadataPair> metadataPairs = new ArrayList<>();
+
+        if (!json.containsKey("success") || !(json.get("success") instanceof Boolean)) {
+            metadataPairs.add(AuditService.MetadataPair.pair("success", "missing or corrupt"));
+            return ValidationResult.failure("Invalid or missing 'success' field.", metadataPairs);
+        }
+
+        boolean success = (boolean) json.get("success");
+
+        metadataPairs.add(AuditService.MetadataPair.pair("success", success));
+
+        if (success && (json.containsKey("failure_code") || json.containsKey("failure_reason"))) {
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair("failure_code", json.get("failure_code")));
+            return ValidationResult.failure(
+                    "'failure_code' or 'failure_reason' must not be present when successful.",
+                    metadataPairs);
+        }
+
+        if (!success) {
+            boolean failureDetailsMissing =
+                    !json.containsKey("failure_code")
+                            || !(json.get("failure_code") instanceof String);
+
+            if (failureDetailsMissing) {
+                return ValidationResult.failure("Invalid or missing 'failure_code'", metadataPairs);
+            }
+
+            String failValue = (String) json.get("failure_code");
+
+            if (!IpvReverificationFailureCode.isValid(failValue)) {
+                metadataPairs.add(AuditService.MetadataPair.pair("failure_code", failValue));
+                return ValidationResult.failure(
+                        "Invalid or missing 'failure_reason'", metadataPairs);
+            }
+            cloudwatchMetricService.incrementMfaResetIpvResponseCount(failValue);
+            metadataPairs.add(AuditService.MetadataPair.pair("failure_code", failValue));
+        }
+        cloudwatchMetricService.incrementMfaResetIpvResponseCount("success");
+        return ValidationResult.success(metadataPairs);
+    }
+}
+
+record ValidationResult(
+        boolean valid, String errorMessage, List<AuditService.MetadataPair> metadataPairs) {
+
+    public static ValidationResult success(List<AuditService.MetadataPair> metadataPairs) {
+        return new ValidationResult(true, null, metadataPairs);
+    }
+
+    public static ValidationResult failure(
+            String errorMessage, List<AuditService.MetadataPair> metadataPairs) {
+        return new ValidationResult(false, errorMessage, metadataPairs);
     }
 }
