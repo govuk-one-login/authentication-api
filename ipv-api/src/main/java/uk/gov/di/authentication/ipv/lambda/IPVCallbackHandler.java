@@ -53,6 +53,7 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -79,6 +80,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class IPVCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -92,6 +94,7 @@ public class IPVCallbackHandler
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
     private final LogoutService logoutService;
@@ -114,6 +117,7 @@ public class IPVCallbackHandler
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             DynamoService dynamoService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
             LogoutService logoutService,
@@ -129,6 +133,7 @@ public class IPVCallbackHandler
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
         this.logoutService = logoutService;
@@ -153,6 +158,7 @@ public class IPVCallbackHandler
                 new AuthenticationUserInfoStorageService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.logoutService = new LogoutService(configurationService);
@@ -180,6 +186,7 @@ public class IPVCallbackHandler
                 new AuthenticationUserInfoStorageService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.logoutService = new LogoutService(configurationService, redis);
@@ -255,6 +262,10 @@ public class IPVCallbackHandler
                                     () ->
                                             new IPVCallbackNoSessionException(
                                                     "ClientSession not found"));
+            var orchClientSession =
+                    orchClientSessionService.getClientSession(clientSessionId).orElse(null);
+
+            logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
 
             var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
