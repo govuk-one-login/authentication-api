@@ -336,7 +336,7 @@ variable "code_max_retries_increased" {
 
 
 variable "endpoint_memory_size" {
-  default = 2000
+  default = 1536
   type    = number
 }
 
@@ -610,7 +610,7 @@ variable "ticf_cri_service_uri" {
 }
 
 variable "ticf_cri_service_call_timeout" {
-  default     = 2000
+  default     = 1536
   type        = number
   description = "The HTTP Client connection timeout for requests to TICF CRI Service (in milliseconds)."
 }
