@@ -20,8 +20,6 @@ public class Session {
         UNKNOWN
     }
 
-    @Expose private String sessionId;
-
     @Expose private List<String> clientSessions;
 
     @Expose private String emailAddress;
@@ -42,8 +40,7 @@ public class Session {
 
     @Expose private String internalCommonSubjectIdentifier;
 
-    public Session(String sessionId) {
-        this.sessionId = sessionId;
+    public Session() {
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
         this.processingIdentityAttempts = 0;
@@ -52,7 +49,6 @@ public class Session {
     }
 
     public Session(Session session) {
-        this.sessionId = session.sessionId;
         this.clientSessions = session.clientSessions;
         this.isNewAccount = session.isNewAccount;
         this.processingIdentityAttempts = session.processingIdentityAttempts;
@@ -64,10 +60,6 @@ public class Session {
         this.retryCount = session.retryCount;
         this.verifiedMfaMethodType = session.verifiedMfaMethodType;
         initializeCodeRequestMap();
-    }
-
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
     }
 
     public List<String> getClientSessions() {

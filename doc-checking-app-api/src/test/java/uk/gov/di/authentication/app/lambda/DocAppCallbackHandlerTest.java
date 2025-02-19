@@ -120,7 +120,7 @@ class DocAppCallbackHandlerTest {
     private static final State RP_STATE = new State();
     private static final Nonce NONCE = new Nonce();
 
-    private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY);

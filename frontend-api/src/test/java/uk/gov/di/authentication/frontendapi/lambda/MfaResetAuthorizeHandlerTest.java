@@ -67,7 +67,7 @@ class MfaResetAuthorizeHandlerTest {
     private static final SessionService sessionService = mock(SessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
     private static final Session session =
-            new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+            new Session().setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private static final AuditService auditService = mock(AuditService.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);

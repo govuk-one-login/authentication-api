@@ -136,7 +136,7 @@ class TestClientHelperTest {
                         .withTestClient(isTestClient)
                         .withTestClientEmailAllowlist(allowedEmails);
         var sessionId = IdGenerator.generate();
-        return UserContext.builder(new Session(sessionId).setEmailAddress(TEST_EMAIL_ADDRESS))
+        return UserContext.builder(new Session().setEmailAddress(TEST_EMAIL_ADDRESS))
                 .withSessionId(sessionId)
                 .withClient(clientRegistry)
                 .build();

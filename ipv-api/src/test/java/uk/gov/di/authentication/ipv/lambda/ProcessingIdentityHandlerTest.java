@@ -109,7 +109,7 @@ class ProcessingIdentityHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
-    private final Session session = new Session(SESSION_ID);
+    private final Session session = new Session();
     private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();

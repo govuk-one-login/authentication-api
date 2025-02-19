@@ -928,7 +928,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupPreviousSessions(String internalCommonSubjectId)
                 throws Json.JsonException {
-            var session = new Session(PREVIOUS_SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+            var session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
             PREVIOUS_CLIENT_SESSIONS.forEach(session::addClientSession);
             redis.addSessionWithId(session, PREVIOUS_SESSION_ID);
             redis.addStateToRedis(

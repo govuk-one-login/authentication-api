@@ -4,7 +4,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -17,7 +16,7 @@ class SessionTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
     private final Session session =
-            new Session(IdGenerator.generate())
+            new Session()
                     .setEmailAddress("joe.bloggs@test.com")
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 

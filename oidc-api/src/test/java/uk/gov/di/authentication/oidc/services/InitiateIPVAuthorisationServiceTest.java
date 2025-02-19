@@ -126,7 +126,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private final AuthenticationRequest authenticationRequest = mock(AuthenticationRequest.class);
     private final UserInfo userInfo = generateUserInfo();
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ClientRegistry client = generateClientRegistry();

@@ -90,7 +90,7 @@ class CheckReAuthUserHandlerTest {
             apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
 
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL_USED_TO_SIGN_IN)
                     .setInternalCommonSubjectIdentifier(TEST_SUBJECT_ID);
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);

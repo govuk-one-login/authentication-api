@@ -86,9 +86,7 @@ class ReverificationResultHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final String subjectId = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
     private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(subjectId);
+            new Session().setEmailAddress(EMAIL).setInternalCommonSubjectIdentifier(subjectId);
     private final AuditContext auditContextWithAllUserInfo =
             new AuditContext(
                     CLIENT_ID,

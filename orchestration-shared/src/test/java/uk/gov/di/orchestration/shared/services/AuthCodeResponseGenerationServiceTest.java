@@ -48,7 +48,7 @@ class AuthCodeResponseGenerationServiceTest {
                 new OrchSessionItem(SESSION_ID)
                         .withAccountState(NEW)
                         .withVerifiedMfaMethodType(AUTH_APP.toString());
-        session = new Session(SESSION_ID);
+        session = new Session();
         authCodeResponseGenerationService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
         clientSession =

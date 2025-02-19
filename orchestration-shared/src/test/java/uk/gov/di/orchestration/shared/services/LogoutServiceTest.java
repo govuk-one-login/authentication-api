@@ -180,7 +180,7 @@ class LogoutServiceTest {
         rpPairwiseId = Optional.of(idToken.getJWTClaimsSet().getSubject());
 
         session =
-                new Session(SESSION_ID)
+                new Session()
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID);

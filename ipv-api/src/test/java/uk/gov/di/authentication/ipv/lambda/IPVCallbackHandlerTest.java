@@ -191,7 +191,7 @@ class IPVCallbackHandlerTest {
             new CaptureLoggingExtension(IPVCallbackHandler.class);
 
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
 
