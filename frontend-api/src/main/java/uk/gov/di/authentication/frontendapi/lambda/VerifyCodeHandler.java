@@ -242,7 +242,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    authSession,
                     codeRequest,
                     userContext,
                     subjectId,
@@ -379,7 +378,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private void processSuccessfulCodeRequest(
-            AuthSessionItem authSession,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
@@ -388,7 +386,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             ClientRegistry client,
             Optional<String> maybeRpPairwiseId) {
         var session = userContext.getSession();
-        var sessionId = userContext.getAuthSession().getSessionId();
+        var authSession = userContext.getAuthSession();
+        var sessionId = authSession.getSessionId();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
