@@ -33,8 +33,4 @@ public class ClientSession {
     public VectorOfTrust getEffectiveVectorOfTrust() {
         return effectiveVectorOfTrust;
     }
-
-    public String getClientName() {
-        return clientName;
-    }
 }

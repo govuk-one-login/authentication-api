@@ -76,7 +76,6 @@ public class ClientSessionServiceIntegrationTest {
         assertThat(orchClientSession.getVtrList(), is(equalTo(VTR_LIST)));
 
         // Check fields have expected values in Auth copy.
-        assertThat(authClientSession.getClientName(), is(equalTo(CLIENT_NAME)));
         assertThat(
                 authClientSession.getEffectiveVectorOfTrust().toString(),
                 is(equalTo(VTR_LIST.get(0).toString())));
