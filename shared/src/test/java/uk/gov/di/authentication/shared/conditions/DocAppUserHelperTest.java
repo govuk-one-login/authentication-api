@@ -10,7 +10,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -46,7 +45,6 @@ class DocAppUserHelperTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final String REDIRECT_URI = "https://localhost:8080";
-    private static final Subject SUBJECT = new Subject();
 
     private static Stream<ClientType> clientTypes() {
         return Stream.of(ClientType.WEB, ClientType.APP);
