@@ -6,37 +6,32 @@ plugins {
 group "uk.gov.di"
 version "unspecified"
 
-configurations.implementation {
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.nimbus)
-    extendsFrom(configurations.bouncycastle)
-    extendsFrom(configurations.govuk_notify)
-    extendsFrom(configurations.dynamodb)
-    extendsFrom(configurations.jetbrains_annotations)
-    extendsFrom(configurations.kms)
-    extendsFrom(configurations.lettuce)
-    extendsFrom(configurations.libphonenumber)
-    extendsFrom(configurations.hamcrest)
-    extendsFrom(configurations.sns)
-    extendsFrom(configurations.s3)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.ssm)
-    extendsFrom(configurations.xray)
-    extendsFrom(configurations.cloudwatch)
-    extendsFrom(configurations.gson)
-    extendsFrom(configurations.apache)
-}
-
-configurations.testImplementation {
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.lambda_tests)
-}
-
-configurations.testRuntimeOnly.extendsFrom(configurations.test_runtime)
-
 dependencies {
+
+    implementation configurations.lambda,
+            configurations.nimbus,
+            configurations.bouncycastle,
+            configurations.govuk_notify,
+            configurations.dynamodb,
+            configurations.jetbrains_annotations,
+            configurations.kms,
+            configurations.lettuce,
+            configurations.libphonenumber,
+            configurations.hamcrest,
+            configurations.sns,
+            configurations.s3,
+            configurations.sqs,
+            configurations.ssm,
+            configurations.xray,
+            configurations.cloudwatch,
+            configurations.gson,
+            configurations.apache
     implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
-    testImplementation project(":shared-test")
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests,
+            project(":shared-test")
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
@@ -51,7 +46,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
     dependsOn "test"
 }

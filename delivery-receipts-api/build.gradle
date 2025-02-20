@@ -46,7 +46,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
     dependsOn "test"
 }

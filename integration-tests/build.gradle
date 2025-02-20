@@ -7,23 +7,21 @@ plugins {
 group "uk.gov.di"
 version "unspecified"
 
-configurations.testImplementation {
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.apache)
-    extendsFrom(configurations.gson)
-    extendsFrom(configurations.nimbus)
-    extendsFrom(configurations.bouncycastle)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.kms)
-    extendsFrom(configurations.s3)
-    extendsFrom(configurations.cloudwatch)
-    extendsFrom(configurations.dynamodb)
-    extendsFrom(configurations.lettuce)
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.pact_provider)
-}
-
 dependencies {
+    testImplementation configurations.tests,
+            configurations.apache,
+            configurations.gson,
+            configurations.nimbus,
+            configurations.bouncycastle,
+            configurations.sqs,
+            configurations.kms,
+            configurations.s3,
+            configurations.cloudwatch,
+            configurations.dynamodb,
+            configurations.lettuce,
+            configurations.lambda,
+            configurations.pact_provider
+
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray
     implementation project(":shared-test"), noXray
@@ -121,6 +119,6 @@ task pactProviderTests (type: Test, group: "verification") {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
 }

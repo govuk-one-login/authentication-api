@@ -6,20 +6,17 @@ plugins {
 group "uk.gov.di"
 version "unspecified"
 
-configurations.testImplementation {
-    extendsFrom(configurations.bouncycastle)
-    extendsFrom(configurations.apache)
-    extendsFrom(configurations.nimbus)
-    extendsFrom(configurations.gson)
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.dynamodb)
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.lettuce)
-    extendsFrom(configurations.libphonenumber)
-}
-
 dependencies {
+    testImplementation configurations.bouncycastle,
+            configurations.apache,
+            configurations.nimbus,
+            configurations.gson,
+            configurations.tests,
+            configurations.sqs,
+            configurations.dynamodb,
+            configurations.lambda,
+            configurations.lettuce,
+            configurations.libphonenumber
 
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
@@ -65,6 +62,6 @@ test {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
 }

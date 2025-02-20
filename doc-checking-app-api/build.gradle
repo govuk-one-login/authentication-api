@@ -7,37 +7,31 @@ plugins {
 group "uk.gov.di.authentication.doccheckingapp"
 version "unspecified"
 
-configurations.compileOnly {
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.dynamodb)
-    extendsFrom(configurations.sns)
-    extendsFrom(configurations.kms)
-}
-
-configurations.implementation {
-    extendsFrom(configurations.gson)
-    extendsFrom(configurations.nimbus)
-    extendsFrom(configurations.bouncycastle)
-}
-
-configurations.runtimeOnly.extendsFrom(configurations.logging_runtime)
-
-configurations.testRuntimeOnly {
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.apache)
-    extendsFrom(configurations.lambda_tests)
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.kms)
-    extendsFrom(configurations.dynamodb)
-    extendsFrom(configurations.pact_consumer)
-}
-
-configurations.testRuntimeOnly.extendsFrom(configurations.test_runtime)
-
 dependencies {
+    compileOnly configurations.lambda,
+            configurations.dynamodb,
+            configurations.sns,
+            configurations.kms
+
+    implementation configurations.gson,
+            configurations.nimbus,
+            configurations.bouncycastle
+
     implementation project(":orchestration-shared")
-    testImplementation project(":orchestration-shared-test")
+
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.apache,
+            configurations.lambda_tests,
+            project(":orchestration-shared-test"),
+            configurations.lambda,
+            configurations.sqs,
+            configurations.kms,
+            configurations.dynamodb,
+            configurations.pact_consumer
+
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
@@ -83,7 +77,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
     dependsOn "test"
 }

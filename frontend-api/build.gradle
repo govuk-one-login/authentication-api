@@ -7,48 +7,40 @@ plugins {
 group "uk.gov.di.authentication.frontendapi"
 version "unspecified"
 
-configurations.implementation {
-    extendsFrom(configurations.govuk_notify)
-    extendsFrom(configurations.apache)
-    extendsFrom(configurations.gson)
-    extendsFrom(configurations.nimbus)
-    extendsFrom(configurations.cloudwatch)
-    extendsFrom(configurations.bouncycastle)
-    extendsFrom(configurations.kms)
-    extendsFrom(configurations.jetbrains_annotations)
-}
-
-configurations.compileOnly {
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.ssm)
-    extendsFrom(configurations.sns)
-    extendsFrom(configurations.s3)
-    extendsFrom(configurations.dynamodb)
-    extendsFrom(configurations.kms)
-}
-
-configurations.runtimeOnly.extendsFrom(configurations.logging_runtime)
-
-configurations.testImplementation {
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.lambda_tests)
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.s3)
-    extendsFrom(configurations.kms)
-    extendsFrom(configurations.dynamodb)
-    extendsFrom(configurations.pact_consumer)
-}
-
-configurations.testRuntimeOnly.extendsFrom(configurations.test_runtime)
-
-
 dependencies {
-    implementation project(path: ':shared')
 
-    testImplementation project(":shared-test"),
+    implementation project(path: ':shared')
+    compileOnly configurations.lambda,
+            configurations.sqs,
+            configurations.ssm,
+            configurations.sns,
+            configurations.s3,
+            configurations.dynamodb,
+            configurations.kms
+
+    implementation configurations.govuk_notify,
+            configurations.apache,
+            configurations.gson,
+            configurations.nimbus,
+            configurations.cloudwatch,
+            configurations.bouncycastle,
+            configurations.kms,
+            configurations.jetbrains_annotations
+
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests,
+            project(":shared-test"),
+            configurations.lambda,
+            configurations.sqs,
+            configurations.s3,
+            configurations.kms,
+            configurations.dynamodb,
+            configurations.pact_consumer,
             'org.wiremock:wiremock-jetty12:3.12.0'
+
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
@@ -94,7 +86,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
     dependsOn "test"
 }

@@ -6,33 +6,24 @@ plugins {
 group 'uk.gov.di.authentication.utils'
 version 'unspecified'
 
-configurations.compileOnly {
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.s3)
-    extendsFrom(configurations.dynamodb)
-}
-
-configurations.implementation {
-    extendsFrom(configurations.govuk_notify)
-    extendsFrom(configurations.nimbus)
-    extendsFrom(configurations.xray)
-}
-
-configurations.runtimeOnly.extendsFrom(configurations.logging_runtime)
-
-
-configurations.testImplementation {
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.s3)
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.dynamodb)
-}
-
-configurations.testRuntimeOnly.extendsFrom(configurations.test_runtime)
-
-
 dependencies {
-    implementation project(":shared")
+    compileOnly configurations.lambda,
+            configurations.s3,
+            configurations.dynamodb
+
+    implementation project(":shared"),
+            configurations.govuk_notify,
+            configurations.nimbus,
+            configurations.xray
+
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.s3,
+            configurations.lambda,
+            configurations.dynamodb
+
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
@@ -59,7 +50,7 @@ clean.dependsOn ":composeDown"
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
     dependsOn "test"
 }

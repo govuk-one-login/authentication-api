@@ -6,38 +6,31 @@ plugins {
 group "uk.gov.di.authentication.testservices"
 version "unspecified"
 
-configurations.compileOnly {
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.ssm)
-    extendsFrom(configurations.sns)
-    extendsFrom(configurations.kms)
-    extendsFrom(configurations.dynamodb)
-}
-
-configurations.implementation {
-    extendsFrom(configurations.gson)
-    extendsFrom(configurations.nimbus)
-}
-
-configurations.runtimeOnly.extendsFrom(configurations.logging_runtime)
-
-configurations.testImplementation {
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.apache)
-    extendsFrom(configurations.lambda_tests)
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.kms)
-    extendsFrom(configurations.dynamodb)
-}
-
-configurations.testRuntimeOnly.extendsFrom(configurations.test_runtime)
-
-
 dependencies {
+    compileOnly configurations.lambda,
+            configurations.sqs,
+            configurations.ssm,
+            configurations.sns,
+            configurations.kms,
+            configurations.dynamodb
+
+    implementation configurations.gson,
+            configurations.nimbus
+
     implementation project(":shared")
-    testImplementation project(":shared-test")
+
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.apache,
+            configurations.lambda_tests,
+            project(":shared-test"),
+            configurations.lambda,
+            configurations.sqs,
+            configurations.kms,
+            configurations.dynamodb
+
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
@@ -60,7 +53,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
     dependsOn "test"
 }

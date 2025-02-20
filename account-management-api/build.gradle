@@ -6,37 +6,30 @@ plugins {
 group "uk.gov.di.authentication.accountmanagement"
 version "unspecified"
 
-configurations.compileOnly {
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.ssm)
-    extendsFrom(configurations.sns)
-    extendsFrom(configurations.s3)
-    extendsFrom(configurations.dynamodb)
-}
-
-configurations.implementation {
-    extendsFrom(configurations.nimbus)
-    extendsFrom(configurations.govuk_notify)
-    extendsFrom(configurations.gson)
-}
-
-configurations.runtimeOnly.extendsFrom(configurations.logging_runtime)
-
-configurations.testImplementation {
-    extendsFrom(configurations.tests)
-    extendsFrom(configurations.lambda_tests)
-    extendsFrom(configurations.lambda)
-    extendsFrom(configurations.sqs)
-    extendsFrom(configurations.dynamodb)
-}
-
-configurations.testRuntimeOnly.extendsFrom(configurations.test_runtime)
-
 dependencies {
+    compileOnly configurations.lambda,
+            configurations.sqs,
+            configurations.ssm,
+            configurations.sns,
+            configurations.s3,
+            configurations.dynamodb
+
+    implementation configurations.nimbus,
+            configurations.govuk_notify,
+            configurations.gson
+
     implementation project(":shared")
 
-    testImplementation project(":shared-test")
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests,
+            project(":shared-test"),
+            configurations.lambda,
+            configurations.sqs,
+            configurations.dynamodb
+
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
@@ -59,7 +52,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.setRequired true
+        xml.enabled true
     }
     dependsOn "test"
 }
