@@ -30,10 +30,6 @@ public class ClientSession {
         return authRequestParams;
     }
 
-    public LocalDateTime getCreationDate() {
-        return creationDate;
-    }
-
     public VectorOfTrust getEffectiveVectorOfTrust() {
         return effectiveVectorOfTrust;
     }
