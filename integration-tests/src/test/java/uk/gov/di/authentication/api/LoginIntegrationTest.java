@@ -109,7 +109,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -194,7 +193,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
@@ -224,7 +222,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
         var headers = validHeadersWithSessionId(sessionId);
@@ -246,7 +243,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
         var headers = validHeadersWithSessionId(sessionId);
 
         redis.createClientSession(
@@ -283,7 +279,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
         var headers = validHeadersWithSessionId(sessionId);
 
         redis.createClientSession(

@@ -49,6 +49,8 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 
 class AuthAppCodeProcessorTest {
     AuthAppCodeProcessor authAppCodeProcessor;
+    Session mockSession;
+    AuthSessionItem mockAuthSession;
     CodeStorageService mockCodeStorageService;
     ConfigurationService mockConfigurationService;
     DynamoService mockDynamoService;
@@ -56,7 +58,6 @@ class AuthAppCodeProcessorTest {
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
     private Session session;
-    private AuthSessionItem authSession;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -86,7 +87,8 @@ class AuthAppCodeProcessorTest {
                 new Session(SESSION_ID)
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(INTERNAL_SUB_ID);
-        this.authSession = new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
+        this.mockSession = mock(Session.class);
+        this.mockAuthSession = mock(AuthSessionItem.class);
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
         this.mockDynamoService = mock(DynamoService.class);
@@ -94,7 +96,7 @@ class AuthAppCodeProcessorTest {
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
         when(mockUserContext.getSession()).thenReturn(session);
-        when(mockUserContext.getAuthSession()).thenReturn(authSession);
+        when(mockUserContext.getAuthSession()).thenReturn(mock(AuthSessionItem.class));
     }
 
     private static Stream<Arguments> validatorParams() {
@@ -281,9 +283,10 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpSuccessfulCodeRequest(CodeRequest codeRequest) {
+        when(mockAuthSession.getSessionId()).thenReturn(SESSION_ID);
         when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(mockUserContext.getSession()).thenReturn(session);
-        when(mockUserContext.getAuthSession()).thenReturn(authSession);
+        when(mockUserContext.getAuthSession()).thenReturn(mockAuthSession);
         when(mockUserContext.getClientId()).thenReturn(CLIENT_ID);
         when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
 

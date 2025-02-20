@@ -136,8 +136,7 @@ class VerifyCodeHandlerTest {
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Session sessionForTestClient =
             new Session(SESSION_ID_FOR_TEST_CLIENT).setEmailAddress(TEST_CLIENT_EMAIL);
-    private final AuthSessionItem authSession =
-            new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
