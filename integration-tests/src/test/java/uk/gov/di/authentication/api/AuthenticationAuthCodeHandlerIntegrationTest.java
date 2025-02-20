@@ -142,7 +142,6 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         return sessionId;
     }
 }
