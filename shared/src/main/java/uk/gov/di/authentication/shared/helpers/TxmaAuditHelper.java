@@ -29,6 +29,11 @@ public class TxmaAuditHelper {
             UserContext userContext) {
         LOG.info("Calculating RP pairwise identifier");
 
+        if (userContext == null) {
+            LOG.warn("Returning empty RP pairwise identifier - no user context provided");
+            return AuditService.UNKNOWN;
+        }
+
         var userProfile = userContext.getUserProfile();
         var client = userContext.getClient();
 
