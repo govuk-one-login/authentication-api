@@ -33,7 +33,7 @@ public class RedisConnectionService implements AutoCloseable {
 
     public RedisConnectionService(
             String host, int port, boolean useSsl, Optional<String> password) {
-        this(host, port, useSsl, password, true);
+        this(host, port, useSsl, password, false);
     }
 
     public RedisConnectionService(ConfigurationService configurationService) {
