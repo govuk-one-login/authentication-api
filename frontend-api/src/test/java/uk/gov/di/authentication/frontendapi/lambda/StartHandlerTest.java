@@ -2,20 +2,12 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +28,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -52,10 +43,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
-import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -104,11 +93,6 @@ class StartHandlerTest {
     private static final String SESSION_ID = "session-id";
     public static final State STATE = new State();
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
-    private static final Scope DOC_APP_SCOPE =
-            new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
-    private static final Nonce NONCE = new Nonce();
-    private static final ClientID CLIENT_ID = new ClientID("test-id");
-    private static final String AUDIENCE = "https://localhost/authorize";
     private static final Json objectMapper = SerializationService.getInstance();
 
     private StartHandler handler;
@@ -128,7 +112,6 @@ class StartHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final Session session = new Session(SESSION_ID);
     private final ClientSession clientSession = getClientSession();
-    private final ClientSession docAppClientSession = getDocAppClientSession();
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
                     TEST_CLIENT_ID,
@@ -195,47 +178,6 @@ class StartHandlerTest {
 
         assertThat(response.client(), equalTo(getClientStartInfo()));
         assertThat(response.user(), equalTo(userStartInfo));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
-                        AUDIT_CONTEXT,
-                        pair("internalSubjectId", AuditService.UNKNOWN));
-    }
-
-    @Test
-    void shouldReturn200WhenDocCheckingAppUserIsPresent()
-            throws ParseException, Json.JsonException {
-        var isAuthenticated = false;
-        when(userContext.getClientSession()).thenReturn(docAppClientSession);
-        when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null, false);
-        var clientStartInfo =
-                new ClientStartInfo(
-                        TEST_CLIENT_NAME,
-                        DOC_APP_SCOPE.toStringList(),
-                        "MANDATORY",
-                        false,
-                        REDIRECT_URL,
-                        STATE,
-                        false);
-        usingStartServiceThatReturns(userContext, clientStartInfo, userStartInfo);
-        usingValidDocAppClientSession();
-        usingValidSession();
-
-        var event =
-                apiRequestEventWithHeadersAndBody(
-                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(isAuthenticated));
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
-
-        assertThat(response.client(), equalTo(clientStartInfo));
-        assertThat(response.user(), equalTo(userStartInfo));
-
-        verify(clientSessionService).updateStoredClientSession(anyString(), any());
 
         verify(auditService)
                 .submitAuditEvent(
@@ -600,11 +542,6 @@ class StartHandlerTest {
                 .thenReturn(Optional.of(clientSession));
     }
 
-    private void usingValidDocAppClientSession() {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(docAppClientSession));
-    }
-
     private void usingInvalidClientSession() {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.empty());
@@ -636,41 +573,6 @@ class StartHandlerTest {
                         .build();
         return new ClientSession(
                 authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
-    }
-
-    private ClientSession getDocAppClientSession() {
-        try {
-            var jwtClaimsSet =
-                    new JWTClaimsSet.Builder()
-                            .audience(AUDIENCE)
-                            .subject(new Subject().getValue())
-                            .claim("redirect_uri", REDIRECT_URL)
-                            .claim("response_type", ResponseType.CODE.toString())
-                            .claim("scope", DOC_APP_SCOPE.toString())
-                            .claim("nonce", NONCE)
-                            .claim("state", STATE)
-                            .claim("client_id", CLIENT_ID)
-                            .issuer(new ClientID("test-id").getValue())
-                            .build();
-            var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
-            var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
-            var signer = new RSASSASigner(KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPrivate());
-            signedJWT.sign(signer);
-            var authRequest =
-                    new AuthenticationRequest.Builder(
-                                    ResponseType.CODE, DOC_APP_SCOPE, CLIENT_ID, REDIRECT_URL)
-                            .state(STATE)
-                            .nonce(new Nonce())
-                            .requestObject(signedJWT)
-                            .build();
-            return new ClientSession(
-                    authRequest.toParameters(),
-                    LocalDateTime.now(),
-                    mock(VectorOfTrust.class),
-                    TEST_CLIENT_NAME);
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private ClientStartInfo getClientStartInfo() {
