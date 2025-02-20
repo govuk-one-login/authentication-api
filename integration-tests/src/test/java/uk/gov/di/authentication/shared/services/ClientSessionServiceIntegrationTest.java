@@ -109,6 +109,5 @@ public class ClientSessionServiceIntegrationTest {
         // Check expected null fields are null.
         assertThat(orchClientSession.getIdTokenHint(), is(nullValue()));
         assertThat(orchClientSession.getDocAppSubjectId(), is(nullValue()));
-        assertThat(authClientSession.getDocAppSubjectId(), is(nullValue()));
     }
 }
