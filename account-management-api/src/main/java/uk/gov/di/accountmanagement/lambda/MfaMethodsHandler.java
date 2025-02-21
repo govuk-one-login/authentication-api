@@ -13,12 +13,17 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.List;
+
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class MfaMethodsHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final String PRODUCTION = "production";
+    private static final String INTEGRATION = "integration";
 
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -44,6 +49,10 @@ public class MfaMethodsHandler
 
     public APIGatewayProxyResponseEvent mfaMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        var disabledEnvironments = List.of(PRODUCTION, INTEGRATION);
+        if (disabledEnvironments.contains(configurationService.getEnvironment())) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
+        }
 
         var subject = input.getPathParameters().get("publicSubjectId");
         if (subject == null || !subject.equals("helloPath")) {
