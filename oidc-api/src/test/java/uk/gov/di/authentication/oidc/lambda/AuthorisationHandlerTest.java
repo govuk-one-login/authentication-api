@@ -329,6 +329,7 @@ class AuthorisationHandlerTest {
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
+        when(orchClientSession.getDocAppSubjectId()).thenReturn("test-subject-id");
         when(sessionService.updateWithNewSessionId(any(Session.class), anyString(), anyString()))
                 .then(invocation -> invocation.<Session>getArgument(0));
     }
@@ -663,8 +664,9 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+            var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
+            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "login"));
             APIGatewayProxyResponseEvent response =
@@ -708,8 +710,9 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+            var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
+            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             Map<String, String> requestParams =
                     buildRequestParams(
@@ -735,9 +738,10 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(
-                            generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters());
+            var authRequestParams =
+                    generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
+            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
                     makeHandlerRequest(
@@ -779,8 +783,10 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(generateAuthRequest(Optional.of(jsonArrayOf("Cl"))).toParameters());
+            var authRequestParams =
+                    generateAuthRequest(Optional.of(jsonArrayOf("Cl"))).toParameters();
+            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
                     makeHandlerRequest(
@@ -825,10 +831,10 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(
-                            generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm")))
-                                    .toParameters());
+            var authRequestParams =
+                    generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
+            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
                     makeHandlerRequest(
@@ -2933,7 +2939,7 @@ class AuthorisationHandlerTest {
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, CLIENT_ID, URI.create(REDIRECT_URI))
                         .state(STATE)
-                        .nonce(new Nonce());
+                        .nonce(NONCE);
         credentialTrustLevel.ifPresent(t -> builder.customParameter("vtr", t));
         return builder.build();
     }
