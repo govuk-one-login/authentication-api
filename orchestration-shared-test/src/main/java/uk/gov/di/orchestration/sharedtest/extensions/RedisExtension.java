@@ -121,6 +121,17 @@ public class RedisExtension
             Map<String, List<String>> authRequest,
             String clientName)
             throws Json.JsonException {
+        addAuthRequestToSession(
+                clientSessionId, sessionId, authRequest, clientName, LocalDateTime.now());
+    }
+
+    public void addAuthRequestToSession(
+            String clientSessionId,
+            String sessionId,
+            Map<String, List<String>> authRequest,
+            String clientName,
+            LocalDateTime creationDate)
+            throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.addClientSession(clientSessionId);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
@@ -129,7 +140,7 @@ public class RedisExtension
                 objectMapper.writeValueAsString(
                         new ClientSession(
                                 authRequest,
-                                LocalDateTime.now(),
+                                creationDate,
                                 List.of(VectorOfTrust.getDefaults()),
                                 clientName)),
                 3600);
