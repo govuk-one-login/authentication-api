@@ -14,6 +14,6 @@ locals {
     OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED                                 = "true"
 
     DT_LOGGING_DESTINATION = "stdout"
-    DT_LOGGING_JAVA_FLAGS  = "log-AwsLambdaIntrospection=true,log-Transformer=true,log-OpenTelemetryUtils=true,log-AsyncClassRetransformer=true,log-ClassValue=true,log-dt-http-requests=true,log-span-content=true,log-debug-communication=true,log-debug-app-spans=true,log-debug-tags=true,log-debug-communication=true,log-debug-periodic-tasks=true"
+    DT_LOGGING_JAVA_FLAGS  = "log-AwsLambdaIntrospection=true,log-Transformer=true,log-OpenTelemetryUtils=true,log-AsyncClassRetransformer=true,log-ClassValue=true,log-dt-http-requests=true,log-debug-communication=true,log-debug-tags=true,log-debug-communication=true,log-debug-periodic-tasks=true"
   }
 }
