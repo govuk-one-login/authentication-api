@@ -125,7 +125,7 @@ class VerifyMfaCodeHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);

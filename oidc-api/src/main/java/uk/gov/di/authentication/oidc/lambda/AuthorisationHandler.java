@@ -517,7 +517,7 @@ public class AuthorisationHandler
         var newBrowserSessionId = IdGenerator.generate();
         var existingSession = existingSessionId.flatMap(sessionService::getSession);
         if (existingSessionId.isEmpty() || existingSession.isEmpty()) {
-            session = sessionService.generateSession(newSessionId);
+            session = sessionService.generateSession();
             updateAttachedSessionIdToLogs(newSessionId);
             LOG.info("Created new session with ID {}", newSessionId);
         } else {
@@ -639,7 +639,7 @@ public class AuthorisationHandler
         if (existingSessionId.isEmpty()
                 || existingSession.isEmpty()
                 || existingOrchSessionOptional.isEmpty()) {
-            session = sessionService.generateSession(newSessionId);
+            session = sessionService.generateSession();
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
         } else {
@@ -783,7 +783,7 @@ public class AuthorisationHandler
             String newSessionId) {
         sessionService.updateWithNewSessionId(
                 previousSession, previousSessionId, newSessionIdForPreviousSession);
-        var newSession = sessionService.copySessionForMaxAge(previousSession, newSessionId);
+        var newSession = sessionService.copySessionForMaxAge(previousSession);
         sessionService.storeOrUpdateSession(newSession, newSessionId);
         return newSession;
     }

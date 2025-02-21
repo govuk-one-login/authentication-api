@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -81,7 +80,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
@@ -135,7 +133,7 @@ class ResetPasswordRequestHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =
@@ -478,7 +476,7 @@ class ResetPasswordRequestHandlerTest {
             when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                    .thenReturn(Optional.of(new Session(IdGenerator.generate())));
+                    .thenReturn(Optional.of(new Session()));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
@@ -556,7 +554,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {
-        Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+        session.resetPasswordResetCount();
         IntStream.range(0, passwordResetCount)
                 .forEach((i) -> session.incrementPasswordResetCount());
         when(sessionService.getSessionFromRequestHeaders(anyMap()))

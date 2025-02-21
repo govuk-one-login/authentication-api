@@ -40,7 +40,7 @@ class DocAppUserHelperTest {
 
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
-    private static final Session SESSION = new Session("a-session-id");
+    private static final Session SESSION = new Session();
     private static final String AUDIENCE = "oidc-audience";
     private static final Scope VALID_SCOPE =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);

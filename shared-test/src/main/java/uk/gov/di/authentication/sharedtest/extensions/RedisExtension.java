@@ -56,7 +56,7 @@ public class RedisExtension
 
     private String createSession(String sessionId, boolean isAuthenticated, Optional<String> email)
             throws Json.JsonException {
-        Session session = new Session(sessionId).setAuthenticated(isAuthenticated);
+        Session session = new Session().setAuthenticated(isAuthenticated);
         email.ifPresent(session::setEmailAddress);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         return sessionId;

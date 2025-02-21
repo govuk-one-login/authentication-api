@@ -131,11 +131,10 @@ class VerifyCodeHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     // TODO do we need both session and sessionForTestClient here?
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-    private final Session sessionForTestClient =
-            new Session(SESSION_ID_FOR_TEST_CLIENT).setEmailAddress(TEST_CLIENT_EMAIL);
+    private final Session sessionForTestClient = new Session().setEmailAddress(TEST_CLIENT_EMAIL);
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);

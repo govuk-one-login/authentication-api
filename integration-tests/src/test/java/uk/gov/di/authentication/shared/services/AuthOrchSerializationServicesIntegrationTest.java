@@ -48,7 +48,7 @@ class AuthOrchSerializationServicesIntegrationTest {
 
     @Test
     void authCanReadFromSessionCreatedByOrch() {
-        var orchSession = orchSessionService.generateSession(SESSION_ID);
+        var orchSession = orchSessionService.generateSession();
         orchSession.addClientSession(CLIENT_SESSION_ID);
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
@@ -58,7 +58,7 @@ class AuthOrchSerializationServicesIntegrationTest {
     @Test
     void orchCanReadFromSessionCreatedByAuth() {
         var sessionId = "some-existing-session-id";
-        var authSession = new Session(sessionId);
+        var authSession = new Session();
         authSession.addClientSession(CLIENT_SESSION_ID);
         authSessionService.storeOrUpdateSession(authSession, sessionId);
         var orchSession = orchSessionService.getSession(sessionId).get();
@@ -67,7 +67,7 @@ class AuthOrchSerializationServicesIntegrationTest {
 
     @Test
     void authCanUpdateSharedFieldInSessionCreatedByOrch() {
-        var orchSession = orchSessionService.generateSession(SESSION_ID);
+        var orchSession = orchSessionService.generateSession();
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
         authSession.addClientSession(CLIENT_SESSION_ID);
@@ -79,7 +79,7 @@ class AuthOrchSerializationServicesIntegrationTest {
     @Test
     void orchCanUpdateSharedFieldInSessionCreatedByAuth() {
         var sessionId = "some-existing-session-id";
-        var authSession = new Session(sessionId);
+        var authSession = new Session();
         authSessionService.storeOrUpdateSession(authSession, sessionId);
         var orchSession = orchSessionService.getSession(sessionId).get();
         orchSession.addClientSession(CLIENT_SESSION_ID);
@@ -90,7 +90,7 @@ class AuthOrchSerializationServicesIntegrationTest {
 
     @Test
     void orchCanReadUnsharedFieldAfterAuthUpdatesSession() {
-        var orchSession = orchSessionService.generateSession(SESSION_ID);
+        var orchSession = orchSessionService.generateSession();
         orchSession.incrementProcessingIdentityAttempts();
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
@@ -103,7 +103,7 @@ class AuthOrchSerializationServicesIntegrationTest {
     @Test
     void authCanReadUnsharedFieldAfterOrchUpdatesSession() {
         var sessionId = "some-existing-session-id";
-        var authSession = new Session(sessionId);
+        var authSession = new Session();
         authSession.incrementPasswordResetCount();
         authSession.incrementPasswordResetCount();
         authSession.incrementPasswordResetCount();
@@ -119,7 +119,7 @@ class AuthOrchSerializationServicesIntegrationTest {
     void authCanReadSessionAfterSessionIdIsUpdated() {
         var oldSessionId = SESSION_ID;
         var newSessionId = "new-session-id";
-        var orchSession = orchSessionService.generateSession(oldSessionId);
+        var orchSession = orchSessionService.generateSession();
         orchSessionService.storeOrUpdateSession(orchSession, oldSessionId);
         var authSession = authSessionService.getSession(oldSessionId).get();
         authSession.addClientSession(CLIENT_SESSION_ID);
@@ -132,11 +132,11 @@ class AuthOrchSerializationServicesIntegrationTest {
 
     @Test
     void authCanResetSharedFieldsWithoutOverridingUnsharedFields() {
-        var orchSession = orchSessionService.generateSession(SESSION_ID);
+        var orchSession = orchSessionService.generateSession();
         orchSession.addClientSession(CLIENT_SESSION_ID);
         orchSession.incrementProcessingIdentityAttempts();
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
-        var authSession = new Session(SESSION_ID);
+        var authSession = new Session();
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertThat(orchSession.getClientSessions(), is(empty()));

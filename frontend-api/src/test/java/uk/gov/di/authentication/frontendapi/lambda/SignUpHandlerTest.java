@@ -106,7 +106,7 @@ class SignUpHandlerTest {
 
     private SignUpHandler handler;
 
-    private final Session session = new Session(SESSION_ID);
+    private final Session session = new Session();
     private final ClientSession clientSession =
             new ClientSession(
                     generateAuthRequest().toParameters(), null, (VectorOfTrust) null, CLIENT_NAME);

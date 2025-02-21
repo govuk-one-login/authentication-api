@@ -136,7 +136,7 @@ class SendNotificationHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final Session session =
-            new Session(SESSION_ID)
+            new Session()
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =

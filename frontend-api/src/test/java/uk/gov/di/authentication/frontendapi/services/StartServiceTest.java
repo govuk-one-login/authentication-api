@@ -69,7 +69,7 @@ class StartServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final String SESSION_ID = "a-session-id";
-    private static final Session SESSION = new Session(SESSION_ID).setEmailAddress(EMAIL);
+    private static final Session SESSION = new Session().setEmailAddress(EMAIL);
     private static final AuthSessionItem AUTH_SESSION =
             new AuthSessionItem().withSessionId(SESSION_ID);
     private static final Scope SCOPES =
