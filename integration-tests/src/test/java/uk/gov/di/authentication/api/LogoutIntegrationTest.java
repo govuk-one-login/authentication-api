@@ -20,14 +20,21 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -47,6 +54,12 @@ import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.baseUri;
 import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.queryParameters;
 
 public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+    @RegisterExtension
+    public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    public static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     private static final String BASE_URL = System.getenv().getOrDefault("BASE_URL", "rubbish");
     public static final String STATE = "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU";
@@ -248,12 +261,13 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         idTokenClaims.setNonce(nonce);
         SignedJWT signedJWT = externalTokenSigner.signJwt(idTokenClaims.toJWTClaimsSet());
         redis.createSession(sessionId);
-        redis.addAuthRequestToSession(
-                clientSessionId,
-                sessionId,
-                generateAuthRequest(nonce).toParameters(),
-                "client-name");
-        redis.addIDTokenToSession(clientSessionId, signedJWT.serialize());
+        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
+        var authRequestParams = generateAuthRequest(nonce).toParameters();
+        var creationDate = LocalDateTime.now();
+        var idTokenHint = signedJWT.serialize();
+        setupClientSession(
+                sessionId, clientSessionId, authRequestParams, idTokenHint, creationDate);
+        setupOrchClientSession(clientSessionId, authRequestParams, idTokenHint, creationDate);
         clientStore.registerClient(
                 "client-id",
                 "client-name",
@@ -268,6 +282,32 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "public");
 
         return signedJWT;
+    }
+
+    private void setupClientSession(
+            String sessionId,
+            String clientSessionId,
+            Map<String, List<String>> authRequestParams,
+            String idTokenHint,
+            LocalDateTime creationDate)
+            throws Json.JsonException {
+        redis.addAuthRequestToSession(
+                clientSessionId, sessionId, authRequestParams, "client-name", creationDate);
+        redis.addIDTokenToSession(clientSessionId, idTokenHint);
+    }
+
+    private void setupOrchClientSession(
+            String clientSessionId,
+            Map<String, List<String>> authRequestParams,
+            String idTokenHint,
+            LocalDateTime creationDate) {
+        var orchClientSession = new OrchClientSessionItem(clientSessionId);
+        orchClientSession.setAuthRequestParams(authRequestParams);
+        orchClientSession.setVtrList(List.of(VectorOfTrust.getDefaults()));
+        orchClientSession.setClientName("client-name");
+        orchClientSession.setIdTokenHint(idTokenHint);
+        orchClientSession.setCreationDate(creationDate);
+        orchClientSessionExtension.storeClientSession(orchClientSession);
     }
 
     private AuthenticationRequest generateAuthRequest(Nonce nonce) {

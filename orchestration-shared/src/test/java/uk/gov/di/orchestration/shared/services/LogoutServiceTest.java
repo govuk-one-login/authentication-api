@@ -124,7 +124,6 @@ class LogoutServiceTest {
             URI.create("https://redirect.go.uk?error=access_denied");
 
     private static final String ENVIRONMENT = "test";
-
     private SignedJWT signedIDToken;
     private Optional<String> audience;
     private Optional<String> rpPairwiseId;
@@ -687,7 +686,7 @@ class LogoutServiceTest {
                 new ClientSession(
                         authRequestParams,
                         creationTime,
-                        List.of(mock(VectorOfTrust.class)),
+                        List.of(VectorOfTrust.getDefaults()),
                         "client_name");
         clientSession.setIdTokenHint(idToken.serialize());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -696,8 +695,8 @@ class LogoutServiceTest {
                 new OrchClientSessionItem(
                         clientId,
                         authRequestParams,
-                        LocalDateTime.now(),
-                        List.of(mock(VectorOfTrust.class)),
+                        creationTime,
+                        List.of(VectorOfTrust.getDefaults()),
                         "client_name");
         orchClientSession.setIdTokenHint(idToken.serialize());
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
