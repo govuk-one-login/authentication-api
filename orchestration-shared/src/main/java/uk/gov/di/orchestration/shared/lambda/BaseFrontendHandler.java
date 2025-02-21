@@ -22,6 +22,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -43,6 +44,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeadersOpt;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -57,6 +59,7 @@ public abstract class BaseFrontendHandler<T>
     protected final AuthenticationService authenticationService;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final OrchSessionService orchSessionService;
+    protected final OrchClientSessionService orchClientSessionService;
 
     protected BaseFrontendHandler(
             Class<T> clazz,
@@ -65,7 +68,8 @@ public abstract class BaseFrontendHandler<T>
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            OrchSessionService orchSessionService) {
+            OrchSessionService orchSessionService,
+            OrchClientSessionService orchClientSessionService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = sessionService;
@@ -73,6 +77,7 @@ public abstract class BaseFrontendHandler<T>
         this.clientService = clientService;
         this.authenticationService = authenticationService;
         this.orchSessionService = orchSessionService;
+        this.orchClientSessionService = orchClientSessionService;
     }
 
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
@@ -83,6 +88,7 @@ public abstract class BaseFrontendHandler<T>
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }
 
     protected BaseFrontendHandler(
@@ -96,6 +102,7 @@ public abstract class BaseFrontendHandler<T>
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }
 
     @Override
@@ -137,8 +144,12 @@ public abstract class BaseFrontendHandler<T>
                         configurationService.getHeadersCaseInsensitive());
         onRequestReceived(clientSessionId);
         Optional<Session> session = sessionService.getSession(sessionId);
-        Optional<ClientSession> clientSession =
+        var clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
+        var orchClientSession =
+                orchClientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
+        logIfClientSessionsAreNotEqual(clientSession.orElse(null), orchClientSession.orElse(null));
+
         if (session.isEmpty()) {
             LOG.warn("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);

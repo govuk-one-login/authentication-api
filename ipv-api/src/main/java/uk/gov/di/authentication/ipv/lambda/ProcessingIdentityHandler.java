@@ -30,6 +30,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -92,7 +93,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             LogoutService logoutService,
-            OrchSessionService orchSessionService) {
+            OrchSessionService orchSessionService,
+            OrchClientSessionService orchClientSessionService) {
         super(
                 ProcessingIdentityRequest.class,
                 configurationService,
@@ -100,7 +102,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 clientSessionService,
                 dynamoClientService,
                 dynamoService,
-                orchSessionService);
+                orchSessionService,
+                orchClientSessionService);
         this.dynamoIdentityService = dynamoIdentityService;
         this.accountInterventionService = accountInterventionService;
         this.auditService = auditService;
