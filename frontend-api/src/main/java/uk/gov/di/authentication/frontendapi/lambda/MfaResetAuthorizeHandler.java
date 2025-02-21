@@ -15,9 +15,9 @@ import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -90,6 +90,20 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
     }
 
+    public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService) {
+        super(MfaResetRequest.class, ConfigurationService.getInstance(), redisConnectionService);
+        KmsConnectionService kmsConnectionService = new KmsConnectionService(configurationService);
+        JwtService jwtService = new JwtService(kmsConnectionService);
+        TokenService tokenService =
+                new TokenService(
+                        configurationService, redisConnectionService, kmsConnectionService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.ipvReverificationService =
+                new IPVReverificationService(configurationService, jwtService, tokenService);
+        this.idReverificationStateService = new IDReverificationStateService(configurationService);
+    }
+
     public MfaResetAuthorizeHandler() {
         this(ConfigurationService.getInstance());
     }
@@ -133,9 +147,22 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     request.orchestrationRedirectUrl(),
                     userContext.getClientSessionId());
 
+            var userProfile =
+                    userContext
+                            .getUserProfile()
+                            .orElseThrow(() -> new RuntimeException("UserProfile not found"));
+            var clientRegistry =
+                    userContext
+                            .getClient()
+                            .orElseThrow(() -> new RuntimeException("ClientRegistry not found"));
+
             String rpPairwiseId =
-                    TxmaAuditHelper.getRpPairwiseId(
-                            authenticationService, configurationService, userContext);
+                    ClientSubjectHelper.getSubject(
+                                    userProfile,
+                                    clientRegistry,
+                                    authenticationService,
+                                    configurationService.getInternalSectorUri())
+                            .toString();
 
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_AUTHORISATION_REQUESTED,

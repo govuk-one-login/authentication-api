@@ -47,6 +47,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 public class ReverificationResultHandler extends BaseFrontendHandler<ReverificationResultRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOG = LogManager.getLogger(ReverificationResultHandler.class);
+    public static final String IPV_REVERIFICATION_SUCCESS = "success";
+    public static final String IPV_REVERIFICATION_FAILURE_CODE = "failure_code";
     private final ReverificationResultService reverificationResultService;
     private final AuditService auditService;
     private final IDReverificationStateService idReverificationStateService;
@@ -215,18 +217,25 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             return ValidationResult.failure("sub does not match current user.", metadataPairs);
         }
 
-        if (!json.containsKey("success") || !(json.get("success") instanceof Boolean)) {
-            metadataPairs.add(AuditService.MetadataPair.pair("success", "missing or corrupt"));
+        if (!json.containsKey(IPV_REVERIFICATION_SUCCESS)
+                || !(json.get(IPV_REVERIFICATION_SUCCESS) instanceof Boolean)) {
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair(
+                            IPV_REVERIFICATION_SUCCESS, "missing or corrupt"));
             return ValidationResult.failure("Invalid or missing 'success' field.", metadataPairs);
         }
 
-        boolean success = (boolean) json.get("success");
+        boolean success = (boolean) json.get(IPV_REVERIFICATION_SUCCESS);
 
-        metadataPairs.add(AuditService.MetadataPair.pair("success", success));
+        metadataPairs.add(AuditService.MetadataPair.pair(IPV_REVERIFICATION_SUCCESS, success));
 
-        if (success && (json.containsKey("failure_code") || json.containsKey("failure_reason"))) {
+        if (success
+                && (json.containsKey(IPV_REVERIFICATION_FAILURE_CODE)
+                        || json.containsKey("failure_reason"))) {
             metadataPairs.add(
-                    AuditService.MetadataPair.pair("failure_code", json.get("failure_code")));
+                    AuditService.MetadataPair.pair(
+                            IPV_REVERIFICATION_FAILURE_CODE,
+                            json.get(IPV_REVERIFICATION_FAILURE_CODE)));
             return ValidationResult.failure(
                     "'failure_code' or 'failure_reason' must not be present when successful.",
                     metadataPairs);
@@ -234,24 +243,26 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
         if (!success) {
             boolean failureDetailsMissing =
-                    !json.containsKey("failure_code")
-                            || !(json.get("failure_code") instanceof String);
+                    !json.containsKey(IPV_REVERIFICATION_FAILURE_CODE)
+                            || !(json.get(IPV_REVERIFICATION_FAILURE_CODE) instanceof String);
 
             if (failureDetailsMissing) {
                 return ValidationResult.failure("Invalid or missing 'failure_code'", metadataPairs);
             }
 
-            String failValue = (String) json.get("failure_code");
+            String failValue = (String) json.get(IPV_REVERIFICATION_FAILURE_CODE);
 
             if (!IpvReverificationFailureCode.isValid(failValue)) {
-                metadataPairs.add(AuditService.MetadataPair.pair("failure_code", failValue));
+                metadataPairs.add(
+                        AuditService.MetadataPair.pair(IPV_REVERIFICATION_FAILURE_CODE, failValue));
                 return ValidationResult.failure(
                         "Invalid or missing 'failure_reason'", metadataPairs);
             }
             cloudwatchMetricService.incrementMfaResetIpvResponseCount(failValue);
-            metadataPairs.add(AuditService.MetadataPair.pair("failure_code", failValue));
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair(IPV_REVERIFICATION_FAILURE_CODE, failValue));
         }
-        cloudwatchMetricService.incrementMfaResetIpvResponseCount("success");
+        cloudwatchMetricService.incrementMfaResetIpvResponseCount(IPV_REVERIFICATION_SUCCESS);
         return ValidationResult.success(metadataPairs);
     }
 }

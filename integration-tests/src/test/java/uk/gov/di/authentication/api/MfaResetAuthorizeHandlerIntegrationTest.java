@@ -5,7 +5,14 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.matching.ContainsPattern;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +22,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler;
+import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -28,10 +38,13 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -43,6 +56,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -55,6 +69,9 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     private static final String USER_PHONE_NUMBER = "+447712345432";
     private static KeyPair keyPair;
     private String sessionId;
+    public static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final ClientID CLIENT_ID = new ClientID("test-client");
+    private static final String CLIENT_NAME = "some-client-name";
 
     private static WireMockServer wireMockServer;
 
@@ -139,21 +156,68 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new MfaResetAuthorizeHandler();
+        handler = new MfaResetAuthorizeHandler(redisConnectionService);
 
-        sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
-        authSessionStore.addSession(sessionId);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         new Subject().getValue(),
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
-        authSessionStore
-                .getSession(sessionId)
-                .map(session -> session.withInternalCommonSubjectId(internalCommonSubjectId))
-                .ifPresent(authSessionStore::updateSession);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
 
+        setUpSession(internalCommonSubjectId);
+        addSessionToSessionStore(internalCommonSubjectId);
+        createClientSession();
+        registerClient();
+        addUserToUserStore();
+    }
+
+    private void setUpSession(String internalCommonSubjectId) throws Json.JsonException {
+        sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+    }
+
+    private void addSessionToSessionStore(String internalCommonSubjectId) {
+        authSessionStore.addSession(sessionId);
+        authSessionStore.addEmailToSession(sessionId, USER_EMAIL);
+        authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+    }
+
+    private static void createClientSession() throws Json.JsonException {
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                new ClientID(CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .state(new State())
+                        .nonce(new Nonce());
+
+        var clientSession =
+                new ClientSession(
+                        authRequestBuilder.build().toParameters(),
+                        LocalDateTime.now(),
+                        VectorOfTrust.getDefaults(),
+                        CLIENT_NAME);
+
+        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
+    }
+
+    private static void registerClient() {
+        clientStore.registerClient(
+                CLIENT_ID.getValue(),
+                CLIENT_NAME,
+                singletonList("redirect-url"),
+                singletonList(USER_EMAIL),
+                List.of("openid", "email", "phone"),
+                "public-key",
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
+    }
+
+    private static void addUserToUserStore() {
         String subjectId = "test-subject-id";
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
         userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
@@ -171,7 +235,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         var response =
                 makeRequest(
                         Optional.of(new MfaResetRequest(USER_EMAIL, "")),
-                        constructFrontendHeaders(sessionId, sessionId),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
         assertThat(response, hasStatus(200));
