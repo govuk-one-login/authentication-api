@@ -9,7 +9,7 @@ shared_state_bucket                  = "digital-identity-prod-tfstate"
 # App-specific
 internal_sector_uri  = "https://identity.account.gov.uk"
 test_clients_enabled = false
-
+call_ticf_cri        = true
 
 auth_to_orch_token_signing_public_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
