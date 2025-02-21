@@ -664,6 +664,11 @@ variable "orch_session_table_encryption_key_arn" {
   default = ""
 }
 
+variable "orch_client_session_table_encryption_key_arn" {
+  type    = string
+  default = ""
+}
+
 variable "cmk_for_back_channel_logout_enabled" {
   default     = false
   type        = bool

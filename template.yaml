@@ -1400,6 +1400,7 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref DocAppSigningKmsAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1538,6 +1539,8 @@ Resources:
         - !Ref InvokeFetchJwksHandlerPolicy
         - !Ref RpPublicKeyCacheTableReadAccessPolicy
         - !Ref RpPublicKeyCacheTableWriteAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1745,6 +1748,8 @@ Resources:
         - !Ref BackChannelLogoutQueueWritePolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2074,6 +2079,7 @@ Resources:
         - !Ref IpvPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
+        - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2717,6 +2723,7 @@ Resources:
         - !Ref RpPublicKeyCacheTableReadAccessPolicy
         - !Ref OrchSessionTableReadAndWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
+        - !Ref ClientSessionTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3115,6 +3122,7 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref OrchSessionTableWriteAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3771,6 +3779,8 @@ Resources:
         - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -4444,6 +4454,89 @@ Resources:
             Action:
               - kms:Encrypt
             Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
+
+  ClientSessionTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+
+  ClientSessionTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+
+  ClientSessionTableDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt ClientSessionTable.Arn
+
+  # This combined read, write and delete policy is required because we've reached the managed polices per role quota limit.
+  ClientSessionTableReadWriteAndDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+          - Sid: AllowClientSessionTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
   IdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
