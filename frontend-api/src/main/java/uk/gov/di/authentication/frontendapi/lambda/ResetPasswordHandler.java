@@ -155,7 +155,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             }
             var userCredentials =
                     authenticationService.getUserCredentialsFromEmail(
-                            userContext.getSession().getEmailAddress());
+                            userContext.getAuthSession().getEmailAddress());
 
             if (Objects.nonNull(userCredentials.getPassword())) {
                 if (verifyPassword(userCredentials.getPassword(), request.password())) {
@@ -167,7 +167,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             authenticationService.updatePassword(userCredentials.getEmail(), request.password());
             var userProfile =
                     authenticationService.getUserProfileByEmail(
-                            userContext.getSession().getEmailAddress());
+                            userContext.getAuthSession().getEmailAddress());
 
             LOG.info("Calculating internal common subject identifier");
             var internalCommonSubjectId =
