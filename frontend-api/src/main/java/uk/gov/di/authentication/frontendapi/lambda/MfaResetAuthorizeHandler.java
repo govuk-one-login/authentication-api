@@ -14,6 +14,8 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.frontendapi.services.JwtService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -37,6 +39,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -87,6 +90,20 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
     }
 
+    public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService) {
+        super(MfaResetRequest.class, ConfigurationService.getInstance(), redisConnectionService);
+        KmsConnectionService kmsConnectionService = new KmsConnectionService(configurationService);
+        JwtService jwtService = new JwtService(kmsConnectionService);
+        TokenService tokenService =
+                new TokenService(
+                        configurationService, redisConnectionService, kmsConnectionService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.ipvReverificationService =
+                new IPVReverificationService(configurationService, jwtService, tokenService);
+        this.idReverificationStateService = new IDReverificationStateService(configurationService);
+    }
+
     public MfaResetAuthorizeHandler() {
         this(ConfigurationService.getInstance());
     }
@@ -112,7 +129,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             AuditContext auditContext =
                     AuditContext.auditContextFromUserContext(
                             userContext,
-                            AuditService.UNKNOWN,
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
                             request.email(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
@@ -130,7 +147,28 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     request.orchestrationRedirectUrl(),
                     userContext.getClientSessionId());
 
-            auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
+            var userProfile =
+                    userContext
+                            .getUserProfile()
+                            .orElseThrow(() -> new RuntimeException("UserProfile not found"));
+            var clientRegistry =
+                    userContext
+                            .getClient()
+                            .orElseThrow(() -> new RuntimeException("ClientRegistry not found"));
+
+            String rpPairwiseId =
+                    ClientSubjectHelper.getSubject(
+                                    userProfile,
+                                    clientRegistry,
+                                    authenticationService,
+                                    configurationService.getInternalSectorUri())
+                            .toString();
+
+            auditService.submitAuditEvent(
+                    AUTH_REVERIFY_AUTHORISATION_REQUESTED,
+                    auditContext,
+                    pair("rpPairwiseId", rpPairwiseId),
+                    pair("journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
             cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
             return generateApiGatewayProxyResponse(

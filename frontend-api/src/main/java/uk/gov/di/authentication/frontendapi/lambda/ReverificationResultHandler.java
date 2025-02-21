@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import net.minidev.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.IpvReverificationFailureCode;
@@ -27,10 +28,12 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
@@ -44,6 +47,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 public class ReverificationResultHandler extends BaseFrontendHandler<ReverificationResultRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOG = LogManager.getLogger(ReverificationResultHandler.class);
+    public static final String IPV_REVERIFICATION_SUCCESS = "success";
+    public static final String IPV_REVERIFICATION_FAILURE_CODE = "failure_code";
     private final ReverificationResultService reverificationResultService;
     private final AuditService auditService;
     private final IDReverificationStateService idReverificationStateService;
@@ -78,6 +83,17 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         this(ConfigurationService.getInstance());
     }
 
+    public ReverificationResultHandler(RedisConnectionService redisConnectionService) {
+        super(
+                ReverificationResultRequest.class,
+                ConfigurationService.getInstance(),
+                redisConnectionService);
+        this.reverificationResultService = new ReverificationResultService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.idReverificationStateService = new IDReverificationStateService(configurationService);
+        this.cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
+    }
+
     public ReverificationResultHandler(ConfigurationService configurationService) {
         super(ReverificationResultRequest.class, configurationService, true);
         this.reverificationResultService = new ReverificationResultService(configurationService);
@@ -99,7 +115,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             ReverificationResultRequest request,
             UserContext userContext) {
 
-        var auditContext =
+        var baseAuditContext =
                 auditContextFromUserContext(
                         userContext,
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
@@ -134,11 +150,16 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             return generateApiGatewayProxyErrorResponse(400, ERROR_1058);
         }
         LOG.info("Successful IPV TokenResponse");
-        auditService.submitAuditEvent(
-                AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
-                auditContext,
+
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        metadataPairs.add(
                 AuditService.MetadataPair.pair(
                         "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+
+        auditService.submitAuditEvent(
+                AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,
+                baseAuditContext,
+                metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
         try {
             var reverificationResult =
@@ -155,44 +176,106 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             LOG.info("ReverificationResult response received from IPV");
 
             var reverificationResultJson = reverificationResult.getContentAsJSONObject();
-            var success = reverificationResultJson.get("success");
-            var failureCode = reverificationResultJson.get("failure_code");
 
-            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
-            metadataPairs.add(
-                    AuditService.MetadataPair.pair(
-                            "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
-            metadataPairs.add(AuditService.MetadataPair.pair("success", success));
-            if (failureCode != null) {
-                try {
-                    var parsedFailureCode =
-                            IpvReverificationFailureCode.fromValue(failureCode.toString());
-                    metadataPairs.add(
-                            AuditService.MetadataPair.pair(
-                                    "failure_code", parsedFailureCode.getValue()));
-                    cloudwatchMetricService.incrementMfaResetIpvResponseCount(
-                            parsedFailureCode.getValue());
-                } catch (IllegalArgumentException e) {
-                    LOG.warn("Unknown ipv reverification failure code of {}", failureCode);
-                }
-            }
+            var validMetadata =
+                    extractValidMetadata(
+                            reverificationResultJson,
+                            userContext.getAuthSession().getInternalCommonSubjectId());
 
-            if (success == null) {
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
-            }
-            if (success.equals(true)) {
-                cloudwatchMetricService.incrementMfaResetIpvResponseCount("success");
-            }
+            metadataPairs.addAll(validMetadata.metadataPairs());
 
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
-                    auditContext,
+                    baseAuditContext,
                     metadataPairs.toArray(AuditService.MetadataPair[]::new));
+
+            if (!validMetadata.valid()) {
+                LOG.warn(validMetadata.errorMessage());
+                var logFriendlyResponse = reverificationResultJson.toJSONString();
+                LOG.warn(
+                        "Invalid re-verification result response from IPV: {}",
+                        logFriendlyResponse);
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
+            }
 
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {
             LOG.error("Error getting reverification result", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
         }
+    }
+
+    private ValidationResult extractValidMetadata(JSONObject json, String sub) {
+        List<AuditService.MetadataPair> metadataPairs = new ArrayList<>();
+
+        if (!json.containsKey("sub") || !(json.get("sub") instanceof String subOfResponse)) {
+            return ValidationResult.failure(
+                    "Missing sub cannot verify response is for current user.", metadataPairs);
+        }
+
+        if (!sub.equalsIgnoreCase(subOfResponse)) {
+            return ValidationResult.failure("sub does not match current user.", metadataPairs);
+        }
+
+        if (!json.containsKey(IPV_REVERIFICATION_SUCCESS)
+                || !(json.get(IPV_REVERIFICATION_SUCCESS) instanceof Boolean)) {
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair(
+                            IPV_REVERIFICATION_SUCCESS, "missing or corrupt"));
+            return ValidationResult.failure("Invalid or missing 'success' field.", metadataPairs);
+        }
+
+        boolean success = (boolean) json.get(IPV_REVERIFICATION_SUCCESS);
+
+        metadataPairs.add(AuditService.MetadataPair.pair(IPV_REVERIFICATION_SUCCESS, success));
+
+        if (success
+                && (json.containsKey(IPV_REVERIFICATION_FAILURE_CODE)
+                        || json.containsKey("failure_reason"))) {
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair(
+                            IPV_REVERIFICATION_FAILURE_CODE,
+                            json.get(IPV_REVERIFICATION_FAILURE_CODE)));
+            return ValidationResult.failure(
+                    "'failure_code' or 'failure_reason' must not be present when successful.",
+                    metadataPairs);
+        }
+
+        if (!success) {
+            boolean failureDetailsMissing =
+                    !json.containsKey(IPV_REVERIFICATION_FAILURE_CODE)
+                            || !(json.get(IPV_REVERIFICATION_FAILURE_CODE) instanceof String);
+
+            if (failureDetailsMissing) {
+                return ValidationResult.failure("Invalid or missing 'failure_code'", metadataPairs);
+            }
+
+            String failValue = (String) json.get(IPV_REVERIFICATION_FAILURE_CODE);
+
+            if (!IpvReverificationFailureCode.isValid(failValue)) {
+                metadataPairs.add(
+                        AuditService.MetadataPair.pair(IPV_REVERIFICATION_FAILURE_CODE, failValue));
+                return ValidationResult.failure(
+                        "Invalid or missing 'failure_reason'", metadataPairs);
+            }
+            cloudwatchMetricService.incrementMfaResetIpvResponseCount(failValue);
+            metadataPairs.add(
+                    AuditService.MetadataPair.pair(IPV_REVERIFICATION_FAILURE_CODE, failValue));
+        }
+        cloudwatchMetricService.incrementMfaResetIpvResponseCount(IPV_REVERIFICATION_SUCCESS);
+        return ValidationResult.success(metadataPairs);
+    }
+}
+
+record ValidationResult(
+        boolean valid, String errorMessage, List<AuditService.MetadataPair> metadataPairs) {
+
+    public static ValidationResult success(List<AuditService.MetadataPair> metadataPairs) {
+        return new ValidationResult(true, null, metadataPairs);
+    }
+
+    public static ValidationResult failure(
+            String errorMessage, List<AuditService.MetadataPair> metadataPairs) {
+        return new ValidationResult(false, errorMessage, metadataPairs);
     }
 }
