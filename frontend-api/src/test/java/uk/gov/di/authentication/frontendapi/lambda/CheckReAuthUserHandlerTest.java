@@ -90,7 +90,8 @@ class CheckReAuthUserHandlerTest {
             apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
 
     private final Session session = new Session().setEmailAddress(EMAIL_USED_TO_SIGN_IN);
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL_USED_TO_SIGN_IN);
 
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(

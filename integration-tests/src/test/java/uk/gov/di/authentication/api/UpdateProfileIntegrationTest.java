@@ -73,6 +73,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         scope.add(OIDCScopeValue.EMAIL);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         authSessionStore.addSession(sessionId);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
