@@ -1,6 +1,3 @@
-// There are two roles here. Only the "old" one is in use, but I need to deploy the new role
-// before using it, as I have removed a policy from part way through the policies_to_attach
-
 module "oidc_api_authentication_callback_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -22,32 +19,6 @@ module "oidc_api_authentication_callback_role_1" {
     Service = "orchestration-redirect"
   }
 }
-
-module "oidc_api_authentication_callback_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "oidc-api-authentication-callback-role"
-  vpc_arn     = local.authentication_vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.storage_token_kms_signing_policy.arn,
-    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
-    aws_iam_policy.dynamo_authentication_callback_userinfo_read_policy.arn,
-    aws_iam_policy.dynamo_authentication_callback_userinfo_write_access_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.ipv_token_auth_kms_policy.arn,
-    aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
-    aws_iam_policy.orch_to_auth_kms_policy.arn,
-    aws_iam_policy.authentication_callback_userinfo_encryption_key_kms_policy.arn,
-    module.oidc_txma_audit.access_policy_arn,
-    local.client_registry_encryption_policy_arn,
-    aws_iam_policy.dynamo_user_read_access_policy.arn
-  ]
-  extra_tags = {
-    Service = "orchestration-redirect"
-  }
-}
-
 
 module "authentication_callback" {
   source = "../modules/endpoint-module-v2"
@@ -100,7 +71,7 @@ module "authentication_callback" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_api_authentication_callback_role.arn
+  lambda_role_arn                        = module.oidc_api_authentication_callback_role_1.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

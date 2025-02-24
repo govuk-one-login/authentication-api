@@ -34,10 +34,6 @@ data "aws_dynamodb_table" "access_token_store" {
   name = "${var.environment}-access-token-store"
 }
 
-data "aws_dynamodb_table" "authentication_callback_userinfo_table" {
-  name = "${var.environment}-authentication-callback-userinfo"
-}
-
 data "aws_dynamodb_table" "email_check_results_table" {
   name = "${var.environment}-email-check-result"
 }
@@ -450,71 +446,6 @@ data "aws_iam_policy_document" "dynamo_access_token_read_access_policy_document"
     resources = [
       data.aws_dynamodb_table.access_token_store.arn,
     ]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_authentication_callback_userinfo_write_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:BatchWriteItem",
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem",
-    ]
-    resources = [
-      data.aws_dynamodb_table.authentication_callback_userinfo_table.arn,
-      "${data.aws_dynamodb_table.authentication_callback_userinfo_table.arn}/index/*"
-    ]
-  }
-
-  statement {
-    sid    = "AllowAccessToKms"
-    effect = "Allow"
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = [local.authentication_callback_userinfo_encryption_key_arn]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_authentication_callback_userinfo_read_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:BatchGetItem",
-      "dynamodb:DescribeStream",
-      "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
-    ]
-    resources = [
-      data.aws_dynamodb_table.authentication_callback_userinfo_table.arn,
-      "${data.aws_dynamodb_table.authentication_callback_userinfo_table.arn}/index/*",
-    ]
-  }
-
-  statement {
-    sid    = "AllowAccessToKms"
-    effect = "Allow"
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = [local.authentication_callback_userinfo_encryption_key_arn]
   }
 }
 
@@ -1044,22 +975,6 @@ resource "aws_iam_policy" "dynamo_access_token_delete_access_policy" {
   description = "IAM policy for managing delete permissions to the Dynamo access token store table"
 
   policy = data.aws_iam_policy_document.dynamo_access_token_delete_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_authentication_callback_userinfo_read_policy" {
-  name_prefix = "dynamo-authentication-callback-userinfo-read-policy"
-  path        = "/${var.environment}/oidc-shared/"
-  description = "IAM policy for managing read permissions to the Dynamo Callback User Info table"
-
-  policy = data.aws_iam_policy_document.dynamo_authentication_callback_userinfo_read_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_authentication_callback_userinfo_write_access_policy" {
-  name_prefix = "dynamo-authentication-callback-userinfo-write-policy"
-  path        = "/${var.environment}/oidc-shared/"
-  description = "IAM policy for managing write permissions to the Dynamo Callback User Info table"
-
-  policy = data.aws_iam_policy_document.dynamo_authentication_callback_userinfo_write_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_auth_code_store_write_access_policy" {
