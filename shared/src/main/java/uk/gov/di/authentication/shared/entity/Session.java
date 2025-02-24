@@ -59,10 +59,6 @@ public class Session {
         return this;
     }
 
-    public boolean validateSession(String emailAddress) {
-        return this.emailAddress.equals(emailAddress);
-    }
-
     public String getEmailAddress() {
         return emailAddress;
     }
