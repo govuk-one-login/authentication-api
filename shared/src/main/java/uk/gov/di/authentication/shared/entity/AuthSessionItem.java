@@ -208,7 +208,7 @@ public class AuthSessionItem {
         this.emailAddress = emailAddress;
         return this;
     }
-    
+
     public boolean validateSession(String emailAddress) {
         return this.emailAddress.equals(emailAddress);
     }
