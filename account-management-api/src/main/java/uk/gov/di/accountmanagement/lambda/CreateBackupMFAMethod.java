@@ -8,9 +8,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.MfaMethodCreateRequest;
+import uk.gov.di.accountmanagement.entity.MfaMethodCreateSuccessResponse;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.List;
@@ -28,14 +33,22 @@ public class CreateBackupMFAMethod
     private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
+    private final DynamoService dynamoService;
     private static final Logger LOG = LogManager.getLogger(CreateBackupMFAMethod.class);
 
     public CreateBackupMFAMethod() {
         this(ConfigurationService.getInstance());
     }
 
+    public CreateBackupMFAMethod(
+            ConfigurationService configurationService, DynamoService dynamoService) {
+        this.configurationService = configurationService;
+        this.dynamoService = dynamoService;
+    }
+
     public CreateBackupMFAMethod(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     @Override
@@ -58,17 +71,42 @@ public class CreateBackupMFAMethod
         }
 
         var subject = input.getPathParameters().get("publicSubjectId");
-        if (subject == null || !subject.equals("helloPath")) {
+        if (subject == null) {
             LOG.error("Subject missing from request prevents request being handled.");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
+        String userEmail;
         try {
-            var mfaMethodCreateRequest =
+            userEmail = dynamoService.getUserProfileFromPublicSubject(subject).getEmail();
+        } catch (RuntimeException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+
+        try {
+            MfaMethodCreateRequest mfaMethodCreateRequest =
                     objectMapper.readValue(input.getBody(), MfaMethodCreateRequest.class);
 
+            MFAMethodType newMfaMethodType =
+                    mfaMethodCreateRequest.mfaMethod().method().mfaMethodType();
+            if (newMfaMethodType.equals(MFAMethodType.AUTH_APP)) {
+                dynamoService.addMFAMethodSupportingMultiple(
+                        userEmail,
+                        new AuthAppMfaData(
+                                mfaMethodCreateRequest.mfaMethod().method().credential(),
+                                true,
+                                true,
+                                PriorityIdentifier.BACKUP,
+                                2
+                                //                              TODO: need to make mfaIdentifier
+                                // increment based on already existing mfaIdentifiers
+                                ));
+            } else {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            }
+
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
-            return generateApiGatewayProxyResponse(200, input.getBody());
+            return generateApiGatewayProxyResponse(200, new MfaMethodCreateSuccessResponse(2, PriorityIdentifier.BACKUP, new MfaMethodCreateSuccessResponse.Method(MFAMethodType.AUTH_APP, )));
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
