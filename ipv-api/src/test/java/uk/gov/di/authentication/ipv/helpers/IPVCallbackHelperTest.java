@@ -455,7 +455,8 @@ class IPVCallbackHelperTest {
                 "127.0.0.1",
                 "a-persistent-session-id",
                 CLIENT_ID.getValue(),
-                TEST_EMAIL_ADDRESS);
+                TEST_EMAIL_ADDRESS,
+                SUBJECT.getValue());
 
         assertAuthorisationCodeGeneratedAndSaved();
     }

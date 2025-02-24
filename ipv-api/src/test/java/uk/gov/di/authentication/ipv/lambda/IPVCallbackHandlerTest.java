@@ -61,7 +61,6 @@ import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -387,10 +386,7 @@ class IPVCallbackHandlerTest {
     @MethodSource("returnCodeClaims")
     void shouldReturnAccessDeniedToRPIfReturnCodePresentButNotPermittedAndRequested(
             ClientRegistry clientRegistry, OIDCClaimsRequest claimsRequest, URI expectedURI)
-            throws UnsuccessfulCredentialResponseException,
-                    IpvCallbackException,
-                    UserNotFoundException,
-                    ParseException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidAuthUserInfo();
 
@@ -421,7 +417,8 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any()))
+                        any(),
+                        anyString()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 REDIRECT_URI, null, null, null, null, null, null));
@@ -467,7 +464,6 @@ class IPVCallbackHandlerTest {
         void shouldCallHelperWithFeatureFlag(boolean isFlagEnabled)
                 throws UnsuccessfulCredentialResponseException,
                         IpvCallbackException,
-                        UserNotFoundException,
                         ParseException {
             usingValidSession();
             usingValidAuthUserInfo();
@@ -516,7 +512,8 @@ class IPVCallbackHandlerTest {
                             any(),
                             any(),
                             any(),
-                            any()))
+                            any(),
+                            anyString()))
                     .thenReturn(
                             new AuthenticationSuccessResponse(
                                     REDIRECT_URI, null, null, null, null, null, null));
@@ -562,10 +559,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldReturnAuthCodeToRPWhenP0AndReturnCodePresentPermittedAndRequested()
-            throws UnsuccessfulCredentialResponseException,
-                    IpvCallbackException,
-                    UserNotFoundException,
-                    ParseException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidAuthUserInfo();
 
@@ -636,7 +630,8 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any()))
+                        any(),
+                        anyString()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));
@@ -660,7 +655,8 @@ class IPVCallbackHandlerTest {
                         anyString(),
                         eq(PERSISTENT_SESSION_ID),
                         eq(CLIENT_ID.getValue()),
-                        eq(TEST_EMAIL_ADDRESS));
+                        eq(TEST_EMAIL_ADDRESS),
+                        eq(TEST_SUBJECT.getValue()));
     }
 
     @Test
