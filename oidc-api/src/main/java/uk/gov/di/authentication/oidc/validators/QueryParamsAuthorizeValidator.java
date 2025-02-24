@@ -101,6 +101,16 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             redirectURI,
                             state));
         }
+
+        // TODO: ATO-1371: Delete the following log once we have verified that
+        //  no RPs are using the code challenge method "plain" AND we have
+        //  checked which RPs, if any, are using PKCE already.
+        if (authRequest.getCodeChallengeMethod() != null) {
+            LOG.info(
+                    "authRequest code challenge method is '{}'",
+                    authRequest.getCodeChallengeMethod());
+        }
+
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
