@@ -177,7 +177,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
             }
 
-            if (!userContext.getSession().validateSession(email)) {
+            if (!userContext.getAuthSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
                 auditService.submitAuditEvent(
                         AUTH_MFA_MISMATCHED_EMAIL, auditContext, metadataPairs);

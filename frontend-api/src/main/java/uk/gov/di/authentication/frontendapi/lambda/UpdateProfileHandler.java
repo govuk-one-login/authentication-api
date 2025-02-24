@@ -118,7 +118,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         String ipAddress = IpAddressHelper.extractIpAddress(input);
 
-        if (!session.validateSession(request.getEmail())) {
+        if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
             return generateErrorResponse(
                     ErrorResponse.ERROR_1000,
