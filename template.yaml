@@ -1214,7 +1214,7 @@ Resources:
         - true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
+      AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       AlarmName: !Sub ${Environment}-backchannel-logout-request-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -1222,13 +1222,13 @@ Resources:
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
-      Threshold: 10
+      Threshold: 50
 
   BackChannelLogoutRequestFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
+      AlarmDescription: !Sub "Lambda error rate of 50 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       ActionsEnabled: !If
         - IsIntegration
         - false
@@ -1237,7 +1237,7 @@ Resources:
         - !Ref SlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      Threshold: 10
+      Threshold: 50
       Metrics:
         - Id: e1
           ReturnData: true
