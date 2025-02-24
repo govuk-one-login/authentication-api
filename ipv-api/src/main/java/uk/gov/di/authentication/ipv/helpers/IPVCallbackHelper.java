@@ -25,7 +25,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -201,8 +200,8 @@ public class IPVCallbackHelper {
             String ipAddress,
             String persistentSessionId,
             String clientId,
-            String email)
-            throws UserNotFoundException {
+            String email,
+            String subjectId) {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
                 "saveIdentityClaims",
@@ -225,8 +224,6 @@ public class IPVCallbackHelper {
         var dimensions =
                 authCodeResponseService.getDimensions(
                         orchSession, clientSession, clientSessionId, false, false);
-
-        var subjectId = authCodeResponseService.getSubjectId(session);
 
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
