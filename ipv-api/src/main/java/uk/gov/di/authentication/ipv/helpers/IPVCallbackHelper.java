@@ -201,7 +201,8 @@ public class IPVCallbackHelper {
             String ipAddress,
             String persistentSessionId,
             String clientId,
-            String email)
+            String email,
+            String subjectId)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
@@ -223,8 +224,6 @@ public class IPVCallbackHelper {
         var dimensions =
                 authCodeResponseService.getDimensions(
                         orchSession, clientSession, clientSessionId, false, false);
-
-        var subjectId = authCodeResponseService.getSubjectId(session);
 
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
