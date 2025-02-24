@@ -28,6 +28,12 @@ Deployed to Orch dev and observed the following succesful test cases:
 
 ### Checklist
 
+<!-- If any lambdas are accessing a resource for the first time, they must have additional permissions to do so.
+This should be done in a separate PR.
+-->
+
+- [ ] Lambdas have correct permissions for the resources they're accessing.
+
 <!-- Be careful when making changes to code in 'shared' components where each team has a copy.
 Check with counterparts to see if changes need to be made in the other team's code.
 In particular pay attention to classes representing Session data where changes need to be applied on both sides to avoid deserialization errors.
