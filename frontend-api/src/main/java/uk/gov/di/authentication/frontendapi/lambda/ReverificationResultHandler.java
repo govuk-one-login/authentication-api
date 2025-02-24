@@ -118,7 +118,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         var baseAuditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
                         request.email(),
                         IpAddressHelper.extractIpAddress(input),
                         userContext
