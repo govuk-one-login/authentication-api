@@ -722,22 +722,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
         var creationDate = LocalDateTime.now();
+        var authRequestParams = generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters();
+        var clientSessionId = "a-client-session-id";
         var clientSession =
-                new ClientSession(
-                        generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
-                        creationDate,
-                        vtrList,
-                        "client-name");
+                new ClientSession(authRequestParams, creationDate, vtrList, "client-name");
         redis.createClientSession("a-client-session-id", clientSession);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
-                        "a-client-session-id",
-                        generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
-                        creationDate,
-                        vtrList,
-                        "client-name"));
-        redis.addAuthCode(
-                code, CLIENT_ID, "a-client-session-id", clientSession, TEST_EMAIL, AUTH_TIME);
+                        clientSessionId, authRequestParams, creationDate, vtrList, "client-name"));
+        redis.addAuthCode(code, CLIENT_ID, clientSessionId, clientSession, TEST_EMAIL, AUTH_TIME);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));

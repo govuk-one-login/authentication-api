@@ -68,6 +68,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -261,9 +262,11 @@ public class TokenHandler
 
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
         var clientSessionId = authCodeExchangeData.getClientSessionId();
+        var orchClientSession = orchClientSessionService.getClientSession(clientSessionId);
+        logIfClientSessionsAreNotEqual(clientSession, orchClientSession.orElse(null));
         clientSessionService.updateStoredClientSession(
                 clientSessionId, clientSession.setIdTokenHint(idTokenHint));
-        var orchClientSession = orchClientSessionService.getClientSession(clientSessionId);
+
         if (orchClientSession.isEmpty()) {
             LOG.warn("No orch client session is present");
         } else {
