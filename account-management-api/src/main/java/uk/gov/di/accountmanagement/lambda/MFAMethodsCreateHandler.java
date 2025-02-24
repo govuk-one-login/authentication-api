@@ -9,6 +9,9 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MfaDetail;
+import uk.gov.di.authentication.shared.entity.MfaMethodData;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -24,8 +27,6 @@ public class MFAMethodsCreateHandler
 
     private static final String PRODUCTION = "production";
     private static final String INTEGRATION = "integration";
-
-    private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
@@ -58,19 +59,42 @@ public class MFAMethodsCreateHandler
         }
 
         var subject = input.getPathParameters().get("publicSubjectId");
-        if (subject == null || !subject.equals("helloPath")) {
+        if (subject == null) {
             LOG.error("Subject missing from request prevents request being handled.");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
         try {
-            var mfaMethodCreateRequest =
-                    objectMapper.readValue(input.getBody(), MfaMethodCreateRequest.class);
+            MfaMethodCreateRequest mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
+            MfaDetail mfaMethod = mfaMethodCreateRequest.mfaMethod().method();
+            PriorityIdentifier priorityIdentifier =
+                    mfaMethodCreateRequest.mfaMethod().priorityIdentifier();
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
-            return generateApiGatewayProxyResponse(200, input.getBody());
+            return generateApiGatewayProxyResponse(
+                    200, new MfaMethodData(2, priorityIdentifier, true, mfaMethod), true);
+
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
+            throws Json.JsonException {
+        MfaMethodCreateRequest mfaMethodCreateRequest;
+        var objectMapper = SerializationService.getInstance();
+        try {
+            mfaMethodCreateRequest =
+                    segmentedFunctionCall(
+                            "SerializationService::GSON::fromJson",
+                            () ->
+                                    objectMapper.readValue(
+                                            input.getBody(), MfaMethodCreateRequest.class));
+
+        } catch (RuntimeException e) {
+            LOG.error("Error during JSON deserialization", e);
+            throw new Json.JsonException(e);
+        }
+        return mfaMethodCreateRequest;
     }
 }
