@@ -875,6 +875,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpSmsRequest(journeyType, PHONE_NUMBER);
 
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionExtension.addEmailToSession(sessionId, EMAIL_ADDRESS);
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix);
@@ -911,6 +912,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         setUpSmsRequest(journeyType, PHONE_NUMBER);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionExtension.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -976,6 +978,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private void setUpTest(String sessionId, Scope scope) throws Json.JsonException {
         userStore.addUnverifiedUser(EMAIL_ADDRESS, USER_PASSWORD);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionExtension.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,

@@ -469,6 +469,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionExtension.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
