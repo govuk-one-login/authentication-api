@@ -118,12 +118,11 @@ class AccountInterventionsHandlerTest {
 
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
-            new Session()
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+            new Session().setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
+                    .withEmailAddress(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
