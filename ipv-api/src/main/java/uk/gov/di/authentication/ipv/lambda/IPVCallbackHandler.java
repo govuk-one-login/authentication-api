@@ -28,13 +28,13 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -411,7 +411,9 @@ public class IPVCallbackHandler
                                         ipAddress,
                                         persistentId,
                                         clientId,
-                                        authUserInfo.getEmailAddress());
+                                        authUserInfo.getEmailAddress(),
+                                        authUserInfo.getStringClaim(
+                                                AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()));
                         return generateApiGatewayProxyResponse(
                                 302,
                                 "",
@@ -488,9 +490,6 @@ public class IPVCallbackHandler
         } catch (JsonException e) {
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
             return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
-        } catch (UserNotFoundException e) {
-            LOG.error(e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 
