@@ -28,7 +28,8 @@ public class SessionHelper {
         UserProfile userProfile =
                 userContext.getUserProfile().isPresent()
                         ? userContext.getUserProfile().get()
-                        : authenticationService.getUserProfileByEmail(session.getEmailAddress());
+                        : authenticationService.getUserProfileByEmail(
+                                authSession.getEmailAddress());
         var internalCommonSubjectId =
                 session.getInternalCommonSubjectIdentifier() != null
                         ? session.getInternalCommonSubjectIdentifier()
