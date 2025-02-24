@@ -25,21 +25,49 @@ class CreateBackupMFAMethodIntegrationTest extends ApiGatewayHandlerIntegrationT
     void shouldReturn200AndHelloWorld() {
         var response =
                 makeRequest(
-                        Optional.of("{\"mfaMethod\": \"Hello World\"}"),
+                        Optional.of(
+                                "{\n"
+                                        + "\"mfaMethod\": {\n"
+                                        + "\"priorityIdentifier\": \"BACKUP\",\n"
+                                        + "\"method\": {\n"
+                                        + "\"mfaMethodType\": \"AUTH_APP\",\n"
+                                        + "\"credential\": \"AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444\"\n"
+                                        + "}\n"
+                                        + "}\n"
+                                        + "}"),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", "helloPath"),
                         Collections.emptyMap());
 
         assertEquals(200, response.getStatusCode());
-        assertEquals("{\"mfaMethod\": \"Hello World\"}", response.getBody());
+        assertEquals(
+                "{\n"
+                        + "\"mfaMethod\": {\n"
+                        + "\"priorityIdentifier\": \"BACKUP\",\n"
+                        + "\"method\": {\n"
+                        + "\"mfaMethodType\": \"AUTH_APP\",\n"
+                        + "\"credential\": \"AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444\"\n"
+                        + "}\n"
+                        + "}\n"
+                        + "}",
+                response.getBody());
     }
 
     @Test
     void shouldReturn400AndBadRequestWhenPathParameterIsWrong() {
         var response =
                 makeRequest(
-                        Optional.of("{\"mfaMethod\": \"Hello World\"}"),
+                        Optional.of(
+                                "{\n"
+                                        + "\"mfaMethod\": {\n"
+                                        + "\"priorityIdentifier\": \"BACKUP\",\n"
+                                        + "\"method\": {\n"
+                                        + "\"mfaMethodType\": \"AUTH_APP\",\n"
+                                        + "\"credential\": \"AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444\"\n"
+                                        + "}\n"
+                                        + "}\n"
+                                        + "}"),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", "wrongPath"),
