@@ -2,7 +2,7 @@ package uk.gov.di.accountmanagement.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.accountmanagement.lambda.MfaMethodsHandler;
+import uk.gov.di.accountmanagement.lambda.CreateBackupMFAMethod;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
@@ -14,11 +14,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
-class MfaMethodsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class CreateBackupMFAMethodIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        handler = new MfaMethodsHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new CreateBackupMFAMethod(TEST_CONFIGURATION_SERVICE);
     }
 
     @Test

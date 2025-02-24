@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
@@ -11,19 +12,26 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Map;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class MfaMethodsHandlerTest {
+class CreateBackupMFAMethodTest {
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(CreateBackupMFAMethod.class);
+
     private final Context context = mock(Context.class);
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final String SESSION_ID = "some-session-id";
@@ -31,12 +39,12 @@ class MfaMethodsHandlerTest {
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
 
-    private MfaMethodsHandler handler;
+    private CreateBackupMFAMethod handler;
 
     @BeforeEach
     void setUp() {
         when(configurationService.getEnvironment()).thenReturn("test");
-        handler = new MfaMethodsHandler(configurationService);
+        handler = new CreateBackupMFAMethod(configurationService);
     }
 
     @Test
@@ -53,7 +61,7 @@ class MfaMethodsHandlerTest {
     @ValueSource(strings = {"production", "integration"})
     void shouldReturn400IfRequestIsMadeInProductionOrIntegration(String environment) {
         when(configurationService.getEnvironment()).thenReturn(environment);
-        handler = new MfaMethodsHandler(configurationService);
+        handler = new CreateBackupMFAMethod(configurationService);
 
         var event = generateApiGatewayEvent("say hello");
 
@@ -71,6 +79,11 @@ class MfaMethodsHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Subject missing from request prevents request being handled.")));
     }
 
     @Test
