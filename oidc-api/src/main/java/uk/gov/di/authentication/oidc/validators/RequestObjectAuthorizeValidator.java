@@ -187,6 +187,14 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                 "Request is missing nonce parameter"),
                         state);
             }
+
+            // TODO: ATO-1371: Delete once verified that no RPs are using code challenge method
+            // "plain" AND checked which (if any) RPs are using PKCE already.
+            var codeChallengeMethod = jwtClaimsSet.getClaim("code_challenge_method");
+            if (Objects.nonNull(codeChallengeMethod)) {
+                LOG.info("authRequest code challenge method is '{}'", codeChallengeMethod);
+            }
+
             var vtrError = validateVtr(jwtClaimsSet, client);
             if (vtrError.isPresent()) {
                 return errorResponse(redirectURI, vtrError.get(), state);
