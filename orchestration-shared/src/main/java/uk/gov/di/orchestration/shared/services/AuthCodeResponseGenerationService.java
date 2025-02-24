@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -7,7 +8,9 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
+import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -89,6 +92,28 @@ public class AuthCodeResponseGenerationService {
         return Objects.isNull(session.getEmailAddress())
                 ? AuditService.UNKNOWN
                 : userProfile.getSubjectID();
+    }
+
+    public String getRpPairwiseId(
+            Session session, ClientID clientID, DynamoClientService dynamoClientService)
+            throws UserNotFoundException, ClientNotFoundException {
+        var userProfile =
+                dynamoService
+                        .getUserProfileByEmailMaybe(session.getEmailAddress())
+                        .orElseThrow(
+                                () ->
+                                        new UserNotFoundException(
+                                                "Unable to find user with given email address"));
+        var client =
+                dynamoClientService
+                        .getClient(clientID.getValue())
+                        .orElseThrow(() -> new ClientNotFoundException(clientID.getValue()));
+        return ClientSubjectHelper.getSubject(
+                        userProfile,
+                        client,
+                        dynamoService,
+                        configurationService.getInternalSectorURI())
+                .getValue();
     }
 
     public void saveSession(
