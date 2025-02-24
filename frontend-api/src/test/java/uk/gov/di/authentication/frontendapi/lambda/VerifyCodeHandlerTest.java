@@ -121,7 +121,6 @@ class VerifyCodeHandlerTest {
     private static final long LOCKOUT_DURATION = 799;
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final int MAX_RETRIES = 6;
-    private static final String SESSION_ID_FOR_TEST_CLIENT = "session-id-for-test-client";
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -129,13 +128,10 @@ class VerifyCodeHandlerTest {
     private final UserProfile userProfile = mock(UserProfile.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
-    // TODO do we need both session and sessionForTestClient here?
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-    private final Session sessionForTestClient =
-            new Session(SESSION_ID_FOR_TEST_CLIENT).setEmailAddress(TEST_CLIENT_EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -192,13 +188,7 @@ class VerifyCodeHandlerTest {
     void tearDown() {
         assertThat(
                 logging.events(),
-                not(
-                        hasItem(
-                                withMessageContaining(
-                                        CLIENT_ID,
-                                        TEST_CLIENT_CODE,
-                                        SESSION_ID,
-                                        SESSION_ID_FOR_TEST_CLIENT))));
+                not(hasItem(withMessageContaining(CLIENT_ID, TEST_CLIENT_CODE, SESSION_ID))));
     }
 
     @BeforeEach
@@ -320,7 +310,6 @@ class VerifyCodeHandlerTest {
         when(clientSession.getAuthRequestParams())
                 .thenReturn(withAuthenticationRequest(CLIENT_ID).toParameters());
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -391,13 +380,14 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
-        sessionForTestClient.setEmailAddress(email);
-        sessionForTestClient.setInternalCommonSubjectIdentifier(expectedCommonSubject);
+        session.setEmailAddress(email);
+        session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
+        authSession.setEmailAddress(email);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, VERIFY_EMAIL);
-        var result = makeCallWithCode(body, Optional.of(sessionForTestClient), TEST_CLIENT_ID);
+        var result = makeCallWithCode(body, Optional.of(session), TEST_CLIENT_ID);
 
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
@@ -427,11 +417,12 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
-        sessionForTestClient.setEmailAddress(email);
-        sessionForTestClient.setInternalCommonSubjectIdentifier(expectedCommonSubject);
+        session.setEmailAddress(email);
+        session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
+        authSession.setEmailAddress(email);
         String body =
                 format("{ \"code\": \"%s\", \"notificationType\": \"%s\"  }", CODE, VERIFY_EMAIL);
-        var result = makeCallWithCode(body, Optional.of(sessionForTestClient), TEST_CLIENT_ID);
+        var result = makeCallWithCode(body, Optional.of(session), TEST_CLIENT_ID);
 
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
@@ -750,12 +741,14 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE))
                 .thenReturn(Optional.of(CODE));
+        session.setEmailAddress(TEST_CLIENT_EMAIL);
+        authSession.setEmailAddress(TEST_CLIENT_EMAIL);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, RESET_PASSWORD_WITH_CODE);
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode(body, Optional.of(sessionForTestClient), TEST_CLIENT_ID);
+                makeCallWithCode(body, Optional.of(session), TEST_CLIENT_ID);
 
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE);
