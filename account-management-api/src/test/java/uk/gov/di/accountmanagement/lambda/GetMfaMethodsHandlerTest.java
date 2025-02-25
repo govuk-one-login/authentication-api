@@ -57,4 +57,18 @@ class GetMfaMethodsHandlerTest {
 
         assertThat(result, hasStatus(400));
     }
+
+    @Test
+    void shouldReturn404IfPublicSubjectIdNotFound() {
+        when(configurationService.getEnvironment()).thenReturn("test-environment");
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withPathParameters(
+                                (Map.of("publicSubjectId", "unknown-public-subject-id")))
+                        .withHeaders(VALID_HEADERS);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(404));
+    }
 }

@@ -24,6 +24,7 @@ public class GetMfaMethodsHandler
 
     private static final String PRODUCTION = "production";
     private static final String INTEGRATION = "integration";
+    private static final String DUMMY_UNKNOWN_SUBJECT_ID = "unknown-public-subject-id";
 
     private static final Logger LOG = LogManager.getLogger(GetMfaMethodsHandler.class);
 
@@ -37,8 +38,9 @@ public class GetMfaMethodsHandler
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent apiGatewayProxyRequestEvent, Context context) {
-        addSessionIdToLogs(apiGatewayProxyRequestEvent);
+            APIGatewayProxyRequestEvent input, Context context) {
+
+        addSessionIdToLogs(input);
 
         var disabledEnvironments = List.of(PRODUCTION, INTEGRATION);
         if (disabledEnvironments.contains(configurationService.getEnvironment())) {
@@ -46,6 +48,11 @@ public class GetMfaMethodsHandler
                     "Request to create MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
+        }
+
+        if (input.getPathParameters().get("publicSubjectId").equals(DUMMY_UNKNOWN_SUBJECT_ID)) {
+            LOG.error("Unknown public subject ID");
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
 
         return generateApiGatewayProxyResponse(200, "{\"hello\": \"world\"}");
