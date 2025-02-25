@@ -56,6 +56,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
     void shouldAddSpotCredentialToDBForValidResponseWhenEntryAlreadyExists() {
         var pairwiseIdentifier = new Subject();
         identityStore.saveIdentityClaims(
+                CLIENT_SESSION_ID,
                 pairwiseIdentifier.getValue(),
                 Map.of(
                         ValidClaims.ADDRESS.getValue(),
@@ -137,6 +138,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                         REQUEST_ID,
                         CLIENT_ID);
         identityStore.saveIdentityClaims(
+                CLIENT_SESSION_ID,
                 pairwiseIdentifier.getValue(),
                 emptyMap(),
                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),

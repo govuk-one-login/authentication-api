@@ -67,11 +67,13 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
     }
 
     public void saveIdentityClaims(
+            String clientSessionId,
             String subjectID,
             Map<String, String> additionalClaims,
             String ipvVot,
             String ipvCoreIdentity) {
-        dynamoService.saveIdentityClaims(subjectID, additionalClaims, ipvVot, ipvCoreIdentity);
+        dynamoService.saveIdentityClaims(
+                clientSessionId, subjectID, additionalClaims, ipvVot, ipvCoreIdentity);
     }
 
     public Optional<AuthIdentityCredentials> getIdentityCredentials(String subjectID) {

@@ -522,7 +522,7 @@ public class IPVCallbackHandler
                     "saveIdentityClaims",
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
-                                    rpPairwiseSubject, userIdentityUserInfo));
+                                    clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
             var redirectURI = frontend.ipvCallbackURI();
             LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(

@@ -456,6 +456,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         IdentityStoreExtension identityStore = new IdentityStoreExtension(ttl);
         if (Objects.nonNull(additionalClaims)) {
             identityStore.saveIdentityClaims(
+                    JOURNEY_ID,
                     PUBLIC_SUBJECT.getValue(),
                     additionalClaims,
                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
