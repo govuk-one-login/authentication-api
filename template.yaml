@@ -4562,130 +4562,53 @@ Resources:
               - kms:Decrypt
             Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
-  IdentityCredentialsTableReadAccessPolicy:
+  OrchIdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdentityCredentialsTableReadAccess
+          - Sid: AllowOrchIdentityCredentialsTableReadAccess
             Effect: Allow
             Action:
-              - dynamodb:BatchGetItem
               - dynamodb:DescribeTable
               - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
-          - Sid: AllowIdentityCredentialsTableKeyAccess
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableDecryption
             Effect: Allow
             Action:
-              - kms:Encrypt
               - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                identityCredentialsTableKeyArn,
-              ]
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
 
-  IdentityCredentialsTableWriteAccessPolicy:
+  OrchIdentityCredentialsTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdentityCredentialsTableWriteAccess
+          - Sid: AllowOrchIdentityCredentialsTableWriteAccess
             Effect: Allow
             Action:
-              - dynamodb:UpdateItem
               - dynamodb:PutItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
-          - Sid: AllowIdentityCredentialsTableKeyAccess
+              - dynamodb:UpdateItem
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableEncryption
             Effect: Allow
             Action:
               - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                identityCredentialsTableKeyArn,
-              ]
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
 
-  IdentityCredentialsTableDeleteAccessPolicy:
+  OrchIdentityCredentialsTableDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdentityCredentialsTableDeleteAccess
+          - Sid: AllowOrchIdentityCredentialsTableDeleteAccess
             Effect: Allow
             Action:
               - dynamodb:DeleteItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
-          - Sid: AllowIdentityCredentialsTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                identityCredentialsTableKeyArn,
-              ]
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
 
   AuthIdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
