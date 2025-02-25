@@ -4000,6 +4000,7 @@ Resources:
         - !Ref AuthIdentityCredentialsTableDeleteAccessPolicy
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref OrchIdentityCredentialsTableWriteAccessPolicy
+        - !Ref OrchIdentityCredentialsTableDeleteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       Tags:
