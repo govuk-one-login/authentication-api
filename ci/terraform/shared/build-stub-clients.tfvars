@@ -12,8 +12,9 @@ stub_rp_clients = [
       "https://rp-build.build.stubs.account.gov.uk/signed-out",
       "http://localhost:8080/signed-out",
     ]
-    test_client = "0"
-    client_type = "web"
+    back_channel_logout_uri = "https://rp-build.build.stubs.account.gov.uk/backchannel-logout"
+    test_client             = "0"
+    client_type             = "web"
     scopes = [
       "openid",
       "email",
@@ -63,8 +64,9 @@ stub_rp_clients = [
       "http://localhost:8080/signed-out",
       "https://rp-build.build.stubs.account.gov.uk/signed-out",
     ]
-    test_client = "1"
-    client_type = "web"
+    back_channel_logout_uri = "https://acceptance-test-rp-build.build.stubs.account.gov.uk/backchannel-logout"
+    test_client             = "1"
+    client_type             = "web"
     scopes = [
       "openid",
       "email",
