@@ -4557,6 +4557,55 @@ Resources:
               - kms:Decrypt
             Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
+  OrchIdentityCredentialsTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
+
+  OrchIdentityCredentialsTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
+
+  OrchIdentityCredentialsTableDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+
   AuthIdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
