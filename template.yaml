@@ -3787,8 +3787,7 @@ Resources:
       Policies:
         - !Ref AuthIdentityCredentialsTableReadAccessPolicy
         - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
-        - !Ref OrchIdentityCredentialsTableReadAccessPolicy
-        - !Ref OrchIdentityCredentialsTableWriteAccessPolicy
+        - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
@@ -4611,6 +4610,36 @@ Resources:
             Action:
               - dynamodb:DeleteItem
             Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+
+  # This combined read and write policy is required because we've reached the managed polices per role quota limit (20).
+  OrchIdentityCredentialsTableReadAndWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
+          - Sid: AllowOrchIdentityCredentialsTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
 
   AuthIdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
