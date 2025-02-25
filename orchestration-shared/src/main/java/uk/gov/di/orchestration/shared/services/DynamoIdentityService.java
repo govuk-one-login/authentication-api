@@ -29,8 +29,9 @@ public class DynamoIdentityService {
         this.timeToExist = configurationService.getAccessTokenExpiry();
     }
 
-    public void addCoreIdentityJWT(String subjectID, String coreIdentityJWT) {
-        var identityCredentials =
+    public void addCoreIdentityJWT(
+            String clientSessionId, String subjectID, String coreIdentityJWT) {
+        var authIdentityCredentials =
                 authIdentityCredentialsDynamoService
                         .get(subjectID)
                         .orElse(new AuthIdentityCredentials())
@@ -40,8 +41,20 @@ public class DynamoIdentityService {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
+        authIdentityCredentialsDynamoService.update(authIdentityCredentials);
 
-        authIdentityCredentialsDynamoService.update(identityCredentials);
+        var identityCredentials =
+                orchIdentityCredentialsDynamoService
+                        .get(clientSessionId)
+                        .orElse(new OrchIdentityCredentials())
+                        .withClientSessionId(clientSessionId)
+                        .withSubjectID(subjectID)
+                        .withCoreIdentityJWT(coreIdentityJWT)
+                        .withTimeToExist(
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond());
+        orchIdentityCredentialsDynamoService.update(identityCredentials);
     }
 
     public Optional<AuthIdentityCredentials> getIdentityCredentials(String subjectID) {

@@ -79,7 +79,8 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         var signedCredential = SignedCredentialHelper.generateCredential();
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
-        identityStore.addCoreIdentityJWT(pairwiseIdentifier, signedCredential.serialize());
+        identityStore.addCoreIdentityJWT(
+                CLIENT_SESSION_ID, pairwiseIdentifier, signedCredential.serialize());
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
