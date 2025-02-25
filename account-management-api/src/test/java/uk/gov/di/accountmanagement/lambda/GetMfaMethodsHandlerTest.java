@@ -44,6 +44,19 @@ class GetMfaMethodsHandlerTest {
         assertEquals("{\"hello\": \"world\"}", result.getBody());
     }
 
+    @Test
+    void shouldReturn400IfPublicSubjectIdNotIncludedInPath() {
+        when(configurationService.getEnvironment()).thenReturn("test-environment");
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withPathParameters((Map.of("publicSubjectId", "")))
+                        .withHeaders(VALID_HEADERS);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"production", "integration"})
     void shouldReturn400IfRequestIsMadeInProductionOrIntegration(String environment) {

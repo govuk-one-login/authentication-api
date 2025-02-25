@@ -50,7 +50,14 @@ public class GetMfaMethodsHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
         }
 
-        if (input.getPathParameters().get("publicSubjectId").equals(DUMMY_UNKNOWN_SUBJECT_ID)) {
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+
+        if (publicSubjectId.isEmpty()) {
+            LOG.error("Request does not include public subject id");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);
+        }
+
+        if (publicSubjectId.equals(DUMMY_UNKNOWN_SUBJECT_ID)) {
             LOG.error("Unknown public subject ID");
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
