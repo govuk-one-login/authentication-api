@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -282,6 +283,79 @@ class RequestObjectToAuthRequestHelperTest {
         assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
         assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
         assertThat(transformedAuthRequest.getMaxAge(), equalTo(123));
+    }
+
+    @Test
+    void shouldConvertRequestObjectToAuthRequestWhenCodeChallengePresent() throws JOSEException {
+        var codeChallenge = "aCodeChallenge";
+        var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
+
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet =
+                getClaimsSetBuilder(scope)
+                        .claim("code_challenge", codeChallenge)
+                        .claim("code_challenge_method", codeChallengeMethod)
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getCodeChallenge().getValue(), equalTo(codeChallenge));
+        assertThat(
+                transformedAuthRequest.getCodeChallengeMethod().getValue(),
+                equalTo(codeChallengeMethod));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+    }
+
+    @Test
+    void shouldConvertRequestObjectToAuthRequestWhenCodeChallengeAndMethodPresent()
+            throws JOSEException {
+        var codeChallenge = "aCodeChallenge";
+        var codeChallengeMethod = CodeChallengeMethod.S256;
+
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet =
+                getClaimsSetBuilder(scope)
+                        .claim("code_challenge", codeChallenge)
+                        .claim("code_challenge_method", codeChallengeMethod.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getCodeChallenge().getValue(), equalTo(codeChallenge));
+        assertThat(transformedAuthRequest.getCodeChallengeMethod(), equalTo(codeChallengeMethod));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
     }
 
     @Test

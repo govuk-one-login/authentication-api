@@ -7,6 +7,8 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -31,6 +33,7 @@ public class RequestObjectToAuthRequestHelper {
 
     private RequestObjectToAuthRequestHelper() {}
 
+    @SuppressWarnings("deprecation")
     public static AuthenticationRequest transform(AuthenticationRequest authRequest) {
         if (Objects.isNull(authRequest.getRequestObject())) {
             return authRequest;
@@ -82,6 +85,17 @@ public class RequestObjectToAuthRequestHelper {
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("max_age"))) {
                 builder.maxAge(getMaxAge(jwtClaimsSet));
+            }
+
+            var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
+
+            if (Objects.nonNull(codeChallenge)) {
+                var parsedCodeChallenge = CodeChallenge.parse(codeChallenge);
+                var parsedCodeChallengeMethod =
+                        CodeChallengeMethod.parse(
+                                jwtClaimsSet.getStringClaim("code_challenge_method"));
+
+                builder.codeChallenge(parsedCodeChallenge, parsedCodeChallengeMethod);
             }
 
             return builder.build();
