@@ -71,6 +71,11 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                                 .withSessionId(logIds.getSessionId())
                                 .withPersistentSessionId(logIds.getPersistentSessionId());
 
+                LOG.info(
+                        "is clientSessionId defined: {}",
+                        logIds.getClientSessionId() != null
+                                && !logIds.getClientSessionId().isBlank());
+
                 if (spotResponse.getStatus().equals(SPOTStatus.ACCEPTED)) {
                     LOG.info(
                             "SPOTResponse Status is {}. Adding CoreIdentityJWT to Dynamo",
