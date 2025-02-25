@@ -463,7 +463,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     CORE_IDENTITY_CLAIM);
         }
         if (Objects.nonNull(coreIdentityJWT)) {
-            identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
+            identityStore.addCoreIdentityJWT(
+                    JOURNEY_ID, PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
         }
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
         userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);

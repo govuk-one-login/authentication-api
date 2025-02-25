@@ -83,6 +83,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                     auditService.submitAuditEvent(
                             IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, logIds.getClientId(), user);
                     dynamoIdentityService.addCoreIdentityJWT(
+                            logIds.getClientSessionId(),
                             spotResponse.getSub(),
                             spotResponse.getClaims().values().stream()
                                     .map(Object::toString)
