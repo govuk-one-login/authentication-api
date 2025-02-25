@@ -31,7 +31,7 @@ variable "logging_endpoint_arns" {
 
 variable "stub_rp_clients" {
   default     = []
-  type        = list(object({ client_name : string, at_client : bool, sector_identifier_uri : string, callback_urls : list(string), logout_urls : list(string), test_client : string, scopes : list(string), client_type : string, one_login_service : bool, service_type : string, max_age_enabled : bool }))
+  type        = list(object({ client_name : string, at_client : bool, sector_identifier_uri : string, callback_urls : list(string), logout_urls : list(string), test_client : string, scopes : list(string), client_type : string, one_login_service : bool, service_type : string, max_age_enabled : bool, back_channel_logout_uri : optional(string) }))
   description = "The details of RP clients to provision in the Client table"
   validation {
     condition     = length(var.stub_rp_clients) > 0
