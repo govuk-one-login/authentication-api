@@ -55,11 +55,12 @@ public class DynamoIdentityService {
     }
 
     public void saveIdentityClaims(
+            String clientSessionId,
             String subjectID,
             Map<String, String> additionalClaims,
             String ipvVot,
             String ipvCoreIdentity) {
-        var identityCredentials =
+        var authIdentityCredentials =
                 new AuthIdentityCredentials()
                         .withSubjectID(subjectID)
                         .withAdditionalClaims(additionalClaims)
@@ -69,7 +70,19 @@ public class DynamoIdentityService {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
+        authIdentityCredentialsDynamoService.put(authIdentityCredentials);
 
-        authIdentityCredentialsDynamoService.put(identityCredentials);
+        var identityCredentials =
+                new OrchIdentityCredentials()
+                        .withClientSessionId(clientSessionId)
+                        .withSubjectID(subjectID)
+                        .withAdditionalClaims(additionalClaims)
+                        .withIpvVot(ipvVot)
+                        .withIpvCoreIdentity(ipvCoreIdentity)
+                        .withTimeToExist(
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond());
+        orchIdentityCredentialsDynamoService.put(identityCredentials);
     }
 }

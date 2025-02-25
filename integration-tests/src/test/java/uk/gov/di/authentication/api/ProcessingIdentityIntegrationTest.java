@@ -110,6 +110,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
         identityStore.saveIdentityClaims(
+                CLIENT_SESSION_ID,
                 pairwiseIdentifier,
                 emptyMap(),
                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),
