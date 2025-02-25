@@ -3785,8 +3785,7 @@ Resources:
             - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
       Policies:
-        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
-        - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -4736,6 +4735,70 @@ Resources:
             Effect: Allow
             Action:
               - dynamodb:DeleteItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowAuthIdentityCredentialsTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authIdentityCredentialsTableKeyArn,
+              ]
+
+  # This combined read and write policy is required because we've reached the managed polices per role quota limit (20).
+  AuthIdentityCredentialsTableReadAndWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowAuthIdentityCredentialsTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
               - AccountId:
