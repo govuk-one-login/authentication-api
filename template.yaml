@@ -2954,6 +2954,7 @@ Resources:
                 ]
       Policies:
         - !Ref AuthIdentityCredentialsTableReadAccessPolicy
+        - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -3791,6 +3792,7 @@ Resources:
       Policies:
         - !Ref AuthIdentityCredentialsTableReadAccessPolicy
         - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
+        - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
@@ -4000,6 +4002,7 @@ Resources:
         - !Ref AuthIdentityCredentialsTableReadAccessPolicy
         - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
         - !Ref AuthIdentityCredentialsTableDeleteAccessPolicy
+        - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       Tags:
