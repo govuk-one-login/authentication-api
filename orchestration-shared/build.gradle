@@ -28,7 +28,8 @@ dependencies {
             configurations.apache,
             "org.apache.httpcomponents.core5:httpcore5:5.3.3"
 
-    implementation configurations.otel
+    implementation configurations.otel,
+            configurations.otel_http_client
 
     testImplementation configurations.tests,
             configurations.lambda_tests,

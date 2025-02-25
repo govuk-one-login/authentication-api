@@ -67,6 +67,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
+import static uk.gov.di.orchestration.shared.tracing.AuthAttributes.GRANT_TYPE;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -176,7 +177,7 @@ public class TokenHandler
         }
 
         Map<String, String> requestBody = parseRequestBody(input.getBody());
-        addAnnotation("grant_type", requestBody.get("grant_type"));
+        addAnnotation(GRANT_TYPE, requestBody.get("grant_type"));
 
         TokenClientAuthValidator tokenAuthenticationValidator;
         try {
