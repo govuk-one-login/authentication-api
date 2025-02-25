@@ -505,4 +505,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }
+
+    public boolean isPkceEnabled() {
+        return getFlagOrFalse("PKCE_ENABLED");
+    }
 }
