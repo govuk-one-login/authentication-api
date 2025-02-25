@@ -96,6 +96,22 @@ dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
 -----END PUBLIC KEY-----
 EOT
 
+# The IPV public encrypting key that is specific to auth.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo9DGrlCJ1qrrXzeiSeLr
+6rzPmsIiF6hGxl8B4axJkBsfZWldFpPw1CvX/sP1FtY5fdVdUG7U1uMObcmE43tQ
+EiBv7vPWZ9wRI7knjc8ncrGmzhU1eeWyrhDIuhnJFm2iCldigLQu7DfCJMWAtsk2
+g/NMKsC9qYmyHD9QIpQTVt9/HjfzYXFTXtSettNlku2Xi5FjtCpdLEXOMezhRXjF
+imObuMzdLZYryP17mr2OJy9d+227FCexPG6UYOgH21RtOE9gxC2iLGMdqEmfTQt/
+G+lrdOD+OMl6qTVg+zJqG3amdPFnb4Vmnp8rOVnio30PFd71JxSqQsED8jjUW6KK
+FQIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+evcs_audience              = "https://credential-store.build.account.gov.uk"
+auth_issuer_claim_for_evcs = "https://signin.build.account.gov.uk"
+
 # Logging
 logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
 
