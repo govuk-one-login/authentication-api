@@ -111,6 +111,7 @@ subprojects {
         pact_consumer
         pact_provider
         otel
+        otel_http_client
         otel_aws_instrumentation
     }
 
@@ -222,11 +223,11 @@ subprojects {
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
 
+        otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry:opentelemetry-api"
         otel_aws_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
-
-        otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
-                "io.opentelemetry:opentelemetry-api",
+        otel_http_client platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
                 "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }
 }
