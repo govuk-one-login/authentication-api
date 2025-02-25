@@ -1,5 +1,8 @@
 package uk.gov.di.authentication.oidc.validators;
 
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
@@ -92,5 +95,45 @@ public abstract class BaseAuthorizeValidator {
         }
         LOG.info("Claims are present AND valid in auth request");
         return true;
+    }
+
+    protected Optional<ErrorObject> validateCodeChallengeAndMethod(
+            String codeChallenge, String codeChallengeMethod) {
+        if (codeChallenge == null) {
+            return Optional.empty();
+        }
+
+        if (codeChallenge.isBlank()) {
+            logErrorInProdElseWarn("code_challenge is blank (empty or contains only white space).");
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid value for code_challenge parameter."));
+        }
+
+        if (codeChallengeMethod == null) {
+            logErrorInProdElseWarn(
+                    "code_challenge_method is missing from authRequest, but is required as code_challenge is present.");
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Request is missing code_challenge_method parameter. code_challenge_method is required when code_challenge is present."));
+        }
+
+        var isValidCodeChallengeMethod =
+                codeChallengeMethod.equals(CodeChallengeMethod.S256.getValue());
+
+        if (!isValidCodeChallengeMethod) {
+            logErrorInProdElseWarn(
+                    String.format(
+                            "Invalid value for code_challenge_method - only '%s' is supported. code_challenge_method value in request: %s",
+                            CodeChallengeMethod.S256.getValue(), codeChallengeMethod));
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid value for code_challenge_method parameter."));
+        }
+
+        return Optional.empty();
     }
 }
