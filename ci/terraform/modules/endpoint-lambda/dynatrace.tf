@@ -14,15 +14,11 @@ locals {
     DT_TENANT                    = var.dynatrace_secret.DT_TENANT
     DT_LOG_COLLECTION_AUTH_TOKEN = var.dynatrace_secret.DT_LOG_COLLECTION_AUTH_TOKEN
 
-    DT_OPEN_TELEMETRY_ENABLE_INTEGRATION                                   = "false"
+    DT_OPEN_TELEMETRY_ENABLE_INTEGRATION                                   = "true"
     OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING = "true"
     OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED                                 = "true"
 
     DT_LOGGING_DESTINATION = local.dt_log_dest
     DT_LOGGING_JAVA_FLAGS  = local.dt_log_flags
   }
-}
-
-locals {
-  memory_size = var.memory_size
 }
