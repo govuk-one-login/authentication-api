@@ -104,6 +104,12 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
+  PkceEnabled:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2715,6 +2721,10 @@ Resources:
             - false
           SUPPORT_MAX_AGE_ENABLED: !If
             - SupportMaxAgeEnabled
+            - true
+            - false
+          PKCE_ENABLED: !If
+            - PkceEnabled
             - true
             - false
 
