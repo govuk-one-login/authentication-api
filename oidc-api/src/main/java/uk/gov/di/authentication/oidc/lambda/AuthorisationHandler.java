@@ -803,7 +803,7 @@ public class AuthorisationHandler
     private boolean maxAgeExpired(Long authTime, Optional<Integer> maxAge, long timeNow) {
         if (maxAge.isEmpty()) return false;
         if (authTime == null) {
-            LOG.error(
+            LOG.warn(
                     "Auth time expected to be set in Orch session but is null. Assuming that max age has not expired.");
             return false;
         }
