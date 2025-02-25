@@ -94,7 +94,8 @@ class SPOTResponseHandlerTest {
         handler.handleRequest(generateSQSEvent(json), context);
 
         verify(dynamoIdentityService)
-                .deleteIdentityCredentials("urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6");
+                .deleteIdentityCredentials(
+                        CLIENT_SESSION_ID, "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6");
 
         verify(auditService)
                 .submitAuditEvent(
