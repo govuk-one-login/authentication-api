@@ -18,7 +18,7 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.E
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.LOGOUT_SUCCESS;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class CloudwatchMetricsService {
 
@@ -35,7 +35,7 @@ public class CloudwatchMetricsService {
     }
 
     public void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
-        segmentedFunctionCall(
+        instrumentedFunctionCall(
                 "Metrics::EMF",
                 () -> {
                     try {

@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> {
     private static final Logger LOG = LogManager.getLogger(BulkTestUserCreateHandler.class);
@@ -71,7 +71,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
         ResponseInputStream<GetObjectResponse> fileContent = client.getObject(getObjectRequest);
 
-        segmentedFunctionCall(
+        instrumentedFunctionCall(
                 "lineReader",
                 () -> {
                     List<String> batch = new ArrayList<>();
@@ -87,7 +87,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
                             if (batch.size() % 500 == 0 && !batch.isEmpty()) {
                                 final List<String> finalBatch = batch;
-                                segmentedFunctionCall(
+                                instrumentedFunctionCall(
                                         "dbWriteFullBatch", () -> addTestUsersBatch(finalBatch));
                                 batch = new ArrayList<>();
                             }
@@ -98,7 +98,8 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
                     final List<String> finalBatch = batch;
 
-                    segmentedFunctionCall("dbWriteFinalBatch", () -> addTestUsersBatch(finalBatch));
+                    instrumentedFunctionCall(
+                            "dbWriteFinalBatch", () -> addTestUsersBatch(finalBatch));
                 });
 
         return null;
@@ -108,7 +109,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
         String dateTime = LocalDateTime.now().toString();
         Map<UserProfile, UserCredentials> testUsers = new HashMap<>();
 
-        segmentedFunctionCall(
+        instrumentedFunctionCall(
                 "parseTestUsersCsv",
                 () ->
                         batchOfIndividualUsersAsRawCsv.forEach(
@@ -128,7 +129,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
                                 }));
 
         try {
-            segmentedFunctionCall(
+            instrumentedFunctionCall(
                     "dynamoCreateBatchTestUsers",
                     () -> dynamoService.createBatchTestUsers(testUsers));
         } catch (Exception e) {

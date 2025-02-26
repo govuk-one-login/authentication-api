@@ -18,7 +18,7 @@ import uk.gov.di.orchestration.shared.validation.Validator;
 import java.time.LocalDateTime;
 
 import static java.util.Objects.isNull;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class SerializationService implements Json {
 
@@ -59,11 +59,11 @@ public class SerializationService implements Json {
             throws JsonException {
         try {
             T value =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "SerializationService::GSON::fromJson",
                             () -> gson.fromJson(jsonString, clazz));
             var violations =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "SerializationService::validator::validate",
                             () -> validator.validate(value));
             if (violations.isEmpty()) {
@@ -81,7 +81,7 @@ public class SerializationService implements Json {
 
     @Override
     public String writeValueAsString(Object object) {
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "SerializationService::GSON::toJson", () -> gson.toJson(object));
     }
 
