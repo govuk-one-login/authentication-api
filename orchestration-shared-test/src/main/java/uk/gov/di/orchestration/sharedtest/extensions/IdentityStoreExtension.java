@@ -19,7 +19,10 @@ import java.util.Optional;
 public class IdentityStoreExtension extends DynamoExtension implements AfterEachCallback {
 
     public static final String SUBJECT_ID_FIELD = "SubjectID";
-    public static final String IDENTITY_CREDENTIALS_TABLE = "local-identity-credentials";
+    public static final String AUTH_IDENTITY_CREDENTIALS_TABLE = "local-identity-credentials";
+
+    public static final String CLIENT_SESSION_ID_FIELD = "ClientSessionId";
+    public static final String ORCH_IDENTITY_CREDENTIALS_TABLE = "local-Orch-Identity-Credentials";
 
     private DynamoIdentityService dynamoService;
     private final ConfigurationService configuration;
@@ -45,12 +48,16 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
 
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
-        clearDynamoTable(dynamoDB, IDENTITY_CREDENTIALS_TABLE, SUBJECT_ID_FIELD);
+        clearDynamoTable(dynamoDB, AUTH_IDENTITY_CREDENTIALS_TABLE, SUBJECT_ID_FIELD);
+        clearDynamoTable(dynamoDB, ORCH_IDENTITY_CREDENTIALS_TABLE, CLIENT_SESSION_ID_FIELD);
     }
 
     @Override
     protected void createTables() {
-        if (!tableExists(IDENTITY_CREDENTIALS_TABLE)) {
+        if (!tableExists(AUTH_IDENTITY_CREDENTIALS_TABLE)) {
+            createAuthIdentityCredentialTable();
+        }
+        if (!tableExists(ORCH_IDENTITY_CREDENTIALS_TABLE)) {
             createIdentityCredentialTable();
         }
     }
@@ -71,10 +78,10 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
         return dynamoService.getIdentityCredentials(subjectID);
     }
 
-    private void createIdentityCredentialTable() {
+    private void createAuthIdentityCredentialTable() {
         CreateTableRequest request =
                 CreateTableRequest.builder()
-                        .tableName(IDENTITY_CREDENTIALS_TABLE)
+                        .tableName(AUTH_IDENTITY_CREDENTIALS_TABLE)
                         .keySchema(
                                 KeySchemaElement.builder()
                                         .keyType(KeyType.HASH)
@@ -84,6 +91,26 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
                         .attributeDefinitions(
                                 AttributeDefinition.builder()
                                         .attributeName(SUBJECT_ID_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build())
+                        .build();
+
+        dynamoDB.createTable(request);
+    }
+
+    private void createIdentityCredentialTable() {
+        CreateTableRequest request =
+                CreateTableRequest.builder()
+                        .tableName(ORCH_IDENTITY_CREDENTIALS_TABLE)
+                        .keySchema(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.HASH)
+                                        .attributeName(CLIENT_SESSION_ID_FIELD)
+                                        .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .attributeDefinitions(
+                                AttributeDefinition.builder()
+                                        .attributeName(CLIENT_SESSION_ID_FIELD)
                                         .attributeType(ScalarAttributeType.S)
                                         .build())
                         .build();
