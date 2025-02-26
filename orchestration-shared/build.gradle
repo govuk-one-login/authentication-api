@@ -29,6 +29,7 @@ dependencies {
             "org.apache.httpcomponents.core5:httpcore5:5.3.3"
 
     implementation configurations.otel,
+            configurations.otel_aws_instrumentation,
             configurations.otel_http_client
 
     testImplementation configurations.tests,
