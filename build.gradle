@@ -179,7 +179,7 @@ subprojects {
         libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.55"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
-                "org.slf4j:slf4j-nop:2.0.16"
+                "org.slf4j:slf4j-nop:2.0.17"
 
         nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
