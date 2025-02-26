@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -20,6 +21,7 @@ import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -54,10 +56,19 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
         this.latestTermsAndConditions = configurationService.getTermsAndConditionsVersion();
     }
 
+    private static S3Client buildS3Client() {
+        return S3Client.builder()
+                .overrideConfiguration(
+                        ClientOverrideConfiguration.builder()
+                                .addExecutionInterceptor(
+                                        new ConditionalOtelTracingExecutionInterceptor())
+                                .build())
+                .region((Region.EU_WEST_2))
+                .build();
+    }
+
     public BulkTestUserCreateHandler() {
-        this(
-                ConfigurationService.getInstance(),
-                S3Client.builder().region((Region.EU_WEST_2)).build());
+        this(ConfigurationService.getInstance(), buildS3Client());
     }
 
     @Override

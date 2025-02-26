@@ -113,6 +113,7 @@ subprojects {
         otel
         otel_http_client
         otel_aws_instrumentation
+        otel_aws_auto_instrumentation
     }
 
     // Check dependencies using:
@@ -226,6 +227,8 @@ subprojects {
         otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
                 "io.opentelemetry:opentelemetry-api"
         otel_aws_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2"
+        otel_aws_auto_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
         otel_http_client platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
                 "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
@@ -236,7 +239,9 @@ subprojects {
     afterEvaluate { subproject ->
         if (subproject.plugins.hasPlugin('java')) {
             dependencies {
-                runtimeOnly configurations.otel_aws_instrumentation
+                implementation configurations.otel,
+                        configurations.otel_aws_instrumentation
+                // runtimeOnly configurations.otel_aws_auto_instrumentation
             }
         }
     }

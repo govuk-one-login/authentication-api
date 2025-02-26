@@ -3,12 +3,14 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 
 import java.net.URI;
 import java.util.Optional;
@@ -29,6 +31,7 @@ public class KmsConnectionService {
             Optional<String> localstackEndpointUri, String awsRegion, String tokenSigningKeyId) {
         if (localstackEndpointUri.isPresent()) {
             LOG.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
+
             this.kmsClient =
                     KmsClient.builder()
                             .endpointOverride(URI.create(localstackEndpointUri.get()))
@@ -38,6 +41,11 @@ public class KmsConnectionService {
         } else {
             this.kmsClient =
                     KmsClient.builder()
+                            .overrideConfiguration(
+                                    ClientOverrideConfiguration.builder()
+                                            .addExecutionInterceptor(
+                                                    new ConditionalOtelTracingExecutionInterceptor())
+                                            .build())
                             .region(Region.of(awsRegion))
                             .credentialsProvider(DefaultCredentialsProvider.create())
                             .build();

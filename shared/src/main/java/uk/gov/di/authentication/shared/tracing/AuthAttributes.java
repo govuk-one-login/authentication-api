@@ -9,5 +9,4 @@ public class AuthAttributes {
     public static final AttributeKey<String> PERSISTENT_SESSION_ID =
             AttributeKey.stringKey("persistent_session_id");
     public static final AttributeKey<String> CLIENT_ID = AttributeKey.stringKey("client_id");
-    public static final AttributeKey<String> GRANT_TYPE = AttributeKey.stringKey("grant_type");
 }

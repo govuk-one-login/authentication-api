@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -18,6 +19,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -68,8 +70,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                                 configurationService.getNotifyApiKey(), url))
                         .orElse(new NotificationClient(configurationService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client, configurationService);
+
         this.s3Client =
-                S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
+                S3Client.builder()
+                        .overrideConfiguration(
+                                ClientOverrideConfiguration.builder()
+                                        .addExecutionInterceptor(
+                                                new ConditionalOtelTracingExecutionInterceptor())
+                                        .build())
+                        .region(Region.of(configurationService.getAwsRegion()))
+                        .build();
     }
 
     @Override

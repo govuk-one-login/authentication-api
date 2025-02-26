@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
@@ -27,6 +28,7 @@ import uk.gov.di.orchestration.shared.entity.RpPublicKeyCache;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 import uk.gov.di.orchestration.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
 import java.net.URI;
@@ -57,8 +59,14 @@ public class ClientSignatureValidationService {
     public ClientSignatureValidationService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.rpPublicKeyCacheService = new RpPublicKeyCacheService(configurationService);
+
         this.lambdaClient =
                 LambdaClient.builder()
+                        .overrideConfiguration(
+                                ClientOverrideConfiguration.builder()
+                                        .addExecutionInterceptor(
+                                                new ConditionalOtelTracingExecutionInterceptor())
+                                        .build())
                         .region(Region.of(configurationService.getAwsRegion()))
                         .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
                         .build();
