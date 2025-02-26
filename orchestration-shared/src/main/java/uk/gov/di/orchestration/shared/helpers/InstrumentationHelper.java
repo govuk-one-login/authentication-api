@@ -18,16 +18,15 @@ import java.util.concurrent.Callable;
 
 import static io.opentelemetry.context.Context.current;
 import static java.util.Objects.nonNull;
+import static uk.gov.di.orchestration.shared.tracing.Tracing.isTracingAllowed;
 
 @ExcludeFromGeneratedCoverageReport
 public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
     private static final Tracer tracer = GlobalOpenTelemetry.getTracer("instrumentation-helper");
 
-    private static final boolean TRACING_ENABLED = false;
-
     public static <T> T instrumentedFunctionCall(String segmentName, Callable<T> callable) {
-        if (TRACING_ENABLED) {
+        if (isTracingAllowed()) {
             Span span = tracer.spanBuilder(segmentName).startSpan();
             var subSegment = AWSXRay.beginSubsegment(segmentName);
             try {
@@ -56,7 +55,7 @@ public class InstrumentationHelper {
     }
 
     public static void instrumentedFunctionCall(String segmentName, Runnable runnable) {
-        if (TRACING_ENABLED) {
+        if (isTracingAllowed()) {
             Span span = tracer.spanBuilder(segmentName).startSpan();
             var subSegment = AWSXRay.beginSubsegment(segmentName);
             try {
@@ -86,9 +85,8 @@ public class InstrumentationHelper {
         subSegment.addException(e);
     }
 
-    @SuppressWarnings("unused")
     public static void addAnnotation(final AttributeKey<String> key, final String value) {
-        if (TRACING_ENABLED && nonNull(value)) {
+        if (isTracingAllowed() && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key.getKey(), value),
