@@ -99,7 +99,7 @@ import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationS
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.getPrimaryLanguageFromUILocales;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -233,7 +233,7 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> authoriseRequestHandler(input, context));
     }
@@ -1137,7 +1137,7 @@ public class AuthorisationHandler
 
     private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
         boolean isTokenSignatureValid =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "isTokenSignatureValid",
                         () ->
                                 tokenValidationService.isTokenSignatureValid(

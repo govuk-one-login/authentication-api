@@ -24,7 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.SessionCookieIds;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -59,7 +59,7 @@ public class LogoutRequest {
         sessionId = sessionCookieIds.map(SessionCookieIds::getSessionId);
         var clientSessionIdFromCookie = sessionCookieIds.map(SessionCookieIds::getClientSessionId);
         session =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "getSession", () -> sessionId.flatMap(sessionService::getSession));
         orchSession = sessionId.flatMap(orchSessionService::getSession);
 
@@ -94,7 +94,7 @@ public class LogoutRequest {
 
         LOG.info("ID token hint is present");
         isTokenSignatureValid =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "isTokenSignatureValid",
                         () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
         if (!isTokenSignatureValid) {

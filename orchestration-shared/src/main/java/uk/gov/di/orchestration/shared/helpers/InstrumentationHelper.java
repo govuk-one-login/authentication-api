@@ -26,7 +26,7 @@ public class InstrumentationHelper {
 
     private static final boolean TRACING_ENABLED = false;
 
-    public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
+    public static <T> T instrumentedFunctionCall(String segmentName, Callable<T> callable) {
         if (TRACING_ENABLED) {
             Span span = tracer.spanBuilder(segmentName).startSpan();
             var subSegment = AWSXRay.beginSubsegment(segmentName);
@@ -55,7 +55,7 @@ public class InstrumentationHelper {
         }
     }
 
-    public static void segmentedFunctionCall(String segmentName, Runnable runnable) {
+    public static void instrumentedFunctionCall(String segmentName, Runnable runnable) {
         if (TRACING_ENABLED) {
             Span span = tracer.spanBuilder(segmentName).startSpan();
             var subSegment = AWSXRay.beginSubsegment(segmentName);

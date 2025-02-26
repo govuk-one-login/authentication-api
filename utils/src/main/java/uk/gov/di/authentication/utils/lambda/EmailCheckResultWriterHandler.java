@@ -14,7 +14,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.NowHelper.now;
 
 public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, Void> {
@@ -42,7 +42,7 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
 
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "shared-api::" + getClass().getSimpleName(),
                 () -> emailCheckResultWriterHandler(event));
     }

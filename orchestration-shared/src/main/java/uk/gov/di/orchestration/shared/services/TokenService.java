@@ -53,7 +53,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class TokenService {
 
@@ -96,7 +96,7 @@ public class TokenService {
             Long authTime) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "generateAndStoreAccessToken",
                         () ->
                                 generateAndStoreAccessToken(
@@ -109,12 +109,12 @@ public class TokenService {
                                         signingAlgorithm,
                                         journeyId));
         AccessTokenHash accessTokenHash =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "AccessTokenHash.compute",
                         () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
 
         SignedJWT idToken =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "generateIDToken",
                         () ->
                                 generateIDToken(
@@ -129,7 +129,7 @@ public class TokenService {
                                         authTime));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "generateAndStoreRefreshToken",
                             () ->
                                     generateAndStoreRefreshToken(

@@ -31,7 +31,7 @@ import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static com.nimbusds.jose.jwk.Curve.P_256;
 import static software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec.ECDSA_SHA_256;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class JwksService {
 
@@ -93,10 +93,10 @@ public class JwksService {
 
     private JWK getPublicJWKWithKeyId(String keyId) {
         var jwk =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "createJwk", () -> KEY_CACHE.computeIfAbsent(keyId, this::createJwk));
 
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "parseJwk",
                 () -> {
                     try {
