@@ -190,8 +190,17 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
             var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
 
+            // TODO ATO-1371: Remove after debug
+            LOG.info("pkce enabled? {}", configurationService.isPkceEnabled());
+
             if (configurationService.isPkceEnabled() && Objects.nonNull(codeChallenge)) {
                 var codeChallengeMethod = jwtClaimsSet.getStringClaim("code_challenge_method");
+
+                // TODO ATO-1371: Remove after debug
+                LOG.info(
+                        "code_challenge is {}, code_challenge_method is {}",
+                        codeChallenge,
+                        codeChallengeMethod);
 
                 var codeChallengeError =
                         validateCodeChallengeAndMethod(codeChallenge, codeChallengeMethod);

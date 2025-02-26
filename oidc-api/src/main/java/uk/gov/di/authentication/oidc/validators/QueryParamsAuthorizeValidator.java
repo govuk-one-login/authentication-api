@@ -112,6 +112,12 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             .map(Identifier::getValue)
                             .orElse(null);
 
+            // TODO ATO-1371: Remove after debug
+            LOG.info(
+                    "code_challenge is {}, code_challenge_method is {}",
+                    codeChallenge,
+                    codeChallengeMethod);
+
             var codeChallengeError =
                     validateCodeChallengeAndMethod(codeChallenge, codeChallengeMethod);
             if (codeChallengeError.isPresent()) {
