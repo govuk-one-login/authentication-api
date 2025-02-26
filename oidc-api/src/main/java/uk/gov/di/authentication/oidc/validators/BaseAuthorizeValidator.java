@@ -111,6 +111,14 @@ public abstract class BaseAuthorizeValidator {
                             "Invalid value for code_challenge parameter."));
         }
 
+        // TODO ATO-1371: Remove after debug
+        LOG.info(
+                "code_challenge is {}, code_challenge_method is {}",
+                codeChallenge,
+                codeChallengeMethod);
+
+        /// TODO: Getting "java.util.NoSuchElementException: No value present" when running this on
+        // RP stub with valid code verifier, but the method set to 'Optional.empty()'
         if (codeChallengeMethod == null) {
             logErrorInProdElseWarn(
                     "code_challenge_method is missing from authRequest, but is required as code_challenge is present.");
