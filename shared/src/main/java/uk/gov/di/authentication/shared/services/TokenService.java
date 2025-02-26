@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class TokenService {
 
@@ -93,7 +93,7 @@ public class TokenService {
             String vot) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "generateAndStoreAccessToken",
                         () ->
                                 generateAndStoreAccessToken(
@@ -105,12 +105,12 @@ public class TokenService {
                                         claimsRequest,
                                         signingAlgorithm));
         AccessTokenHash accessTokenHash =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "AccessTokenHash.compute",
                         () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
 
         SignedJWT idToken =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "generateIDToken",
                         () ->
                                 generateIDToken(
@@ -124,7 +124,7 @@ public class TokenService {
                                         journeyId));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "generateAndStoreRefreshToken",
                             () ->
                                     generateAndStoreRefreshToken(

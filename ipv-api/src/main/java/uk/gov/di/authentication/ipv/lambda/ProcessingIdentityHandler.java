@@ -42,7 +42,7 @@ import java.util.Objects;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIdentityRequest> {
 
@@ -184,7 +184,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     processingStatus);
             if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
                 AccountIntervention intervention =
-                        segmentedFunctionCall(
+                        instrumentedFunctionCall(
                                 "AIS: getAccountIntervention",
                                 () ->
                                         accountInterventionService.getAccountIntervention(

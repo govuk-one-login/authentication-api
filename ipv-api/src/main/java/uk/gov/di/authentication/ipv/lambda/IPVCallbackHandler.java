@@ -72,7 +72,7 @@ import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -268,7 +268,7 @@ public class IPVCallbackHandler
                                                     "Client registry not found with given clientId"));
 
             var errorObject =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "validateIpvAuthResponse",
                             () ->
                                     ipvAuthorisationService.validateResponse(
@@ -318,7 +318,7 @@ public class IPVCallbackHandler
 
             if (errorObject.isPresent()) {
                 AccountIntervention intervention =
-                        segmentedFunctionCall(
+                        instrumentedFunctionCall(
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
@@ -395,7 +395,7 @@ public class IPVCallbackHandler
             //
 
             var tokenResponse =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "getIpvToken",
                             () ->
                                     ipvTokenService.getToken(
@@ -429,7 +429,7 @@ public class IPVCallbackHandler
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
                 AccountIntervention intervention =
-                        segmentedFunctionCall(
+                        instrumentedFunctionCall(
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
@@ -518,7 +518,7 @@ public class IPVCallbackHandler
                     clientId);
 
             auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
-            segmentedFunctionCall(
+            instrumentedFunctionCall(
                     "saveIdentityClaims",
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
@@ -553,7 +553,8 @@ public class IPVCallbackHandler
             return authUserInfoStorageService.getAuthenticationUserInfo(
                     internalCommonSubjectId, clientSessionId);
         } catch (ParseException e) {
-            // TODO: ATO-1117: temporary logs. authUserInfo is not essential, so we don't want this
+            // TODO: ATO-1117: temporary logs. authUserInfo is not essential, so we don't
+            // want this
             // to exit the lambda yet.
             LOG.info("error parsing authUserInfo. Message: {}", e.getMessage());
             return Optional.empty();
