@@ -20,6 +20,8 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -192,6 +194,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 @Override
                 public String getOrchestrationToAuthenticationEncryptionPublicKey() {
                     return AUTH_PUBLIC_ENCRYPTION_KEY;
+                }
+
+                @Override
+                public boolean isPkceEnabled() {
+                    return true;
                 }
             };
 
@@ -1208,28 +1215,405 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         "error=invalid_request&error_description=Max+age+is+negative+in+request+object"));
     }
 
+    @Test
+    void shouldRedirectToFrontendWhenCodeChallengeIsNotProvided() throws Exception {
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        var previousClientSessionId = "a-previous-client-session";
+        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(previousSessionId)
+                        .withAuthenticated(true)
+                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var previousSession = orchSessionExtension.getSession(previousSessionId);
+        assertTrue(previousSession.isPresent());
+        assertTrue(previousSession.get().getAuthenticated());
+        assertNull(previousSession.get().getPreviousSessionId());
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
+                        constructQueryStringParameters(
+                                CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
+                        Optional.of("GET"));
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                getLocationResponseHeader(response),
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
+    }
+
+    @Test
+    void shouldRedirectToFrontendWhenCodeChallengeIsNotProvidedInRequestObject()
+            throws JOSEException {
+        setupForAuthJourney();
+
+        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
+
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        signedJWT.serialize(),
+                        "scope",
+                        "openid");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        requestParams,
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(
+                locationHeaderUri.toString(),
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
+    }
+
+    @Test
+    void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedAndIsMissing()
+            throws Exception {
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        var previousClientSessionId = "a-previous-client-session";
+        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(previousSessionId)
+                        .withAuthenticated(true)
+                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var previousSession = orchSessionExtension.getSession(previousSessionId);
+        assertTrue(previousSession.isPresent());
+        assertTrue(previousSession.get().getAuthenticated());
+        assertNull(previousSession.get().getPreviousSessionId());
+
+        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
+                        constructQueryStringParameters(
+                                CLIENT_ID, null, "openid", "P2.Cl.Cm", codeChallenge, null),
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
+    }
+
+    @Test
+    void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedInRequestObjectAndIsMissing()
+            throws JOSEException, ParseException {
+        setupForAuthJourney();
+
+        var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
+
+        SignedJWT signedJWT =
+                createSignedJWT("", CLAIMS, List.of("openid"), null, aCodeChallenge, null);
+
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        signedJWT.serialize(),
+                        "scope",
+                        "openid");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        requestParams,
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
+    }
+
+    @Test
+    void shouldReturnInvalidRequestWhenCodeChallengeMethodIsInvalid() throws Exception {
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        var previousClientSessionId = "a-previous-client-session";
+        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(previousSessionId)
+                        .withAuthenticated(true)
+                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var previousSession = orchSessionExtension.getSession(previousSessionId);
+        assertTrue(previousSession.isPresent());
+        assertTrue(previousSession.get().getAuthenticated());
+        assertNull(previousSession.get().getPreviousSessionId());
+
+        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+        var codeChallengeMethod = CodeChallengeMethod.PLAIN;
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
+                        constructQueryStringParameters(
+                                CLIENT_ID,
+                                null,
+                                "openid",
+                                "P2.Cl.Cm",
+                                codeChallenge,
+                                codeChallengeMethod),
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
+    }
+
+    @Test
+    void shouldReturnInvalidRequestWhenCodeChallengeMethodInRequestObjectIsInvalid()
+            throws JOSEException, ParseException {
+        setupForAuthJourney();
+
+        var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
+        var codeChallengeMethod = CodeChallengeMethod.PLAIN;
+
+        SignedJWT signedJWT =
+                createSignedJWT(
+                        "", CLAIMS, List.of("openid"), null, aCodeChallenge, codeChallengeMethod);
+
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        signedJWT.serialize(),
+                        "scope",
+                        "openid");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        requestParams,
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
+    }
+
+    @Test
+    void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValid() throws Exception {
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        var previousClientSessionId = "a-previous-client-session";
+        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(previousSessionId)
+                        .withAuthenticated(true)
+                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var previousSession = orchSessionExtension.getSession(previousSessionId);
+        assertTrue(previousSession.isPresent());
+        assertTrue(previousSession.get().getAuthenticated());
+        assertNull(previousSession.get().getPreviousSessionId());
+
+        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+        var codeChallengeMethod = CodeChallengeMethod.S256;
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
+                        constructQueryStringParameters(
+                                CLIENT_ID,
+                                null,
+                                "openid",
+                                "P2.Cl.Cm",
+                                codeChallenge,
+                                codeChallengeMethod),
+                        Optional.of("GET"));
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                getLocationResponseHeader(response),
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
+    }
+
+    @Test
+    void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValidInRequestObject()
+            throws JOSEException, ParseException {
+        setupForAuthJourney();
+
+        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+        var codeChallengeMethod = CodeChallengeMethod.S256;
+
+        SignedJWT signedJWT =
+                createSignedJWT(
+                        "", CLAIMS, List.of("openid"), null, codeChallenge, codeChallengeMethod);
+
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        signedJWT.serialize(),
+                        "scope",
+                        "openid");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        requestParams,
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(
+                locationHeaderUri.toString(),
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, null);
+                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, null, null, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, Long maxAge) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, maxAge);
+                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, maxAge, null, null);
+    }
+
+    private Map<String, String> constructQueryStringParameters(
+            String clientId,
+            String prompt,
+            String scopes,
+            String vtr,
+            CodeChallenge codeChallenge,
+            CodeChallengeMethod codeChallengeMethod) {
+        return constructQueryStringParameters(
+                clientId,
+                prompt,
+                scopes,
+                vtr,
+                null,
+                RP_REDIRECT_URI,
+                null,
+                codeChallenge,
+                codeChallengeMethod);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, String uiLocales) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, uiLocales, RP_REDIRECT_URI, null);
+                clientId, prompt, scopes, vtr, uiLocales, RP_REDIRECT_URI, null, null, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, URI redirectUri) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, null, redirectUri, null);
+                clientId, prompt, scopes, vtr, null, redirectUri, null, null, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
@@ -1239,7 +1623,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             String vtr,
             String uiLocales,
             URI redirectUri,
-            Long maxAge) {
+            Long maxAge,
+            CodeChallenge codeChallenge,
+            CodeChallengeMethod codeChallengeMethod) {
         final Map<String, String> queryStringParameters =
                 new HashMap<>(
                         Map.of(
@@ -1261,6 +1647,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Optional.ofNullable(uiLocales).ifPresent(s -> queryStringParameters.put("ui_locales", s));
         Optional.ofNullable(maxAge)
                 .ifPresent(s -> queryStringParameters.put("max_age", s.toString()));
+        Optional.ofNullable(uiLocales).ifPresent(s -> queryStringParameters.put("ui_locales", s));
+        Optional.ofNullable(codeChallenge)
+                .ifPresent(
+                        s -> queryStringParameters.put("code_challenge", codeChallenge.getValue()));
+        Optional.ofNullable(codeChallengeMethod)
+                .ifPresent(
+                        s ->
+                                queryStringParameters.put(
+                                        "code_challenge_method", codeChallengeMethod.getValue()));
 
         return queryStringParameters;
     }
@@ -1366,16 +1761,27 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
-        return createSignedJWT(uiLocales, null, null);
+        return createSignedJWT(uiLocales, null, null, null, null, null);
     }
 
     private SignedJWT createSignedJWT(String uiLocales, String claims, List<String> scopes)
             throws JOSEException {
-        return createSignedJWT(uiLocales, claims, scopes, null);
+        return createSignedJWT(uiLocales, claims, scopes, null, null, null);
     }
 
     private SignedJWT createSignedJWT(
             String uiLocales, String claims, List<String> scopes, Integer maxAge)
+            throws JOSEException {
+        return createSignedJWT(uiLocales, claims, scopes, maxAge, null, null);
+    }
+
+    private SignedJWT createSignedJWT(
+            String uiLocales,
+            String claims,
+            List<String> scopes,
+            Integer maxAge,
+            CodeChallenge codeChallenge,
+            CodeChallengeMethod codeChallengeMethod)
             throws JOSEException {
         var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
@@ -1406,6 +1812,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         if (maxAge != null) {
             jwtClaimsSetBuilder.claim("max_age", maxAge);
         }
+
+        if (codeChallenge != null) {
+            jwtClaimsSetBuilder.claim("code_challenge", codeChallenge.getValue());
+        }
+
+        if (codeChallengeMethod != null) {
+            jwtClaimsSetBuilder.claim("code_challenge_method", codeChallengeMethod.getValue());
+        }
+
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
         var signer = new RSASSASigner(RP_KEY_PAIR.getPrivate());

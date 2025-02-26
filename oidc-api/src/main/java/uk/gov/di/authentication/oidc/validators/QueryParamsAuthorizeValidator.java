@@ -3,6 +3,7 @@ package uk.gov.di.authentication.oidc.validators;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.id.Identifier;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
@@ -14,6 +15,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -102,13 +104,20 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
 
-        // TODO: ATO-1371: Delete the following log once we have verified that
-        //  no RPs are using the code challenge method "plain" AND we have
-        //  checked which RPs, if any, are using PKCE already.
-        if (authRequest.getCodeChallengeMethod() != null) {
-            LOG.info(
-                    "authRequest code challenge method is '{}'",
-                    authRequest.getCodeChallengeMethod());
+        if (configurationService.isPkceEnabled()
+                && Objects.nonNull(authRequest.getCodeChallenge())) {
+            var codeChallenge = authRequest.getCodeChallenge().getValue();
+            var codeChallengeMethod =
+                    Optional.ofNullable(authRequest.getCodeChallengeMethod())
+                            .map(Identifier::getValue)
+                            .orElse(null);
+
+            var codeChallengeError =
+                    validateCodeChallengeAndMethod(codeChallenge, codeChallengeMethod);
+            if (codeChallengeError.isPresent()) {
+                return Optional.of(
+                        new AuthRequestError(codeChallengeError.get(), redirectURI, state));
+            }
         }
 
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);

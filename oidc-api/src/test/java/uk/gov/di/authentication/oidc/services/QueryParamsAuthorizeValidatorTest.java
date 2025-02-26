@@ -11,6 +11,8 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -478,6 +480,158 @@ class QueryParamsAuthorizeValidatorTest {
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "Request vtr is not permitted")
                                 .toJSONObject()));
+    }
+
+    @Test
+    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsNotEnabled() {
+        when(configurationService.isPkceEnabled()).thenReturn(false);
+
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .build();
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertTrue(errorObject.isEmpty());
+    }
+
+    @Test
+    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsEnabled() {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .build();
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertTrue(errorObject.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
+            throws ParseException {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .codeChallenge(codeChallenge, null)
+                        .build();
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing code_challenge_method parameter. code_challenge_method is required when code_challenge is present.")
+                                .toJSONObject()));
+        assertEquals(STATE, errorObject.get().state());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
+            throws ParseException {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+        var codeChallengeMethod = CodeChallengeMethod.PLAIN;
+
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .codeChallenge(codeChallenge, codeChallengeMethod)
+                        .build();
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid value for code_challenge_method parameter.")
+                                .toJSONObject()));
+        assertEquals(STATE, errorObject.get().state());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreValid() throws ParseException {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+        var codeChallengeMethod = CodeChallengeMethod.S256;
+
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .codeChallenge(codeChallenge, codeChallengeMethod)
+                        .build();
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertTrue(errorObject.isEmpty());
     }
 
     @Test

@@ -188,11 +188,16 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         state);
             }
 
-            // TODO: ATO-1371: Delete once verified that no RPs are using code challenge method
-            // "plain" AND checked which (if any) RPs are using PKCE already.
-            var codeChallengeMethod = jwtClaimsSet.getClaim("code_challenge_method");
-            if (Objects.nonNull(codeChallengeMethod)) {
-                LOG.info("authRequest code challenge method is '{}'", codeChallengeMethod);
+            var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
+
+            if (configurationService.isPkceEnabled() && Objects.nonNull(codeChallenge)) {
+                var codeChallengeMethod = jwtClaimsSet.getStringClaim("code_challenge_method");
+
+                var codeChallengeError =
+                        validateCodeChallengeAndMethod(codeChallenge, codeChallengeMethod);
+                if (codeChallengeError.isPresent()) {
+                    return errorResponse(redirectURI, codeChallengeError.get(), state);
+                }
             }
 
             var vtrError = validateVtr(jwtClaimsSet, client);
