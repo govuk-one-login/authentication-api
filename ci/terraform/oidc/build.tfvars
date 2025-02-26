@@ -15,6 +15,7 @@ ipv_authorisation_uri = "https://ipvstub.signin.build.account.gov.uk/authorize/"
 # auth only
 ipv_auth_authorize_callback_uri = "https://signin-sp.build.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
+ipv_audience                    = "https://ipvstub.signin.build.account.gov.uk"
 
 internal_sector_uri  = "https://identity.build.account.gov.uk"
 test_clients_enabled = true
