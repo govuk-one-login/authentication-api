@@ -85,59 +85,6 @@ public class InstrumentationHelper {
         subSegment.addException(e);
     }
 
-    public static void addAnnotation(final String key, final String value) {
-        if (TRACING_ENABLED && nonNull(value)) {
-            AWSXRay.getCurrentSubsegmentOptional()
-                    .ifPresentOrElse(
-                            s -> s.putAnnotation(key, value),
-                            InstrumentationHelper::noSubSegmentPresent);
-            getCurrentSpan()
-                    .ifPresentOrElse(
-                            s -> s.setAttribute(AttributeKey.stringKey(key), value),
-                            InstrumentationHelper::noSpanPresent);
-        }
-    }
-
-    private static void addNumberXrayAnnotation(final String key, final Number value) {
-        AWSXRay.getCurrentSubsegmentOptional()
-                .ifPresentOrElse(
-                        s -> s.putAnnotation(key, value),
-                        InstrumentationHelper::noSubSegmentPresent);
-    }
-
-    public static void addAnnotation(final String key, final Double value) {
-        if (TRACING_ENABLED && nonNull(value)) {
-            addNumberXrayAnnotation(key, value);
-            getCurrentSpan()
-                    .ifPresentOrElse(
-                            s -> s.setAttribute(AttributeKey.doubleKey(key), value),
-                            InstrumentationHelper::noSpanPresent);
-        }
-    }
-
-    public static void addAnnotation(final String key, final Integer value) {
-        if (TRACING_ENABLED && nonNull(value)) {
-            addNumberXrayAnnotation(key, value);
-            getCurrentSpan()
-                    .ifPresentOrElse(
-                            s -> s.setAttribute(AttributeKey.longKey(key), value),
-                            InstrumentationHelper::noSpanPresent);
-        }
-    }
-
-    public static void addAnnotation(final String key, final Boolean value) {
-        if (TRACING_ENABLED && nonNull(value)) {
-            AWSXRay.getCurrentSubsegmentOptional()
-                    .ifPresentOrElse(
-                            s -> s.putAnnotation(key, value),
-                            InstrumentationHelper::noSubSegmentPresent);
-            getCurrentSpan()
-                    .ifPresentOrElse(
-                            s -> s.setAttribute(AttributeKey.booleanKey(key), value),
-                            InstrumentationHelper::noSpanPresent);
-        }
-    }
-
     public static void addAnnotation(final AttributeKey<String> key, final String value) {
         if (TRACING_ENABLED && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
