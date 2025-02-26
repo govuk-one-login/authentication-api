@@ -34,27 +34,19 @@ repos:
   - repo: local
     hooks:
       - id: tflint
-        name: Init tflint (hack)
-        files: ^ci/terraform/
-        pass_filenames: false
-        types_or:
-          - hcl
-          - terraform
-        language: golang
-        additional_dependencies:
-          - github.com/terraform-linters/tflint@v0.55.0
-        entry: tflint --chdir ci/terraform --init
-      - id: tflint
         name: Run tflint (terraform linter)
         files: ^ci/terraform/
-        pass_filenames: false
+        require_serial: true
         types_or:
           - hcl
           - terraform
         language: golang
         additional_dependencies:
           - github.com/terraform-linters/tflint@v0.55.0
-        entry: tflint --chdir ci/terraform --recursive --fix
+        entry: scripts/tflint.py
+        args:
+          - --minimum-failure-severity=warning
+          - --fix
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.6
