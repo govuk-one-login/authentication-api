@@ -13,6 +13,12 @@ call_ticf_cri                           = true
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
 
+## AUTH to IPV reverification
+## auth only
+ipv_auth_authorize_callback_uri = "https://signin.integration.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_client_id    = "auth"
+
+
 auth_to_orch_token_signing_public_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvvr/3/mHEPLpgsLR3ocLiGrVpVLJ
@@ -67,6 +73,8 @@ ipv_authorisation_uri                       = "https://identity.integration.acco
 ipv_authorisation_callback_uri              = "https://oidc.integration.account.gov.uk/ipv-callback"
 ipv_backend_uri                             = "https://api.identity.integration.account.gov.uk"
 ipv_audience                                = "https://identity.integration.account.gov.uk"
+evcs_audience                               = "https://credential-store.integration.account.gov.uk"
+auth_issuer_claim_for_evcs                  = "https://signin.integration.account.gov.uk"
 spot_enabled                                = true
 custom_doc_app_claim_enabled                = true
 account_intervention_service_call_enabled   = true
@@ -95,6 +103,21 @@ cX8yiRmHf7ID9br2MsdrTO9YyVWfI0z7OZB1GnNe5lJhGBXvd3xg4UjWbnHikliE
 NQIDAQAB
 -----END PUBLIC KEY-----
 EOT
+
+## The IPV public encrypting key that is specific to auth.
+## Note: ipv_auth_public_encryption_key, above, is owned and used by orchestration.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzgTML6YZ+XUEPQprWBlW
+oZ9FwasmRGsdLHLgAhyNWDw4PtYaihhpSOxoI+86IeO1qAe1nfqrFGW+X37jxDBz
+clY/TxQkivEQqLCWmohuFcpn5dxz6SSC+WFhwLtedC8gXUv1JP4E0mgr7OKWh7t3
+RQcpGyTaAGXh2wywZXytVOLDcwwPb0PeFiC8MR0A8tIpYyx1yXjKcs1Aga8Xy0HF
+V9pU5gbB7a/XLl7j3CHePsfImYi4wG17y+jbN7+vF3GDpAqyRa78ctTZT9/WBWzP
+cX8yiRmHf7ID9br2MsdrTO9YyVWfI0z7OZB1GnNe5lJhGBXvd3xg4UjWbnHikliE
+NQIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
 
 # Logging
 logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
