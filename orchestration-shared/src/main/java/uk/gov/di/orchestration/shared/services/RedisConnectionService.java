@@ -6,8 +6,10 @@ import io.lettuce.core.TransactionResult;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisServerCommands;
+import io.lettuce.core.resource.ClientResources;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import uk.gov.di.orchestration.shared.tracing.ConditionalOtelRedisTracing;
 
 import java.util.Optional;
 
@@ -17,16 +19,22 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instr
 public class RedisConnectionService implements AutoCloseable {
 
     public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
+    private final ClientResources clientResources;
     private final RedisClient client;
 
     private final GenericObjectPool<StatefulRedisConnection<String, String>> pool;
 
     public RedisConnectionService(
             String host, int port, boolean useSsl, Optional<String> password, boolean warmup) {
+        clientResources =
+                ClientResources.builder().tracing(new ConditionalOtelRedisTracing()).build();
+
         RedisURI.Builder builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
         password.ifPresent(s -> builder.withPassword(s.toCharArray()));
         RedisURI redisURI = builder.build();
-        this.client = RedisClient.create(redisURI);
+
+        this.client = RedisClient.create(clientResources, redisURI);
+
         this.pool = createGenericObjectPool(client::connect, new GenericObjectPoolConfig<>());
         if (warmup) warmUp();
     }
@@ -51,7 +59,8 @@ public class RedisConnectionService implements AutoCloseable {
 
     private <T> T executeCommand(RedisFunction<T> callable) {
         try (StatefulRedisConnection<String, String> connection =
-                instrumentedFunctionCall("Redis: getConnection", () -> pool.borrowObject())) {
+                instrumentedFunctionCall(
+                        "Redis.GetConnectionFromPool", () -> pool.borrowObject())) {
             return callable.getResult(connection.sync());
         } catch (Exception e) {
             throw new RedisConnectionException(REDIS_CONNECTION_ERROR, e);
@@ -60,28 +69,28 @@ public class RedisConnectionService implements AutoCloseable {
 
     public void saveWithExpiry(final String key, final String value, final long expiry) {
         instrumentedFunctionCall(
-                "Redis: saveWithExpiry",
+                "Redis.SaveWithExpiry",
                 () -> executeCommand(commands -> commands.setex(key, expiry, value)));
     }
 
     public boolean keyExists(final String key) {
         return instrumentedFunctionCall(
-                "Redis: keyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
+                "Redis.KeyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
     }
 
     public String getValue(final String key) {
         return instrumentedFunctionCall(
-                "Redis: getValue", () -> executeCommand(commands -> commands.get(key)));
+                "Redis.GetValue", () -> executeCommand(commands -> commands.get(key)));
     }
 
     public long deleteValue(final String key) {
         return instrumentedFunctionCall(
-                "Redis: deleteValue", () -> executeCommand(commands -> commands.del(key)));
+                "Redis.DeleteValue", () -> executeCommand(commands -> commands.del(key)));
     }
 
     public String popValue(final String key) {
         return instrumentedFunctionCall(
-                "Redis: popValue",
+                "Redis.PopValue",
                 () ->
                         executeCommand(
                                 commands -> {
@@ -94,14 +103,14 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     private void warmUp() {
-        instrumentedFunctionCall(
-                "Redis: warmUp", () -> executeCommand(RedisServerCommands::clientGetname));
+        executeCommand(RedisServerCommands::clientGetname);
     }
 
     @Override
     public void close() {
         pool.close();
         client.shutdown();
+        clientResources.shutdown();
     }
 
     public static class RedisConnectionException extends RuntimeException {
