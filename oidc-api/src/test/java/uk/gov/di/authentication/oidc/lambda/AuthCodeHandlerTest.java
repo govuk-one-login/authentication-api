@@ -7,6 +7,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -18,6 +19,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,10 +40,8 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -48,11 +49,11 @@ import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -61,6 +62,7 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,18 +116,20 @@ class AuthCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
+    private final AuthenticationUserInfoStorageService authUserInfoService =
+            mock(AuthenticationUserInfoStorageService.class);
     private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
 
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String PHONE_NUMBER = "012345678902";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
@@ -137,6 +141,7 @@ class AuthCodeHandlerTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(SALT);
     private static final Json objectMapper = SerializationService.getInstance();
     private AuthCodeHandler handler;
 
@@ -166,11 +171,12 @@ class AuthCodeHandlerTest {
     }
 
     @BeforeEach
-    void setUp() throws UserNotFoundException, ClientNotFoundException {
+    void setUp() {
         handler =
                 new AuthCodeHandler(
                         sessionService,
                         orchSessionService,
+                        authUserInfoService,
                         authCodeResponseService,
                         authorisationCodeService,
                         orchestrationAuthorizationService,
@@ -178,16 +184,10 @@ class AuthCodeHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService,
-                        dynamoClientService);
+                        dynamoService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(authCodeResponseService.getSubjectId(session)).thenReturn(SUBJECT.getValue());
-        when(authCodeResponseService.getRpPairwiseId(session, CLIENT_ID, dynamoClientService))
-                .thenReturn(
-                        ClientSubjectHelper.calculatePairwiseIdentifier(
-                                SUBJECT.getValue(), "rp-sector-uri", SALT));
         doAnswer(
                         (i) -> {
                             session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
@@ -227,11 +227,8 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel,
             MFAMethodType mfaMethodType)
-            throws ClientNotFoundException, Json.JsonException, JOSEException {
-        var userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+            throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
+        generateAuthUserInfo();
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
                             eq(orchSession),
@@ -264,7 +261,6 @@ class AuthCodeHandlerTest {
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
         session.setCurrentCredentialStrength(initialLevel)
                 .setNewAccount(AccountState.NEW)
-                .setEmailAddress(EMAIL)
                 .setVerifiedMfaMethodType(mfaMethodType);
         orchSession.setCurrentCredentialStrength(initialLevel);
         var authSuccessResponse =
@@ -276,7 +272,6 @@ class AuthCodeHandlerTest {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
@@ -294,6 +289,10 @@ class AuthCodeHandlerTest {
                 .thenReturn(authSuccessResponse);
         when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
+        when(clientSession.getRpPairwiseId())
+                .thenReturn(
+                        ClientSubjectHelper.calculatePairwiseIdentifier(
+                                SUBJECT.getValue(), "rp-sector-uri", SALT));
 
         var response = generateApiRequest();
 
@@ -333,6 +332,14 @@ class AuthCodeHandlerTest {
                         pair("rpPairwiseId", expectedRpPairwiseId),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
+
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        eq(clientSession),
+                        any(Long.class));
 
         var dimensions =
                 Map.of(
@@ -449,6 +456,13 @@ class AuthCodeHandlerTest {
                         pair("rpPairwiseId", AuditService.UNKNOWN),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        eq(clientSession),
+                        any(Long.class));
 
         var expectedDimensions =
                 Map.of(
@@ -494,8 +508,8 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
-            throws ClientNotFoundException, JOSEException {
-        session.setEmailAddress(EMAIL);
+            throws ClientNotFoundException, JOSEException, ParseException {
+        generateAuthUserInfo();
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(false);
@@ -509,8 +523,8 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenClientIsNotFound()
-            throws ClientNotFoundException, Json.JsonException, JOSEException {
-        session.setEmailAddress(EMAIL);
+            throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
+        generateAuthUserInfo();
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
@@ -539,8 +553,81 @@ class AuthCodeHandlerTest {
     }
 
     @Test
+    void shouldGenerateErrorResponseWhenAuthUserInfoIsNotFound()
+            throws Json.JsonException, JOSEException, ClientNotFoundException {
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.ACCESS_DENIED, null, null);
+        when(orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        any(AuthenticationRequest.class),
+                        eq(OAuth2Error.ACCESS_DENIED),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authenticationErrorResponse);
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+
+        APIGatewayProxyResponseEvent response = generateApiRequest();
+
+        assertThat(response, hasStatus(400));
+        AuthCodeResponse authCodeResponse =
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(
+                authCodeResponse.getLocation(),
+                equalTo(
+                        "http://localhost/redirect?error=access_denied&error_description=Access+denied+by+resource+owner+or+authorization+server"));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldGenerateErrorResponseWhenOrchSessionHasNoInternalCommonSubjectId()
+            throws Json.JsonException, JOSEException, ParseException, ClientNotFoundException {
+        generateAuthUserInfo();
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+        when(orchSessionService.getSession(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new OrchSessionItem(SESSION_ID)
+                                        .withAccountState(OrchSessionItem.AccountState.NEW)
+                                        .withAuthTime(12345L)));
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.ACCESS_DENIED, null, null);
+        when(orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        any(AuthenticationRequest.class),
+                        eq(OAuth2Error.ACCESS_DENIED),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authenticationErrorResponse);
+
+        APIGatewayProxyResponseEvent response = generateApiRequest();
+
+        assertThat(response, hasStatus(400));
+        AuthCodeResponse authCodeResponse =
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(
+                authCodeResponse.getLocation(),
+                equalTo(
+                        "http://localhost/redirect?error=access_denied&error_description=Access+denied+by+resource+owner+or+authorization+server"));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
     void shouldGenerateErrorResponseIfUnableToParseAuthRequest() throws Json.JsonException {
-        session.setEmailAddress(EMAIL);
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
@@ -600,7 +687,8 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    void shouldUpdateOrchSession() throws JOSEException, ClientNotFoundException {
+    void shouldUpdateOrchSession() throws JOSEException, ClientNotFoundException, ParseException {
+        generateAuthUserInfo();
 
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
@@ -624,7 +712,7 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
-                        eq(null),
+                        eq(EMAIL),
                         eq(clientSession),
                         any(Long.class)))
                 .thenReturn(authorizationCode);
@@ -744,5 +832,27 @@ class AuthCodeHandlerTest {
                 .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .withTestClient(false)
                 .withScopes(singletonList("openid"));
+    }
+
+    private void generateAuthUserInfo() throws ParseException {
+        var authUserInfo =
+                new UserInfo(
+                        new JSONObject(
+                                Map.of(
+                                        "sub",
+                                        INTERNAL_COMMON_SUBJECT_ID,
+                                        "client_session_id",
+                                        CLIENT_SESSION_ID,
+                                        "email",
+                                        EMAIL,
+                                        "phone_number",
+                                        PHONE_NUMBER,
+                                        "salt",
+                                        BASE_64_ENCODED_SALT,
+                                        "local_account_id",
+                                        SUBJECT.getValue())));
+        when(authUserInfoService.getAuthenticationUserInfo(
+                        INTERNAL_COMMON_SUBJECT_ID, CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(authUserInfo));
     }
 }
