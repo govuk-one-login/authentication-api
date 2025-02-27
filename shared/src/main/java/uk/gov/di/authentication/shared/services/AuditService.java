@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
@@ -16,7 +17,6 @@ import java.util.Optional;
 
 import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class AuditService {
     private static final Logger LOG = LogManager.getLogger(AuditService.class);
@@ -74,14 +74,8 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
     }
 
+    @Instrumented
     public void submitAuditEvent(
-            AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
-        instrumentedFunctionCall(
-                "AuditService:submitAuditEvent",
-                () -> actuallySubmitAuditEvent(event, auditContext, metadataPairs));
-    }
-
-    private void actuallySubmitAuditEvent(
             AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
 
         var user =

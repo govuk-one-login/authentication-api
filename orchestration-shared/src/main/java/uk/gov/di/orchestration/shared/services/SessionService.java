@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -76,6 +77,7 @@ public class SessionService {
         redisConnectionService.deleteValue(sessionId);
     }
 
+    @Instrumented
     public Optional<Session> getSession(String sessionId) {
         String serializedSession = redisConnectionService.getValue(sessionId);
         return Optional.ofNullable(serializedSession)

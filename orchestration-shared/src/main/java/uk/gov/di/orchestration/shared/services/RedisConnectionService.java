@@ -9,16 +9,17 @@ import io.lettuce.core.api.sync.RedisServerCommands;
 import io.lettuce.core.resource.ClientResources;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.tracing.ConditionalOtelRedisTracing;
 
 import java.util.Optional;
 
 import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectPool;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class RedisConnectionService implements AutoCloseable {
 
     public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
+    public static final String REDIS_COMMAND_ERROR = "Error executing Redis command";
     private final ClientResources clientResources;
     private final RedisClient client;
 
@@ -58,48 +59,54 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     private <T> T executeCommand(RedisFunction<T> callable) {
-        try (StatefulRedisConnection<String, String> connection =
-                instrumentedFunctionCall(
-                        "Redis.GetConnectionFromPool", () -> pool.borrowObject())) {
+        try (StatefulRedisConnection<String, String> connection = getConnection()) {
             return callable.getResult(connection.sync());
+        } catch (RedisConnectionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RedisConnectionException(REDIS_COMMAND_ERROR, e);
+        }
+    }
+
+    @Instrumented("RedisPool.BorrowObject")
+    private StatefulRedisConnection<String, String> getConnection() {
+        try {
+            return pool.borrowObject();
         } catch (Exception e) {
             throw new RedisConnectionException(REDIS_CONNECTION_ERROR, e);
         }
     }
 
+    @Instrumented("Redis.SaveWithExpiry")
     public void saveWithExpiry(final String key, final String value, final long expiry) {
-        instrumentedFunctionCall(
-                "Redis.SaveWithExpiry",
-                () -> executeCommand(commands -> commands.setex(key, expiry, value)));
+        executeCommand(commands -> commands.setex(key, expiry, value));
     }
 
+    @Instrumented("Redis.KeyExists")
     public boolean keyExists(final String key) {
-        return instrumentedFunctionCall(
-                "Redis.KeyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
+        return executeCommand(commands -> commands.exists(key) == 1);
     }
 
+    @Instrumented("Redis.GetValue")
     public String getValue(final String key) {
-        return instrumentedFunctionCall(
-                "Redis.GetValue", () -> executeCommand(commands -> commands.get(key)));
+        return executeCommand(commands -> commands.get(key));
     }
 
+    @Instrumented("Redis.DeleteValue")
     public long deleteValue(final String key) {
-        return instrumentedFunctionCall(
-                "Redis.DeleteValue", () -> executeCommand(commands -> commands.del(key)));
+        return executeCommand(commands -> commands.del(key));
     }
 
+    @Instrumented("Redis.PopValue")
     public String popValue(final String key) {
-        return instrumentedFunctionCall(
-                "Redis.PopValue",
-                () ->
-                        executeCommand(
-                                commands -> {
-                                    commands.multi();
-                                    commands.get(key);
-                                    commands.del(key);
-                                    TransactionResult result = commands.exec();
-                                    return result.get(0);
-                                }));
+        return executeCommand(
+                commands -> {
+                    commands.multi();
+                    commands.get(key);
+                    commands.del(key);
+                    TransactionResult result = commands.exec();
+                    return result.get(0);
+                });
     }
 
     private void warmUp() {

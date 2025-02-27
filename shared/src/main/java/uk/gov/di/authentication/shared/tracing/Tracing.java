@@ -10,7 +10,11 @@ public class Tracing {
     public static final Boolean TRACING_ENABLED =
             Boolean.valueOf(System.getenv().getOrDefault("TRACING_ENABLED", "true"));
 
+    public static Boolean isTracingEnabled() {
+        return TRACING_ENABLED;
+    }
+
     public static Boolean isOtelTracingAllowed() {
-        return nonNull(System.getProperty(traceHeaderProperty)) && TRACING_ENABLED;
+        return nonNull(System.getProperty(traceHeaderProperty)) && isTracingEnabled();
     }
 }
