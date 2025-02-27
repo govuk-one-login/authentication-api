@@ -85,8 +85,6 @@ public class IPVReverificationService {
         JWTClaimsSet mfaResetAuthorizationClaims =
                 createMfaResetAuthorizationClaims(state, subject, claims, clientSessionId);
 
-        LOG.info("Claim set: {}", mfaResetAuthorizationClaims);
-
         SignedJWT signedJWT =
                 jwtService.signJWT(
                         SIGNING_ALGORITHM,
