@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -51,6 +50,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -87,6 +88,7 @@ class AccountInterventionsHandlerTest {
     private static final String TEST_CLIENT_ID = "test_client_id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final byte[] SALT = "a-test-salt".getBytes(StandardCharsets.UTF_8);
     private static final String TEST_ENVIRONMENT = "test-environment";
     private static final Long APPLIED_AT_TIMESTAMP = 1696869005821L;
 
@@ -98,7 +100,6 @@ class AccountInterventionsHandlerTest {
             String.format(
                     "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":%s}",
                     false, false, false, false, FIXED_DATE_UNIX_TIMESTAMP_STRING);
-    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private AccountInterventionsHandler handler;
     private final Context context = mock(Context.class);
 
@@ -272,6 +273,53 @@ class AccountInterventionsHandlerTest {
         } else {
             verify(mockLambdaInvokerService, times(0)).invokeAsyncWithPayload(any(), any());
         }
+    }
+
+    private static Stream<Arguments> ticfParametersSource() {
+        return Stream.of(
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.NEW,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"initialRegistration\":\"Y\"}"),
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
+                Arguments.of(
+                        false,
+                        AuthSessionItem.AccountState.NEW,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"initialRegistration\":\"Y\"}"),
+                Arguments.of(
+                        false,
+                        AuthSessionItem.AccountState.EXISTING,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("ticfParametersSource")
+    void checkInvokesTICFLambdaWithCorrectValues(
+            boolean authenticated,
+            AuthSessionItem.AccountState accountState,
+            String expectedPayload)
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
+        var authSessionWithAccountState = authSession.withAccountState(accountState);
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(authSessionWithAccountState));
+
+        var result = handler.handleRequest(apiRequestEventForTICF(authenticated), context);
+
+        assertThat(result, hasStatus(200));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
+        verify(mockLambdaInvokerService, times(1))
+                .invokeAsyncWithPayload(eq(expectedPayload), any());
     }
 
     private static Stream<Boolean> authenticatedUserSource() {
@@ -547,6 +595,21 @@ class AccountInterventionsHandlerTest {
                 format(
                         "{ \"email\": \"%s\" }",
                         uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL));
+        return event;
+    }
+
+    private APIGatewayProxyRequestEvent apiRequestEventForTICF(Boolean authenticated) {
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(
+                format(
+                        """
+                                {
+                                  "email": "%s",
+                                  "authenticated": %s
+                                }
+                                """,
+                        CommonTestVariables.EMAIL, authenticated));
         return event;
     }
 }
