@@ -25,8 +25,8 @@ public record LoginResponse(
                 redactedPhoneNumber,
                 mfaDetail.isMfaRequired(),
                 latestTermsAndConditionsAccepted,
-                mfaDetail.getMfaMethodType(),
-                mfaDetail.isMfaMethodVerified(),
+                mfaDetail.mfaMethodType(),
+                mfaDetail.mfaMethodVerified(),
                 passwordChangeRequired);
     }
 }
