@@ -140,7 +140,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         }
 
         var tokenResponse =
-                InstrumentationHelper.segmentedFunctionCall(
+                InstrumentationHelper.instrumentedFunctionCall(
                         "getIpvToken", () -> reverificationResultService.getToken(request.code()));
 
         if (!tokenResponse.indicatesSuccess()) {

@@ -17,6 +17,7 @@ import java.util.Optional;
 import static java.util.function.Predicate.not;
 import static uk.gov.di.orchestration.audit.TxmaAuditEvent.auditEventWithTime;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.AuditField.TXMA_ENCODED_HEADER;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class AuditService {
 
@@ -43,6 +44,12 @@ public class AuditService {
     }
 
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
+        instrumentedFunctionCall(
+                "AuditService::submitAuditEvent",
+                () -> actuallySubmitAuditEvent(event, auditContext));
+    }
+
+    private void actuallySubmitAuditEvent(AuditableEvent event, AuditContext auditContext) {
 
         var user =
                 TxmaAuditUser.user()
@@ -58,6 +65,16 @@ public class AuditService {
     }
 
     public void submitAuditEvent(
+            AuditableEvent event,
+            String clientId,
+            TxmaAuditUser user,
+            MetadataPair... metadataPairs) {
+        instrumentedFunctionCall(
+                "AuditService::submitAuditEvent",
+                () -> actuallySubmitAuditEvent(event, clientId, user, metadataPairs));
+    }
+
+    private void actuallySubmitAuditEvent(
             AuditableEvent event,
             String clientId,
             TxmaAuditUser user,

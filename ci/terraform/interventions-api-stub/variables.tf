@@ -53,7 +53,7 @@ variable "lambda_min_concurrency" {
 }
 
 variable "endpoint_memory_size" {
-  default = 1536
+  default = 2000
   type    = number
 }
 

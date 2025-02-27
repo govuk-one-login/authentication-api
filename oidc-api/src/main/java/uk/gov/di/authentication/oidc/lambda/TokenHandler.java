@@ -62,7 +62,7 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
@@ -162,7 +162,7 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(), () -> tokenRequestHandler(input));
     }
 
@@ -198,7 +198,7 @@ public class TokenHandler
 
         if (refreshTokenRequest(requestBody)) {
             LOG.info("Processing refresh token request");
-            return segmentedFunctionCall(
+            return instrumentedFunctionCall(
                     "processRefreshTokenRequest",
                     () ->
                             processRefreshTokenRequest(
@@ -209,7 +209,7 @@ public class TokenHandler
         }
 
         Optional<AuthCodeExchangeData> authCodeExchangeDataMaybe =
-                segmentedFunctionCall(
+                instrumentedFunctionCall(
                         "authorisationCodeService",
                         () ->
                                 authorisationCodeService.getExchangeDataForCode(
@@ -413,7 +413,7 @@ public class TokenHandler
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
             tokenResponse =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "generateTokenResponse",
                             () ->
                                     tokenService.generateTokenResponse(
@@ -444,7 +444,7 @@ public class TokenHandler
                             configurationService.getInternalSectorURI(),
                             dynamoService);
             tokenResponse =
-                    segmentedFunctionCall(
+                    instrumentedFunctionCall(
                             "generateTokenResponse",
                             () ->
                                     tokenService.generateTokenResponse(

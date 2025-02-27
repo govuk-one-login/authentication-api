@@ -1,0 +1,16 @@
+package uk.gov.di.orchestration.shared.tracing;
+
+import uk.gov.di.orchestration.shared.annotations.ExcludeFromGeneratedCoverageReport;
+
+import static java.util.Objects.nonNull;
+
+@ExcludeFromGeneratedCoverageReport
+public class Tracing {
+    private static final String traceHeaderProperty = "com.amazonaws.xray.traceHeader";
+    public static final Boolean TRACING_ENABLED =
+            Boolean.valueOf(System.getenv().getOrDefault("TRACING_ENABLED", "true"));
+
+    public static Boolean isOtelTracingAllowed() {
+        return nonNull(System.getProperty(traceHeaderProperty)) && TRACING_ENABLED;
+    }
+}

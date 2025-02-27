@@ -6,27 +6,35 @@ import io.lettuce.core.TransactionResult;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisServerCommands;
+import io.lettuce.core.resource.ClientResources;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelRedisTracing;
 
 import java.util.Optional;
 
 import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectPool;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class RedisConnectionService implements AutoCloseable {
 
     public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
+    private final ClientResources clientResources;
     private final RedisClient client;
 
     private final GenericObjectPool<StatefulRedisConnection<String, String>> pool;
 
     public RedisConnectionService(
             String host, int port, boolean useSsl, Optional<String> password, boolean warmup) {
+        clientResources =
+                ClientResources.builder().tracing(new ConditionalOtelRedisTracing()).build();
+
         RedisURI.Builder builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
         password.ifPresent(s -> builder.withPassword(s.toCharArray()));
         RedisURI redisURI = builder.build();
-        this.client = RedisClient.create(redisURI);
+
+        this.client = RedisClient.create(clientResources, redisURI);
+
         this.pool = createGenericObjectPool(client::connect, new GenericObjectPoolConfig<>());
         if (warmup) warmUp();
     }
@@ -51,7 +59,8 @@ public class RedisConnectionService implements AutoCloseable {
 
     private <T> T executeCommand(RedisFunction<T> callable) {
         try (StatefulRedisConnection<String, String> connection =
-                segmentedFunctionCall("Redis: getConnection", () -> pool.borrowObject())) {
+                instrumentedFunctionCall(
+                        "Redis.GetConnectionFromPool", () -> pool.borrowObject())) {
             return callable.getResult(connection.sync());
         } catch (Exception e) {
             throw new RedisConnectionException(REDIS_CONNECTION_ERROR, e);
@@ -59,34 +68,34 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     public void saveWithExpiry(final String key, final String value, final long expiry) {
-        segmentedFunctionCall(
-                "Redis: saveWithExpiry",
+        instrumentedFunctionCall(
+                "Redis.SaveWithExpiry",
                 () -> executeCommand(commands -> commands.setex(key, expiry, value)));
     }
 
     public Long getTimeToLive(final String key) {
-        return segmentedFunctionCall(
-                "Redis: getTimeToLive", () -> executeCommand(commands -> commands.ttl(key)));
+        return instrumentedFunctionCall(
+                "Redis.GetTimeToLive", () -> executeCommand(commands -> commands.ttl(key)));
     }
 
     public boolean keyExists(final String key) {
-        return segmentedFunctionCall(
-                "Redis: keyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
+        return instrumentedFunctionCall(
+                "Redis.KeyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
     }
 
     public String getValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: getValue", () -> executeCommand(commands -> commands.get(key)));
+        return instrumentedFunctionCall(
+                "Redis.GetValue", () -> executeCommand(commands -> commands.get(key)));
     }
 
     public long deleteValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: deleteValue", () -> executeCommand(commands -> commands.del(key)));
+        return instrumentedFunctionCall(
+                "Redis.DeleteValue", () -> executeCommand(commands -> commands.del(key)));
     }
 
     public String popValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: popValue",
+        return instrumentedFunctionCall(
+                "Redis.PopValue",
                 () ->
                         executeCommand(
                                 commands -> {
@@ -99,14 +108,14 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     private void warmUp() {
-        segmentedFunctionCall(
-                "Redis: warmUp", () -> executeCommand(RedisServerCommands::clientGetname));
+        executeCommand(RedisServerCommands::clientGetname);
     }
 
     @Override
     public void close() {
         pool.close();
         client.shutdown();
+        clientResources.shutdown();
     }
 
     public static class RedisConnectionException extends RuntimeException {

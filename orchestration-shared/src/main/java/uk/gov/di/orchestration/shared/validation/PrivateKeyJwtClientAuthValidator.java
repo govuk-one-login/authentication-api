@@ -21,7 +21,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addClientIdAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -50,7 +50,7 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
             }
             var clientRegistry = getClientRegistryFromTokenAuth(privateKeyJWT.getClientID());
             attachLogFieldToLogs(CLIENT_ID, clientRegistry.getClientID());
-            addAnnotation("client_id", clientRegistry.getClientID());
+            addClientIdAnnotation(clientRegistry.getClientID());
             if (Objects.nonNull(clientRegistry.getTokenAuthMethod())
                     && !clientRegistry
                             .getTokenAuthMethod()

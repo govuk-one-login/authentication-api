@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
@@ -14,6 +15,7 @@ import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 
 import java.net.URI;
 import java.time.Clock;
@@ -552,6 +554,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                             .orElseGet(
                                     () ->
                                             SsmClient.builder()
+                                                    .overrideConfiguration(
+                                                            ClientOverrideConfiguration.builder()
+                                                                    .addExecutionInterceptor(
+                                                                            new ConditionalOtelTracingExecutionInterceptor())
+                                                                    .build())
                                                     .region(Region.of(getAwsRegion()))
                                                     .build());
         }

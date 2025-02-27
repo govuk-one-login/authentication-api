@@ -32,7 +32,8 @@ ext {
         nimbusds_jwt_version: "10.0.1",
         junit: "5.11.4",
         xray: "2.18.2",
-        pact: "4.6.17"
+        pact: "4.6.17",
+        opentelemetry_instrumentation: "2.12.0-alpha"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -109,6 +110,10 @@ subprojects {
         xray
         pact_consumer
         pact_provider
+        otel
+        otel_http_client
+        otel_aws_instrumentation
+        otel_aws_auto_instrumentation
     }
 
     // Check dependencies using:
@@ -174,7 +179,10 @@ subprojects {
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
 
         lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.5.3.RELEASE"
+                "io.lettuce:lettuce-core:6.5.3.RELEASE",
+                platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-lettuce-5.1"
+
 
         libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.55"
 
@@ -218,6 +226,27 @@ subprojects {
         pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
+
+        otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry:opentelemetry-api"
+        otel_aws_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2"
+        otel_aws_auto_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
+        otel_http_client platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
+    }
+}
+
+subprojects {
+    afterEvaluate { subproject ->
+        if (subproject.plugins.hasPlugin('java')) {
+            dependencies {
+                implementation configurations.otel,
+                        configurations.otel_aws_instrumentation
+                // runtimeOnly configurations.otel_aws_auto_instrumentation
+            }
+        }
     }
 }
 

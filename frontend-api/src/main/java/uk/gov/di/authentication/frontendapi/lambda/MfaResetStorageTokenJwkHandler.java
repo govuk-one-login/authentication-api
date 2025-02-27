@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class MfaResetStorageTokenJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -42,7 +42,7 @@ public class MfaResetStorageTokenJwkHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent event, Context context) {
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "frontend-api::" + getClass().getSimpleName(),
                 this::mfaResetStorageTokenJwkHandler);
     }
@@ -61,7 +61,7 @@ public class MfaResetStorageTokenJwkHandler
 
             return generateApiGatewayProxyResponse(
                     200,
-                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
+                    instrumentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
                     Map.of("Cache-Control", "max-age=86400"),
                     null);
         } catch (Exception e) {

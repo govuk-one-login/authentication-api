@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class AuditService {
     private static final Logger LOG = LogManager.getLogger(AuditService.class);
@@ -74,6 +75,13 @@ public class AuditService {
     }
 
     public void submitAuditEvent(
+            AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
+        instrumentedFunctionCall(
+                "AuditService::submitAuditEvent",
+                () -> actuallySubmitAuditEvent(event, auditContext, metadataPairs));
+    }
+
+    private void actuallySubmitAuditEvent(
             AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
 
         var user =
