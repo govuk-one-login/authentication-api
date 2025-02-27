@@ -81,6 +81,7 @@ public class AuthCodeResponseGenerationService {
                 "RequestedLevelOfConfidence", clientSession.getVtrLocsAsCommaSeparatedString());
     }
 
+    // TODO: ATO-1117: remove this method
     public String getSubjectId(Session session) throws UserNotFoundException {
         var userProfile =
                 dynamoService
