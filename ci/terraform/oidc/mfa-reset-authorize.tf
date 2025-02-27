@@ -32,6 +32,7 @@ module "mfa_reset_authorize" {
   handler_environment_variables = {
     AUTH_ISSUER_CLAIM                             = "auth",
     ENVIRONMENT                                   = var.environment,
+    INTERNAl_SECTOR_URI                           = var.internal_sector_uri,
     IPV_AUDIENCE                                  = var.ipv_audience,
     IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_auth_authorize_client_id,
     IPV_AUTHORIZATION_URI                         = var.ipv_authorisation_uri,
