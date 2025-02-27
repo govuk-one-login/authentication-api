@@ -1,25 +1,25 @@
 package uk.gov.di.authentication.shared.services;
 
-import uk.gov.di.authentication.shared.entity.IdentityCredentials;
+import uk.gov.di.authentication.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
-public class DynamoIdentityService extends BaseDynamoService<IdentityCredentials> {
+public class DynamoIdentityService extends BaseDynamoService<AuthIdentityCredentials> {
 
     private final long timeToExist;
 
     public DynamoIdentityService(ConfigurationService configurationService) {
-        super(IdentityCredentials.class, "identity-credentials", configurationService);
+        super(AuthIdentityCredentials.class, "identity-credentials", configurationService);
         this.timeToExist = configurationService.getAccessTokenExpiry();
     }
 
     public void addCoreIdentityJWT(String subjectID, String coreIdentityJWT) {
         var identityCredentials =
                 get(subjectID)
-                        .orElse(new IdentityCredentials())
+                        .orElse(new AuthIdentityCredentials())
                         .withSubjectID(subjectID)
                         .withCoreIdentityJWT(coreIdentityJWT)
                         .withTimeToExist(
@@ -30,7 +30,7 @@ public class DynamoIdentityService extends BaseDynamoService<IdentityCredentials
         update(identityCredentials);
     }
 
-    public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {
+    public Optional<AuthIdentityCredentials> getIdentityCredentials(String subjectID) {
         return get(subjectID)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
@@ -45,7 +45,7 @@ public class DynamoIdentityService extends BaseDynamoService<IdentityCredentials
             String ipvVot,
             String ipvCoreIdentity) {
         var identityCredentials =
-                new IdentityCredentials()
+                new AuthIdentityCredentials()
                         .withSubjectID(subjectID)
                         .withAdditionalClaims(additionalClaims)
                         .withIpvVot(ipvVot)
