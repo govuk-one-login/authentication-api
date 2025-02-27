@@ -77,8 +77,9 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
                 clientSessionId, subjectID, additionalClaims, ipvVot, ipvCoreIdentity);
     }
 
-    public Optional<AuthIdentityCredentials> getIdentityCredentials(String subjectID) {
-        return dynamoService.getIdentityCredentials(subjectID);
+    public Optional<AuthIdentityCredentials> getIdentityCredentials(
+            String clientSessionId, String subjectID) {
+        return dynamoService.getIdentityCredentials(clientSessionId, subjectID);
     }
 
     private void createAuthIdentityCredentialTable() {

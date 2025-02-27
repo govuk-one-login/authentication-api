@@ -145,7 +145,11 @@ public class UserInfoService {
     private UserInfo populateIdentityInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating IdentityInfo");
         var identityCredentials =
-                identityService.getIdentityCredentials(accessTokenInfo.getSubject()).orElse(null);
+                identityService
+                        .getIdentityCredentials(
+                                accessTokenInfo.getAccessTokenStore().getJourneyId(),
+                                accessTokenInfo.getSubject())
+                        .orElse(null);
         if (Objects.isNull(identityCredentials)) {
             LOG.info("No identity credentials present");
             return userInfo;

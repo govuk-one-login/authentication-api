@@ -57,7 +57,8 @@ public class DynamoIdentityService {
         orchIdentityCredentialsDynamoService.update(identityCredentials);
     }
 
-    public Optional<AuthIdentityCredentials> getIdentityCredentials(String subjectID) {
+    public Optional<AuthIdentityCredentials> getIdentityCredentials(
+            String clientSessionId, String subjectID) {
         return authIdentityCredentialsDynamoService
                 .get(subjectID)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());

@@ -175,7 +175,7 @@ class ProcessingIdentityHandlerTest {
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
-        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+        when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -207,7 +207,7 @@ class ProcessingIdentityHandlerTest {
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
-        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+        when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -239,7 +239,7 @@ class ProcessingIdentityHandlerTest {
                         .withCoreIdentityJWT("a-core-identity");
         AccountIntervention intervention =
                 new AccountIntervention(new AccountInterventionState(false, true, false, false));
-        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+        when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -286,7 +286,7 @@ class ProcessingIdentityHandlerTest {
                 new AuthIdentityCredentials()
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap());
-        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+        when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -315,7 +315,7 @@ class ProcessingIdentityHandlerTest {
             throws Json.JsonException {
         session.incrementProcessingIdentityAttempts();
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT))
+        when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID, PAIRWISE_SUBJECT))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -342,7 +342,7 @@ class ProcessingIdentityHandlerTest {
     void shouldReturnNO_ENTRYStatusWhenNoEntryIsFoundInDynamoOnFirstAttempt()
             throws Json.JsonException {
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT))
+        when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID, PAIRWISE_SUBJECT))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));

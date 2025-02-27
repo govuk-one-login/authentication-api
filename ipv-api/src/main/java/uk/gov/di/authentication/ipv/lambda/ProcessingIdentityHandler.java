@@ -142,7 +142,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     processingAttempts);
 
             var identityCredentials =
-                    dynamoIdentityService.getIdentityCredentials(rpPairwiseSubject.getValue());
+                    dynamoIdentityService.getIdentityCredentials(
+                            userContext.getClientSessionId(), rpPairwiseSubject.getValue());
             var processingStatus = ProcessingIdentityStatus.PROCESSING;
             if (identityCredentials.isEmpty()
                     && userContext.getSession().getProcessingIdentityAttempts() == 1) {
