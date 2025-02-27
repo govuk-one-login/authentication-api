@@ -5,13 +5,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -178,9 +178,9 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         if (configurationService.isPhoneCheckerWithReplyEnabled()
                 && (journeyType != JourneyType.ACCOUNT_RECOVERY || updatedPhoneNumber)) {
-            Session session = userContext.getSession();
+            AuthSessionItem authSession = userContext.getAuthSession();
             String internalCommonSubjectIdentifier =
-                    session != null ? session.getInternalCommonSubjectIdentifier() : "";
+                    authSession != null ? authSession.getInternalCommonSubjectId() : "";
 
             var phoneNumberRequest =
                     new PhoneNumberRequest(
