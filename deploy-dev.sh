@@ -14,7 +14,7 @@ Options:
     -b, --build                 run gradle and buildZip tasks before applying the Terraform configuration. (default: true)
     --no-build                  do not run gradle and buildZip tasks before applying the Terraform configuration. (default: false)
     -p, --prompt                prompt for confirmation before applying the Terraform configuration. (default: false)
-    -c, --clean                 run gradle clean and remove old terraform data dirs before build. (default: false)
+    -c, --clean                 run gradle clean before build. (default: false)
     --shell                     start a shell in the Terraform configuration directory. (does not automatically apply) (default: false)
     -r, --refresh-only          only refresh the Terraform configuration without applying it. (default: false)
     -h, --help                  display this help message.
@@ -127,12 +127,6 @@ if [[ ${O_BUILD} -eq 1 ]]; then
   pushd "${DIR}" > /dev/null
   ./gradlew ${O_CLEAN} build buildZip -x test -x spotlessCheck -x composeDown
   popd > /dev/null
-  echo "done!"
-fi
-
-if [[ ${O_CLEAN} == "clean" ]]; then
-  echo "Cleaning Terraform cache ..."
-  rm -rf "${DIR}/ci/terraform/${component}/.terraform"
   echo "done!"
 fi
 
