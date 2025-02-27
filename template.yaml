@@ -4455,10 +4455,15 @@ Resources:
               - dynamodb:DescribeTable
               - dynamodb:Get*
             Resource: !GetAtt AuthUserInfoTable.Arn
-          - Sid: AllowAuthUserInfoTableDecryption
+          - Sid: AllowAuthUserInfoTableKeyAccess
             Effect: Allow
             Action:
+              - kms:Encrypt
               - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
 
   AuthUserInfoTableWriteAccessPolicy:
@@ -4473,10 +4478,15 @@ Resources:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
             Resource: !GetAtt AuthUserInfoTable.Arn
-          - Sid: AllowAuthUserInfoTableEncryption
+          - Sid: AllowAuthUserInfoTableKeyAccess
             Effect: Allow
             Action:
               - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
 
   ClientSessionTableReadAccessPolicy:
