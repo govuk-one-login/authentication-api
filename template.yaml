@@ -885,6 +885,10 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          PKCE_ENABLED: !If
+            - PkceEnabled
+            - true
+            - false
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
