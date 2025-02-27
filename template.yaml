@@ -5151,7 +5151,12 @@ Resources:
           - Sid: AllowRpPublicKeyCacheTableKeyAccess
             Effect: Allow
             Action:
+              - kms:Encrypt
               - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
 
   RpPublicKeyCacheTableWriteAccessPolicy:
@@ -5165,6 +5170,16 @@ Resources:
             Action:
               - dynamodb:PutItem
             Resource: !GetAtt RpPublicKeyCacheTable.Arn
+          - Sid: AllowRpPublicKeyCacheTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
 
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy
