@@ -2,12 +2,13 @@ locals {
   # Define the modules that will be used to create the API
   # The names of the modules are used to refer to the integration_uri when templating openapi.yaml
   endpoint_modules = {
-    authenticate          = module.authenticate
-    update-password       = module.update_password
-    update-email          = module.update_email
-    delete-account        = module.delete_account
-    send-otp-notification = module.send_otp_notification
-    update-phone-number   = module.update_phone_number
+    authenticate              = module.authenticate
+    update-password           = module.update_password
+    update-email              = module.update_email
+    delete-account            = module.delete_account
+    send-otp-notification     = module.send_otp_notification
+    update-phone-number       = module.update_phone_number
+    mfa-methods-create-backup = module.mfa-methods-create-backup
   }
   openapi_spec = templatefile(
     "${path.module}/${var.openapi_spec_filename}",
@@ -17,6 +18,16 @@ locals {
       authorizer_credentials = aws_iam_role.invocation_role.arn
     }
   )
+}
+
+resource "local_file" "rendered_openapi" {
+  filename = "${path.module}/openapi_rendered.yaml"
+  content  = local.openapi_spec
+}
+
+output "rendered_openapi_spec" {
+  sensitive = true
+  value     = local.openapi_spec
 }
 
 data "aws_vpc" "auth_shared_vpc" {
