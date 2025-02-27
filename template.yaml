@@ -4521,10 +4521,15 @@ Resources:
               - dynamodb:DescribeTable
               - dynamodb:Get*
             Resource: !GetAtt ClientSessionTable.Arn
-          - Sid: AllowClientSessionTableDecryption
+          - Sid: AllowClientSessionTableKeyAccess
             Effect: Allow
             Action:
+              - kms:Encrypt
               - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
   ClientSessionTableWriteAccessPolicy:
@@ -4539,10 +4544,15 @@ Resources:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
             Resource: !GetAtt ClientSessionTable.Arn
-          - Sid: AllowClientSessionTableEncryption
+          - Sid: AllowClientSessionTableKeyAccess
             Effect: Allow
             Action:
               - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
   ClientSessionTableDeleteAccessPolicy:
@@ -4556,6 +4566,16 @@ Resources:
             Action:
               - dynamodb:DeleteItem
             Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
   # This combined read, write and delete policy is required because we've reached the managed polices per role quota limit.
   ClientSessionTableReadWriteAndDeleteAccessPolicy:
@@ -4581,15 +4601,15 @@ Resources:
             Action:
               - dynamodb:DeleteItem
             Resource: !GetAtt ClientSessionTable.Arn
-          - Sid: AllowClientSessionTableEncryption
+          - Sid: AllowClientSessionTableKeyAccess
             Effect: Allow
             Action:
               - kms:Encrypt
-            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
-          - Sid: AllowClientSessionTableDecryption
-            Effect: Allow
-            Action:
               - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
   IdentityCredentialsTableReadAccessPolicy:
