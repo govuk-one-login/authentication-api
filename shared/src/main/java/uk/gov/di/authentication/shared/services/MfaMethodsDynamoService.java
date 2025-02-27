@@ -4,6 +4,8 @@ import uk.gov.di.authentication.shared.entity.*;
 
 import java.util.List;
 
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
+
 public class MfaMethodsDynamoService implements MfaMethodsService {
 
     private final DynamoService dynamoService;
@@ -15,18 +17,34 @@ public class MfaMethodsDynamoService implements MfaMethodsService {
     @Override
     public List<MfaData> getMfaMethods(String email) {
         var userProfile = dynamoService.getUserProfileByEmail(email);
-        if (userProfile.isPhoneNumberVerified()) {
-            // TODO how to get identifier?
-            // TODO: is this always enabled? What if someone switches from phone to auth app?
-            return List.of(
-                    new SmsMfaData(
-                            userProfile.getPhoneNumber(),
-                            userProfile.isPhoneNumberVerified(),
-                            true,
-                            PriorityIdentifier.DEFAULT,
-                            1));
+        var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
+        var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
+        if (enabledAuthAppMethod.isPresent()) {
+            return List.of(convertAuthAppToAuthAppMfaData(enabledAuthAppMethod.get()));
+        } else if (userProfile.isPhoneNumberVerified()) {
+            return List.of(getSmsMfaDataFromUserProfile(userProfile));
         } else {
             return List.of();
         }
+    }
+
+    private static AuthAppMfaData convertAuthAppToAuthAppMfaData(MFAMethod authApp) {
+        return new AuthAppMfaData(
+                authApp.getCredentialValue(),
+                authApp.isMethodVerified(),
+                true,
+                PriorityIdentifier.DEFAULT,
+                1);
+    }
+
+    // TODO how to get identifier?
+    // TODO: is this always enabled? What if someone switches from phone to auth app?
+    private static SmsMfaData getSmsMfaDataFromUserProfile(UserProfile userProfile) {
+        return new SmsMfaData(
+                userProfile.getPhoneNumber(),
+                userProfile.isPhoneNumberVerified(),
+                true,
+                PriorityIdentifier.DEFAULT,
+                1);
     }
 }

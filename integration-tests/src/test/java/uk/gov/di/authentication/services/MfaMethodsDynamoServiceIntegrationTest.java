@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -19,6 +20,7 @@ class MfaMethodsDynamoServiceIntegrationTest {
     private static final String TEST_EMAIL = "joe.bloggs@example.com";
     private static final String INTERNAL_COMMON_SUBJECT_ID = "subject-1";
     private static final String PHONE_NUMBER = "+44123456789";
+    private static final String AUTH_APP_CREDENTIAL = "some-credential";
     MfaMethodsDynamoService dynamoService =
             new MfaMethodsDynamoService(ConfigurationService.getInstance());
 
@@ -38,6 +40,38 @@ class MfaMethodsDynamoServiceIntegrationTest {
 
         var expectedData = new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, 1);
         assertEquals(result, List.of(expectedData));
+    }
+
+    @Test
+    void shouldReturnSingleAuthAppMethodWhenVerified() {
+        userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
+
+        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+
+        var expectedData =
+                new AuthAppMfaData(AUTH_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT, 1);
+        assertEquals(result, List.of(expectedData));
+    }
+
+    @Test
+    void authAppShouldTakePrecedenceOverSmsMethodForNonMigratedUser() {
+        userStoreExtension.addVerifiedPhoneNumber(TEST_EMAIL, PHONE_NUMBER);
+        userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
+
+        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+
+        var expectedData =
+                new AuthAppMfaData(AUTH_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT, 1);
+        assertEquals(List.of(expectedData), result);
+    }
+
+    @Test
+    void shouldReturnNoMethodsWhenAuthAppMethodNotVerified() {
+        userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, false, AUTH_APP_CREDENTIAL);
+
+        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+
+        assertEquals(result, List.of());
     }
 
     @Test
