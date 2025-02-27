@@ -54,6 +54,7 @@ orch_logout_enabled                  = true
 auth_spot_response_disabled          = true
 orch_register_enabled                = true
 orch_storage_token_jwk_enabled       = true
+orch_ipv_jwks_enabled                = true
 doc_app_cri_data_endpoint            = "userinfo"
 doc_app_backend_uri                  = "https://api-backend-api.review-b.integration.account.gov.uk"
 doc_app_domain                       = "https://api.review-b.integration.account.gov.uk"

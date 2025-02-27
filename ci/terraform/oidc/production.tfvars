@@ -68,6 +68,7 @@ orch_authentication_callback_enabled = true
 orch_logout_enabled                  = true
 auth_spot_response_disabled          = true
 orch_storage_token_jwk_enabled       = true
+orch_ipv_jwks_enabled                = true
 notify_template_map = {
   VERIFY_EMAIL_TEMPLATE_ID                               = "09f29c9a-3f34-4a56-88f5-8197aede7f85"
   VERIFY_PHONE_NUMBER_TEMPLATE_ID                        = "8babad52-0e2e-443a-8a5a-c296dc1696cc"
