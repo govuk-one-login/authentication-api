@@ -280,7 +280,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                             userProfile.isPhoneNumberVerified());
 
                             return new ResetPasswordRequestHandlerResponse(
-                                    userMfaDetail.getMfaMethodType(),
+                                    userMfaDetail.mfaMethodType(),
                                     getLastDigitsOfPhoneNumber(userMfaDetail));
                         });
     }

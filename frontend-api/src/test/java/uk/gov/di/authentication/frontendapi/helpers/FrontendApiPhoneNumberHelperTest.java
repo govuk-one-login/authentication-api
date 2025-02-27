@@ -23,7 +23,7 @@ class FrontendApiPhoneNumberHelperTest {
 
     private static Stream<Arguments> userMfaDetail() {
         return Stream.of(
-                Arguments.of(new UserMfaDetail(), null),
+                Arguments.of(UserMfaDetail.noMfa(), null),
                 Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, ""), null),
                 Arguments.of(
                         new UserMfaDetail(false, false, MFAMethodType.AUTH_APP, "123456789"), null),
