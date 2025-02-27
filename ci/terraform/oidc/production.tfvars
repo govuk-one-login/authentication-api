@@ -10,6 +10,29 @@ shared_state_bucket                  = "digital-identity-prod-tfstate"
 internal_sector_uri  = "https://identity.account.gov.uk"
 test_clients_enabled = false
 
+evcs_audience              = "https://credential-store.account.gov.uk"
+auth_issuer_claim_for_evcs = "https://signin.account.gov.uk"
+
+# The IPV public encrypting key that is specific to auth.
+# This was calculated from the production IPV wel known endpoint:
+# https://api.identity.account.gov.uk/.well-known/jwks.json
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4K/6GH//FQSD6Yk/5nKY
+zRCwrYcQy7wGHH2cZ7EXo/9+SNRcbQlzd+NVTplIk9x7+t7g8U36z/I8CM/woGgJ
+zM8DNREecxH/4YEYKOqbqHSnK7iICJ18Wfb+mNr20Dt+Ik1oQja6aKPqIj4Jl4WW
+0vHMhDfUNP/iOi3zhNJsTZwYjVQWqLzmWfAqO/61d2XbLDIgubKqAtTFWnxeXuBU
+VZAbq03qmvzyekRUvZtck7JuQUa9mj2gJC0YPLoLDM+j0QDGWrPnDA2L2VmmF1wn
+rbeA0zSUxxfdffFH/L0cTgzdTQtv6iGQrkfHnTTk1TQe0+wxJEQz5FlcXYl6qSrh
+swIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+# AUTH to IPV reverification
+# auth only
+ipv_auth_authorize_callback_uri = "https://signin.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_client_id    = "auth"
+
 
 auth_to_orch_token_signing_public_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
