@@ -4342,10 +4342,15 @@ Resources:
               - dynamodb:DescribeTable
               - dynamodb:Get*
             Resource: !GetAtt OrchSessionTable.Arn
-          - Sid: AllowOrchSessionTableDecryption
+          - Sid: AllowOrchSessionTableKeyAccess
             Effect: Allow
             Action:
+              - kms:Encrypt
               - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
 
   OrchSessionTableWriteAccessPolicy:
@@ -4364,6 +4369,11 @@ Resources:
             Effect: Allow
             Action:
               - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
 
   # This combined read and write policy is required because we've reached the managed polices per role quota limit (20). Ticket raised to requst quota increase (ATO-1056)
@@ -4379,11 +4389,6 @@ Resources:
               - dynamodb:DescribeTable
               - dynamodb:Get*
             Resource: !GetAtt OrchSessionTable.Arn
-          - Sid: AllowOrchSessionTableDecryption
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
           - Sid: AllowOrchSessionTableWriteAccess
             Effect: Allow
             Action:
@@ -4394,6 +4399,11 @@ Resources:
             Effect: Allow
             Action:
               - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
             Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
 
   # This combined read, write and delete policy is required because we've reached the managed polices per role quota limit (20). Ticket raised to requst quota increase (ATO-1056)
@@ -4409,27 +4419,27 @@ Resources:
               - dynamodb:DescribeTable
               - dynamodb:Get*
             Resource: !GetAtt OrchSessionTable.Arn
-          - Sid: AllowOrchSessionTableDecryption
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
           - Sid: AllowOrchSessionTableWriteAccess
             Effect: Allow
             Action:
               - dynamodb:PutItem
               - dynamodb:UpdateItem
             Resource: !GetAtt OrchSessionTable.Arn
-          - Sid: AllowOrchSessionTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
           - Sid: AllowOrchSessionTableDeleteAccess
             Effect: Allow
             Action:
               - dynamodb:DeleteItem
             Resource: !GetAtt OrchSessionTable.Arn
+          - Sid: AllowOrchSessionTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
 
   OrchSessionTableDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -4442,6 +4452,16 @@ Resources:
             Action:
               - dynamodb:DeleteItem
             Resource: !GetAtt OrchSessionTable.Arn
+          - Sid: AllowOrchSessionTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
 
   AuthUserInfoTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
