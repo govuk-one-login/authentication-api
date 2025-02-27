@@ -77,7 +77,7 @@ public class AuditService {
     public void submitAuditEvent(
             AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
         instrumentedFunctionCall(
-                "AuditService:submitAuditEvent",
+                "AuditService::submitAuditEvent",
                 () -> actuallySubmitAuditEvent(event, auditContext, metadataPairs));
     }
 
