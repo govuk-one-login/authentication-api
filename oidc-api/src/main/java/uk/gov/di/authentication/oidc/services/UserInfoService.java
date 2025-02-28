@@ -147,8 +147,7 @@ public class UserInfoService {
         var identityCredentials =
                 identityService
                         .getIdentityCredentials(
-                                accessTokenInfo.getAccessTokenStore().getJourneyId(),
-                                accessTokenInfo.getSubject())
+                                accessTokenInfo.getAccessTokenStore().getJourneyId())
                         .orElse(null);
         if (Objects.isNull(identityCredentials)) {
             LOG.info("No identity credentials present");

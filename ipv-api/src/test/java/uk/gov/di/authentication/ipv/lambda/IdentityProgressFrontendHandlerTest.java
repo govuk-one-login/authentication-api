@@ -169,7 +169,7 @@ public class IdentityProgressFrontendHandlerTest {
                         .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
-        when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
+        when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -207,7 +207,7 @@ public class IdentityProgressFrontendHandlerTest {
                 new OrchIdentityCredentials()
                         .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap());
-        when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
+        when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -242,8 +242,7 @@ public class IdentityProgressFrontendHandlerTest {
             throws Json.JsonException {
         session.incrementProcessingIdentityAttempts();
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(
-                        CLIENT_SESSION_ID, INTERNAL_COMMON_SUBJECT_ID))
+        when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -277,8 +276,7 @@ public class IdentityProgressFrontendHandlerTest {
     void shouldReturnNO_ENTRYStatusWhenNoEntryIsFoundInDynamoOnFirstAttempt()
             throws Json.JsonException {
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(
-                        CLIENT_SESSION_ID, INTERNAL_COMMON_SUBJECT_ID))
+        when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -317,7 +315,7 @@ public class IdentityProgressFrontendHandlerTest {
                         .withSubjectID(INTERNAL_COMMON_SUBJECT_ID)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
-        when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
+        when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSession(any()))
                 .thenReturn(Optional.of(getClientSession()));

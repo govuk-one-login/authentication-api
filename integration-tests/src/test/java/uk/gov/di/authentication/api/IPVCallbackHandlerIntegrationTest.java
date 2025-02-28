@@ -203,8 +203,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         CLIENT_SESSION_ID),
                                 CLIENT_ID)));
 
-        var identityCredentials =
-                identityStore.getIdentityCredentials(CLIENT_SESSION_ID, internalCommonSubjectId);
+        var identityCredentials = identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
 
         assertTrue(
                 identityCredentials
@@ -385,8 +384,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         "code",
                                         new AuthorizationCode().getValue())));
 
-        var identityCredentials =
-                identityStore.getIdentityCredentials(CLIENT_SESSION_ID, internalCommonSubjectId);
+        var identityCredentials = identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
 
         assertThat(response, hasStatus(302));
         if (validLoC) {
