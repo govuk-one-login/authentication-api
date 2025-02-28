@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.helpers;
 
 import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.entities.Subsegment;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
@@ -17,111 +18,77 @@ import java.util.concurrent.Callable;
 
 import static io.opentelemetry.context.Context.current;
 import static java.util.Objects.isNull;
-import static uk.gov.di.authentication.shared.tracing.Tracing.TRACING_ENABLED;
 import static uk.gov.di.authentication.shared.tracing.Tracing.isOtelTracingAllowed;
+import static uk.gov.di.authentication.shared.tracing.Tracing.isTracingEnabled;
 
 @ExcludeFromGeneratedCoverageReport
 public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
     private static final Tracer tracer = GlobalOpenTelemetry.getTracer("instrumentation-helper");
 
-    private static <T> T otelAndXrayInstrumentedFunctionCall(
-            String segmentName, Callable<T> callable) {
-        Span span = tracer.spanBuilder(segmentName).startSpan();
-        var subSegment = AWSXRay.beginSubsegment(segmentName);
-        try {
-            try (Scope callableScope = span.makeCurrent()) {
-                return callable.call();
-            } catch (RuntimeException e) {
-                recordExceptionOnSpan(span, e);
-                subSegment.addException(e);
-                throw e;
-            } catch (Exception e) {
-                recordExceptionOnSpan(span, e);
-                subSegment.addException(e);
-                throw new RuntimeException(e);
-            }
-        } finally {
-            AWSXRay.endSubsegment();
-            span.end();
-        }
-    }
-
     public static <T> T instrumentedFunctionCall(String segmentName, Callable<T> callable) {
-        if (isOtelTracingAllowed()) {
-            // If we are within a handler, we can create spans and subsegments
-            return otelAndXrayInstrumentedFunctionCall(segmentName, callable);
-        } else if (TRACING_ENABLED) {
-            // If we are not within a handler, we can create subsegments
-            var subSegment = AWSXRay.beginSubsegment(segmentName);
-            try {
-                return callable.call();
-            } catch (RuntimeException e) {
-                subSegment.addException(e);
-                throw e;
-            } catch (Exception e) {
-                subSegment.addException(e);
-                throw new RuntimeException(e);
-            } finally {
-                AWSXRay.endSubsegment();
-            }
-        } else {
-            try {
-                return callable.call();
-            } catch (RuntimeException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    public static void otelAndXrayInstrumentedFunctionCall(String segmentName, Runnable runnable) {
-        Span span = tracer.spanBuilder(segmentName).startSpan();
-        var subSegment = AWSXRay.beginSubsegment(segmentName);
-        try {
-            try (Scope runnableScope = span.makeCurrent()) {
-                runnable.run();
-            } catch (RuntimeException e) {
-                recordExceptionOnSpan(span, e);
-                subSegment.addException(e);
-                throw e;
-            } catch (Exception e) {
-                recordExceptionOnSpan(span, e);
-                subSegment.addException(e);
-                throw new RuntimeException(e);
-            }
-        } finally {
-            AWSXRay.endSubsegment();
-            span.end();
-        }
+        return instrument(segmentName, callable, null);
     }
 
     public static void instrumentedFunctionCall(String segmentName, Runnable runnable) {
+        instrument(segmentName, null, runnable);
+    }
+
+    private static <T> T instrument(String segmentName, Callable<T> callable, Runnable runnable) {
+        Span span = null;
+        Subsegment subSegment = null;
+
         if (isOtelTracingAllowed()) {
-            otelAndXrayInstrumentedFunctionCall(segmentName, runnable);
-        } else if (TRACING_ENABLED) {
-            var subSegment = AWSXRay.beginSubsegment(segmentName);
-            try {
-                runnable.run();
-            } catch (RuntimeException e) {
-                subSegment.addException(e);
-                throw e;
-            } catch (Exception e) {
-                subSegment.addException(e);
-                throw new RuntimeException(e);
-            } finally {
+            span = tracer.spanBuilder(segmentName).startSpan();
+        }
+
+        if (isTracingEnabled()) {
+            subSegment = AWSXRay.beginSubsegment(segmentName);
+        }
+
+        try {
+            if (span != null) {
+                try (Scope scope = span.makeCurrent()) {
+                    return executeCall(callable, runnable);
+                }
+            } else {
+                return executeCall(callable, runnable);
+            }
+        } catch (RuntimeException e) {
+            recordError(span, subSegment, e);
+            throw e;
+        } catch (Exception e) {
+            recordError(span, subSegment, e);
+            throw new RuntimeException(e);
+        } finally {
+            if (subSegment != null) {
                 AWSXRay.endSubsegment();
             }
-        } else {
-            runnable.run();
+            if (span != null) {
+                span.end();
+            }
         }
     }
 
-    private static void recordExceptionOnSpan(Span span, Exception e) {
-        span.recordException(e);
-        span.setAttribute(AttributeKey.stringKey("error.type"), e.getClass().getName());
-        span.setStatus(StatusCode.ERROR, e.getMessage());
+    private static <T> T executeCall(Callable<T> callable, Runnable runnable) throws Exception {
+        if (callable != null) {
+            return callable.call();
+        } else {
+            runnable.run();
+            return null;
+        }
+    }
+
+    private static void recordError(
+            Span span, com.amazonaws.xray.entities.Subsegment subSegment, Exception e) {
+        if (span != null) {
+            span.recordException(e);
+            span.setAttribute(AttributeKey.stringKey("error.type"), e.getClass().getName());
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+        }
+        if (subSegment != null) {
+            subSegment.addException(e);
+        }
     }
 
     public static void addAnnotation(final String key, final String value) {
@@ -137,7 +104,7 @@ public class InstrumentationHelper {
                     .ifPresentOrElse(
                             s -> s.setAttribute(key, value), InstrumentationHelper::noSpanPresent);
         }
-        if (TRACING_ENABLED) {
+        if (isTracingEnabled()) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key.getKey(), value),
