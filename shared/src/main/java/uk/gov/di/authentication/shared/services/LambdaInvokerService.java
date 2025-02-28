@@ -5,11 +5,13 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvocationType;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.LambdaException;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 
 import java.util.Optional;
 
@@ -25,6 +27,11 @@ public class LambdaInvokerService implements LambdaInvoker {
     public LambdaInvokerService(ConfigurationService configurationService) {
         this.lambdaClient =
                 LambdaClient.builder()
+                        .overrideConfiguration(
+                                ClientOverrideConfiguration.builder()
+                                        .addExecutionInterceptor(
+                                                new ConditionalOtelTracingExecutionInterceptor())
+                                        .build())
                         .credentialsProvider(DefaultCredentialsProvider.create())
                         .region(Region.of(configurationService.getAwsRegion()))
                         .build();

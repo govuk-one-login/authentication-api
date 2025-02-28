@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.entity.AuthPolicy.PolicyDocument.getAllowAllPolicy;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
@@ -59,7 +59,7 @@ public class AuthoriseAccessTokenHandler
     @Override
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
                 () -> authoriseAccessTokenHandler(input));
     }

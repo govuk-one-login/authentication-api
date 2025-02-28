@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class OrchFrontendAuthorizerHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, Map<String, Object>> {
@@ -48,7 +48,7 @@ public class OrchFrontendAuthorizerHandler
     @Override
     public Map<String, Object> handleRequest(APIGatewayProxyRequestEvent event, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> orchFrontendAuthorizerHandler(event, context));
     }

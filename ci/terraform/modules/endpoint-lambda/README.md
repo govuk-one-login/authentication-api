@@ -7,6 +7,7 @@ such as via [endpoint-module-v2](../endpoint-module-v2/).
 
 Eventually, this module will be consumed by [endpoint-module](../endpoint-module/) which currently is a partial clone of this.
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -65,6 +66,7 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 | <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | The id of the subnets for the lambda | `list(string)` | n/a | yes |
 | <a name="input_architectures"></a> [architectures](#input\_architectures) | n/a | `list(string)` | <pre>[<br/>  "x86_64"<br/>]</pre> | no |
 | <a name="input_code_signing_config_arn"></a> [code\_signing\_config\_arn](#input\_code\_signing\_config\_arn) | n/a | `string` | `null` | no |
+| <a name="input_dt_logging"></a> [dt\_logging](#input\_dt\_logging) | enable dynatrace logging | `bool` | `true` | no |
 | <a name="input_endpoint_name_sanitized"></a> [endpoint\_name\_sanitized](#input\_endpoint\_name\_sanitized) | A sanitized version of endpoint\_name, required if endpoint\_name contains a dot. | `string` | `null` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to apply to resources | `map(string)` | `{}` | no |
 | <a name="input_handler_runtime"></a> [handler\_runtime](#input\_handler\_runtime) | n/a | `string` | `"java17"` | no |
@@ -88,3 +90,4 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 | <a name="output_integration_uri"></a> [integration\_uri](#output\_integration\_uri) | n/a |
 | <a name="output_invoke_arn"></a> [invoke\_arn](#output\_invoke\_arn) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->

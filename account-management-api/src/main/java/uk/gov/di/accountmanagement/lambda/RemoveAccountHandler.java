@@ -33,7 +33,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class RemoveAccountHandler
@@ -91,7 +91,7 @@ public class RemoveAccountHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
                 () -> removeAccountRequestHandler(input));
     }

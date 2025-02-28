@@ -37,7 +37,7 @@ import java.util.Set;
 import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_TOKEN_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -92,7 +92,7 @@ public class TokenHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
-            return segmentedFunctionCall(
+            return instrumentedFunctionCall(
                     "auth-external-api::" + getClass().getSimpleName(),
                     () -> tokenRequestHandler(input));
         } catch (Exception e) {

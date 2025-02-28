@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -35,7 +36,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
@@ -142,7 +143,7 @@ public abstract class BaseFrontendHandler<T>
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "frontend-api::" + getClass().getSimpleName(),
                 () -> validateAndHandleRequest(input, context));
     }
@@ -182,6 +183,7 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
             attachSessionIdToLogs(sessionId.get());
+            InstrumentationHelper.addSessionIdAnnotation(sessionId.get());
         }
 
         if (authSession.isEmpty()) {
@@ -189,6 +191,7 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
             attachAuthSessionIdToLogs(authSession.get());
+            InstrumentationHelper.addAuthSessionIdAnnotation(authSession.get().getSessionId());
         }
 
         UserContext.Builder userContextBuilder = UserContext.builder(session.get());
@@ -200,9 +203,10 @@ public abstract class BaseFrontendHandler<T>
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
 
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        String persistentSessionId =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+        InstrumentationHelper.addPersistentSessionIdAnnotation(persistentSessionId);
 
         Optional<String> userLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
@@ -224,6 +228,7 @@ public abstract class BaseFrontendHandler<T>
                         .flatMap(v -> v.stream().findFirst());
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+        clientID.ifPresent(InstrumentationHelper::addClientIdAnnotation);
 
         clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 

@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di.authentication.external.api"
@@ -18,6 +19,10 @@ dependencies {
             configurations.nimbus
 
     implementation project(":shared")
+
+    implementation configurations.aspectjrt
+    implementation configurations.aspectjweaver
+    aspect project(":shared")
 
     runtimeOnly configurations.logging_runtime
 

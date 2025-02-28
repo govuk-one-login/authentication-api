@@ -5,11 +5,13 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,10 +35,19 @@ public class S3ToDynamoDbHandler implements RequestHandler<S3Event, Void> {
         this.client = client;
     }
 
+    private static S3Client buildS3Client() {
+        return S3Client.builder()
+                .overrideConfiguration(
+                        ClientOverrideConfiguration.builder()
+                                .addExecutionInterceptor(
+                                        new ConditionalOtelTracingExecutionInterceptor())
+                                .build())
+                .region((Region.EU_WEST_2))
+                .build();
+    }
+
     public S3ToDynamoDbHandler() {
-        this(
-                ConfigurationService.getInstance(),
-                S3Client.builder().region((Region.EU_WEST_2)).build());
+        this(ConfigurationService.getInstance(), buildS3Client());
     }
 
     @Override

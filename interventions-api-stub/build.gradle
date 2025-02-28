@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group = 'uk.gov.di.authentication.interventions-api-stub'
@@ -12,6 +13,10 @@ dependencies {
 
     implementation project(":shared"),
             configurations.gson
+
+    implementation configurations.aspectjrt
+    implementation configurations.aspectjweaver
+    aspect project(":shared")
 
     testImplementation configurations.tests,
             configurations.lambda

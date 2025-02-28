@@ -1,3 +1,4 @@
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -48,3 +49,4 @@
 | <a name="output_oidc_api_url"></a> [oidc\_api\_url](#output\_oidc\_api\_url) | n/a |
 | <a name="output_service_domain_name"></a> [service\_domain\_name](#output\_service\_domain\_name) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->
