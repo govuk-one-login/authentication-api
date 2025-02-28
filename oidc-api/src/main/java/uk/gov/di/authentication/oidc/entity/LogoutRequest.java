@@ -12,6 +12,7 @@ import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper.SessionCookieIds;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -23,8 +24,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.helpers.CookieHelper.SessionCookieIds;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -58,9 +57,7 @@ public class LogoutRequest {
         var sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders());
         sessionId = sessionCookieIds.map(SessionCookieIds::getSessionId);
         var clientSessionIdFromCookie = sessionCookieIds.map(SessionCookieIds::getClientSessionId);
-        session =
-                instrumentedFunctionCall(
-                        "getSession", () -> sessionId.flatMap(sessionService::getSession));
+        session = sessionId.flatMap(sessionService::getSession);
         orchSession = sessionId.flatMap(orchSessionService::getSession);
 
         internalCommonSubjectId = orchSession.map(OrchSessionItem::getInternalCommonSubjectId);
@@ -93,10 +90,7 @@ public class LogoutRequest {
         }
 
         LOG.info("ID token hint is present");
-        isTokenSignatureValid =
-                instrumentedFunctionCall(
-                        "isTokenSignatureValid",
-                        () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
+        isTokenSignatureValid = tokenValidationService.isTokenSignatureValid(idTokenHint.get());
         if (!isTokenSignatureValid) {
             LOG.warn("Unable to validate ID token signature");
             errorObject =

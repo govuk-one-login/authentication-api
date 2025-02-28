@@ -82,6 +82,7 @@ public class TokenService {
         this.oidcApi = oidcApi;
     }
 
+    @Instrumented
     public OIDCTokenResponse generateTokenResponse(
             String clientID,
             Subject internalSubject,
