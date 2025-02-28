@@ -798,6 +798,33 @@ data "aws_iam_policy_document" "dynamo_orch_client_session_encryption_key_cross_
   }
 }
 
+data "aws_iam_policy_document" "dynamo_orch_identity_credentials_cross_account_read_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  statement {
+    sid    = "AllowOrchIdentityCredentialsEncryptionKeyCrossAccountDecryptAccess"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+    ]
+    resources = [
+      var.orch_identity_credentials_table_encryption_key_arn,
+    ]
+  }
+
+  statement {
+    sid    = "AllowOrchIdentityCredentialsCrossAccountReadAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Orch-Identity-Credentials",
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_id_reverification_state_write_policy_document" {
   statement {
     sid    = "AllowWrite"
@@ -1157,6 +1184,16 @@ resource "aws_iam_policy" "dynamo_orch_client_session_cross_account_delete_acces
 moved {
   from = aws_iam_policy.dynamo_orch_client_session_cross_account_delete_access_policy
   to   = aws_iam_policy.dynamo_orch_client_session_cross_account_delete_access_policy[0]
+}
+
+resource "aws_iam_policy" "dynamo_orch_identity_credentials_cross_account_read_access_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-orch-identity-credentials-cross-account-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the orch identity credentials table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_identity_credentials_cross_account_read_access_policy_document[count.index].json
 }
 
 resource "aws_iam_policy" "dynamo_id_reverification_state_write_policy" {
