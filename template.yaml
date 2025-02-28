@@ -647,6 +647,20 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+          - Sid: AllowKeyDecryptionAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AuthAccountId}:root
+                - AuthAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+            Action:
+              - kms:Decrypt
+            Resource: "*"
 
   OrchIdentityCredentialsTable:
     Type: AWS::DynamoDB::Table
@@ -671,6 +685,25 @@ Resources:
       Tags:
         - Key: Name
           Value: OrchIdentityCredentialsTable
+      ResourcePolicy:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Sid: AllowOrchIdentityCredentialsTableCrossAccountReadAccess
+              Effect: Allow
+              Action:
+                - dynamodb:DescribeTable
+                - dynamodb:Get*
+              Resource: "*"
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
   #endregion
 
   #region RP Public Key DynamoDB Table
