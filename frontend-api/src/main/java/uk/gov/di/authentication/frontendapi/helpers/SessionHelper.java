@@ -24,7 +24,6 @@ public class SessionHelper {
             ConfigurationService configurationService) {
         LOG.info("Calculating internal common subject identifier");
         var session = userContext.getSession();
-        var sessionId = userContext.getAuthSession().getSessionId();
         UserProfile userProfile =
                 userContext.getUserProfile().isPresent()
                         ? userContext.getUserProfile().get()
@@ -38,8 +37,6 @@ public class SessionHelper {
                                         authenticationService)
                                 .getValue();
         LOG.info("Setting internal common subject identifier in user session");
-        session.setInternalCommonSubjectIdentifier(internalCommonSubjectId);
-        sessionService.storeOrUpdateSession(session, sessionId);
         authSession.setInternalCommonSubjectId(internalCommonSubjectId);
         authSessionService.updateSession(authSession);
     }
