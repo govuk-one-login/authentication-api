@@ -292,11 +292,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile,
             AuditContext auditContext,
             AuthSessionItem authSessionItem) {
-        sessionService.storeOrUpdateSession(
-                userContext
-                        .getSession()
-                        .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier),
-                userContext.getAuthSession().getSessionId());
 
         authSessionService.updateSession(
                 authSessionItem

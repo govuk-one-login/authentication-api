@@ -70,7 +70,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -902,13 +901,6 @@ class LoginHandlerTest {
         verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .storeOrUpdateSession(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)),
-                        eq(SESSION_ID));
     }
 
     private void verifyAuthSessionIsSaved() {
