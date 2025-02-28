@@ -2949,6 +2949,7 @@ Resources:
                 ]
       Policies:
         - !Ref AuthIdentityCredentialsTableReadAccessPolicy
+        - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -3784,8 +3785,8 @@ Resources:
             - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
       Policies:
-        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
-        - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAndWriteAccessPolicy
+        - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
@@ -3995,6 +3996,9 @@ Resources:
         - !Ref AuthIdentityCredentialsTableReadAccessPolicy
         - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
         - !Ref AuthIdentityCredentialsTableDeleteAccessPolicy
+        - !Ref OrchIdentityCredentialsTableReadAccessPolicy
+        - !Ref OrchIdentityCredentialsTableWriteAccessPolicy
+        - !Ref OrchIdentityCredentialsTableDeleteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       Tags:
@@ -4557,6 +4561,85 @@ Resources:
               - kms:Decrypt
             Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
 
+  OrchIdentityCredentialsTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
+
+  OrchIdentityCredentialsTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
+
+  OrchIdentityCredentialsTableDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+
+  # This combined read and write policy is required because we've reached the managed polices per role quota limit (20).
+  OrchIdentityCredentialsTableReadAndWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
+          - Sid: AllowOrchIdentityCredentialsTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+          - Sid: AllowOrchIdentityCredentialsTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
+
   AuthIdentityCredentialsTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -4652,6 +4735,70 @@ Resources:
             Effect: Allow
             Action:
               - dynamodb:DeleteItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowAuthIdentityCredentialsTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authIdentityCredentialsTableKeyArn,
+              ]
+
+  # This combined read and write policy is required because we've reached the managed polices per role quota limit (20).
+  AuthIdentityCredentialsTableReadAndWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowAuthIdentityCredentialsTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
               - AccountId:
