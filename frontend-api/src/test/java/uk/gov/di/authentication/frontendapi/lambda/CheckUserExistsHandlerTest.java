@@ -185,8 +185,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
-            assertEquals(
-                    getExpectedInternalPairwiseId(), session.getInternalCommonSubjectIdentifier());
+            assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
         @Test
@@ -305,7 +304,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
-        assertNull(session.getInternalCommonSubjectIdentifier());
+        assertNull(authSession.getInternalCommonSubjectId());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
