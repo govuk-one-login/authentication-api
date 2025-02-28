@@ -47,6 +47,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
@@ -195,6 +196,10 @@ class ReverificationResultHandlerTest {
                             USER_CONTEXT);
 
             verify(cloudwatchMetricsService).incrementMfaResetIpvResponseCount("success");
+
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining(format("Received reverification success code"))));
             assertThat(result, hasStatus(200));
             assertThat(result, hasBody(userInfo.getContent()));
 
@@ -615,6 +620,15 @@ class ReverificationResultHandlerTest {
                         apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
         verify(cloudwatchMetricsService).incrementMfaResetIpvResponseCount(failureCode);
+        verify(cloudwatchMetricsService, never()).incrementMfaResetIpvResponseCount("success");
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                format(
+                                        "Received reverification failure code due to %s",
+                                        failureCode))));
         assertThat(result, hasStatus(200));
     }
 

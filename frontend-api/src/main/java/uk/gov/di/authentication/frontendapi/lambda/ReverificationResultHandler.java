@@ -258,11 +258,14 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                 return ValidationResult.failure(
                         "Invalid or missing 'failure_reason'", metadataPairs);
             }
+            LOG.info("Received reverification failure code due to {}", failValue);
             cloudwatchMetricService.incrementMfaResetIpvResponseCount(failValue);
             metadataPairs.add(
                     AuditService.MetadataPair.pair(IPV_REVERIFICATION_FAILURE_CODE, failValue));
+        } else {
+            LOG.info("Received reverification success code");
+            cloudwatchMetricService.incrementMfaResetIpvResponseCount(IPV_REVERIFICATION_SUCCESS);
         }
-        cloudwatchMetricService.incrementMfaResetIpvResponseCount(IPV_REVERIFICATION_SUCCESS);
         return ValidationResult.success(metadataPairs);
     }
 }
