@@ -549,60 +549,6 @@ resource "aws_dynamodb_table" "bulk_email_users" {
   )
 }
 
-resource "aws_dynamodb_table" "authentication_callback_userinfo" {
-  name         = "${var.environment}-authentication-callback-userinfo"
-  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
-  hash_key     = "SubjectID"
-
-  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
-
-  deletion_protection_enabled = false
-
-  attribute {
-    name = "SubjectID"
-    type = "S"
-  }
-
-  attribute {
-    name = "UserInfo"
-    type = "S"
-  }
-
-  global_secondary_index {
-    name            = "UserInfoIndex"
-    hash_key        = "UserInfo"
-    projection_type = "ALL"
-    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
-  }
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.authentication_callback_userinfo_encryption_key.arn
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-
-  ttl {
-    attribute_name = "TimeToExist"
-    enabled        = true
-  }
-
-  tags = (
-    var.environment == "integration" || var.environment == "production" ?
-    {
-      "BackupFrequency" = "Bihourly"
-    } : {}
-  )
-}
-
 resource "aws_dynamodb_table" "email-check-result" {
   name         = "${var.environment}-email-check-result"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
