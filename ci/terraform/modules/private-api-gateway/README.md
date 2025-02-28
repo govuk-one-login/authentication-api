@@ -4,6 +4,7 @@ This module provisions an OpenAPI-based API gateway that does not have a domain 
 Functionally, this is a transparent wrapper for [api-gateway](../api-gateway/), but it means that when used,
 it's immediately obvious that this provisions a **_private_** gateway (as opposed to a public one).
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -47,3 +48,4 @@ it's immediately obvious that this provisions a **_private_** gateway (as oppose
 | <a name="output_api_gateway_id"></a> [api\_gateway\_id](#output\_api\_gateway\_id) | n/a |
 | <a name="output_api_gateway_name"></a> [api\_gateway\_name](#output\_api\_gateway\_name) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->
