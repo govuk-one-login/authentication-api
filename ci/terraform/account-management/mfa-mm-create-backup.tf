@@ -1,7 +1,7 @@
-module "account_management_api_mfa_methods_create_backup_role" {
+module "account_management_api_mfa_mm_create_backup_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "account_management_api_mfa_methods_create_backup_role"
+  role_name   = "account_management_api_mfa_mm_create_backup_role"
   vpc_arn     = local.vpc_arn
 
   policies_to_attach = [
@@ -13,7 +13,7 @@ module "account_management_api_mfa_methods_create_backup_role" {
   }
 }
 
-module "mfa-methods-create-backup" {
+module "mfa-mm-create-backup" {
   source = "../modules/endpoint-lambda"
 
   endpoint_name = "mfa-methods-create-backup"
@@ -25,10 +25,10 @@ module "mfa-methods-create-backup" {
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.CreateBackupMFAMethod::handleRequest"
 
-  memory_size                 = lookup(var.performance_tuning, "mfa-methods-create-backup", local.default_performance_parameters).memory
-  provisioned_concurrency     = lookup(var.performance_tuning, "mfa-methods-create-backup", local.default_performance_parameters).concurrency
-  max_provisioned_concurrency = lookup(var.performance_tuning, "mfa-methods-create-backup", local.default_performance_parameters).max_concurrency
-  scaling_trigger             = lookup(var.performance_tuning, "mfa-methods-create-backup", local.default_performance_parameters).scaling_trigger
+  memory_size                 = lookup(var.performance_tuning, "mfa-mm-create-backup", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "mfa-mm-create-backup", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "mfa-mm-create-backup", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "mfa-mm-create-backup", local.default_performance_parameters).scaling_trigger
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file         = aws_s3_object.account_management_api_release_zip.key
@@ -41,7 +41,7 @@ module "mfa-methods-create-backup" {
   ]
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
-  lambda_role_arn                        = module.account_management_api_mfa_methods_create_backup_role.arn
+  lambda_role_arn                        = module.account_management_api_mfa_mm_create_backup_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -51,5 +51,5 @@ module "mfa-methods-create-backup" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
-  depends_on = [module.account_management_api_mfa_methods_create_backup_role]
+  depends_on = [module.account_management_api_mfa_mm_create_backup_role]
 }
