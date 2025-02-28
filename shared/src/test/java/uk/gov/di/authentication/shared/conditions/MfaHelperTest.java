@@ -9,6 +9,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -21,13 +22,17 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Objects.nonNull;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -36,10 +41,14 @@ import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class MfaHelperTest {
     private static final UserCredentials userCredentials = mock(UserCredentials.class);
     private static final String PHONE_NUMBER = "+44123456789";
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHelper.class);
 
     @Nested
     class GetUserMFADetail {
@@ -75,6 +84,10 @@ class MfaHelperTest {
             var expectedResult = new UserMfaDetail(true, isPhoneNumberVerified, SMS, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining(format("User has mfa method %s", "SMS"))));
         }
 
         @Test
@@ -111,6 +124,10 @@ class MfaHelperTest {
             var expectedResult = new UserMfaDetail(true, false, NONE, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining(format("User has mfa method %s", "NONE"))));
         }
 
         @ParameterizedTest
@@ -133,6 +150,12 @@ class MfaHelperTest {
                     new UserMfaDetail(true, true, MFAMethodType.AUTH_APP, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "User has verified method from user credentials")));
         }
 
         @Test
@@ -170,6 +193,12 @@ class MfaHelperTest {
             var expectedResult = new UserMfaDetail(true, false, AUTH_APP, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Unverified auth app mfa method present and no verified phone number")));
         }
     }
 
