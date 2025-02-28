@@ -13,12 +13,14 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,12 +61,20 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             value = MFAMethodType.class,
             names = {"SMS", "AUTH_APP"})
     void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists(
-            MFAMethodType mfaMethodType) throws JsonException {
+            MFAMethodType mfaMethodType) throws JsonException, URISyntaxException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
+        var salt = userStore.addSalt(emailAddress);
+
+        var userProfile = userStore.getUserProfileFromEmail(emailAddress).orElseThrow();
+        var expectedInternalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        userProfile.getSubjectID(),
+                        new URI(TXMA_ENABLED_CONFIGURATION_SERVICE.getInternalSectorUri()),
+                        salt);
 
         if (MFAMethodType.SMS == mfaMethodType) {
             userStore.addMfaMethod(emailAddress, mfaMethodType, false, true, "credential");
@@ -93,6 +103,9 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(checkUserExistsResponse.email(), equalTo(emailAddress));
         assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(mfaMethodType));
         assertTrue(checkUserExistsResponse.doesUserExist());
+        assertThat(
+                authSessionStore.getSession(sessionId).orElseThrow().getInternalCommonSubjectId(),
+                equalTo(expectedInternalCommonSubjectId));
         if (MFAMethodType.SMS.equals(mfaMethodType)) {
             assertThat(checkUserExistsResponse.phoneNumberLastThree(), equalTo("321"));
         } else if (MFAMethodType.AUTH_APP.equals(mfaMethodType)) {

@@ -177,7 +177,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
                 LOG.info("Setting internal common subject identifier in user session");
 
-                session.setInternalCommonSubjectIdentifier(internalCommonSubjectId);
                 authSession.setInternalCommonSubjectId(internalCommonSubjectId);
                 var isPhoneNumberVerified = userProfile.get().isPhoneNumberVerified();
                 var userCredentials =
@@ -190,7 +189,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 isPhoneNumberVerified);
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
             } else {
-                session.setInternalCommonSubjectIdentifier(null);
                 authSession.setInternalCommonSubjectId(null);
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
