@@ -169,10 +169,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             LOG.info("Setting internal common subject identifier in user session");
             sessionService.storeOrUpdateSession(
-                    userContext
-                            .getSession()
-                            .setEmailAddress(request.getEmail())
-                            .setInternalCommonSubjectIdentifier(internalCommonSubjectId.getValue()),
+                    userContext.getSession().setEmailAddress(request.getEmail()),
                     userContext.getAuthSession().getSessionId());
 
             authSessionService.updateSession(
