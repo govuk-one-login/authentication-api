@@ -16,11 +16,11 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
-import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -171,7 +171,8 @@ class ProcessingIdentityHandlerTest {
     void shouldReturnCOMPLETEDStatusWhenIdentityCredentialIsPresent() throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
-                new AuthIdentityCredentials()
+                new OrchIdentityCredentials()
+                        .withClientSessionId(CLIENT_SESSION_ID)
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
@@ -203,7 +204,8 @@ class ProcessingIdentityHandlerTest {
     void shouldCallAISIfProcessingStatusIsCOMPLETED() throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
-                new AuthIdentityCredentials()
+                new OrchIdentityCredentials()
+                        .withClientSessionId(CLIENT_SESSION_ID)
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
@@ -233,7 +235,7 @@ class ProcessingIdentityHandlerTest {
             throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
-                new AuthIdentityCredentials()
+                new OrchIdentityCredentials()
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
@@ -283,7 +285,7 @@ class ProcessingIdentityHandlerTest {
             throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
-                new AuthIdentityCredentials()
+                new OrchIdentityCredentials()
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString(), anyString()))
