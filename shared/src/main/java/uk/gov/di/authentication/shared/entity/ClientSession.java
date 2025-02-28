@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.entity;
 
 import com.google.gson.annotations.Expose;
-import com.nimbusds.oauth2.sdk.id.Subject;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,8 +12,6 @@ public class ClientSession {
 
     @Expose private LocalDateTime creationDate;
     @Expose private VectorOfTrust effectiveVectorOfTrust;
-
-    @Expose private Subject docAppSubjectId;
 
     @Expose private String clientName;
 
@@ -33,24 +30,7 @@ public class ClientSession {
         return authRequestParams;
     }
 
-    public LocalDateTime getCreationDate() {
-        return creationDate;
-    }
-
     public VectorOfTrust getEffectiveVectorOfTrust() {
         return effectiveVectorOfTrust;
-    }
-
-    public Subject getDocAppSubjectId() {
-        return docAppSubjectId;
-    }
-
-    public ClientSession setDocAppSubjectId(Subject docAppSubjectId) {
-        this.docAppSubjectId = docAppSubjectId;
-        return this;
-    }
-
-    public String getClientName() {
-        return clientName;
     }
 }

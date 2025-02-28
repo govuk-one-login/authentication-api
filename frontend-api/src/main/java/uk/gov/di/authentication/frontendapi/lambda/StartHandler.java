@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -273,21 +272,6 @@ public class StartHandler
                             isBlockedForReauth,
                             isUserAuthenticatedWithValidProfile,
                             upliftRequired);
-
-            if (userStartInfo.isDocCheckingAppUser()) {
-                var docAppSubjectId =
-                        DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                                userContext.getClientSession().getAuthRequestParams(),
-                                configurationService.isCustomDocAppClaimEnabled(),
-                                configurationService.getDocAppDomain());
-                LOG.info(
-                        "is docAppSubjectId updated: {}",
-                        !docAppSubjectId.equals(clientSession.get().getDocAppSubjectId()));
-
-                clientSessionService.updateStoredClientSession(
-                        clientSessionId, clientSession.get().setDocAppSubjectId(docAppSubjectId));
-                LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
-            }
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
