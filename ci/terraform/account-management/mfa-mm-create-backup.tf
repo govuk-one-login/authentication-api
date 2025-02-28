@@ -16,7 +16,7 @@ module "account_management_api_mfa_mm_create_backup_role" {
 module "mfa-mm-create-backup" {
   source = "../modules/endpoint-lambda"
 
-  endpoint_name = "mfa-methods-create-backup"
+  endpoint_name = "mfa-mm-create-backup"
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     REDIS_KEY            = local.redis_key
