@@ -64,7 +64,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
     private static final String SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT =
             """
             {
-                "sub": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+                "sub": "%s",
                 "success": true
             }
             """;
@@ -109,17 +109,22 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
         }
     }
 
+    String internalCommonSubjectId = null;
+
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new ReverificationResultHandler();
+        handler = new ReverificationResultHandler(redisConnectionService);
+
         sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
-        authSessionStore.addSession(sessionId);
-        var internalCommonSubjectId =
+        internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         new Subject().getValue(),
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+
+        authSessionStore.addSession(sessionId);
+        authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
 
         String subjectId = "test-subject-id";
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
@@ -143,7 +148,9 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
                                 aResponse()
                                         .withStatus(200)
                                         .withHeader("Content-Type", "application/json")
-                                        .withBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT)));
+                                        .withBody(
+                                                SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT
+                                                        .formatted(internalCommonSubjectId))));
 
         var response =
                 makeRequest(

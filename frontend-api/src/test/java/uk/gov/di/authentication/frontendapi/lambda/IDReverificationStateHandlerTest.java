@@ -8,6 +8,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.IDReverificationState;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 
 import java.util.Map;
@@ -32,11 +33,15 @@ public class IDReverificationStateHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final IDReverificationStateService idReverificationStateService =
             mock(IDReverificationStateService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private IDReverificationStateHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new IDReverificationStateHandler(auditService, idReverificationStateService);
+        handler =
+                new IDReverificationStateHandler(
+                        auditService, idReverificationStateService, cloudwatchMetricsService);
         when(context.getAwsRequestId()).thenReturn("aws-request-id");
     }
 
@@ -70,6 +75,13 @@ public class IDReverificationStateHandlerTest {
                                 .withClientSessionId(CLIENT_SESSION_ID)
                                 .withTxmaAuditEncoded(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", "ACCOUNT_RECOVERY"));
+    }
+
+    @Test
+    void shouldIncrementReverifyAuthorisationErrorCount() throws Json.JsonException {
+        givenThereIsAStoredStateEntry();
+        handler.handleRequest(generateRequest(AUTHENTICATION_STATE), context);
+        verify(cloudwatchMetricsService).incrementReverifyAuthorisationErrorCount();
     }
 
     private static APIGatewayProxyRequestEvent generateRequest(String authenticationState) {

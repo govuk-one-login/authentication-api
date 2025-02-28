@@ -44,16 +44,19 @@ public class MfaHelper {
             String phoneNumber,
             boolean isPhoneNumberVerified) {
         var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
-        var mfaMethodVerified = isPhoneNumberVerified;
-        var mfaMethodType = isPhoneNumberVerified ? MFAMethodType.SMS : MFAMethodType.NONE;
 
-        var mfaMethod = getPrimaryMFAMethod(userCredentials);
-        if (mfaMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
-            mfaMethodVerified = true;
-            mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
-        } else if (!isPhoneNumberVerified && mfaMethod.isPresent()) {
-            mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
+        var enabledMethod = getPrimaryMFAMethod(userCredentials);
+
+        if (enabledMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
+            var mfaMethodType = MFAMethodType.valueOf(enabledMethod.get().getMfaMethodType());
+            return new UserMfaDetail(isMfaRequired, true, mfaMethodType, phoneNumber);
+        } else if (!isPhoneNumberVerified && enabledMethod.isPresent()) {
+            var mfaMethodType = MFAMethodType.valueOf(enabledMethod.get().getMfaMethodType());
+            return new UserMfaDetail(isMfaRequired, false, mfaMethodType, phoneNumber);
+        } else {
+            var mfaMethodType = isPhoneNumberVerified ? MFAMethodType.SMS : MFAMethodType.NONE;
+            return new UserMfaDetail(
+                    isMfaRequired, isPhoneNumberVerified, mfaMethodType, phoneNumber);
         }
-        return new UserMfaDetail(isMfaRequired, mfaMethodVerified, mfaMethodType, phoneNumber);
     }
 }

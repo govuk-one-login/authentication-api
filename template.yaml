@@ -85,7 +85,11 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  IsIntegration: !Equals [!Ref Environment, integration]
+  IsIntegrationOrProduction:
+    !Or [
+      !Equals [!Ref Environment, integration],
+      !Equals [!Ref Environment, production],
+    ]
   SupportMaxAgeEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -95,6 +99,12 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   UseIpvJwksEndpointToGetEncryptionKey:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
+  PkceEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
       !Equals [build, !Ref Environment],
@@ -129,7 +139,7 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
-      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
@@ -159,7 +169,7 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
-      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
@@ -189,7 +199,7 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
-      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       defaultProvisionedConcurrency: 3
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
@@ -219,7 +229,7 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
-      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
@@ -249,7 +259,7 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
-      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
+      authIdentityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
@@ -606,6 +616,61 @@ Resources:
           Value: ClientSessionTable
   #endregion
 
+  #region IdentityCredentials DynamoDB Table
+  IdentityCredentialsTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for IdentityCredentials DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  IdentityCredentialsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Identity-Credentials
+      AttributeDefinitions:
+        - AttributeName: ClientSessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ClientSessionId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt IdentityCredentialsTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: IdentityCredentialsTable
+  #endregion
+
   #region RP Public Key DynamoDB Table
 
   RpPublicKeyTableEncryptionKey:
@@ -815,6 +880,10 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          PKCE_ENABLED: !If
+            - PkceEnabled
+            - true
+            - false
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1154,7 +1223,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: !If
-        - IsIntegration
+        - IsIntegrationOrProduction
         - false
         - true
       AlarmActions:
@@ -1175,7 +1244,7 @@ Resources:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       ActionsEnabled: !If
-        - IsIntegration
+        - IsIntegrationOrProduction
         - false
         - true
       AlarmActions:
@@ -1345,6 +1414,7 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref DocAppSigningKmsAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1483,6 +1553,8 @@ Resources:
         - !Ref InvokeFetchJwksHandlerPolicy
         - !Ref RpPublicKeyCacheTableReadAccessPolicy
         - !Ref RpPublicKeyCacheTableWriteAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1690,6 +1762,8 @@ Resources:
         - !Ref BackChannelLogoutQueueWritePolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2019,6 +2093,7 @@ Resources:
         - !Ref IpvPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
+        - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2647,6 +2722,10 @@ Resources:
             - SupportMaxAgeEnabled
             - true
             - false
+          PKCE_ENABLED: !If
+            - PkceEnabled
+            - true
+            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -2662,6 +2741,7 @@ Resources:
         - !Ref RpPublicKeyCacheTableReadAccessPolicy
         - !Ref OrchSessionTableReadAndWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
+        - !Ref ClientSessionTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2868,7 +2948,7 @@ Resources:
                   authEnvironment,
                 ]
       Policies:
-        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -3060,6 +3140,8 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref OrchSessionTableWriteAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3702,8 +3784,8 @@ Resources:
             - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
       Policies:
-        - !Ref IdentityCredentialsTableReadAccessPolicy
-        - !Ref IdentityCredentialsTableWriteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
+        - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
@@ -3716,6 +3798,8 @@ Resources:
         - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
+        - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref ClientSessionTableDeleteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3908,9 +3992,9 @@ Resources:
                   authEnvironment,
                 ]
       Policies:
-        - !Ref IdentityCredentialsTableReadAccessPolicy
-        - !Ref IdentityCredentialsTableWriteAccessPolicy
-        - !Ref IdentityCredentialsTableDeleteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableReadAccessPolicy
+        - !Ref AuthIdentityCredentialsTableWriteAccessPolicy
+        - !Ref AuthIdentityCredentialsTableDeleteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       Tags:
@@ -4390,13 +4474,96 @@ Resources:
               - kms:Encrypt
             Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
 
-  IdentityCredentialsTableReadAccessPolicy:
+  ClientSessionTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdentityCredentialsTableReadAccess
+          - Sid: AllowClientSessionTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+
+  ClientSessionTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+
+  ClientSessionTableDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt ClientSessionTable.Arn
+
+  # This combined read, write and delete policy is required because we've reached the managed polices per role quota limit.
+  ClientSessionTableReadWriteAndDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+          - Sid: AllowClientSessionTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+
+  AuthIdentityCredentialsTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthIdentityCredentialsTableReadAccess
             Effect: Allow
             Action:
               - dynamodb:BatchGetItem
@@ -4418,7 +4585,7 @@ Resources:
                     !Ref Environment,
                     authEnvironment,
                   ]
-          - Sid: AllowIdentityCredentialsTableKeyAccess
+          - Sid: AllowAuthIdentityCredentialsTableKeyAccess
             Effect: Allow
             Action:
               - kms:Encrypt
@@ -4431,16 +4598,16 @@ Resources:
               !FindInMap [
                 EnvironmentConfiguration,
                 !Ref Environment,
-                identityCredentialsTableKeyArn,
+                authIdentityCredentialsTableKeyArn,
               ]
 
-  IdentityCredentialsTableWriteAccessPolicy:
+  AuthIdentityCredentialsTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdentityCredentialsTableWriteAccess
+          - Sid: AllowAuthIdentityCredentialsTableWriteAccess
             Effect: Allow
             Action:
               - dynamodb:UpdateItem
@@ -4459,7 +4626,7 @@ Resources:
                     !Ref Environment,
                     authEnvironment,
                   ]
-          - Sid: AllowIdentityCredentialsTableKeyAccess
+          - Sid: AllowAuthIdentityCredentialsTableKeyAccess
             Effect: Allow
             Action:
               - kms:Encrypt
@@ -4472,16 +4639,16 @@ Resources:
               !FindInMap [
                 EnvironmentConfiguration,
                 !Ref Environment,
-                identityCredentialsTableKeyArn,
+                authIdentityCredentialsTableKeyArn,
               ]
 
-  IdentityCredentialsTableDeleteAccessPolicy:
+  AuthIdentityCredentialsTableDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdentityCredentialsTableDeleteAccess
+          - Sid: AllowAuthIdentityCredentialsTableDeleteAccess
             Effect: Allow
             Action:
               - dynamodb:DeleteItem
@@ -4499,7 +4666,7 @@ Resources:
                     !Ref Environment,
                     authEnvironment,
                   ]
-          - Sid: AllowIdentityCredentialsTableKeyAccess
+          - Sid: AllowAuthIdentityCredentialsTableKeyAccess
             Effect: Allow
             Action:
               - kms:Encrypt
@@ -4512,7 +4679,7 @@ Resources:
               !FindInMap [
                 EnvironmentConfiguration,
                 !Ref Environment,
-                identityCredentialsTableKeyArn,
+                authIdentityCredentialsTableKeyArn,
               ]
 
   ClientRegistryTableReadAccessPolicy:

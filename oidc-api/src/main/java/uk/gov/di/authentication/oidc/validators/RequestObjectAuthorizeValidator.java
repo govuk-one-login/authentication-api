@@ -187,6 +187,19 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                 "Request is missing nonce parameter"),
                         state);
             }
+
+            var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
+
+            if (configurationService.isPkceEnabled() && Objects.nonNull(codeChallenge)) {
+                var codeChallengeMethod = jwtClaimsSet.getStringClaim("code_challenge_method");
+
+                var codeChallengeError =
+                        validateCodeChallengeAndMethod(codeChallenge, codeChallengeMethod);
+                if (codeChallengeError.isPresent()) {
+                    return errorResponse(redirectURI, codeChallengeError.get(), state);
+                }
+            }
+
             var vtrError = validateVtr(jwtClaimsSet, client);
             if (vtrError.isPresent()) {
                 return errorResponse(redirectURI, vtrError.get(), state);

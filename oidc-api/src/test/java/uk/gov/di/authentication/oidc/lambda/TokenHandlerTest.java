@@ -31,8 +31,10 @@ import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +44,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -89,8 +92,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -775,6 +780,162 @@ public class TokenHandlerTest {
                                 DOC_APP_CLIENT_ID.getValue()));
     }
 
+    private static Stream<Arguments> vectorsTypesThatShouldNotReturnClaims() {
+        return Stream.of(Arguments.of("Cl.Cm"), Arguments.of("Cl"), Arguments.of("P0.Cl.Cm"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("vectorsTypesThatShouldNotReturnClaims")
+    void shouldNotReturnClaimsForNonIdentityJourneys(String vectorValue)
+            throws JOSEException, TokenAuthInvalidException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID,
+                        RP_PAIRWISE_SUBJECT,
+                        "issuer-url",
+                        new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry =
+                generateClientRegistry(keyPair, CLIENT_ID)
+                        .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
+        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+        AuthenticationRequest authenticationRequest =
+                generateRequestObjectAuthRequestWithOIDCClaims(
+                        JsonArrayHelper.jsonArrayOf(vectorValue), oidcClaimsRequest);
+        List<VectorOfTrust> vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        authenticationRequest.toParameters(),
+                                                        LocalDateTime.now(),
+                                                        vtr,
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
+        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(tokenService.generateTokenResponse(
+                        eq(CLIENT_ID),
+                        eq(INTERNAL_SUBJECT),
+                        eq(SCOPES),
+                        eq(Map.of("nonce", NONCE)),
+                        eq(RP_PAIRWISE_SUBJECT),
+                        eq(INTERNAL_PAIRWISE_SUBJECT),
+                        eq(null),
+                        eq(false),
+                        eq(JWSAlgorithm.RS256),
+                        eq(CLIENT_SESSION_ID),
+                        eq(lowestLevelVtr.retrieveVectorOfTrustForToken()),
+                        eq(AUTH_TIME)))
+                .thenReturn(tokenResponse);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+        assertThat(result, hasStatus(200));
+        assertTrue(result.getBody().contains(refreshToken.getValue()));
+        assertTrue(result.getBody().contains(accessToken.getValue()));
+        assertClaimsRequestIfPresent(oidcClaimsRequest, false);
+    }
+
+    @Test
+    void shouldReturnClaimsForIdentityJourney() throws JOSEException, TokenAuthInvalidException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID,
+                        RP_PAIRWISE_SUBJECT,
+                        "issuer-url",
+                        new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry =
+                generateClientRegistry(keyPair, CLIENT_ID)
+                        .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
+        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+        AuthenticationRequest authenticationRequest =
+                generateRequestObjectAuthRequestWithOIDCClaims(
+                        JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"), oidcClaimsRequest);
+        List<VectorOfTrust> vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        authenticationRequest.toParameters(),
+                                                        LocalDateTime.now(),
+                                                        vtr,
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
+        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(tokenService.generateTokenResponse(
+                        eq(CLIENT_ID),
+                        eq(INTERNAL_SUBJECT),
+                        eq(SCOPES),
+                        eq(Map.of("nonce", NONCE)),
+                        eq(RP_PAIRWISE_SUBJECT),
+                        eq(INTERNAL_PAIRWISE_SUBJECT),
+                        argThat(
+                                (actualOidcClaimsRequest) ->
+                                        actualOidcClaimsRequest
+                                                .toJSONString()
+                                                .equals(oidcClaimsRequest.toJSONString())),
+                        eq(false),
+                        eq(JWSAlgorithm.RS256),
+                        eq(CLIENT_SESSION_ID),
+                        eq(lowestLevelVtr.retrieveVectorOfTrustForToken()),
+                        eq(AUTH_TIME)))
+                .thenReturn(tokenResponse);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+        assertThat(result, hasStatus(200));
+        assertTrue(result.getBody().contains(refreshToken.getValue()));
+        assertTrue(result.getBody().contains(accessToken.getValue()));
+        assertClaimsRequestIfPresent(oidcClaimsRequest, true);
+    }
+
     private UserProfile generateUserProfile() {
         return new UserProfile()
                 .withEmail(TEST_EMAIL)
@@ -928,6 +1089,22 @@ public class TokenHandlerTest {
         return generateAuthRequest(signedJWT);
     }
 
+    private static AuthenticationRequest generateRequestObjectAuthRequestWithOIDCClaims(
+            String vtr, OIDCClaimsRequest oidcClaimsRequest) {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        return new AuthenticationRequest.Builder(
+                        responseType,
+                        Scope.parse(SCOPES.toString()),
+                        new ClientID(CLIENT_ID),
+                        URI.create(REDIRECT_URI))
+                .state(state)
+                .nonce(NONCE)
+                .claims(oidcClaimsRequest)
+                .customParameter("vtr", vtr)
+                .build();
+    }
+
     private static AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
         Scope scope = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
         return new AuthenticationRequest.Builder(
@@ -936,5 +1113,31 @@ public class TokenHandlerTest {
                 .nonce(NONCE)
                 .requestObject(signedJWT)
                 .build();
+    }
+
+    private void assertClaimsRequestIfPresent(
+            OIDCClaimsRequest oidcClaimsRequest, boolean returningClaims) {
+        var finalClaimsRequestCaptor = ArgumentCaptor.forClass(OIDCClaimsRequest.class);
+        verify(tokenService)
+                .generateTokenResponse(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        finalClaimsRequestCaptor.capture(),
+                        anyBoolean(),
+                        any(),
+                        any(),
+                        any(),
+                        any());
+        if (returningClaims) {
+            assertEquals(
+                    oidcClaimsRequest.toJSONString(),
+                    finalClaimsRequestCaptor.getValue().toJSONString());
+        } else {
+            assertEquals(null, finalClaimsRequestCaptor.getValue());
+        }
     }
 }

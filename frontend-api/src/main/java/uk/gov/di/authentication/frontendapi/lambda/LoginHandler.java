@@ -322,8 +322,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         LOG.info(
                 "User has successfully logged in with MFAType: {}. MFAVerified: {}",
-                userMfaDetail.getMfaMethodType().getValue(),
-                userMfaDetail.isMfaMethodVerified());
+                userMfaDetail.mfaMethodType().getValue(),
+                userMfaDetail.mfaMethodVerified());
 
         auditService.submitAuditEvent(
                 AUTH_LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));

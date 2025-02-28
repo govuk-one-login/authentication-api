@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -69,6 +70,7 @@ class RequestObjectAuthorizeValidatorTest {
     private static final Nonce NONCE = new Nonce();
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final URI OIDC_BASE_AUTHORIZE_URI = URI.create("https://localhost/authorize");
+    private static final String PKCE_CODE_CHALLENGE = "aCodeChallenge";
     private RequestObjectAuthorizeValidator service;
     private final OidcAPI oidcApi = mock(OidcAPI.class);
 
@@ -401,6 +403,148 @@ class RequestObjectAuthorizeValidatorTest {
                                         "Request vtr is not permitted")
                                 .toJSONObject()));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsNotEnabled()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        when(configurationService.isPkceEnabled()).thenReturn(false);
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isEmpty());
+    }
+
+    @Test
+    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsEnabled()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isEmpty());
+    }
+
+    @Test
+    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("code_challenge", PKCE_CODE_CHALLENGE)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(
+                requestObjectError.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing code_challenge_method parameter. code_challenge_method is required when code_challenge is present.")
+                                .toJSONObject()));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var codeChallengeMethod = CodeChallengeMethod.PLAIN.getValue();
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("code_challenge", PKCE_CODE_CHALLENGE)
+                        .claim("code_challenge_method", codeChallengeMethod)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(
+                requestObjectError.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid value for code_challenge_method parameter.")
+                                .toJSONObject()));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
+    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreValid()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("code_challenge", PKCE_CODE_CHALLENGE)
+                        .claim("code_challenge_method", codeChallengeMethod)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isEmpty());
     }
 
     @Test

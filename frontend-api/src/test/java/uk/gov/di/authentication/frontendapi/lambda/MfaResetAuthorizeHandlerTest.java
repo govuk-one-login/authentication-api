@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceException;
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
@@ -17,7 +18,10 @@ import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -30,6 +34,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -41,6 +46,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
@@ -49,6 +55,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -56,6 +63,8 @@ class MfaResetAuthorizeHandlerTest {
     private static final SerializationService objectMapper = SerializationService.getInstance();
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
+    public static final String CALCULATED_PAIRWISE_ID =
+            "5y1cBIAt3B4vQLzYIDFTEBwmXB2CPu8fIhO6XdU_tjQ";
     private final IPVReverificationService ipvReverificationService =
             mock(IPVReverificationService.class);
     private static final AuthenticationService authenticationService =
@@ -63,11 +72,11 @@ class MfaResetAuthorizeHandlerTest {
     private static final ClientSessionService clientSessionService =
             mock(ClientSessionService.class);
     private static final ClientService clientService = mock(ClientService.class);
+    private static final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final Context context = mock(Context.class);
     private static final SessionService sessionService = mock(SessionService.class);
     private static final UserContext userContext = mock(UserContext.class);
-    private static final Session session =
-            new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private static final Session session = mock(Session.class);
     private static final AuditService auditService = mock(AuditService.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -77,10 +86,10 @@ class MfaResetAuthorizeHandlerTest {
 
     private static final AuditContext testAuditContext =
             new AuditContext(
-                    AuditService.UNKNOWN,
+                    CLIENT_ID,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    AuditService.UNKNOWN,
+                    INTERNAL_COMMON_SUBJECT_ID,
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
@@ -98,15 +107,30 @@ class MfaResetAuthorizeHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private static MfaResetAuthorizeHandler handler;
+    private static UserProfile userProfile = new UserProfile();
 
     @BeforeAll
     static void globalSetup() {
-        when(userContext.getSession()).thenReturn(session);
+        userProfile.setSubjectID(INTERNAL_COMMON_SUBJECT_ID);
+
+        when(userContext.getSession()).thenReturn(new Session());
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.getClientId()).thenReturn(CLIENT_ID);
+        when(userContext.getAuthSession()).thenReturn(authSession);
+        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        when(userContext.getSession()).thenReturn(session);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+
+        when(clientRegistry.getSectorIdentifierUri()).thenReturn("htttps://gov.uk");
+
+        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
+        when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_COMMON_SUBJECT_ID);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
+        when(authenticationService.getOrGenerateSalt(userProfile))
+                .thenReturn("salt".getBytes(StandardCharsets.UTF_8));
     }
 
     @BeforeEach
@@ -134,10 +158,18 @@ class MfaResetAuthorizeHandlerTest {
                         eq(new Subject(INTERNAL_COMMON_SUBJECT_ID)), eq(CLIENT_SESSION_ID), any()))
                 .thenReturn(TEST_REDIRECT_URI);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
+        var request = new MfaResetRequest(EMAIL, TEST_REDIRECT_URI);
+
+        APIGatewayProxyResponseEvent response =
+                handler.handleRequestWithUserContext(
+                        TEST_INVOKE_EVENT, context, request, userContext);
 
         verify(auditService)
-                .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, testAuditContext);
+                .submitAuditEvent(
+                        AUTH_REVERIFY_AUTHORISATION_REQUESTED,
+                        testAuditContext,
+                        pair("rpPairwiseId", "urn:fdc:gov.uk:2022:" + CALCULATED_PAIRWISE_ID),
+                        pair("journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
         verify(cloudwatchMetricsService).incrementMfaResetHandoffCount();
 
         assertThat(response, hasStatus(200));

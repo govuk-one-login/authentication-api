@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.id.Issuer;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
@@ -107,6 +108,10 @@ public class WellknownHandler
             oidcMetadata.setEndSessionEndpointURI(oidcApi.logoutURI());
             oidcMetadata.setSupportsBackChannelLogout(true);
             oidcMetadata.setCustomParameter("trustmarks", oidcApi.trustmarkURI().toString());
+
+            if (configService.isPkceEnabled()) {
+                oidcMetadata.setCodeChallengeMethods(List.of(CodeChallengeMethod.S256));
+            }
 
             oidcMetadata.setPolicyURI(authFrontend.privacyNoticeURI());
             oidcMetadata.setTermsOfServiceURI(authFrontend.termsOfServiceURI());

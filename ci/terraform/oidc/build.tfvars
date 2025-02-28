@@ -15,6 +15,7 @@ ipv_authorisation_uri = "https://ipvstub.signin.build.account.gov.uk/authorize/"
 # auth only
 ipv_auth_authorize_callback_uri = "https://signin-sp.build.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
+ipv_audience                    = "https://ipvstub.signin.build.account.gov.uk"
 
 internal_sector_uri  = "https://identity.build.account.gov.uk"
 test_clients_enabled = true
@@ -44,10 +45,11 @@ authorize_protected_subnet_enabled = true
 
 contra_state_bucket = "digital-identity-dev-tfstate"
 
-orch_account_id                       = "767397776536"
-is_orch_stubbed                       = false
-orch_environment                      = "build"
-orch_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979"
+orch_account_id                              = "767397776536"
+is_orch_stubbed                              = false
+orch_environment                             = "build"
+orch_session_table_encryption_key_arn        = "arn:aws:kms:eu-west-2:767397776536:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979"
+orch_client_session_table_encryption_key_arn = "arn:aws:kms:eu-west-2:767397776536:key/7a1d86fe-1ca0-499c-95e9-ee8593a850f9"
 
 orch_storage_token_jwk_enabled              = true
 orch_trustmark_enabled                      = true
@@ -94,6 +96,22 @@ dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
 1wIDAQAB
 -----END PUBLIC KEY-----
 EOT
+
+# The IPV public encrypting key that is specific to auth.
+auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo9DGrlCJ1qrrXzeiSeLr
+6rzPmsIiF6hGxl8B4axJkBsfZWldFpPw1CvX/sP1FtY5fdVdUG7U1uMObcmE43tQ
+EiBv7vPWZ9wRI7knjc8ncrGmzhU1eeWyrhDIuhnJFm2iCldigLQu7DfCJMWAtsk2
+g/NMKsC9qYmyHD9QIpQTVt9/HjfzYXFTXtSettNlku2Xi5FjtCpdLEXOMezhRXjF
+imObuMzdLZYryP17mr2OJy9d+227FCexPG6UYOgH21RtOE9gxC2iLGMdqEmfTQt/
+G+lrdOD+OMl6qTVg+zJqG3amdPFnb4Vmnp8rOVnio30PFd71JxSqQsED8jjUW6KK
+FQIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+evcs_audience              = "https://credential-store.build.account.gov.uk"
+auth_issuer_claim_for_evcs = "https://signin.build.account.gov.uk"
 
 # Logging
 logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]

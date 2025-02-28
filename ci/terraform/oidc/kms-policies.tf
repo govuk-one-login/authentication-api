@@ -138,28 +138,6 @@ resource "aws_iam_policy" "auth_code_dynamo_encryption_key_kms_policy" {
   policy = data.aws_iam_policy_document.auth_code_dynamo_encryption_key_policy_document.json
 }
 
-data "aws_iam_policy_document" "authentication_callback_userinfo_encryption_key_policy_document" {
-  statement {
-    sid    = "AllowAccessToAuthCallbackUserInfoTableKmsEncryptionKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:Decrypt*"
-    ]
-    resources = [
-      local.authentication_callback_userinfo_encryption_key_arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "authentication_callback_userinfo_encryption_key_kms_policy" {
-  name        = "${var.environment}-authentication-callback-userinfo-encryption-key-kms-policy"
-  path        = "/"
-  description = "IAM policy for managing KMS encryption of the auth code table"
-
-  policy = data.aws_iam_policy_document.authentication_callback_userinfo_encryption_key_policy_document.json
-}
-
 ### Encrypted VC storage token signing key access
 
 data "aws_iam_policy_document" "storage_token_kms_signing_policy_document" {

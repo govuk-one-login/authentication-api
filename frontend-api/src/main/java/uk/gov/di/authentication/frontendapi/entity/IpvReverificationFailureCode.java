@@ -24,4 +24,13 @@ public enum IpvReverificationFailureCode {
         }
         throw new IllegalArgumentException("No enum constant with value " + value);
     }
+
+    public static boolean isValid(String value) {
+        for (IpvReverificationFailureCode e : IpvReverificationFailureCode.values()) {
+            if (e.getValue().equals(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -60,7 +60,7 @@ public class StartService {
     public Session createNewSessionWithExistingIdAndClientSession(
             String sessionId, String clientSessionId) {
         LOG.info("Creating new session with existing sessionID");
-        Session session = new Session(sessionId);
+        Session session = new Session();
         session.addClientSession(clientSessionId);
         sessionService.storeOrUpdateSession(session, sessionId);
         return session;

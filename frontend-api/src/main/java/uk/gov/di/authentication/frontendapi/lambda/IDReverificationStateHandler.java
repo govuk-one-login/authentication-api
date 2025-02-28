@@ -10,6 +10,7 @@ import uk.gov.di.authentication.frontendapi.entity.IDReverificationStateResponse
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -25,17 +26,22 @@ public class IDReverificationStateHandler {
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
     private final IDReverificationStateService idReverificationStateService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public IDReverificationStateHandler(
-            AuditService auditService, IDReverificationStateService idReverificationStateService) {
+            AuditService auditService,
+            IDReverificationStateService idReverificationStateService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.auditService = auditService;
         this.idReverificationStateService = idReverificationStateService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public IDReverificationStateHandler(ConfigurationService configurationService) {
         this(
                 new AuditService(configurationService),
-                new IDReverificationStateService(configurationService));
+                new IDReverificationStateService(configurationService),
+                new CloudwatchMetricsService(configurationService));
     }
 
     public IDReverificationStateHandler() {
@@ -70,6 +76,7 @@ public class IDReverificationStateHandler {
                 auditContext,
                 AuditService.MetadataPair.pair(
                         "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+        cloudwatchMetricsService.incrementReverifyAuthorisationErrorCount();
         var response =
                 new IDReverificationStateResponse(
                         idReverificationState.getOrchestrationRedirectUrl());
