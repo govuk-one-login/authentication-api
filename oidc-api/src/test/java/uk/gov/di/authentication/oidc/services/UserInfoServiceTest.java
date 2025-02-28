@@ -261,7 +261,7 @@ class UserInfoServiceTest {
                                             RETURN_CODE));
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
-            when(identityService.getIdentityCredentials(JOURNEY_ID, SUBJECT.getValue()))
+            when(identityService.getIdentityCredentials(JOURNEY_ID))
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =
@@ -391,7 +391,7 @@ class UserInfoServiceTest {
                             .withCoreIdentityJWT(coreIdentityJWT);
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
-            when(identityService.getIdentityCredentials(JOURNEY_ID, SUBJECT.getValue()))
+            when(identityService.getIdentityCredentials(JOURNEY_ID))
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =

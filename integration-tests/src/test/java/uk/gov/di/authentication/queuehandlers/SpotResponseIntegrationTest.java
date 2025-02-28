@@ -80,8 +80,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
         Optional<OrchIdentityCredentials> identityCredentials =
-                identityStore.getIdentityCredentials(
-                        CLIENT_SESSION_ID, pairwiseIdentifier.getValue());
+                identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
         assertTrue(identityCredentials.isPresent());
         assertThat(
                 identityCredentials.get().getIpvVot(),
@@ -113,8 +112,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
         Optional<OrchIdentityCredentials> identityCredentials =
-                identityStore.getIdentityCredentials(
-                        CLIENT_SESSION_ID, pairwiseIdentifier.getValue());
+                identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
         assertTrue(identityCredentials.isPresent());
         assertNull(identityCredentials.get().getAdditionalClaims());
         assertNull(identityCredentials.get().getIpvVot());
@@ -147,10 +145,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                 CORE_IDENTITY_CLAIM);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
-        assertFalse(
-                identityStore
-                        .getIdentityCredentials(CLIENT_SESSION_ID, pairwiseIdentifier.getValue())
-                        .isPresent());
+        assertFalse(identityStore.getIdentityCredentials(CLIENT_SESSION_ID).isPresent());
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 Collections.singletonList(
