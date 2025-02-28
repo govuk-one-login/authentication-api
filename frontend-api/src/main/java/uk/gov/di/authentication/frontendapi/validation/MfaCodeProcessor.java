@@ -72,7 +72,7 @@ public abstract class MfaCodeProcessor {
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
                         emailAddress,
                         ipAddress,
                         phoneNumber,
@@ -89,15 +89,15 @@ public abstract class MfaCodeProcessor {
             MFAMethodType mfaMethodType, String ipAddress, String persistentSessionId) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
-                        userContext.getSession().getInternalCommonSubjectIdentifier());
+                        userContext.getAuthSession().getInternalCommonSubjectId());
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    userContext.getSession().getInternalCommonSubjectIdentifier());
+                    userContext.getAuthSession().getInternalCommonSubjectId());
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            userContext.getAuthSession().getInternalCommonSubjectId(),
                             emailAddress,
                             ipAddress,
                             AuditService.UNKNOWN,
