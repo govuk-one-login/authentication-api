@@ -127,10 +127,7 @@ class VerifyMfaCodeHandlerTest {
     private final String expectedRpPairwiseSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
-    private final Session session =
-            new Session()
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -326,7 +323,6 @@ class VerifyMfaCodeHandlerTest {
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         authSession.setCurrentCredentialStrength(credentialTrustLevel);
-        session.setInternalCommonSubjectIdentifier(null);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
         var result =
