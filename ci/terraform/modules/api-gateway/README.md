@@ -6,6 +6,7 @@ Although it can be used directly, it's best to use either [private-api-gateway](
 
 This module is intended to be used alongside multiple [endpoint-lambdas](../endpoint-lambda/), in order to build up an API gateway via a templated OpenAPI spec.
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -71,3 +72,4 @@ This module is intended to be used alongside multiple [endpoint-lambdas](../endp
 | <a name="output_aws_api_gateway"></a> [aws\_api\_gateway](#output\_aws\_api\_gateway) | n/a |
 | <a name="output_aws_api_gateway_stage"></a> [aws\_api\_gateway\_stage](#output\_aws\_api\_gateway\_stage) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->

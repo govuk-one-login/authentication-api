@@ -4,6 +4,7 @@ This module is a transition module, which provisions the same infrastructure as 
 
 When we fully switch over to using OpenAPI for all API Gateways, lambdas currently using this module should be switched over to just using [endpoint-lambda](../endpoint-lambda/), which provides all the same resources, except the piecemeal api-gateway endpoints.
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -94,3 +95,4 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | <a name="output_method_trigger_value"></a> [method\_trigger\_value](#output\_method\_trigger\_value) | n/a |
 | <a name="output_resource_id"></a> [resource\_id](#output\_resource\_id) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->

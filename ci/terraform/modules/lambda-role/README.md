@@ -4,6 +4,7 @@ This module provisions a role, and attaches multiple IAM policies to it.
 It is designed to be used to create the lambda role passed to a lambda via endpoint-module's
 [lambda_role_arn](../endpoint-module/README.md#input_lambda_role_arn) input.
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -54,3 +55,4 @@ It is designed to be used to create the lambda role passed to a lambda via endpo
 | <a name="output_arn"></a> [arn](#output\_arn) | n/a |
 | <a name="output_name"></a> [name](#output\_name) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->

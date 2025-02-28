@@ -7,6 +7,7 @@ such as via [endpoint-module-v2](../endpoint-module-v2/).
 
 Eventually, this module will be consumed by [endpoint-module](../endpoint-module/) which currently is a partial clone of this.
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -88,3 +89,4 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 | <a name="output_integration_uri"></a> [integration\_uri](#output\_integration\_uri) | n/a |
 | <a name="output_invoke_arn"></a> [invoke\_arn](#output\_invoke\_arn) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->
