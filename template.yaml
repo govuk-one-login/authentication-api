@@ -616,11 +616,11 @@ Resources:
           Value: ClientSessionTable
   #endregion
 
-  #region IdentityCredentials DynamoDB Table
-  IdentityCredentialsTableEncryptionKey:
+  #region OrchIdentityCredentials DynamoDB Table
+  OrchIdentityCredentialsTableEncryptionKey:
     Type: AWS::KMS::Key
     Properties:
-      Description: KMS encryption key for IdentityCredentials DynamoDB table
+      Description: KMS encryption key for OrchIdentityCredentials DynamoDB table
       EnableKeyRotation: true
       KeyPolicy:
         Version: 2012-10-17
@@ -646,10 +646,10 @@ Resources:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
 
-  IdentityCredentialsTable:
+  OrchIdentityCredentialsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Identity-Credentials
+      TableName: !Sub ${Environment}-Orch-Identity-Credentials
       AttributeDefinitions:
         - AttributeName: ClientSessionId
           AttributeType: S
@@ -659,7 +659,7 @@ Resources:
       BillingMode: PAY_PER_REQUEST
       SSESpecification:
         SSEEnabled: true
-        KMSMasterKeyId: !GetAtt IdentityCredentialsTableEncryptionKey.Arn
+        KMSMasterKeyId: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
         SSEType: KMS
       TimeToLiveSpecification:
         AttributeName: ttl
@@ -668,7 +668,7 @@ Resources:
         PointInTimeRecoveryEnabled: true
       Tags:
         - Key: Name
-          Value: IdentityCredentialsTable
+          Value: OrchIdentityCredentialsTable
   #endregion
 
   #region RP Public Key DynamoDB Table
