@@ -10,8 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
-import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.sharedtest.basetest.IntegrationTest;
 
@@ -79,8 +79,8 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                         CLIENT_ID);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
-        Optional<AuthIdentityCredentials> identityCredentials =
-                identityStore.getIdentityCredentials(pairwiseIdentifier.getValue());
+        Optional<OrchIdentityCredentials> identityCredentials =
+                identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
         assertTrue(identityCredentials.isPresent());
         assertThat(
                 identityCredentials.get().getIpvVot(),
@@ -111,8 +111,8 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                         CLIENT_ID);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
-        Optional<AuthIdentityCredentials> identityCredentials =
-                identityStore.getIdentityCredentials(pairwiseIdentifier.getValue());
+        Optional<OrchIdentityCredentials> identityCredentials =
+                identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
         assertTrue(identityCredentials.isPresent());
         assertNull(identityCredentials.get().getAdditionalClaims());
         assertNull(identityCredentials.get().getIpvVot());
@@ -145,8 +145,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                 CORE_IDENTITY_CLAIM);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
-        assertFalse(
-                identityStore.getIdentityCredentials(pairwiseIdentifier.getValue()).isPresent());
+        assertFalse(identityStore.getIdentityCredentials(CLIENT_SESSION_ID).isPresent());
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 Collections.singletonList(
