@@ -1,3 +1,4 @@
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -48,3 +49,4 @@
 | <a name="output_queue_arn"></a> [queue\_arn](#output\_queue\_arn) | n/a |
 | <a name="output_queue_url"></a> [queue\_url](#output\_queue\_url) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->

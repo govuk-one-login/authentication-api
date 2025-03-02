@@ -14,9 +14,11 @@ output:
   file: README.md
   mode: inject
   template: |-
+    <!-- prettier-ignore-start -->
     <!-- BEGIN_TF_DOCS -->
     {{ .Content }}
     <!-- END_TF_DOCS -->
+    <!-- prettier-ignore-end -->
 
 output-values:
   enabled: false
