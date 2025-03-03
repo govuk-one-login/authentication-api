@@ -248,14 +248,16 @@ public class TokenHandler
                     400, e.getErrorObject().toJSONObject().toJSONString());
         }
 
-        var codeChallengeString = authRequest.getCodeChallenge().toString();
-        var codeVerifier = new CodeVerifier(requestBody.get("code_verifier"));
-        var hashedVerifierString =
-                CodeChallenge.compute(CodeChallengeMethod.S256, codeVerifier).toString();
+        if (configurationService.isPkceEnabled()) {
+            var codeChallengeString = authRequest.getCodeChallenge().toString();
+            var codeVerifier = new CodeVerifier(requestBody.get("code_verifier"));
+            var hashedVerifierString =
+                    CodeChallenge.compute(CodeChallengeMethod.S256, codeVerifier).toString();
 
-        if (!hashedVerifierString.equals(codeChallengeString)) {
-            LOG.warn("PKCE verification failed as code_verifier did not match code_challenge");
-            return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
+            if (!hashedVerifierString.equals(codeChallengeString)) {
+                LOG.warn("PKCE verification failed as code_verifier did not match code_challenge");
+                return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
+            }
         }
 
         var tokenResponse =

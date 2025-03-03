@@ -180,6 +180,7 @@ public class TokenHandlerTest {
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         when(configurationService.getEnvironment()).thenReturn("test");
+        when(configurationService.isPkceEnabled()).thenReturn(true);
         when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();
         handler =
                 new TokenHandler(

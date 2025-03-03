@@ -55,6 +55,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
@@ -103,13 +104,33 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private final String CODE_CHALLENGE_STRING =
             createCodeChallengeFromCodeVerifier(CODE_VERIFIER_ENCODED_STRING);
 
+    protected static final ConfigurationService configuration =
+            new IntegrationTestConfigurationService(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public boolean isPkceEnabled() {
+                    return true;
+                }
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+            };
+
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
             new RpPublicKeyCacheExtension(180);
 
     @BeforeEach
     void setup() {
-        handler = new TokenHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new TokenHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
