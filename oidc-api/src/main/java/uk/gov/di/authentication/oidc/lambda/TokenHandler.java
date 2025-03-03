@@ -250,9 +250,17 @@ public class TokenHandler
 
         if (configurationService.isPkceEnabled()) {
             var codeChallengeString = authRequest.getCodeChallenge().toString();
-            var codeVerifier = new CodeVerifier(requestBody.get("code_verifier"));
+            var codeVerifierString = requestBody.get("code_verifier");
+
+            if (codeVerifierString.isBlank()) {
+                LOG.warn("PKCE verification failed as code_verifier does not exist");
+                return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
+            }
+
             var hashedVerifierString =
-                    CodeChallenge.compute(CodeChallengeMethod.S256, codeVerifier).toString();
+                    CodeChallenge.compute(
+                                    CodeChallengeMethod.S256, new CodeVerifier(codeVerifierString))
+                            .toString();
 
             if (!hashedVerifierString.equals(codeChallengeString)) {
                 LOG.warn("PKCE verification failed as code_verifier did not match code_challenge");

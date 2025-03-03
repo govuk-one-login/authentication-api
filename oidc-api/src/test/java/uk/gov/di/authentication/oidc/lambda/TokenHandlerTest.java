@@ -697,7 +697,12 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
-                        privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID, true);
+                        privateKeyJWT,
+                        authCode,
+                        "http://invalid-redirect-uri",
+                        CLIENT_ID,
+                        true,
+                        CODE_VERIFIER_ENCODED_STRING);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
@@ -741,6 +746,58 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+        assertThat(result, hasStatus(400));
+        assertThat(
+                result,
+                hasBody(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_GRANT_CODE,
+                                        "PKCE code verification failed")
+                                .toJSONObject()
+                                .toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
+    }
+
+    @Test
+    void shouldReturn400IfCodeVerificationDoesNotExist()
+            throws JOSEException, TokenAuthInvalidException {
+        KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        generateAuthRequestWithIncorrectCodeChallenge()
+                                                                .toParameters(),
+                                                        LocalDateTime.now(),
+                                                        List.of(mock(VectorOfTrust.class)),
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(
+                        privateKeyJWT, authCode, REDIRECT_URI, CLIENT_ID, true, null);
         assertThat(result, hasStatus(400));
         assertThat(
                 result,
@@ -1053,7 +1110,8 @@ public class TokenHandlerTest {
             String authorisationCode,
             String redirectUri,
             String clientId,
-            boolean clientIdInHeader) {
+            boolean clientIdInHeader,
+            String codeVerifier) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
@@ -1062,7 +1120,7 @@ public class TokenHandlerTest {
         }
         customParams.put("code", Collections.singletonList(authorisationCode));
         customParams.put("redirect_uri", Collections.singletonList(redirectUri));
-        customParams.put("code_verifier", Collections.singletonList(CODE_VERIFIER_ENCODED_STRING));
+        customParams.put("code_verifier", Collections.singletonList(codeVerifier));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
         String requestParams = URLUtils.serializeParameters(privateKeyParams);
@@ -1106,7 +1164,12 @@ public class TokenHandlerTest {
             String clientId,
             boolean clientIdInHeader) {
         return generateApiGatewayRequest(
-                privateKeyJWT, authorisationCode, REDIRECT_URI, clientId, clientIdInHeader);
+                privateKeyJWT,
+                authorisationCode,
+                REDIRECT_URI,
+                clientId,
+                clientIdInHeader,
+                CODE_VERIFIER_ENCODED_STRING);
     }
 
     private AuthenticationRequest generateAuthRequest() {
