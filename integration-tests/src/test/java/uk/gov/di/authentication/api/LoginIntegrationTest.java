@@ -116,7 +116,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.setPhoneNumberAndVerificationStatus(
                     email, "01234567890", mfaMethodVerified, mfaMethodVerified);
         } else {
-            userStore.updateMFAMethod(
+            userStore.addMFAAuthAppMethod(
                     email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
         }
 

@@ -123,7 +123,7 @@ class DynamoServiceIntegrationTest {
     void shouldUpdateEmailAndDeletePreviousItemsWithMfaMethods() {
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
-        dynamoService.updateMFAMethod(
+        userStore.addMFAAuthAppMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, false, true, TEST_MFA_APP_CREDENTIAL);
         UserProfile userProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
@@ -138,7 +138,7 @@ class DynamoServiceIntegrationTest {
     @Test
     void shouldAddAuthAppMFAMethod() {
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
-        dynamoService.updateMFAMethod(
+        userStore.addMFAAuthAppMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         UserCredentials updatedUserCredentials =
                 dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
@@ -200,7 +200,7 @@ class DynamoServiceIntegrationTest {
         void aDefaultPriorityMfaMethodShouldReplaceAnExistingMethodWithoutPriority() {
             // Add auth app mfa using existing method which does not contain the new fields,
             // resulting in a null priority field
-            dynamoService.updateMFAMethod(
+            userStore.addMFAAuthAppMethod(
                     TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
 
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
@@ -284,7 +284,7 @@ class DynamoServiceIntegrationTest {
     void
             shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
-        dynamoService.updateMFAMethod(
+        userStore.addMFAAuthAppMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                 TEST_EMAIL, "+4407316763843", true, true);
@@ -338,7 +338,7 @@ class DynamoServiceIntegrationTest {
     void shouldSetVerifiedPhoneNumberAndRemoveAuthAppWhenPresent() {
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.setAccountVerified(TEST_EMAIL);
-        dynamoService.updateMFAMethod(
+        userStore.addMFAAuthAppMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
 
         dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(TEST_EMAIL, "+447316763843");
@@ -355,7 +355,7 @@ class DynamoServiceIntegrationTest {
     void mfaMethodShouldNotContainNewFieldsWhenSetByOldMethod() {
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
-        dynamoService.updateMFAMethod(
+        userStore.addMFAAuthAppMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
 
         var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
@@ -406,7 +406,7 @@ class DynamoServiceIntegrationTest {
     @Test
     void shouldSetVerifiedAuthAppAndRemoveExistingAuthAppWhenPresent() {
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
-        dynamoService.updateMFAMethod(
+        userStore.addMFAAuthAppMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.setAccountVerified(TEST_EMAIL);
 

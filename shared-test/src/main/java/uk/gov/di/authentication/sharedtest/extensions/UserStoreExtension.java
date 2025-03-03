@@ -3,28 +3,40 @@ package uk.gov.di.authentication.sharedtest.extensions;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BillingMode;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.MfaData;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static software.amazon.awssdk.profiles.ProfileProperty.REGION;
 
 public class UserStoreExtension extends DynamoExtension implements AfterEachCallback {
 
@@ -196,21 +208,48 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
             boolean isVerified,
             boolean isEnabled,
             String credentialValue) {
-        dynamoService.updateMFAMethod(email, mfaMethodType, isVerified, isEnabled, credentialValue);
+        addMFAAuthAppMethod(email, mfaMethodType, isVerified, isEnabled, credentialValue);
     }
 
     public void addMfaMethodSupportingMultiple(String email, MfaData mfaData) {
         dynamoService.addMFAMethodSupportingMultiple(email, mfaData);
     }
 
-    public void updateMFAMethod(
+    public void addMFAAuthAppMethod(
             String email,
             MFAMethodType mfaMethodType,
             boolean methodVerified,
             boolean enabled,
             String credentialValue) {
-        dynamoService.updateMFAMethod(
-                email, mfaMethodType, methodVerified, enabled, credentialValue);
+
+        var mfaMethod = new HashMap<String, AttributeValue>();
+
+        mfaMethod.put("MfaMethodType", AttributeValue.fromS(MFAMethodType.AUTH_APP.getValue()));
+        mfaMethod.put("CredentialValue", AttributeValue.fromS(credentialValue));
+        mfaMethod.put("Enabled", AttributeValue.fromN(enabled ? "1" : "0"));
+        mfaMethod.put("MethodVerified", AttributeValue.fromN(methodVerified ? "1" : "0"));
+
+        var mfaMethods = new ArrayList<AttributeValue>();
+
+        mfaMethods.add(AttributeValue.builder().m(mfaMethod).build());
+
+        PutItemRequest request =
+                PutItemRequest.builder()
+                        .tableName("local-user-credentials")
+                        .item(
+                                Map.ofEntries(
+                                    Map.entry("MfaMethods", AttributeValue.fromL(mfaMethods)),
+                                    Map.entry("Email", AttributeValue.fromS(email)),
+                                    Map.entry("SubjectID", AttributeValue.fromS(PUBLIC_SUBJECT_ID_FIELD))))
+                        .build();
+
+        var dynamoDB = DynamoDbClient.builder()
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .region(Region.of(REGION))
+                .endpointOverride(URI.create(DYNAMO_ENDPOINT))
+                .build();
+
+        dynamoDB.putItem(request);
     }
 
     @Override

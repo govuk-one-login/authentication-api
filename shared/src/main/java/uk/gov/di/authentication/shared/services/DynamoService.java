@@ -427,31 +427,6 @@ public class DynamoService implements AuthenticationService {
                         .getPhoneNumber());
     }
 
-    //only used in test
-    @Override
-    public void updateMFAMethod(
-            String email,
-            MFAMethodType mfaMethodType,
-            boolean methodVerified,
-            boolean enabled,
-            String credentialValue) {
-        String dateTime = NowHelper.toTimestampString(NowHelper.now());
-        MFAMethod mfaMethod =
-                new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        credentialValue,
-                        methodVerified,
-                        enabled,
-                        dateTime);
-        dynamoUserCredentialsTable.updateItem(
-                dynamoUserCredentialsTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .setMfaMethod(mfaMethod));
-    }
-
     @Override
     public void addMFAMethodSupportingMultiple(String email, MfaData mfaData) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
