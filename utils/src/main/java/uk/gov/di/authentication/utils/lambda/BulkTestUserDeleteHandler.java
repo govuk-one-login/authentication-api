@@ -6,17 +6,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class BulkTestUserDeleteHandler implements RequestHandler<String, Void> {
     private static final Logger LOG = LogManager.getLogger(BulkTestUserDeleteHandler.class);
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
 
     public BulkTestUserDeleteHandler(ConfigurationService configurationService) {
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
     }
 
     public BulkTestUserDeleteHandler() {
@@ -28,7 +28,7 @@ public class BulkTestUserDeleteHandler implements RequestHandler<String, Void> {
         LOG.info("Commencing deletion of all test users");
 
         long startTime = System.nanoTime();
-        List<UserProfile> allTestUsers = dynamoService.getAllBulkTestUsers();
+        List<UserProfile> allTestUsers = dynamoAuthenticationService.getAllBulkTestUsers();
         long endTime = System.nanoTime();
         long durationInMilliseconds = (endTime - startTime) / 1000000;
         LOG.info("{} records found in {} ms", allTestUsers.size(), durationInMilliseconds);
@@ -52,7 +52,7 @@ public class BulkTestUserDeleteHandler implements RequestHandler<String, Void> {
 
     private void deleteTestUserBatch(List<String> batch) {
         try {
-            dynamoService.deleteBatchTestUsers(batch);
+            dynamoAuthenticationService.deleteBatchTestUsers(batch);
         } catch (Exception e) {
             LOG.error("User Profile or Credentials Dynamo Table exception thrown", e);
         }

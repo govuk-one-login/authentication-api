@@ -24,7 +24,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
@@ -65,7 +65,7 @@ public class RemoveAccountHandler
     }
 
     public RemoveAccountHandler(ConfigurationService configurationService) {
-        this.authenticationService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoAuthenticationService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

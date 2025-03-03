@@ -37,8 +37,8 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -91,14 +91,16 @@ class StartServiceTest {
                     false);
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoAuthenticationService dynamoAuthenticationService =
+            mock(DynamoAuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private StartService startService;
 
     @BeforeEach
     void setup() {
-        startService = new StartService(dynamoClientService, dynamoService, sessionService);
+        startService =
+                new StartService(dynamoClientService, dynamoAuthenticationService, sessionService);
     }
 
     @Test
@@ -129,9 +131,9 @@ class StartServiceTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.getValue(), false)));
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(mock(UserProfile.class)));
-        when(dynamoService.getUserCredentialsFromEmail(EMAIL))
+        when(dynamoAuthenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn((mock(UserCredentials.class)));
         var authRequest =
                 new AuthenticationRequest.Builder(
@@ -698,7 +700,7 @@ class StartServiceTest {
     }
 
     private void withUserProfile() {
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(
                         Optional.of(
                                 new UserProfile()
@@ -707,6 +709,7 @@ class StartServiceTest {
     }
 
     private void withNoUserProfile() {
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.empty());
     }
 }

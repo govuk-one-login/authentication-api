@@ -31,8 +31,8 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -62,7 +62,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class UpdateEmailHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoAuthenticationService dynamoAuthenticationService =
+            mock(DynamoAuthenticationService.class);
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
             mock(DynamoEmailCheckResultService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
@@ -105,7 +106,7 @@ class UpdateEmailHandlerTest {
     void setUp() {
         handler =
                 new UpdateEmailHandler(
-                        dynamoService,
+                        dynamoAuthenticationService,
                         dynamoEmailCheckResultService,
                         sqsClient,
                         codeStorageService,
@@ -113,13 +114,14 @@ class UpdateEmailHandlerTest {
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(configurationService.isEmailCheckEnabled()).thenReturn(true);
-        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(dynamoAuthenticationService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn(SALT);
     }
 
     @Test
     void shouldReturn204WhenPrincipalContainsInternalPairwiseSubjectId() throws Json.JsonException {
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
@@ -134,7 +136,7 @@ class UpdateEmailHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(dynamoService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
+        verify(dynamoAuthenticationService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
         verify(sqsClient)
                 .send(
                         objectMapper.writeValueAsString(
@@ -157,7 +159,7 @@ class UpdateEmailHandlerTest {
     @Test
     void shouldSubmitAuditEventWhenEmailCheckResultRecordDoesNotExist() {
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
@@ -196,11 +198,12 @@ class UpdateEmailHandlerTest {
                 new UserProfile()
                         .withPublicSubjectID(new Subject().getValue())
                         .withSubjectID(new Subject().getValue());
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SaltHelper.generateNewSalt());
+        when(dynamoAuthenticationService.getOrGenerateSalt(userProfile))
+                .thenReturn(SaltHelper.generateNewSalt());
         var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
 
         var expectedException =
@@ -217,12 +220,13 @@ class UpdateEmailHandlerTest {
     void shouldReturn400WhenReplacementEmailAlreadyExists() {
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
-        when(dynamoService.userExists(NEW_EMAIL_ADDRESS)).thenReturn(true);
+        when(dynamoAuthenticationService.userExists(NEW_EMAIL_ADDRESS)).thenReturn(true);
 
         var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
-        verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
+        verify(dynamoAuthenticationService, never())
+                .updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
         assertThat(result, hasStatus(400));
@@ -245,7 +249,7 @@ class UpdateEmailHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoService);
+        verifyNoInteractions(dynamoAuthenticationService);
     }
 
     @Test
@@ -258,7 +262,8 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
-        verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
+        verify(dynamoAuthenticationService, never())
+                .updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
     }
@@ -273,14 +278,15 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
-        verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
+        verify(dynamoAuthenticationService, never())
+                .updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
     }
 
     @Test
     void shouldReturn400IfUserAccountDoesNotExistForCurrentEmail() {
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
@@ -290,7 +296,8 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
-        verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
+        verify(dynamoAuthenticationService, never())
+                .updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
     }

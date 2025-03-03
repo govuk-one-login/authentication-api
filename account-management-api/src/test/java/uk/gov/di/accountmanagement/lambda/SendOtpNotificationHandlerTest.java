@@ -36,8 +36,8 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Date;
@@ -89,7 +89,8 @@ class SendOtpNotificationHandlerTest {
     private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoAuthenticationService dynamoAuthenticationService =
+            mock(DynamoAuthenticationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
@@ -119,7 +120,7 @@ class SendOtpNotificationHandlerTest {
                     pendingEmailCheckSqsClient,
                     codeGeneratorService,
                     codeStorageService,
-                    dynamoService,
+                    dynamoAuthenticationService,
                     dynamoEmailCheckResultService,
                     auditService,
                     clientService,
@@ -463,7 +464,7 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfNewPhoneNumberIsTheSameAsCurrentPhoneNumber() {
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(
                         Optional.of(
                                 new UserProfile()
@@ -534,7 +535,7 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
-        when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+        when(dynamoAuthenticationService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());

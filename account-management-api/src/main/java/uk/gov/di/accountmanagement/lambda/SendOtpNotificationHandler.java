@@ -35,9 +35,9 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -71,7 +71,7 @@ public class SendOtpNotificationHandler
     private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
@@ -85,7 +85,7 @@ public class SendOtpNotificationHandler
             AwsSqsClient pendingEmailCheckSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
             ClientService clientService,
@@ -95,7 +95,7 @@ public class SendOtpNotificationHandler
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
         this.clientService = clientService;
@@ -117,7 +117,7 @@ public class SendOtpNotificationHandler
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -200,7 +200,7 @@ public class SendOtpNotificationHandler
                     if (emailErrorResponse.isPresent()) {
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
-                    if (dynamoService.userExists(email)) {
+                    if (dynamoAuthenticationService.userExists(email)) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
                     if (configurationService.isEmailCheckEnabled()) {
@@ -247,7 +247,7 @@ public class SendOtpNotificationHandler
                 case VERIFY_PHONE_NUMBER:
                     LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
                     var existingPhoneNumber =
-                            dynamoService
+                            dynamoAuthenticationService
                                     .getUserProfileByEmailMaybe(email)
                                     .map(UserProfile::getPhoneNumber)
                                     .orElse(null);

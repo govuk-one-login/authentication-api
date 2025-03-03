@@ -10,7 +10,7 @@ import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -33,7 +33,8 @@ import static org.mockito.Mockito.when;
 class BulkTestUserCreateHandlerTest {
 
     private BulkTestUserCreateHandler handler;
-    private final DynamoService mockDynamoService = mock(DynamoService.class);
+    private final DynamoAuthenticationService mockDynamoAuthenticationService =
+            mock(DynamoAuthenticationService.class);
     private final S3Event mockS3Event = mock(S3Event.class);
     private final Context mockContext = mock(Context.class);
     private final S3Client mockS3Client = mock(S3Client.class);
@@ -62,7 +63,7 @@ class BulkTestUserCreateHandlerTest {
         when(mockS3Client.getObject(any(GetObjectRequest.class)))
                 .thenReturn(mockS3ObjectInputStream);
 
-        this.handler = new BulkTestUserCreateHandler(mockDynamoService, mockS3Client);
+        this.handler = new BulkTestUserCreateHandler(mockDynamoAuthenticationService, mockS3Client);
 
         when(mockS3Event.getRecords())
                 .thenReturn(List.of(mock(S3EventNotification.S3EventNotificationRecord.class)));
@@ -91,7 +92,7 @@ class BulkTestUserCreateHandlerTest {
 
         int numberOfBatchWritesExpected =
                 (int) (Math.ceil((double) mockInputAsArrayList.size() / LINES_PER_BATCH_WRITE));
-        verify(mockDynamoService, times(numberOfBatchWritesExpected))
+        verify(mockDynamoAuthenticationService, times(numberOfBatchWritesExpected))
                 .createBatchTestUsers(anyMap());
     }
 }

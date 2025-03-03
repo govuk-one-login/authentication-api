@@ -21,7 +21,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -40,7 +40,7 @@ import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
 public class StartService {
 
     private final ClientService clientService;
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
     private final SessionService sessionService;
     private static final String CLIENT_ID_PARAM = "client_id";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
@@ -50,10 +50,10 @@ public class StartService {
 
     public StartService(
             ClientService clientService,
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             SessionService sessionService) {
         this.clientService = clientService;
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.sessionService = sessionService;
     }
 
@@ -77,13 +77,13 @@ public class StartService {
             var clientRegistry = getClient(clientSession);
             Optional.of(session)
                     .map(Session::getEmailAddress)
-                    .flatMap(dynamoService::getUserProfileByEmailMaybe)
+                    .flatMap(dynamoAuthenticationService::getUserProfileByEmailMaybe)
                     .ifPresent(
                             t ->
                                     builder.withUserProfile(t)
                                             .withUserCredentials(
                                                     Optional.of(
-                                                            dynamoService
+                                                            dynamoAuthenticationService
                                                                     .getUserCredentialsFromEmail(
                                                                             session
                                                                                     .getEmailAddress()))));
@@ -222,7 +222,7 @@ public class StartService {
 
     public boolean isUserProfileEmpty(Session session) {
         return Optional.ofNullable(session.getEmailAddress())
-                .flatMap(dynamoService::getUserProfileByEmailMaybe)
+                .flatMap(dynamoAuthenticationService::getUserProfileByEmailMaybe)
                 .isEmpty();
     }
 

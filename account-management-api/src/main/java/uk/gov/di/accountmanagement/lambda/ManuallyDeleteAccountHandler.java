@@ -11,7 +11,7 @@ import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -28,7 +28,7 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
     }
 
     public ManuallyDeleteAccountHandler(ConfigurationService configurationService) {
-        this.authenticationService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoAuthenticationService(configurationService);
         var emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

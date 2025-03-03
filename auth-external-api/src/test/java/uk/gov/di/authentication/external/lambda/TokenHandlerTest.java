@@ -43,7 +43,8 @@ class TokenHandlerTest {
     private static final ClientSubjectHelper clientSubjectHelper = mock(ClientSubjectHelper.class);
     private static final TokenService tokenUtilityService = mock(TokenService.class);
     private static final AuditService auditService = mock(AuditService.class);
-    private static final DynamoService dynamoService = mock(DynamoService.class);
+    private static final DynamoAuthenticationService DYNAMO_AUTHENTICATION_SERVICE =
+            mock(DynamoAuthenticationService.class);
     private static final BearerAccessToken SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN =
             new BearerAccessToken();
     private static final AccessTokenResponse SUCCESS_TOKEN_RESPONSE =
@@ -100,7 +101,8 @@ class TokenHandlerTest {
                 .thenReturn(SUCCESS_TOKEN_RESPONSE);
         when(tokenUtilityService.generateTokenErrorResponse(any())).thenCallRealMethod();
 
-        when(dynamoService.getUserProfileFromSubject(any())).thenReturn(USER_PROFILE);
+        when(DYNAMO_AUTHENTICATION_SERVICE.getUserProfileFromSubject(any()))
+                .thenReturn(USER_PROFILE);
     }
 
     @BeforeEach
@@ -125,7 +127,7 @@ class TokenHandlerTest {
                         tokenUtilityService,
                         tokenRequestValidator,
                         auditService,
-                        dynamoService);
+                        DYNAMO_AUTHENTICATION_SERVICE);
     }
 
     @Test

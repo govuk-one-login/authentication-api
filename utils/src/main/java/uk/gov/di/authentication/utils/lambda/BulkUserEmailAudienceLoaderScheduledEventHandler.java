@@ -11,7 +11,7 @@ import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.exceptions.LambdaInvokerServiceException;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
@@ -32,7 +32,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     private final BulkEmailUsersService bulkEmailUsersService;
 
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
 
     private final ConfigurationService configurationService;
 
@@ -45,11 +45,11 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
             BulkEmailUsersService bulkEmailUsersService,
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             ConfigurationService configurationService,
             LambdaInvokerService lambdaInvokerService) {
         this.bulkEmailUsersService = bulkEmailUsersService;
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.configurationService = configurationService;
         this.lambdaInvokerService = lambdaInvokerService;
     }
@@ -58,7 +58,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
             ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
         this.lambdaInvokerService = new LambdaInvokerService(configurationService);
     }
 
@@ -108,7 +108,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
 
-        dynamoService
+        dynamoAuthenticationService
                 .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         exclusiveStartKey, includedTermsAndConditions)
                 .takeWhile(userProfile -> (currentBatchSize > itemCounter.get()))

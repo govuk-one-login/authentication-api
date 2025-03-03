@@ -29,7 +29,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
@@ -49,7 +49,7 @@ public class UpdatePasswordHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final Json objectMapper = SerializationService.getInstance();
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
     private final ConfigurationService configurationService;
@@ -63,13 +63,13 @@ public class UpdatePasswordHandler
     }
 
     public UpdatePasswordHandler(
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             AwsSqsClient sqsClient,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
             ConfigurationService configurationService) {
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
@@ -78,7 +78,8 @@ public class UpdatePasswordHandler
     }
 
     public UpdatePasswordHandler(ConfigurationService configurationService) {
-        this.dynamoService = new DynamoService(ConfigurationService.getInstance());
+        this.dynamoAuthenticationService =
+                new DynamoAuthenticationService(ConfigurationService.getInstance());
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -122,7 +123,7 @@ public class UpdatePasswordHandler
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
             }
             var userProfile =
-                    dynamoService
+                    dynamoAuthenticationService
                             .getUserProfileByEmailMaybe(updatePasswordRequest.getEmail())
                             .orElseThrow(
                                     () ->
@@ -134,13 +135,13 @@ public class UpdatePasswordHandler
             if (PrincipalValidationHelper.principleIsInvalid(
                     userProfile,
                     configurationService.getInternalSectorUri(),
-                    dynamoService,
+                    dynamoAuthenticationService,
                     authorizerParams)) {
                 throw new InvalidPrincipalException("Invalid Principal in request");
             }
 
             String currentPassword =
-                    dynamoService
+                    dynamoAuthenticationService
                             .getUserCredentialsFromEmail(updatePasswordRequest.getEmail())
                             .getPassword();
 
@@ -149,7 +150,7 @@ public class UpdatePasswordHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
             }
 
-            dynamoService.updatePassword(
+            dynamoAuthenticationService.updatePassword(
                     updatePasswordRequest.getEmail(), updatePasswordRequest.getNewPassword());
 
             LOG.info(
@@ -167,7 +168,7 @@ public class UpdatePasswordHandler
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
                             configurationService.getInternalSectorUri(),
-                            dynamoService);
+                            dynamoAuthenticationService);
 
             var auditContext =
                     new AuditContext(

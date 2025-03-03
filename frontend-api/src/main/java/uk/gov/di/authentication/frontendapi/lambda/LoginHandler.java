@@ -40,7 +40,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -120,7 +120,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.codeStorageService = new CodeStorageService(configurationService);
         this.userMigrationService =
                 new UserMigrationService(
-                        new DynamoService(configurationService), configurationService);
+                        new DynamoAuthenticationService(configurationService),
+                        configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
@@ -133,7 +134,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.userMigrationService =
                 new UserMigrationService(
-                        new DynamoService(configurationService), configurationService);
+                        new DynamoAuthenticationService(configurationService),
+                        configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
