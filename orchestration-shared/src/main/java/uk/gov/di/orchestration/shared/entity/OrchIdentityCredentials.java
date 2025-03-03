@@ -62,7 +62,7 @@ public class OrchIdentityCredentials {
         return this;
     }
 
-    @DynamoDbAttribute("TimeToExist")
+    @DynamoDbAttribute("ttl")
     public long getTimeToExist() {
         return timeToExist;
     }
