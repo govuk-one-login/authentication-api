@@ -398,6 +398,7 @@ class PhoneNumberCodeProcessorTest {
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
         when(authSession.getSessionId()).thenReturn(SESSION_ID);
+        when(authSession.getInternalCommonSubjectId()).thenReturn(INTERNAL_SUB_ID);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
