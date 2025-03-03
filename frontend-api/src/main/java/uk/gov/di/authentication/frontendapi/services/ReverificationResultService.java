@@ -6,7 +6,10 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.*;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
+import com.nimbusds.oauth2.sdk.TokenRequest;
+import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
@@ -19,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -51,6 +55,7 @@ public class ReverificationResultService {
         this.kmsConnectionService = new KmsConnectionService(configurationService);
     }
 
+    @Instrumented
     public TokenResponse getToken(String authCode) {
         var tokenRequest = constructTokenRequest(authCode);
         return sendTokenRequest(tokenRequest);

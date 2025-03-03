@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.util.Date;
@@ -58,6 +59,7 @@ public class TokenValidationService {
         return false;
     }
 
+    @Instrumented
     public boolean isTokenSignatureValid(String tokenValue) {
         try {
             var jwt = SignedJWT.parse(tokenValue);

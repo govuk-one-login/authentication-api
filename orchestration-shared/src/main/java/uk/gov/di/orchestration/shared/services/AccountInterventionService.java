@@ -3,12 +3,14 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService.MetadataPair;
+import uk.gov.di.orchestration.shared.tracing.TracingHttpClient;
 
 import java.io.IOException;
 import java.net.URI;
@@ -39,7 +41,7 @@ public class AccountInterventionService {
     public AccountInterventionService(ConfigurationService configService) {
         this(
                 configService,
-                HttpClient.newHttpClient(),
+                TracingHttpClient.newHttpClient(),
                 new CloudwatchMetricsService(),
                 new AuditService(configService));
     }
@@ -48,7 +50,11 @@ public class AccountInterventionService {
             ConfigurationService configService,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
-        this(configService, HttpClient.newHttpClient(), cloudwatchMetricsService, auditService);
+        this(
+                configService,
+                TracingHttpClient.newHttpClient(),
+                cloudwatchMetricsService,
+                auditService);
     }
 
     public AccountInterventionService(
@@ -74,6 +80,7 @@ public class AccountInterventionService {
         return getAccountIntervention(internalPairwiseSubjectId, 0L, null);
     }
 
+    @Instrumented
     public AccountIntervention getAccountIntervention(
             String internalPairwiseSubjectId, AuditContext auditContext)
             throws AccountInterventionException {

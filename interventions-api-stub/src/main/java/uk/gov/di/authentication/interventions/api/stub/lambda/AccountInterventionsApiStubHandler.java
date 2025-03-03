@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.interventions.api.stub.entity.AccountInterventionsStore;
 import uk.gov.di.authentication.interventions.api.stub.entity.InterventionsApiStubResponse;
 import uk.gov.di.authentication.interventions.api.stub.services.AccountInterventionsDbService;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -36,6 +37,7 @@ public class AccountInterventionsApiStubHandler
     }
 
     @Override
+    @Instrumented
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         String internalPairwiseId = input.getPathParameters().get(PATH_PARAM_NAME_IN_API_GW);
@@ -51,7 +53,7 @@ public class AccountInterventionsApiStubHandler
             } else {
                 LOG.info("No matching account found. Default response sent instead.");
                 AccountInterventionsStore noAccountInterventionStore =
-                        new AccountInterventionsStore();
+                        AccountInterventionsDbService.newStore();
                 noAccountInterventionStore
                         .withBlocked(false)
                         .withSuspended(false)

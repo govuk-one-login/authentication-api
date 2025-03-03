@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
-import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -139,9 +138,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             return generateApiGatewayProxyErrorResponse(400, ERROR_1061);
         }
 
-        var tokenResponse =
-                InstrumentationHelper.segmentedFunctionCall(
-                        "getIpvToken", () -> reverificationResultService.getToken(request.code()));
+        var tokenResponse = reverificationResultService.getToken(request.code());
 
         if (!tokenResponse.indicatesSuccess()) {
             LOG.error(

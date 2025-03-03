@@ -25,6 +25,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -63,6 +64,7 @@ public class IPVTokenService {
         this.jwksService = jwksService;
     }
 
+    @Instrumented
     public TokenResponse getToken(String authCode) {
         var tokenRequest = constructTokenRequest(authCode);
         return sendTokenRequest(tokenRequest);

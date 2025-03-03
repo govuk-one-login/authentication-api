@@ -8,6 +8,8 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
+import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.LocalDateTimeAdapter;
 import uk.gov.di.authentication.shared.serialization.StateAdapter;
@@ -18,7 +20,6 @@ import uk.gov.di.authentication.shared.validation.Validator;
 import java.time.LocalDateTime;
 
 import static java.util.Objects.isNull;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class SerializationService implements Json {
 
@@ -29,7 +30,6 @@ public class SerializationService implements Json {
     private final Gson gsonWithCamelCase;
     private final Gson gsonWithUnderscoresNoNulls;
 
-    private static final String SEGMENT_NAME = "SerializationService::GSON::toJson";
     private final RequiredFieldValidator defaultValidator = new RequiredFieldValidator();
 
     public SerializationService() {
@@ -70,13 +70,11 @@ public class SerializationService implements Json {
         return deserializeJson(jsonString, clazz, validator, gson);
     }
 
+    @Instrumented("SerializationService::GSON::fromJson")
     private <T> T deserializeJson(String jsonString, Class<T> clazz, Validator validator, Gson gson)
             throws JsonException {
         try {
-            T value =
-                    segmentedFunctionCall(
-                            "SerializationService::GSON::fromJson",
-                            () -> gson.fromJson(jsonString, clazz));
+            T value = gson.fromJson(jsonString, clazz);
             validateJson(value, validator);
             return value;
         } catch (JsonSyntaxException | IllegalArgumentException e) {
@@ -85,11 +83,9 @@ public class SerializationService implements Json {
         }
     }
 
+    @Instrumented("SerializationService::validator::validate")
     private <T> void validateJson(T value, Validator validator) throws JsonException {
-        var violations =
-                segmentedFunctionCall(
-                        "SerializationService::validator::validate",
-                        () -> validator.validate(value));
+        var violations = validator.validate(value);
         if (!violations.isEmpty()) {
             String violationMessage =
                     "JSON validation error, missing required field(s): "
@@ -101,17 +97,23 @@ public class SerializationService implements Json {
     }
 
     @Override
+    @Instrumented("SerializationService::GSON::toJson")
     public String writeValueAsString(Object object) {
-        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithUnderscores.toJson(object));
+        InstrumentationHelper.addAnnotation("serialization_method", "writeValueAsString");
+        return gsonWithUnderscores.toJson(object);
     }
 
     @Override
+    @Instrumented("SerializationService::GSON::toJson")
     public String writeValueAsStringCamelCase(Object object) {
-        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithCamelCase.toJson(object));
+        InstrumentationHelper.addAnnotation("serialization_method", "writeValueAsStringCamelCase");
+        return gsonWithCamelCase.toJson(object);
     }
 
+    @Instrumented("SerializationService::GSON::toJson")
     public String writeValueAsStringNoNulls(Object object) {
-        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithUnderscoresNoNulls.toJson(object));
+        InstrumentationHelper.addAnnotation("serialization_method", "writeValueAsStringNoNulls");
+        return gsonWithUnderscoresNoNulls.toJson(object);
     }
 
     public static SerializationService getInstance() {

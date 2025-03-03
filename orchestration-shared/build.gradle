@@ -1,6 +1,7 @@
 plugins {
     id "java-library"
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di"
@@ -22,11 +23,17 @@ dependencies {
             configurations.s3,
             configurations.sqs,
             configurations.ssm,
-            configurations.xray,
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache,
             "org.apache.httpcomponents.core5:httpcore5:5.3.3"
+
+    implementation configurations.aspectjrt
+    compileOnly configurations.aspectjweaver
+
+    implementation configurations.otel,
+            configurations.otel_aws_instrumentation,
+            configurations.otel_http_client
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
@@ -36,7 +43,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
 }
 
 java {

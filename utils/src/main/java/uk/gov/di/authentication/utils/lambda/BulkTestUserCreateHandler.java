@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -20,6 +21,7 @@ import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -32,7 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> {
     private static final Logger LOG = LogManager.getLogger(BulkTestUserCreateHandler.class);
@@ -54,10 +56,19 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
         this.latestTermsAndConditions = configurationService.getTermsAndConditionsVersion();
     }
 
+    private static S3Client buildS3Client() {
+        return S3Client.builder()
+                .overrideConfiguration(
+                        ClientOverrideConfiguration.builder()
+                                .addExecutionInterceptor(
+                                        new ConditionalOtelTracingExecutionInterceptor())
+                                .build())
+                .region((Region.EU_WEST_2))
+                .build();
+    }
+
     public BulkTestUserCreateHandler() {
-        this(
-                ConfigurationService.getInstance(),
-                S3Client.builder().region((Region.EU_WEST_2)).build());
+        this(ConfigurationService.getInstance(), buildS3Client());
     }
 
     @Override
@@ -71,7 +82,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
         ResponseInputStream<GetObjectResponse> fileContent = client.getObject(getObjectRequest);
 
-        segmentedFunctionCall(
+        instrumentedFunctionCall(
                 "lineReader",
                 () -> {
                     List<String> batch = new ArrayList<>();
@@ -87,7 +98,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
                             if (batch.size() % 500 == 0 && !batch.isEmpty()) {
                                 final List<String> finalBatch = batch;
-                                segmentedFunctionCall(
+                                instrumentedFunctionCall(
                                         "dbWriteFullBatch", () -> addTestUsersBatch(finalBatch));
                                 batch = new ArrayList<>();
                             }
@@ -98,7 +109,8 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
                     final List<String> finalBatch = batch;
 
-                    segmentedFunctionCall("dbWriteFinalBatch", () -> addTestUsersBatch(finalBatch));
+                    instrumentedFunctionCall(
+                            "dbWriteFinalBatch", () -> addTestUsersBatch(finalBatch));
                 });
 
         return null;
@@ -108,7 +120,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
         String dateTime = LocalDateTime.now().toString();
         Map<UserProfile, UserCredentials> testUsers = new HashMap<>();
 
-        segmentedFunctionCall(
+        instrumentedFunctionCall(
                 "parseTestUsersCsv",
                 () ->
                         batchOfIndividualUsersAsRawCsv.forEach(
@@ -128,7 +140,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
                                 }));
 
         try {
-            segmentedFunctionCall(
+            instrumentedFunctionCall(
                     "dynamoCreateBatchTestUsers",
                     () -> dynamoService.createBatchTestUsers(testUsers));
         } catch (Exception e) {

@@ -22,18 +22,18 @@ dependencies {
             configurations.lambda,
             configurations.pact_provider
 
-    implementation project(":shared"), noXray
-    implementation project(":orchestration-shared"), noXray
-    implementation project(":shared-test"), noXray
-    implementation project(":orchestration-shared-test"), noXray
-    implementation project(":oidc-api"), noXray
-    implementation project(":frontend-api"), noXray
-    implementation project(":auth-external-api"), noXray
-    implementation project(":client-registry-api"), noXray
-    implementation project(":ipv-api"), noXray
-    implementation project(":interventions-api-stub"), noXray
-    implementation project(":doc-checking-app-api"), noXray
-    implementation project(":utils"), noXray
+    implementation project(":shared")
+    implementation project(":orchestration-shared")
+    implementation project(":shared-test")
+    implementation project(":orchestration-shared-test")
+    implementation project(":oidc-api")
+    implementation project(":frontend-api")
+    implementation project(":auth-external-api")
+    implementation project(":client-registry-api")
+    implementation project(":ipv-api")
+    implementation project(":interventions-api-stub")
+    implementation project(":doc-checking-app-api")
+    implementation project(":utils")
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
     testImplementation("uk.org.webcompere:system-stubs-jupiter:2.1.7")
@@ -65,7 +65,6 @@ test {
     environment "TERMS_CONDITIONS_VERSION", "1.0"
     environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "IDENTITY_ENABLED", "false"
-    environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
     environment "BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "1.0,1.1,1.2,1.3,1.4"
     environment "SEND_STORAGE_TOKEN_TO_IPV_ENABLED", "true"
@@ -107,7 +106,6 @@ task pactProviderTests (type: Test, group: "verification") {
     environment "AWS_REGION", "eu-west-2"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "REDIS_KEY", "session"
-    environment "TRACING_ENABLED", "false"
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "ENVIRONMENT", "local"
