@@ -37,6 +37,7 @@ public class LogoutService {
     private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final BackChannelLogoutService backChannelLogoutService;
@@ -52,6 +53,7 @@ public class LogoutService {
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
                 new ClientSessionService(configurationService),
+                new OrchClientSessionService(configurationService),
                 new AuditService(configurationService),
                 new CloudwatchMetricsService(),
                 new BackChannelLogoutService(configurationService),
@@ -66,6 +68,7 @@ public class LogoutService {
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
                 new ClientSessionService(configurationService, redis),
+                new OrchClientSessionService(configurationService),
                 new AuditService(configurationService),
                 new CloudwatchMetricsService(),
                 new BackChannelLogoutService(configurationService),
@@ -79,6 +82,7 @@ public class LogoutService {
             OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             BackChannelLogoutService backChannelLogoutService,
@@ -89,6 +93,7 @@ public class LogoutService {
         this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.backChannelLogoutService = backChannelLogoutService;
@@ -127,6 +132,8 @@ public class LogoutService {
                                             configurationService.getInternalSectorURI()));
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);
+            LOG.info("Deleting Orch Client session");
+            orchClientSessionService.deleteStoredClientSession(clientSessionId);
         }
         LOG.info("Deleting Session");
         sessionService.deleteStoredSession(request.getSessionId());
