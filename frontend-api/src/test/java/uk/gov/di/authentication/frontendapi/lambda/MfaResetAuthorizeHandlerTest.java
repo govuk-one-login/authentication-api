@@ -124,7 +124,6 @@ class MfaResetAuthorizeHandlerTest {
         when(clientRegistry.getSectorIdentifierUri()).thenReturn("htttps://gov.uk");
 
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
-        when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_COMMON_SUBJECT_ID);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
