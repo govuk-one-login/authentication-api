@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -429,8 +428,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        Session session = redis.getSession(sessionId);
-        assertThat(session.getInternalCommonSubjectIdentifier(), notNullValue());
+        var authSession = authSessionExtension.getSession(sessionId).orElseThrow();
+        assertThat(authSession.getInternalCommonSubjectId(), notNullValue());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
