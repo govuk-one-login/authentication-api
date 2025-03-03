@@ -20,7 +20,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -60,7 +60,8 @@ class NotifyCallbackHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoAuthenticationService dynamoAuthenticationService =
+            mock(DynamoAuthenticationService.class);
 
     private final BulkEmailUsersService bulkEmailUsersService = mock(BulkEmailUsersService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -82,7 +83,7 @@ class NotifyCallbackHandlerTest {
                 new NotifyCallbackHandler(
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService,
+                        dynamoAuthenticationService,
                         bulkEmailUsersService);
     }
 
@@ -229,17 +230,18 @@ class NotifyCallbackHandlerTest {
                 new NotifyCallbackHandler(
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService,
+                        dynamoAuthenticationService,
                         bulkEmailUsersService);
         var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         String subjectId = "subject-id-1";
         UserProfile userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(subjectId);
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        verify(dynamoService).getUserProfileByEmailMaybe(EMAIL);
+        verify(dynamoAuthenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         verify(bulkEmailUsersService).updateDeliveryReceiptStatus(subjectId, "delivered");
         assertThat(logging.events(), haveJourneyId(reference));
@@ -254,14 +256,14 @@ class NotifyCallbackHandlerTest {
                 new NotifyCallbackHandler(
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService,
+                        dynamoAuthenticationService,
                         bulkEmailUsersService);
         var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
+        verify(dynamoAuthenticationService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
         assertThat(logging.events(), haveJourneyId(reference));
@@ -276,7 +278,7 @@ class NotifyCallbackHandlerTest {
                 createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
+        verify(dynamoAuthenticationService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
         assertThat(logging.events(), haveJourneyId(reference));
@@ -291,14 +293,14 @@ class NotifyCallbackHandlerTest {
                 new NotifyCallbackHandler(
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService,
+                        dynamoAuthenticationService,
                         bulkEmailUsersService);
         var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
+        verify(dynamoAuthenticationService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
         assertThat(logging.events(), haveJourneyId(reference));

@@ -21,8 +21,8 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -105,7 +105,7 @@ public abstract class BaseFrontendHandler<T>
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
-        this.authenticationService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoAuthenticationService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
     }
 
@@ -118,7 +118,7 @@ public abstract class BaseFrontendHandler<T>
         this.sessionService = new SessionService(configurationService, redis);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
-        this.authenticationService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoAuthenticationService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
     }
 

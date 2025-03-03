@@ -12,7 +12,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -42,7 +42,7 @@ public class DeleteSyntheticsUserHandler
     }
 
     public DeleteSyntheticsUserHandler(ConfigurationService configurationService) {
-        this.authenticationService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoAuthenticationService(configurationService);
         this.configurationService = configurationService;
         this.auditService = new AuditService(configurationService);
     }

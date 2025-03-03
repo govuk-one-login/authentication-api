@@ -25,7 +25,7 @@ import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 
 import java.net.URI;
@@ -49,7 +49,7 @@ public class TokenHandler
     private final TokenService tokenUtilityService;
     private final TokenRequestValidator tokenRequestValidator;
     private final AuditService auditService;
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
 
     public TokenHandler(
             ConfigurationService configurationService,
@@ -58,14 +58,14 @@ public class TokenHandler
             TokenService tokenUtilityService,
             TokenRequestValidator tokenRequestValidator,
             AuditService auditService,
-            DynamoService dynamoService) {
+            DynamoAuthenticationService dynamoAuthenticationService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.accessTokenStoreService = accessTokenService;
         this.tokenUtilityService = tokenUtilityService;
         this.tokenRequestValidator = tokenRequestValidator;
         this.auditService = auditService;
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
     }
 
     public TokenHandler() {
@@ -85,7 +85,7 @@ public class TokenHandler
         this.tokenRequestValidator =
                 new TokenRequestValidator(orchestratorCallbackRedirectUri, orchestratorClientId);
         this.auditService = new AuditService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
     }
 
     @Override
@@ -174,7 +174,8 @@ public class TokenHandler
             authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
 
             String subjectID = authCodeStore.getSubjectID();
-            UserProfile userProfile = dynamoService.getUserProfileFromSubject(subjectID);
+            UserProfile userProfile =
+                    dynamoAuthenticationService.getUserProfileFromSubject(subjectID);
             String internalPairwiseId =
                     userProfile.getSalt() == null
                             ? AuditService.UNKNOWN

@@ -7,7 +7,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
@@ -31,7 +31,8 @@ class DynamoDeleteServiceIntegrationTest {
 
     DynamoDeleteService dynamoDeleteService =
             new DynamoDeleteService(ConfigurationService.getInstance());
-    DynamoService dynamoService = new DynamoService(ConfigurationService.getInstance());
+    DynamoAuthenticationService dynamoAuthenticationService =
+            new DynamoAuthenticationService(ConfigurationService.getInstance());
     DynamoAccountModifiersService dynamoAccountModifiersService =
             new DynamoAccountModifiersService(ConfigurationService.getInstance());
 
@@ -46,8 +47,8 @@ class DynamoDeleteServiceIntegrationTest {
 
         dynamoDeleteService.deleteAccount(TEST_EMAIL, internalCommonSubjectId);
 
-        var userProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var userProfile = dynamoAuthenticationService.getUserProfileByEmail(TEST_EMAIL);
+        var userCredentials = dynamoAuthenticationService.getUserCredentialsFromEmail(TEST_EMAIL);
         var accountModifiers =
                 dynamoAccountModifiersService.getAccountModifiers(internalCommonSubjectId);
         assertThat(Objects.isNull(userProfile), equalTo(true));
@@ -61,8 +62,8 @@ class DynamoDeleteServiceIntegrationTest {
 
         dynamoDeleteService.deleteAccount(TEST_EMAIL, internalCommonSubjectId);
 
-        var userProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var userProfile = dynamoAuthenticationService.getUserProfileByEmail(TEST_EMAIL);
+        var userCredentials = dynamoAuthenticationService.getUserCredentialsFromEmail(TEST_EMAIL);
         var accountModifiers =
                 dynamoAccountModifiersService.getAccountModifiers(internalCommonSubjectId);
         assertThat(Objects.isNull(userProfile), equalTo(true));

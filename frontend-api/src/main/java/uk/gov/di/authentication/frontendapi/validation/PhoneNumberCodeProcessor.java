@@ -157,7 +157,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 case REGISTRATION -> dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                         emailAddress, phoneNumber, true, true);
                 case ACCOUNT_RECOVERY -> dynamoService
-                        .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(emailAddress, phoneNumber);
+                        .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                                emailAddress, phoneNumber, true);
             }
 
             submitAuditEvent(

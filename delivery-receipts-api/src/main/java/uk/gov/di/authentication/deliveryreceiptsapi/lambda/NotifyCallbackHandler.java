@@ -16,7 +16,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 
@@ -38,7 +38,7 @@ public class NotifyCallbackHandler
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String JOURNEY_ID = "journeyId";
     private final ConfigurationService configurationService;
-    private DynamoService dynamoService = null;
+    private DynamoAuthenticationService dynamoAuthenticationService = null;
 
     private BulkEmailUsersService bulkEmailUsersService = null;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -49,12 +49,12 @@ public class NotifyCallbackHandler
     public NotifyCallbackHandler(
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             BulkEmailUsersService bulkEmailUsersService) {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         if (configurationService.isBulkUserEmailEnabled()) {
-            this.dynamoService = dynamoService;
+            this.dynamoAuthenticationService = dynamoAuthenticationService;
             this.bulkEmailUsersService = bulkEmailUsersService;
         }
     }
@@ -63,7 +63,8 @@ public class NotifyCallbackHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
         if (configurationService.isBulkUserEmailEnabled()) {
-            this.dynamoService = new DynamoService(configurationService);
+            this.dynamoAuthenticationService =
+                    new DynamoAuthenticationService(configurationService);
             this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
         }
     }
@@ -115,7 +116,8 @@ public class NotifyCallbackHandler
                                 TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
                     LOG.info("Updating bulk email table for delivery receipt");
                     var maybeProfile =
-                            dynamoService.getUserProfileByEmailMaybe(deliveryReceipt.to());
+                            dynamoAuthenticationService.getUserProfileByEmailMaybe(
+                                    deliveryReceipt.to());
                     if (maybeProfile.isPresent()) {
                         bulkEmailUsersService.updateDeliveryReceiptStatus(
                                 maybeProfile.get().getSubjectID(), deliveryReceipt.status());

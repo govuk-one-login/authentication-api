@@ -36,7 +36,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -101,7 +101,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
     public ResetPasswordHandler(ConfigurationService configurationService) {
         super(ResetPasswordCompletionRequest.class, configurationService);
-        this.authenticationService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoAuthenticationService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -118,7 +118,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     public ResetPasswordHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         super(ResetPasswordCompletionRequest.class, configurationService, redis);
-        this.authenticationService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoAuthenticationService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

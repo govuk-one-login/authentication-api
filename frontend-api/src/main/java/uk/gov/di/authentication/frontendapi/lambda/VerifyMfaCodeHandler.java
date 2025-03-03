@@ -41,7 +41,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -119,7 +119,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 new MfaCodeProcessorFactory(
                         configurationService,
                         codeStorageService,
-                        new DynamoService(configurationService),
+                        new DynamoAuthenticationService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
@@ -136,7 +136,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 new MfaCodeProcessorFactory(
                         configurationService,
                         codeStorageService,
-                        new DynamoService(configurationService),
+                        new DynamoAuthenticationService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
