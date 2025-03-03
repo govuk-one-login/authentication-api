@@ -369,7 +369,8 @@ public class DynamoAuthenticationService implements AuthenticationService {
     }
 
     @Override
-    public void setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(String email, String phoneNumber) {
+    public void setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+            String email, String phoneNumber, boolean accountVerified) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         var userProfile =
@@ -380,7 +381,8 @@ public class DynamoAuthenticationService implements AuthenticationService {
                                         .build())
                         .withPhoneNumber(formattedPhoneNumber)
                         .withPhoneNumberVerified(true)
-                        .withUpdated(dateTime);
+                        .withUpdated(dateTime)
+                        .withAccountVerified(accountVerified ? 1 : 0);
 
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(

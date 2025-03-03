@@ -366,7 +366,7 @@ class DynamoAuthenticationServiceIntegrationTest {
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
 
         dynamoAuthenticationService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
-                TEST_EMAIL, "+447316763843");
+                TEST_EMAIL, "+447316763843", true);
 
         var updatedUserCredentials =
                 dynamoAuthenticationService.getUserCredentialsFromEmail(TEST_EMAIL);
@@ -400,7 +400,7 @@ class DynamoAuthenticationServiceIntegrationTest {
                 TEST_EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
 
         dynamoAuthenticationService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
-                TEST_EMAIL, PHONE_NUMBER);
+                TEST_EMAIL, PHONE_NUMBER, true);
 
         var updatedUserCredentials =
                 dynamoAuthenticationService.getUserCredentialsFromEmail(TEST_EMAIL);

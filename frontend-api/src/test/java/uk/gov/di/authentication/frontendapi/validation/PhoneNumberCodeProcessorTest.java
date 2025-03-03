@@ -271,7 +271,8 @@ class PhoneNumberCodeProcessorTest {
                         true,
                         true);
         verify(authenticationService, never())
-                .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(anyString(), anyString());
+                .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                        anyString(), anyString(), anyBoolean());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
@@ -294,7 +295,7 @@ class PhoneNumberCodeProcessorTest {
 
         verify(authenticationService)
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
-                        CommonTestVariables.EMAIL, CommonTestVariables.UK_MOBILE_NUMBER);
+                        CommonTestVariables.EMAIL, CommonTestVariables.UK_MOBILE_NUMBER, true);
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(
                         anyString(), anyString(), anyBoolean(), anyBoolean());
