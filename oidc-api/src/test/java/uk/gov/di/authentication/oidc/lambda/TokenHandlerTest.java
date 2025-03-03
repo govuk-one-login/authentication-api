@@ -26,6 +26,9 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
+import com.nimbusds.oauth2.sdk.pkce.CodeVerifier;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -77,6 +80,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -146,7 +150,9 @@ public class TokenHandlerTest {
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
-
+    private static final String CODE_VERIFIER_ENCODED_STRING = createCodeVerifierURLEncodedString();
+    private static final String CODE_CHALLENGE_STRING =
+            createCodeChallengeFromCodeVerifier(CODE_VERIFIER_ENCODED_STRING);
     private final BearerAccessToken accessToken = new BearerAccessToken();
     private final RefreshToken refreshToken = new RefreshToken();
     private final Context context = mock(Context.class);
@@ -174,6 +180,7 @@ public class TokenHandlerTest {
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         when(configurationService.getEnvironment()).thenReturn("test");
+        when(configurationService.isPkceEnabled()).thenReturn(true);
         when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();
         handler =
                 new TokenHandler(
@@ -690,9 +697,116 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
-                        privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID, true);
+                        privateKeyJWT,
+                        authCode,
+                        "http://invalid-redirect-uri",
+                        CLIENT_ID,
+                        true,
+                        CODE_VERIFIER_ENCODED_STRING);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
+    }
+
+    @Test
+    void shouldReturn400IfPKCEVerificationFailed() throws JOSEException, TokenAuthInvalidException {
+        KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        generateAuthRequestWithIncorrectCodeChallenge()
+                                                                .toParameters(),
+                                                        LocalDateTime.now(),
+                                                        List.of(mock(VectorOfTrust.class)),
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+        assertThat(result, hasStatus(400));
+        assertThat(
+                result,
+                hasBody(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_GRANT_CODE,
+                                        "PKCE code verification failed")
+                                .toJSONObject()
+                                .toJSONString()));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
+    }
+
+    @Test
+    void shouldReturn400IfCodeVerificationDoesNotExist()
+            throws JOSEException, TokenAuthInvalidException {
+        KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        generateAuthRequestWithIncorrectCodeChallenge()
+                                                                .toParameters(),
+                                                        LocalDateTime.now(),
+                                                        List.of(mock(VectorOfTrust.class)),
+                                                        CLIENT_NAME))
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(
+                        privateKeyJWT, authCode, REDIRECT_URI, CLIENT_ID, true, null);
+        assertThat(result, hasStatus(400));
+        assertThat(
+                result,
+                hasBody(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_GRANT_CODE,
+                                        "PKCE code verification failed")
+                                .toJSONObject()
+                                .toJSONString()));
         verify(cloudwatchMetricsService, never())
                 .incrementCounter(
                         SUCCESSFUL_TOKEN_ISSUED.getValue(),
@@ -996,7 +1110,8 @@ public class TokenHandlerTest {
             String authorisationCode,
             String redirectUri,
             String clientId,
-            boolean clientIdInHeader) {
+            boolean clientIdInHeader,
+            String codeVerifier) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
@@ -1005,12 +1120,25 @@ public class TokenHandlerTest {
         }
         customParams.put("code", Collections.singletonList(authorisationCode));
         customParams.put("redirect_uri", Collections.singletonList(redirectUri));
+        customParams.put("code_verifier", Collections.singletonList(codeVerifier));
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         privateKeyParams.putAll(customParams);
         String requestParams = URLUtils.serializeParameters(privateKeyParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(requestParams);
         return handler.handleRequest(event, context);
+    }
+
+    private static String createCodeVerifierURLEncodedString() {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] codeVerifier = new byte[32];
+        secureRandom.nextBytes(codeVerifier);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(codeVerifier);
+    }
+
+    private static String createCodeChallengeFromCodeVerifier(String codeVerifierString) {
+        var codeVerifier = new CodeVerifier(codeVerifierString);
+        return CodeChallenge.compute(CodeChallengeMethod.S256, codeVerifier).toString();
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRefreshRequest(
@@ -1036,7 +1164,12 @@ public class TokenHandlerTest {
             String clientId,
             boolean clientIdInHeader) {
         return generateApiGatewayRequest(
-                privateKeyJWT, authorisationCode, REDIRECT_URI, clientId, clientIdInHeader);
+                privateKeyJWT,
+                authorisationCode,
+                REDIRECT_URI,
+                clientId,
+                clientIdInHeader,
+                CODE_VERIFIER_ENCODED_STRING);
     }
 
     private AuthenticationRequest generateAuthRequest() {
@@ -1057,6 +1190,25 @@ public class TokenHandlerTest {
                 .state(state)
                 .nonce(NONCE)
                 .customParameter("vtr", vtr)
+                .customParameter("code_challenge", CODE_CHALLENGE_STRING)
+                .build();
+    }
+
+    private AuthenticationRequest generateAuthRequestWithIncorrectCodeChallenge() {
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add("Cl.Cm");
+        jsonArray.add("Cl");
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        State state = new State();
+        return new AuthenticationRequest.Builder(
+                        responseType,
+                        Scope.parse(SCOPES.toString()),
+                        new ClientID(CLIENT_ID),
+                        URI.create(REDIRECT_URI))
+                .state(state)
+                .nonce(NONCE)
+                .customParameter("vtr", jsonArray.toJSONString())
+                .customParameter("code_challenge", "Incorrect Code Challenge")
                 .build();
     }
 
@@ -1102,6 +1254,7 @@ public class TokenHandlerTest {
                 .nonce(NONCE)
                 .claims(oidcClaimsRequest)
                 .customParameter("vtr", vtr)
+                .customParameter("code_challenge", CODE_CHALLENGE_STRING)
                 .build();
     }
 
@@ -1111,6 +1264,7 @@ public class TokenHandlerTest {
                         ResponseType.CODE, scope, DOC_APP_CLIENT_ID, URI.create(REDIRECT_URI))
                 .state(STATE)
                 .nonce(NONCE)
+                .customParameter("code_challenge", CODE_CHALLENGE_STRING)
                 .requestObject(signedJWT)
                 .build();
     }
