@@ -1361,7 +1361,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         redis.createClientSession(clientSessionId, clientSession);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
-                        CLIENT_SESSION_ID,
+                        clientSessionId,
                         authRequestBuilder.build().toParameters(),
                         creationDate,
                         vtrList,

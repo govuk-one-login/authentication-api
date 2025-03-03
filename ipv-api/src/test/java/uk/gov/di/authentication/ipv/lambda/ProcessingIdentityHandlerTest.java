@@ -21,11 +21,11 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -109,6 +110,8 @@ class ProcessingIdentityHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
+    private final OrchClientSessionService orchClientSessionService =
+            mock(OrchClientSessionService.class);
     private final Session session = new Session();
     private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -143,7 +146,8 @@ class ProcessingIdentityHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         logoutService,
-                        orchSessionService);
+                        orchSessionService,
+                        orchClientSessionService);
     }
 
     @Test
@@ -179,7 +183,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
-
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getOrchClientSession()));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -211,6 +216,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getOrchClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(
@@ -243,6 +250,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getOrchClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(intervention);
@@ -290,7 +299,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
-
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getOrchClientSession()));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -319,6 +329,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getOrchClientSession()));
 
         var result = handler.handleRequest(event, context);
 
@@ -346,7 +358,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
-
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getOrchClientSession()));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -379,8 +392,23 @@ class ProcessingIdentityHandlerTest {
                                 URI.create("http://localhost/redirect"))
                         .build();
 
-        return new ClientSession(
-                authRequest.toParameters(), null, List.of(mock(VectorOfTrust.class)), CLIENT_NAME);
+        return new ClientSession(authRequest.toParameters(), null, List.of(), CLIENT_NAME);
+    }
+
+    private OrchClientSessionItem getOrchClientSession() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .build();
+
+        return new OrchClientSessionItem(
+                CLIENT_SESSION_ID, authRequest.toParameters(), null, List.of(), CLIENT_NAME);
     }
 
     private void usingValidSession() {

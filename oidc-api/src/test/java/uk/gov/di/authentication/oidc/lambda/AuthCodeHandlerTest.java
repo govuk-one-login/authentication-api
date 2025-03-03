@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -54,6 +55,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -110,6 +112,9 @@ class AuthCodeHandlerTest {
             mock(AuthorisationCodeService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
+    private final OrchClientSessionService orchClientSessionService =
+            mock(OrchClientSessionService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -175,6 +180,7 @@ class AuthCodeHandlerTest {
                         authorisationCodeService,
                         orchestrationAuthorizationService,
                         clientSessionService,
+                        orchClientSessionService,
                         auditService,
                         cloudwatchMetricsService,
                         configurationService,
@@ -294,7 +300,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authSuccessResponse);
         when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
-
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         var response = generateApiRequest();
 
         assertThat(response, hasStatus(200));
@@ -381,6 +387,8 @@ class AuthCodeHandlerTest {
 
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
         when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
+        when(orchClientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
@@ -483,6 +491,9 @@ class AuthCodeHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchClientSession));
+        when(orchClientSession.getClientName()).thenReturn(CLIENT_NAME);
 
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
@@ -619,6 +630,8 @@ class AuthCodeHandlerTest {
 
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
         when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchClientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
@@ -694,9 +707,13 @@ class AuthCodeHandlerTest {
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchClientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
         when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
         when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+        when(orchClientSession.getClientName()).thenReturn(CLIENT_NAME);
     }
 
     private APIGatewayProxyResponseEvent generateApiRequest() {
