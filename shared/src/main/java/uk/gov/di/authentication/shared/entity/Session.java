@@ -166,10 +166,6 @@ public class Session {
         return this;
     }
 
-    public String getInternalCommonSubjectIdentifier() {
-        return internalCommonSubjectIdentifier;
-    }
-
     public Session setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
         this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
         return this;
