@@ -58,6 +58,7 @@ import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -65,17 +66,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
-import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class IPVCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -234,8 +236,9 @@ public class IPVCallbackHandler
                     orchSessionService
                             .getSession(sessionId)
                             .orElseThrow(
-                                    () -> new IPVCallbackNoSessionException(
-                                            "Orchestration session not found in DynamoDB"));
+                                    () ->
+                                            new IPVCallbackNoSessionException(
+                                                    "Orchestration session not found in DynamoDB"));
 
             attachSessionIdToLogs(sessionId);
             var persistentId =
@@ -248,8 +251,9 @@ public class IPVCallbackHandler
                     clientSessionService
                             .getClientSession(clientSessionId)
                             .orElseThrow(
-                                    () -> new IPVCallbackNoSessionException(
-                                            "ClientSession not found"));
+                                    () ->
+                                            new IPVCallbackNoSessionException(
+                                                    "ClientSession not found"));
 
             var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
@@ -258,8 +262,9 @@ public class IPVCallbackHandler
                     dynamoClientService
                             .getClient(clientId)
                             .orElseThrow(
-                                    () -> new IpvCallbackException(
-                                            "Client registry not found with given clientId"));
+                                    () ->
+                                            new IpvCallbackException(
+                                                    "Client registry not found with given clientId"));
 
             var errorObject =
                     ipvAuthorisationService.validateResponse(
@@ -268,8 +273,9 @@ public class IPVCallbackHandler
                     dynamoService
                             .getUserProfileByEmailMaybe(session.getEmailAddress())
                             .orElseThrow(
-                                    () -> new IpvCallbackException(
-                                            "Email from session does not have a user profile"));
+                                    () ->
+                                            new IpvCallbackException(
+                                                    "Email from session does not have a user profile"));
             var rpPairwiseSubject =
                     ClientSubjectHelper.getSubject(
                             userProfile,
@@ -498,8 +504,8 @@ public class IPVCallbackHandler
                     clientId);
 
             auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
-            ipvCallbackHelper.saveIdentityClaimsToDynamo(clientSessionId, rpPairwiseSubject,
-                    userIdentityUserInfo);
+            ipvCallbackHelper.saveIdentityClaimsToDynamo(
+                    clientSessionId, rpPairwiseSubject, userIdentityUserInfo);
             var redirectURI = frontend.ipvCallbackURI();
             LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(
@@ -550,8 +556,9 @@ public class IPVCallbackHandler
         }
         return clientRegistry.getClaims().contains(RETURN_CODE.getValue())
                 && authRequest
-                        .getOIDCClaims()
-                        .getUserInfoClaimsRequest()
-                        .get(RETURN_CODE.getValue()) != null;
+                                .getOIDCClaims()
+                                .getUserInfoClaimsRequest()
+                                .get(RETURN_CODE.getValue())
+                        != null;
     }
 }

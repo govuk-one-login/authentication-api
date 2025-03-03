@@ -14,8 +14,7 @@ dependencies {
 
     implementation project(":shared"),
             configurations.govuk_notify,
-            configurations.nimbus,
-            configurations.xray
+            configurations.nimbus
 
     implementation configurations.aspectjrt
     implementation configurations.aspectjweaver
@@ -33,7 +32,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
 }
 
 java {

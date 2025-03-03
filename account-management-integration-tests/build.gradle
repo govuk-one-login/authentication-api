@@ -18,9 +18,9 @@ dependencies {
             configurations.lettuce,
             configurations.libphonenumber
 
-    testImplementation project(":shared"), noXray
-    testImplementation project(":account-management-api"), noXray
-    testImplementation project(":shared-test"), noXray
+    testImplementation project(":shared")
+    testImplementation project(":account-management-api")
+    testImplementation project(":shared-test")
 
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
@@ -40,7 +40,6 @@ test {
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
     environment "SQS_ENDPOINT", "http://localhost:45678"
-    environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 
     testLogging {

@@ -33,7 +33,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
 }
 
 task buildZip(type: Zip) {

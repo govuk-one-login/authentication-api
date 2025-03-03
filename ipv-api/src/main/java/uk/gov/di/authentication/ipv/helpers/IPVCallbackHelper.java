@@ -42,12 +42,14 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -313,12 +315,13 @@ public class IPVCallbackHelper {
                 .filter(t -> !t.equals(ValidClaims.CORE_IDENTITY_JWT.getValue()))
                 .filter(claim -> Objects.nonNull(userIdentityUserInfo.toJSONObject().get(claim)))
                 .forEach(
-                        finalClaim -> additionalClaims.put(
-                                finalClaim,
-                                userIdentityUserInfo
-                                        .toJSONObject()
-                                        .get(finalClaim)
-                                        .toString()));
+                        finalClaim ->
+                                additionalClaims.put(
+                                        finalClaim,
+                                        userIdentityUserInfo
+                                                .toJSONObject()
+                                                .get(finalClaim)
+                                                .toString()));
         LOG.info("Additional identity claims present: {}", !additionalClaims.isEmpty());
 
         var ipvCoreIdentityClaim =

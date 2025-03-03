@@ -6,15 +6,11 @@ import static java.util.Objects.nonNull;
 
 @ExcludeFromGeneratedCoverageReport
 public class Tracing {
+    // This property is set by AWS Lambda when the function is invoked by an AWS service. It's *NOT*
+    // set while the constructor is running.
     private static final String traceHeaderProperty = "com.amazonaws.xray.traceHeader";
-    public static final Boolean TRACING_ENABLED =
-            Boolean.valueOf(System.getenv().getOrDefault("TRACING_ENABLED", "true"));
-
-    public static Boolean isTracingEnabled() {
-        return TRACING_ENABLED;
-    }
 
     public static Boolean isOtelTracingAllowed() {
-        return nonNull(System.getProperty(traceHeaderProperty)) && isTracingEnabled();
+        return nonNull(System.getProperty(traceHeaderProperty));
     }
 }

@@ -23,7 +23,6 @@ dependencies {
             configurations.s3,
             configurations.sqs,
             configurations.ssm,
-            configurations.xray,
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache
@@ -44,7 +43,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "true"
 
     // Enable AspectJ weaving during test execution using runtimeClasspath to find the jar
     doFirst {
