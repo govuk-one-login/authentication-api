@@ -9,6 +9,7 @@ locals {
     send-otp-notification = module.send_otp_notification
     update-phone-number   = module.update_phone_number
     mfa-mm-create-backup  = module.mfa-mm-create-backup
+    mfa-methods-retrieve  = module.mfa-methods-retrieve
   }
   openapi_spec = templatefile(
     "${path.module}/${var.openapi_spec_filename}",
