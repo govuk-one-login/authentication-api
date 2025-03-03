@@ -248,7 +248,8 @@ public class TokenHandler
                     400, e.getErrorObject().toJSONObject().toJSONString());
         }
 
-        if (configurationService.isPkceEnabled()) {
+        if (configurationService.isPkceEnabled()
+                && Objects.nonNull(requestBody.get("code_verifier"))) {
             var codeChallengeString = authRequest.getCodeChallenge().toString();
             var codeVerifierString = requestBody.get("code_verifier");
 
