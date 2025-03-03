@@ -69,8 +69,8 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return dynamoService.getPhoneNumber(email);
     }
 
-    public void signUp(String email, String password) {
-        signUp(email, password, new Subject());
+    public String signUp(String email, String password) {
+        return signUp(email, password, new Subject());
     }
 
     public String signUp(String email, String password, Subject subject) {

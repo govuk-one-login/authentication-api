@@ -6,9 +6,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,23 +22,27 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class MFAMethodsRetrieveHandlerTest {
     private final Context context = mock(Context.class);
-    private static final String SUBJECT_ID = "some-subject-id";
+    private static final String PUBLIC_SUBJECT_ID = "some-subject-id";
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
+    private static final DynamoService dynamoService = mock(DynamoService.class);
+    private static final UserProfile userProfile = mock(UserProfile.class);
 
     private MFAMethodsRetrieveHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new MFAMethodsRetrieveHandler(configurationService);
+        handler = new MFAMethodsRetrieveHandler(configurationService, dynamoService);
     }
 
     @Test
     void shouldReturn200AndDummyResponse() {
         when(configurationService.getEnvironment()).thenReturn("test-environment");
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.of(userProfile));
         var event =
                 new APIGatewayProxyRequestEvent()
-                        .withPathParameters((Map.of("publicSubjectId", SUBJECT_ID)))
+                        .withPathParameters((Map.of("publicSubjectId", PUBLIC_SUBJECT_ID)))
                         .withHeaders(VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
@@ -63,7 +70,7 @@ class MFAMethodsRetrieveHandlerTest {
         when(configurationService.getEnvironment()).thenReturn(environment);
         var event =
                 new APIGatewayProxyRequestEvent()
-                        .withPathParameters((Map.of("publicSubjectId", SUBJECT_ID)))
+                        .withPathParameters((Map.of("publicSubjectId", PUBLIC_SUBJECT_ID)))
                         .withHeaders(VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
@@ -72,12 +79,13 @@ class MFAMethodsRetrieveHandlerTest {
     }
 
     @Test
-    void shouldReturn404IfPublicSubjectIdNotFound() {
+    void shouldReturn404IfNoUserProfileForPublicSubjectId() {
         when(configurationService.getEnvironment()).thenReturn("test-environment");
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.empty());
         var event =
                 new APIGatewayProxyRequestEvent()
-                        .withPathParameters(
-                                (Map.of("publicSubjectId", "unknown-public-subject-id")))
+                        .withPathParameters((Map.of("publicSubjectId", PUBLIC_SUBJECT_ID)))
                         .withHeaders(VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);

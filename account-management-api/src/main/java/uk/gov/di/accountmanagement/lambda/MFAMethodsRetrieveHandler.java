@@ -10,6 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
 import java.util.Map;
@@ -23,10 +24,10 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessio
 public class MFAMethodsRetrieveHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final ConfigurationService configurationService;
+    private final DynamoService dynamoService;
 
     private static final String PRODUCTION = "production";
     private static final String INTEGRATION = "integration";
-    private static final String DUMMY_UNKNOWN_SUBJECT_ID = "unknown-public-subject-id";
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsRetrieveHandler.class);
 
@@ -36,6 +37,13 @@ public class MFAMethodsRetrieveHandler
 
     public MFAMethodsRetrieveHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.dynamoService = new DynamoService(configurationService);
+    }
+
+    public MFAMethodsRetrieveHandler(
+            ConfigurationService configurationService, DynamoService dynamoService) {
+        this.configurationService = configurationService;
+        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -67,7 +75,10 @@ public class MFAMethodsRetrieveHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);
         }
 
-        if (publicSubjectId.equals(DUMMY_UNKNOWN_SUBJECT_ID)) {
+        var maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+
+        if (maybeUserProfile.isEmpty()) {
             LOG.error("Unknown public subject ID");
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
