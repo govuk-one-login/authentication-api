@@ -10,7 +10,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -30,7 +29,6 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -47,7 +45,6 @@ class DocAppUserHelperTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final String REDIRECT_URI = "https://localhost:8080";
-    private static final Subject SUBJECT = new Subject();
 
     private static Stream<ClientType> clientTypes() {
         return Stream.of(ClientType.WEB, ClientType.APP);
@@ -57,7 +54,7 @@ class DocAppUserHelperTest {
     @MethodSource("clientTypes")
     void shouldReturnFalseIfAuthRequestDoesNotContainRequestObject(ClientType clientType) {
         var authRequest = getAuthRequest(null);
-        var userContext = buildUserContext(clientType, authRequest, Optional.empty());
+        var userContext = buildUserContext(clientType, authRequest);
 
         assertFalse(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
@@ -87,7 +84,7 @@ class DocAppUserHelperTest {
                         .state(STATE)
                         .requestObject(signedJWT)
                         .build();
-        var userContext = buildUserContext(clientType, authRequest, Optional.empty());
+        var userContext = buildUserContext(clientType, authRequest);
 
         assertFalse(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
@@ -106,7 +103,7 @@ class DocAppUserHelperTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet);
         var authRequest = getAuthRequest(signedJWT);
-        var userContext = buildUserContext(ClientType.WEB, authRequest, Optional.empty());
+        var userContext = buildUserContext(ClientType.WEB, authRequest);
 
         assertFalse(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
@@ -126,59 +123,18 @@ class DocAppUserHelperTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet);
         var authRequest = getAuthRequest(signedJWT);
-        var userContext = buildUserContext(ClientType.APP, authRequest, Optional.empty());
+        var userContext = buildUserContext(ClientType.APP, authRequest);
 
         assertTrue(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
 
-    @Test
-    void shouldReturnTrueIfClientIsDocCheckingAppUserWithSubject()
-            throws NoSuchAlgorithmException, JOSEException {
-
-        JWTClaimsSet.Builder claimsSetBuilder = getBaseJWTClaimsSetBuilder();
-
-        var signedJWT = generateSignedJWT(claimsSetBuilder.build());
-        var authRequest = getAuthRequest(signedJWT);
-        var userContext = buildUserContext(ClientType.APP, authRequest, Optional.of(SUBJECT));
-
-        assertTrue(
-                DocAppUserHelper.isDocCheckingAppUserWithSubjectId(userContext.getClientSession()));
-    }
-
-    @Test
-    void shouldReturnFalsIfClientIsDocCheckingAppUserWithoutSubject()
-            throws NoSuchAlgorithmException, JOSEException {
-
-        JWTClaimsSet.Builder claimsSetBuilder = getBaseJWTClaimsSetBuilder();
-
-        var signedJWT = generateSignedJWT(claimsSetBuilder.build());
-        var authRequest = getAuthRequest(signedJWT);
-        var userContext = buildUserContext(ClientType.APP, authRequest, Optional.empty());
-
-        assertFalse(
-                DocAppUserHelper.isDocCheckingAppUserWithSubjectId(userContext.getClientSession()));
-    }
-
-    private JWTClaimsSet.Builder getBaseJWTClaimsSetBuilder() {
-        return new JWTClaimsSet.Builder()
-                .audience(AUDIENCE)
-                .claim("redirect_uri", REDIRECT_URI)
-                .claim("response_type", ResponseType.CODE.toString())
-                .claim("scope", VALID_SCOPE.toString())
-                .claim("client_id", CLIENT_ID.getValue())
-                .claim("state", STATE.getValue())
-                .issuer(CLIENT_ID.getValue());
-    }
-
-    private UserContext buildUserContext(
-            ClientType clientType, AuthenticationRequest authRequest, Optional<Subject> subject) {
+    private UserContext buildUserContext(ClientType clientType, AuthenticationRequest authRequest) {
         var clientSession =
                 new ClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
                         VectorOfTrust.getDefaults(),
                         CLIENT_NAME);
-        subject.ifPresent(clientSession::setDocAppSubjectId);
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())
