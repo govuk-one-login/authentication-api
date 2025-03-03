@@ -163,6 +163,12 @@ paths:
         - 2FAManagement
       description: Creates an mfa method. A new MFA Method cannot be created as DEFAULT, it must be BACKUP and promoted at a later stage
       operationId: "mfa-method-create"
+      parameters:
+        - name: publicSubjectId
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -226,6 +232,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MfaMethod"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
         "404":
           description: MFA Method not Found
           content:
@@ -251,6 +263,17 @@ paths:
         - 2FAManagement
       description: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'PRIMARY'.
       operationId: "mfa-method-delete"
+      parameters:
+        - name: mfaIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: publicSubjectId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "204":
           description: MFA Method Deleted
