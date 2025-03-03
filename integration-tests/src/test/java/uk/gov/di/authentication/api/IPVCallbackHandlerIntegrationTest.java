@@ -28,9 +28,9 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
-import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
@@ -203,26 +203,26 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         CLIENT_SESSION_ID),
                                 CLIENT_ID)));
 
-        var identityCredentials = identityStore.getIdentityCredentials(internalCommonSubjectId);
+        var identityCredentials = identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
 
         assertTrue(
                 identityCredentials
-                        .map(AuthIdentityCredentials::getAdditionalClaims)
+                        .map(OrchIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.ADDRESS.getValue()))
                         .isPresent());
         assertTrue(
                 identityCredentials
-                        .map(AuthIdentityCredentials::getAdditionalClaims)
+                        .map(OrchIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.PASSPORT.getValue()))
                         .isPresent());
         assertTrue(
                 identityCredentials
-                        .map(AuthIdentityCredentials::getAdditionalClaims)
+                        .map(OrchIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.DRIVING_PERMIT.getValue()))
                         .isPresent());
         assertTrue(
                 identityCredentials
-                        .map(AuthIdentityCredentials::getAdditionalClaims)
+                        .map(OrchIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
                         .isPresent());
 
@@ -384,7 +384,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         "code",
                                         new AuthorizationCode().getValue())));
 
-        var identityCredentials = identityStore.getIdentityCredentials(internalCommonSubjectId);
+        var identityCredentials = identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
 
         assertThat(response, hasStatus(302));
         if (validLoC) {
@@ -416,7 +416,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         assertTrue(
                 identityCredentials
-                        .map(AuthIdentityCredentials::getAdditionalClaims)
+                        .map(OrchIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
                         .isPresent());
         var returnCode =

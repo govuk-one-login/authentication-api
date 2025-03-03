@@ -24,9 +24,9 @@ import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
@@ -245,7 +245,8 @@ class UserInfoServiceTest {
                         ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
-                    new AuthIdentityCredentials()
+                    new OrchIdentityCredentials()
+                            .withClientSessionId(JOURNEY_ID)
                             .withSubjectID(SUBJECT.getValue())
                             .withCoreIdentityJWT(coreIdentityJWT)
                             .withAdditionalClaims(
@@ -260,7 +261,7 @@ class UserInfoServiceTest {
                                             RETURN_CODE));
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
-            when(identityService.getIdentityCredentials(SUBJECT.getValue()))
+            when(identityService.getIdentityCredentials(JOURNEY_ID))
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =
@@ -384,12 +385,13 @@ class UserInfoServiceTest {
                         ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
-                    new AuthIdentityCredentials()
+                    new OrchIdentityCredentials()
+                            .withClientSessionId(JOURNEY_ID)
                             .withSubjectID(SUBJECT.getValue())
                             .withCoreIdentityJWT(coreIdentityJWT);
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
-            when(identityService.getIdentityCredentials(SUBJECT.getValue()))
+            when(identityService.getIdentityCredentials(JOURNEY_ID))
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =
