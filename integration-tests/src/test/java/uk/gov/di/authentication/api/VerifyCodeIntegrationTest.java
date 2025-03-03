@@ -351,7 +351,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
@@ -384,7 +383,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
@@ -444,7 +442,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithSignUp(sessionId, withScope());

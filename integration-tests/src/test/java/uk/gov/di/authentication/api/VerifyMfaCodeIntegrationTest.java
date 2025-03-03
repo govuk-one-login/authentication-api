@@ -108,7 +108,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         this.sessionId = redis.createSession();
         authSessionExtension.addSession(this.sessionId);
-        redis.addInternalCommonSubjectIdToSession(this.sessionId, internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTest(sessionId, withScope());
