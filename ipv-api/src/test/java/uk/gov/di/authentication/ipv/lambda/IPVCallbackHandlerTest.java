@@ -190,10 +190,7 @@ class IPVCallbackHandlerTest {
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(IPVCallbackHandler.class);
 
-    private final Session session =
-            new Session()
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setInternalCommonSubjectIdentifier(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
+    private final Session session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
