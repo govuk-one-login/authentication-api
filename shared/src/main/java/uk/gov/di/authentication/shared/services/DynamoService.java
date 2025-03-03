@@ -318,6 +318,7 @@ public class DynamoService implements AuthenticationService {
         return SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray();
     }
 
+    //why do we have a different thing here to the method below?
     @Override
     public void updatePhoneNumberAndAccountVerifiedStatus(
             String email,
@@ -426,6 +427,7 @@ public class DynamoService implements AuthenticationService {
                         .getPhoneNumber());
     }
 
+    //only used in test
     @Override
     public void updateMFAMethod(
             String email,
@@ -463,6 +465,7 @@ public class DynamoService implements AuthenticationService {
                         .setMfaMethodBasedOnPriority(mfaMethod));
     }
 
+    //why is this different to the one below?
     @Override
     public void setAuthAppAndAccountVerified(String email, String credentialValue) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
@@ -557,6 +560,7 @@ public class DynamoService implements AuthenticationService {
         return userProfile.get();
     }
 
+    // This only used in test. Also, the flag seems redundant on the user (introduced for database analysis originally)
     @Override
     public void setAccountVerified(String email) {
         dynamoUserProfileTable.updateItem(

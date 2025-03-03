@@ -205,6 +205,7 @@ public class UserProfile {
         return this;
     }
 
+    //DO we need this anymore?
     @DynamoDbAttribute(ATTRIBUTE_ACCOUNT_VERIFIED)
     public int getAccountVerified() {
         return accountVerified;
