@@ -7,8 +7,9 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import java.util.Map;
 
 @DynamoDbBean
-public class IdentityCredentials {
+public class OrchIdentityCredentials {
 
+    private String clientSessionId;
     private String subjectID;
     private String coreIdentityJWT;
     private long timeToExist;
@@ -16,9 +17,23 @@ public class IdentityCredentials {
     private String ipvVot;
     private String ipvCoreIdentity;
 
-    public IdentityCredentials() {}
+    public OrchIdentityCredentials() {}
 
     @DynamoDbPartitionKey
+    @DynamoDbAttribute("ClientSessionId")
+    public String getClientSessionId() {
+        return clientSessionId;
+    }
+
+    public void setClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+    }
+
+    public OrchIdentityCredentials withClientSessionId(String clientSessionId) {
+        this.clientSessionId = clientSessionId;
+        return this;
+    }
+
     @DynamoDbAttribute("SubjectID")
     public String getSubjectID() {
         return subjectID;
@@ -28,7 +43,7 @@ public class IdentityCredentials {
         this.subjectID = subjectID;
     }
 
-    public IdentityCredentials withSubjectID(String subjectID) {
+    public OrchIdentityCredentials withSubjectID(String subjectID) {
         this.subjectID = subjectID;
         return this;
     }
@@ -42,12 +57,12 @@ public class IdentityCredentials {
         this.coreIdentityJWT = coreIdentityJWT;
     }
 
-    public IdentityCredentials withCoreIdentityJWT(String coreIdentityJWT) {
+    public OrchIdentityCredentials withCoreIdentityJWT(String coreIdentityJWT) {
         this.coreIdentityJWT = coreIdentityJWT;
         return this;
     }
 
-    @DynamoDbAttribute("TimeToExist")
+    @DynamoDbAttribute("ttl")
     public long getTimeToExist() {
         return timeToExist;
     }
@@ -56,7 +71,7 @@ public class IdentityCredentials {
         this.timeToExist = timeToExist;
     }
 
-    public IdentityCredentials withTimeToExist(long timeToExist) {
+    public OrchIdentityCredentials withTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
         return this;
     }
@@ -70,7 +85,7 @@ public class IdentityCredentials {
         this.additionalClaims = additionalClaims;
     }
 
-    public IdentityCredentials withAdditionalClaims(Map<String, String> additionalClaims) {
+    public OrchIdentityCredentials withAdditionalClaims(Map<String, String> additionalClaims) {
         this.additionalClaims = additionalClaims;
         return this;
     }
@@ -84,7 +99,7 @@ public class IdentityCredentials {
         this.ipvVot = ipvVot;
     }
 
-    public IdentityCredentials withIpvVot(String ipvVot) {
+    public OrchIdentityCredentials withIpvVot(String ipvVot) {
         this.ipvVot = ipvVot;
         return this;
     }
@@ -98,7 +113,7 @@ public class IdentityCredentials {
         this.ipvCoreIdentity = ipvCoreIdentity;
     }
 
-    public IdentityCredentials withIpvCoreIdentity(String ipvCoreIdentity) {
+    public OrchIdentityCredentials withIpvCoreIdentity(String ipvCoreIdentity) {
         this.ipvCoreIdentity = ipvCoreIdentity;
         return this;
     }

@@ -28,7 +28,7 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
-import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -207,22 +207,22 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         assertTrue(
                 identityCredentials
-                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(AuthIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.ADDRESS.getValue()))
                         .isPresent());
         assertTrue(
                 identityCredentials
-                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(AuthIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.PASSPORT.getValue()))
                         .isPresent());
         assertTrue(
                 identityCredentials
-                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(AuthIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.DRIVING_PERMIT.getValue()))
                         .isPresent());
         assertTrue(
                 identityCredentials
-                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(AuthIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
                         .isPresent());
 
@@ -416,7 +416,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         assertTrue(
                 identityCredentials
-                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(AuthIdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
                         .isPresent());
         var returnCode =

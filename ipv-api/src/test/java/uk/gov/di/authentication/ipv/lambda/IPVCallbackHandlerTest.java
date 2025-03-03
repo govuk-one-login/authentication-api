@@ -623,7 +623,8 @@ class IPVCallbackHandlerTest {
                         any(UserInfo.class),
                         eq(CLIENT_ID.getValue()));
         verify(ipvCallbackHelper)
-                .saveIdentityClaimsToDynamo(any(Subject.class), any(UserInfo.class));
+                .saveIdentityClaimsToDynamo(
+                        any(String.class), any(Subject.class), any(UserInfo.class));
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);

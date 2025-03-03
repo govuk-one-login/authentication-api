@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.orchestration.shared.entity;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
@@ -7,7 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import java.util.Map;
 
 @DynamoDbBean
-public class IdentityCredentials {
+public class AuthIdentityCredentials {
 
     private String subjectID;
     private String coreIdentityJWT;
@@ -16,7 +16,7 @@ public class IdentityCredentials {
     private String ipvVot;
     private String ipvCoreIdentity;
 
-    public IdentityCredentials() {}
+    public AuthIdentityCredentials() {}
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("SubjectID")
@@ -28,7 +28,7 @@ public class IdentityCredentials {
         this.subjectID = subjectID;
     }
 
-    public IdentityCredentials withSubjectID(String subjectID) {
+    public AuthIdentityCredentials withSubjectID(String subjectID) {
         this.subjectID = subjectID;
         return this;
     }
@@ -42,7 +42,7 @@ public class IdentityCredentials {
         this.coreIdentityJWT = coreIdentityJWT;
     }
 
-    public IdentityCredentials withCoreIdentityJWT(String coreIdentityJWT) {
+    public AuthIdentityCredentials withCoreIdentityJWT(String coreIdentityJWT) {
         this.coreIdentityJWT = coreIdentityJWT;
         return this;
     }
@@ -56,7 +56,7 @@ public class IdentityCredentials {
         this.timeToExist = timeToExist;
     }
 
-    public IdentityCredentials withTimeToExist(long timeToExist) {
+    public AuthIdentityCredentials withTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
         return this;
     }
@@ -70,7 +70,7 @@ public class IdentityCredentials {
         this.additionalClaims = additionalClaims;
     }
 
-    public IdentityCredentials withAdditionalClaims(Map<String, String> additionalClaims) {
+    public AuthIdentityCredentials withAdditionalClaims(Map<String, String> additionalClaims) {
         this.additionalClaims = additionalClaims;
         return this;
     }
@@ -84,7 +84,7 @@ public class IdentityCredentials {
         this.ipvVot = ipvVot;
     }
 
-    public IdentityCredentials withIpvVot(String ipvVot) {
+    public AuthIdentityCredentials withIpvVot(String ipvVot) {
         this.ipvVot = ipvVot;
         return this;
     }
@@ -98,7 +98,7 @@ public class IdentityCredentials {
         this.ipvCoreIdentity = ipvCoreIdentity;
     }
 
-    public IdentityCredentials withIpvCoreIdentity(String ipvCoreIdentity) {
+    public AuthIdentityCredentials withIpvCoreIdentity(String ipvCoreIdentity) {
         this.ipvCoreIdentity = ipvCoreIdentity;
         return this;
     }

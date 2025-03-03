@@ -206,7 +206,9 @@ public class IPVCallbackHelper {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
                 "saveIdentityClaims",
-                () -> saveIdentityClaimsToDynamo(rpPairwiseSubject, userIdentityUserInfo));
+                () ->
+                        saveIdentityClaimsToDynamo(
+                                clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
                         clientId,
@@ -309,7 +311,7 @@ public class IPVCallbackHelper {
     }
 
     public void saveIdentityClaimsToDynamo(
-            Subject rpPairwiseSubject, UserInfo userIdentityUserInfo) {
+            String clientSessionId, Subject rpPairwiseSubject, UserInfo userIdentityUserInfo) {
         LOG.info("Checking for additional identity claims to save to dynamo");
         var additionalClaims = new HashMap<String, String>();
         ValidClaims.getAllValidClaims().stream()
@@ -330,6 +332,7 @@ public class IPVCallbackHelper {
         String ipvCoreIdentityString =
                 ipvCoreIdentityClaim == null ? "" : ipvCoreIdentityClaim.toString();
         dynamoIdentityService.saveIdentityClaims(
+                clientSessionId,
                 rpPairwiseSubject.getValue(),
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
-import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.sharedtest.basetest.IntegrationTest;
@@ -56,6 +56,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
     void shouldAddSpotCredentialToDBForValidResponseWhenEntryAlreadyExists() {
         var pairwiseIdentifier = new Subject();
         identityStore.saveIdentityClaims(
+                CLIENT_SESSION_ID,
                 pairwiseIdentifier.getValue(),
                 Map.of(
                         ValidClaims.ADDRESS.getValue(),
@@ -78,7 +79,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                         CLIENT_ID);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
-        Optional<IdentityCredentials> identityCredentials =
+        Optional<AuthIdentityCredentials> identityCredentials =
                 identityStore.getIdentityCredentials(pairwiseIdentifier.getValue());
         assertTrue(identityCredentials.isPresent());
         assertThat(
@@ -110,7 +111,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                         CLIENT_ID);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
-        Optional<IdentityCredentials> identityCredentials =
+        Optional<AuthIdentityCredentials> identityCredentials =
                 identityStore.getIdentityCredentials(pairwiseIdentifier.getValue());
         assertTrue(identityCredentials.isPresent());
         assertNull(identityCredentials.get().getAdditionalClaims());
@@ -137,6 +138,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                         REQUEST_ID,
                         CLIENT_ID);
         identityStore.saveIdentityClaims(
+                CLIENT_SESSION_ID,
                 pairwiseIdentifier.getValue(),
                 emptyMap(),
                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),
