@@ -51,7 +51,7 @@ public class DynamoIdentityService {
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
-    public void deleteIdentityCredentials(String clientSessionId, String subjectID) {
+    public void deleteIdentityCredentials(String clientSessionId) {
         orchIdentityCredentialsDynamoService.delete(clientSessionId);
     }
 
