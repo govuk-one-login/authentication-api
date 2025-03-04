@@ -20,7 +20,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
-public class GetMfaMethodsHandler
+public class MFAMethodsRetrieveHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final ConfigurationService configurationService;
 
@@ -28,13 +28,13 @@ public class GetMfaMethodsHandler
     private static final String INTEGRATION = "integration";
     private static final String DUMMY_UNKNOWN_SUBJECT_ID = "unknown-public-subject-id";
 
-    private static final Logger LOG = LogManager.getLogger(GetMfaMethodsHandler.class);
+    private static final Logger LOG = LogManager.getLogger(MFAMethodsRetrieveHandler.class);
 
-    public GetMfaMethodsHandler() {
+    public MFAMethodsRetrieveHandler() {
         this(ConfigurationService.getInstance());
     }
 
-    public GetMfaMethodsHandler(ConfigurationService configurationService) {
+    public MFAMethodsRetrieveHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
     }
 
@@ -44,10 +44,10 @@ public class GetMfaMethodsHandler
         ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
-                () -> getMfaMethodsHandler(input, context));
+                () -> getMFAMethodsHandler(input, context));
     }
 
-    public APIGatewayProxyResponseEvent getMfaMethodsHandler(
+    public APIGatewayProxyResponseEvent getMFAMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
 
         addSessionIdToLogs(input);

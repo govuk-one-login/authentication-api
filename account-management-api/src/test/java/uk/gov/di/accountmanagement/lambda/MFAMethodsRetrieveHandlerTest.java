@@ -17,17 +17,17 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class GetMfaMethodsHandlerTest {
+class MFAMethodsRetrieveHandlerTest {
     private final Context context = mock(Context.class);
     private static final String SUBJECT_ID = "some-subject-id";
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
 
-    private GetMfaMethodsHandler handler;
+    private MFAMethodsRetrieveHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new GetMfaMethodsHandler(configurationService);
+        handler = new MFAMethodsRetrieveHandler(configurationService);
     }
 
     @Test
