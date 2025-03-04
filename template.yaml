@@ -592,6 +592,20 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+          - Sid: AllowKeyDecryptionAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AuthAccountId}:root
+                - AuthAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+            Action:
+              - kms:Decrypt
+            Resource: "*"
 
   ClientSessionTable:
     Type: AWS::DynamoDB::Table
@@ -613,6 +627,39 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      ResourcePolicy:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Sid: AllowClientSessionTableReadAccessPolicy
+              Effect: Allow
+              Action:
+                - dynamodb:DescribeTable
+                - dynamodb:Get*
+              Resource: "*"
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+            - Sid: AllowClientSessionTableDeleteAccessPolicy
+              Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+              Resource: "*"
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
       Tags:
         - Key: Name
           Value: ClientSessionTable
