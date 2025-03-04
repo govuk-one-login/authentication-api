@@ -194,13 +194,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input,
-                    codeRequest,
-                    userContext,
-                    subjectID,
-                    authSession,
-                    maybeRpPairwiseId,
-                    client);
+                    input, codeRequest, userContext, subjectID, maybeRpPairwiseId, client);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -279,12 +273,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
-            AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId,
             ClientRegistry client) {
 
         var session = userContext.getSession();
-        var sessionId = userContext.getAuthSession().getSessionId();
+        var authSession = userContext.getAuthSession();
+        var sessionId = authSession.getSessionId();
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
                         .getMfaCodeProcessor(
