@@ -52,7 +52,6 @@ public class DynamoIdentityService {
     }
 
     public void deleteIdentityCredentials(String clientSessionId, String subjectID) {
-        authIdentityCredentialsDynamoService.delete(subjectID);
         orchIdentityCredentialsDynamoService.delete(clientSessionId);
     }
 
