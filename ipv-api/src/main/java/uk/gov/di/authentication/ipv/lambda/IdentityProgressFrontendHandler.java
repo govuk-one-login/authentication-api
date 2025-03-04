@@ -131,7 +131,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
                     processingAttempts);
             var identityCredentials =
-                    dynamoIdentityService.getIdentityCredentials(pairwiseSubjectId);
+                    dynamoIdentityService.getIdentityCredentials(userSession.getClientSessionId());
 
             var processingStatus = IdentityProgressStatus.PROCESSING;
             if (identityCredentials.isEmpty()
