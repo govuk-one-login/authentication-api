@@ -10,7 +10,10 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +28,7 @@ public class MFAMethodsRetrieveHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
+    private final MfaMethodsService mfaMethodsService;
 
     private static final String PRODUCTION = "production";
     private static final String INTEGRATION = "integration";
@@ -38,12 +42,16 @@ public class MFAMethodsRetrieveHandler
     public MFAMethodsRetrieveHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.dynamoService = new DynamoService(configurationService);
+        this.mfaMethodsService = new DynamoMfaMethodsService(configurationService);
     }
 
     public MFAMethodsRetrieveHandler(
-            ConfigurationService configurationService, DynamoService dynamoService) {
+            ConfigurationService configurationService,
+            DynamoService dynamoService,
+            MfaMethodsService mfaMethodsService) {
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     @Override
@@ -83,7 +91,12 @@ public class MFAMethodsRetrieveHandler
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
 
-        return generateApiGatewayProxyResponse(200, "{\"hello\": \"world\"}");
+        var retrievedMethods = mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());
+
+        var serialisationService = SerializationService.getInstance();
+        var response = serialisationService.writeValueAsStringCamelCase(retrievedMethods);
+
+        return generateApiGatewayProxyResponse(200, response);
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {

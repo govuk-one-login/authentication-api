@@ -6,10 +6,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaMethodData;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.MfaMethodsService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,23 +29,37 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class MFAMethodsRetrieveHandlerTest {
     private final Context context = mock(Context.class);
     private static final String PUBLIC_SUBJECT_ID = "some-subject-id";
+    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final UserProfile userProfile = mock(UserProfile.class);
+    private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
 
     private MFAMethodsRetrieveHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new MFAMethodsRetrieveHandler(configurationService, dynamoService);
+        when(userProfile.getEmail()).thenReturn(EMAIL);
+        handler =
+                new MFAMethodsRetrieveHandler(
+                        configurationService, dynamoService, mfaMethodsService);
     }
 
     @Test
-    void shouldReturn200AndDummyResponse() {
+    void shouldReturn200WithTheMethodReturnedByTheMfaMethodsService() {
         when(configurationService.getEnvironment()).thenReturn("test-environment");
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
+
+        var method =
+                new MfaMethodData(
+                        1,
+                        PriorityIdentifier.DEFAULT,
+                        true,
+                        new SmsMfaDetail(MFAMethodType.SMS, "+44123456789"));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(List.of(method));
+
         var event =
                 new APIGatewayProxyRequestEvent()
                         .withPathParameters((Map.of("publicSubjectId", PUBLIC_SUBJECT_ID)))
@@ -48,7 +68,9 @@ class MFAMethodsRetrieveHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        assertEquals("{\"hello\": \"world\"}", result.getBody());
+        assertEquals(
+                "[{\"mfaIdentifier\":1,\"priorityIdentifier\":\"DEFAULT\",\"methodVerified\":true,\"method\":{\"mfaMethodType\":\"SMS\",\"phoneNumber\":\"+44123456789\"}}]",
+                result.getBody());
     }
 
     @Test
