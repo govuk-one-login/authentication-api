@@ -7,26 +7,23 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
-public class DynamoIdentityService {
+public class DynamoIdentityService extends BaseDynamoService<OrchIdentityCredentials> {
 
     private final long timeToExist;
-    private final BaseDynamoService<OrchIdentityCredentials> orchIdentityCredentialsDynamoService;
 
     public DynamoIdentityService(ConfigurationService configurationService) {
-        orchIdentityCredentialsDynamoService =
-                new BaseDynamoService<>(
-                        OrchIdentityCredentials.class,
-                        "Orch-Identity-Credentials",
-                        configurationService,
-                        true);
+        super(
+                OrchIdentityCredentials.class,
+                "Orch-Identity-Credentials",
+                configurationService,
+                true);
         this.timeToExist = configurationService.getAccessTokenExpiry();
     }
 
     public void addCoreIdentityJWT(
             String clientSessionId, String subjectID, String coreIdentityJWT) {
         var identityCredentials =
-                orchIdentityCredentialsDynamoService
-                        .get(clientSessionId)
+                get(clientSessionId)
                         .orElse(new OrchIdentityCredentials())
                         .withClientSessionId(clientSessionId)
                         .withSubjectID(subjectID)
@@ -35,17 +32,16 @@ public class DynamoIdentityService {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
-        orchIdentityCredentialsDynamoService.update(identityCredentials);
+        update(identityCredentials);
     }
 
     public Optional<OrchIdentityCredentials> getIdentityCredentials(String clientSessionId) {
-        return orchIdentityCredentialsDynamoService
-                .get(clientSessionId)
+        return get(clientSessionId)
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void deleteIdentityCredentials(String clientSessionId) {
-        orchIdentityCredentialsDynamoService.delete(clientSessionId);
+        delete(clientSessionId);
     }
 
     public void saveIdentityClaims(
@@ -65,6 +61,6 @@ public class DynamoIdentityService {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
-        orchIdentityCredentialsDynamoService.put(identityCredentials);
+        put(identityCredentials);
     }
 }
