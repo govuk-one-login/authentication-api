@@ -90,6 +90,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
@@ -517,6 +518,17 @@ public class AuthorisationHandler
         throw new java.text.ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
 
+    private String extractVoTStringFromIdTokenHint(SignedJWT idTokenHint)
+            throws java.text.ParseException {
+        var votClaim = idTokenHint.getJWTClaimsSet().getClaim("vot");
+        if (votClaim == null) {
+            return CredentialTrustLevel.getDefault().getValue();
+        } else if (votClaim instanceof String vot) {
+            return vot;
+        }
+        throw new java.text.ParseException("vtr is in an invalid format. Could not be parsed.", 0);
+    }
+
     private APIGatewayProxyResponseEvent handleDocAppJourney(
             Optional<String> existingSessionId,
             Optional<OrchSessionItem> orchSessionOptional,
@@ -883,6 +895,7 @@ public class AuthorisationHandler
         var state = new State();
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
+        List<String> vtrStringList = List.of("Cl.Cm");
         String reauthSub = null;
         String reauthSid = null;
         if (reauthRequested) {
@@ -890,6 +903,9 @@ public class AuthorisationHandler
                 SignedJWT reauthIdToken = getReauthIdToken(authenticationRequest);
                 reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
                 reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
+                if (isNull(authenticationRequest.getCustomParameter(VTR_PARAM))) {
+                    vtrStringList = List.of(extractVoTStringFromIdTokenHint(reauthIdToken));
+                }
             } catch (RuntimeException e) {
                 return generateErrorResponse(
                         authenticationRequest.getRedirectionURI(),
@@ -902,8 +918,22 @@ public class AuthorisationHandler
                 LOG.warn("Unable to parse id_token_hint SignedJWT into claims");
                 throw new RuntimeException("Invalid id_token_hint");
             }
+        } else {
+            if (!isNull(authenticationRequest.getCustomParameter(VTR_PARAM))) {
+                vtrStringList = authenticationRequest.getCustomParameter(VTR_PARAM);
+            }
         }
 
+        var cookieConsentOpt =
+                Optional.ofNullable(authenticationRequest.getCustomParameter("cookie_consent"))
+                        .map(List::stream)
+                        .flatMap(Stream::findFirst);
+        var gaOpt =
+                Optional.ofNullable(authenticationRequest.getCustomParameter("_ga"))
+                        .map(List::stream)
+                        .flatMap(Stream::findFirst);
+        var hasDocCheckingAppScope =
+                authenticationRequest.getScope().toStringList().contains("doc-checking-app");
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
@@ -931,9 +961,14 @@ public class AuthorisationHandler
                         .claim("authenticated", orchSession.getAuthenticated())
                         .claim(
                                 "current_credential_strength",
-                                orchSession.getCurrentCredentialStrength());
+                                orchSession.getCurrentCredentialStrength())
+                        .claim("vtr_list", String.join(" ", vtrStringList))
+                        .claim("has_doc_checking_app_scope", hasDocCheckingAppScope);
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
+        gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
+        cookieConsentOpt.ifPresent(
+                cookieConsent -> claimsBuilder.claim("cookie_consent", cookieConsent));
 
         var claimsSetRequest =
                 constructAdditionalAuthenticationClaims(client, authenticationRequest);

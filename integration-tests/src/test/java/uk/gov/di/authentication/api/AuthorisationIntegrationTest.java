@@ -70,6 +70,7 @@ import java.util.UUID;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
+import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -143,6 +144,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
     private static final String CLAIMS =
             "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":{\"essential\":true}}}";
+    private static final String NONCE = new Nonce().getValue();
+    private static final String STATE = "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU";
 
     private static final IntegrationTestConfigurationService configuration =
             new IntegrationTestConfigurationService(
@@ -1578,6 +1581,34 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         AUTHORISATION_INITIATED));
     }
 
+    @Test
+    void shouldForwardRequestParamsAsClaimsToAuthFrontendApi() {
+        setupForAuthJourney();
+        var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "");
+        Map<String, String> queryParams = new HashMap<>(baseParams);
+        queryParams.put("_ga", "12345");
+        queryParams.put("cookie_consent", "approve");
+        queryParams.put("vtr", jsonArrayOf("Cl.Cm", "Cl"));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        queryParams,
+                        Optional.of("GET"));
+        assertThat(response, hasStatus(302));
+        assertResponseJarHasClaims(
+                response,
+                Map.of(
+                        "vtr_list",
+                        jsonArrayOf("Cl.Cm", "Cl"),
+                        "has_doc_checking_app_scope",
+                        Boolean.FALSE,
+                        "_ga",
+                        "12345",
+                        "cookie_consent",
+                        "approve"));
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
         return constructQueryStringParameters(
@@ -1639,9 +1670,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "redirect_uri",
                                 redirectUri.toString(),
                                 "state",
-                                "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
+                                STATE,
                                 "nonce",
-                                new Nonce().getValue(),
+                                NONCE,
                                 "client_id",
                                 clientId,
                                 "scope",
@@ -1887,5 +1918,22 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(sessionCookie.isPresent());
         var sessionId = sessionCookie.get().getValue().split("\\.")[0];
         assertTrue(orchSessionExtension.getSession(sessionId).isPresent());
+    }
+
+    private void assertResponseJarHasClaims(
+            APIGatewayProxyResponseEvent response, Map<String, Object> expectedClaims) {
+        try {
+            var authRequest = extractAuthRequestFromResponse(response);
+            var signedJwt = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
+            var claims = signedJwt.getJWTClaimsSet();
+            expectedClaims.forEach(
+                    (key, value) ->
+                            assertEquals(
+                                    value,
+                                    claims.getClaim(key),
+                                    format("Failed assertion on claim \"%s\"", key)));
+        } catch (JOSEException | ParseException | java.text.ParseException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
