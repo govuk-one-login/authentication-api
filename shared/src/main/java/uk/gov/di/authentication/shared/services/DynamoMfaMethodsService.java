@@ -15,35 +15,25 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
     }
 
     @Override
-    public List<MfaData> getMfaMethods(String email) {
+    public List<MfaMethodData> getMfaMethods(String email) {
         var userProfile = dynamoService.getUserProfileByEmail(email);
         var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
+        // TODO how to get identifier?
         if (enabledAuthAppMethod.isPresent()) {
-            return List.of(convertAuthAppToAuthAppMfaData(enabledAuthAppMethod.get()));
+            var method = enabledAuthAppMethod.get();
+            return List.of(
+                    MfaMethodData.authAppMfaData(
+                            1,
+                            PriorityIdentifier.DEFAULT,
+                            method.isMethodVerified(),
+                            method.getCredentialValue()));
         } else if (userProfile.isPhoneNumberVerified()) {
-            return List.of(getSmsMfaDataFromUserProfile(userProfile));
+            return List.of(
+                    MfaMethodData.smsMethodData(
+                            1, PriorityIdentifier.DEFAULT, true, userProfile.getPhoneNumber()));
         } else {
             return List.of();
         }
-    }
-
-    private static AuthAppMfaData convertAuthAppToAuthAppMfaData(MFAMethod authApp) {
-        return new AuthAppMfaData(
-                authApp.getCredentialValue(),
-                authApp.isMethodVerified(),
-                true,
-                PriorityIdentifier.DEFAULT,
-                1);
-    }
-
-    // TODO how to get identifier?
-    private static SmsMfaData getSmsMfaDataFromUserProfile(UserProfile userProfile) {
-        return new SmsMfaData(
-                userProfile.getPhoneNumber(),
-                userProfile.isPhoneNumberVerified(),
-                true,
-                PriorityIdentifier.DEFAULT,
-                1);
     }
 }

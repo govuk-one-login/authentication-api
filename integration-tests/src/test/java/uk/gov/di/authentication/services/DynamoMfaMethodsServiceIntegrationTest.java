@@ -4,9 +4,11 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaDetail;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.SmsMfaData;
+import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -38,7 +40,8 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
         var result = dynamoService.getMfaMethods(TEST_EMAIL);
 
-        var expectedData = new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, 1);
+        var authAppDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
+        var expectedData = new MfaMethodData(1, PriorityIdentifier.DEFAULT, true, authAppDetail);
         assertEquals(result, List.of(expectedData));
     }
 
@@ -48,8 +51,8 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
         var result = dynamoService.getMfaMethods(TEST_EMAIL);
 
-        var expectedData =
-                new AuthAppMfaData(AUTH_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT, 1);
+        var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
+        var expectedData = new MfaMethodData(1, PriorityIdentifier.DEFAULT, true, authAppDetail);
         assertEquals(result, List.of(expectedData));
     }
 
@@ -60,8 +63,8 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
         var result = dynamoService.getMfaMethods(TEST_EMAIL);
 
-        var expectedData =
-                new AuthAppMfaData(AUTH_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT, 1);
+        var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
+        var expectedData = new MfaMethodData(1, PriorityIdentifier.DEFAULT, true, authAppDetail);
         assertEquals(List.of(expectedData), result);
     }
 

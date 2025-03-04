@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.shared.services;
 
-import uk.gov.di.authentication.shared.entity.MfaData;
+import uk.gov.di.authentication.shared.entity.MfaMethodData;
 
 import java.util.List;
 
 public interface MfaMethodsService {
-    List<MfaData> getMfaMethods(String email);
+    List<MfaMethodData> getMfaMethods(String email);
 }
