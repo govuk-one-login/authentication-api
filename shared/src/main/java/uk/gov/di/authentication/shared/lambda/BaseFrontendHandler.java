@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -229,12 +228,8 @@ public abstract class BaseFrontendHandler<T>
 
         clientSession.ifPresent(userContextBuilder::withClientSession);
 
-        LOG.info(
-                "Auth session email migration check {}",
-                Objects.equals(
-                        session.get().getEmailAddress(), authSession.get().getEmailAddress()));
-
-        session.map(Session::getEmailAddress)
+        authSession
+                .map(AuthSessionItem::getEmailAddress)
                 .map(authenticationService::getUserProfileFromEmail)
                 .ifPresentOrElse(
                         userProfile ->
@@ -253,7 +248,8 @@ public abstract class BaseFrontendHandler<T>
                         });
 
         if (loadUserCredentials) {
-            session.map(Session::getEmailAddress)
+            authSession
+                    .map(AuthSessionItem::getEmailAddress)
                     .map(authenticationService::getUserCredentialsFromEmail)
                     .ifPresent(
                             userCredentials ->
