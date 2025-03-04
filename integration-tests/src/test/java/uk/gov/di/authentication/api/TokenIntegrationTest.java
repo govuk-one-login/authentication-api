@@ -22,6 +22,9 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
+import com.nimbusds.oauth2.sdk.pkce.CodeVerifier;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
@@ -52,6 +55,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
@@ -62,6 +66,7 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -95,6 +100,29 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
+    private final String CODE_VERIFIER_ENCODED_STRING = createCodeVerifierURLEncodedString();
+    private final String CODE_CHALLENGE_STRING =
+            createCodeChallengeFromCodeVerifier(CODE_VERIFIER_ENCODED_STRING);
+
+    protected static final ConfigurationService configuration =
+            new IntegrationTestConfigurationService(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public boolean isPkceEnabled() {
+                    return true;
+                }
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+            };
 
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
@@ -102,7 +130,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new TokenHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new TokenHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -650,7 +678,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 new ClientID(CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .state(state)
-                        .nonce(nonce);
+                        .nonce(nonce)
+                        .customParameter("code_challenge", CODE_CHALLENGE_STRING);
         claimsRequest.ifPresent(builder::claims);
         vtr.ifPresent(v -> builder.customParameter("vtr", v));
 
@@ -730,6 +759,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
         customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
+        customParams.put("code_verifier", Collections.singletonList(CODE_VERIFIER_ENCODED_STRING));
         return customParams;
     }
 
@@ -742,5 +772,17 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         return customParams;
+    }
+
+    private String createCodeVerifierURLEncodedString() {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] codeVerifier = new byte[32];
+        secureRandom.nextBytes(codeVerifier);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(codeVerifier);
+    }
+
+    private String createCodeChallengeFromCodeVerifier(String codeVerifierString) {
+        var codeVerifier = new CodeVerifier(codeVerifierString);
+        return CodeChallenge.compute(CodeChallengeMethod.S256, codeVerifier).toString();
     }
 }
