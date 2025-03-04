@@ -97,8 +97,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                             spotResponse.getReason());
                     auditService.submitAuditEvent(
                             IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED, logIds.getClientId(), user);
-                    dynamoIdentityService.deleteIdentityCredentials(
-                            logIds.getClientSessionId(), spotResponse.getSub());
+                    dynamoIdentityService.deleteIdentityCredentials(logIds.getClientSessionId());
                     return null;
                 }
             } catch (JsonException e) {
