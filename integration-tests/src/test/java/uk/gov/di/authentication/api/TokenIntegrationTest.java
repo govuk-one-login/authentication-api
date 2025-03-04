@@ -97,6 +97,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
 
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
@@ -152,15 +153,16 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
 
-        assertThat(
-                OIDCTokenResponse.parse(jsonResponse)
-                        .getOIDCTokens()
-                        .getIDToken()
-                        .getJWTClaimsSet()
-                        .getClaim(VOT.getValue()),
-                equalTo(expectedVotClaim));
+        var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
+        assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo(expectedVotClaim));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+
+        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
+        assertEquals(idToken.serialize(), clientSession.getIdTokenHint());
+        var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+        assertTrue(orchClientSession.isPresent());
+        assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
     }
 
     @Test
@@ -728,16 +730,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         creationDate,
                         vtrList,
                         "client-name");
-        redis.createClientSession("a-client-session-id", clientSession);
+        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
-                        "a-client-session-id",
+                        CLIENT_SESSION_ID,
                         generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
                         creationDate,
                         vtrList,
                         "client-name"));
-        redis.addAuthCode(
-                code, CLIENT_ID, "a-client-session-id", clientSession, TEST_EMAIL, AUTH_TIME);
+        redis.addAuthCode(code, CLIENT_ID, CLIENT_SESSION_ID, clientSession, TEST_EMAIL, AUTH_TIME);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
