@@ -31,18 +31,6 @@ public class DynamoIdentityService {
 
     public void addCoreIdentityJWT(
             String clientSessionId, String subjectID, String coreIdentityJWT) {
-        var authIdentityCredentials =
-                authIdentityCredentialsDynamoService
-                        .get(subjectID)
-                        .orElse(new AuthIdentityCredentials())
-                        .withSubjectID(subjectID)
-                        .withCoreIdentityJWT(coreIdentityJWT)
-                        .withTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
-        authIdentityCredentialsDynamoService.update(authIdentityCredentials);
-
         var identityCredentials =
                 orchIdentityCredentialsDynamoService
                         .get(clientSessionId)
