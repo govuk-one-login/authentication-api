@@ -20,10 +20,14 @@ import {
   id = "/acceptance-tests/${var.environment}/SECTOR_HOST"
 }
 
+locals {
+  orch_stub_url = startswith(var.environment, "authdev") ? "https://orchstub.${local.service_domain}/" : "https://orchstub.signin.${local.service_domain}/"
+}
+
 resource "aws_ssm_parameter" "at_rp_url" {
   name  = "/acceptance-tests/${var.environment}/RP_URL"
   type  = "String"
-  value = var.orch_stub_deployed ? "https://orchstub.signin.${local.service_domain}/" : "${var.stub_rp_clients[index(var.stub_rp_clients[*].at_client, true)].sector_identifier_uri}/?relyingParty=${random_string.stub_relying_party_client_id[var.stub_rp_clients[index(var.stub_rp_clients[*].at_client, true)].client_name].result}"
+  value = var.orch_stub_deployed ? local.orch_stub_url : "${var.stub_rp_clients[index(var.stub_rp_clients[*].at_client, true)].sector_identifier_uri}/?relyingParty=${random_string.stub_relying_party_client_id[var.stub_rp_clients[index(var.stub_rp_clients[*].at_client, true)].client_name].result}"
 }
 import {
   to = aws_ssm_parameter.at_rp_url

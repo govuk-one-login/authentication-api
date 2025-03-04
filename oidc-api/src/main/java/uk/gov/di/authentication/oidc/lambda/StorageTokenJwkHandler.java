@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 
 public class StorageTokenJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -42,7 +42,7 @@ public class StorageTokenJwkHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(), this::storageTokenJwkRequestHandler);
     }
 
@@ -60,7 +60,7 @@ public class StorageTokenJwkHandler
 
             return generateApiGatewayProxyResponse(
                     200,
-                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
+                    instrumentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
                     Map.of("Cache-Control", "max-age=86400"),
                     null);
         } catch (Exception e) {

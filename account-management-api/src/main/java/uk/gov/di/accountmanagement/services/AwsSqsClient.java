@@ -1,11 +1,13 @@
 package uk.gov.di.accountmanagement.services;
 
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.SqsClientBuilder;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import uk.gov.di.authentication.shared.tracing.ConditionalOtelTracingExecutionInterceptor;
 
 import java.net.URI;
 import java.util.Optional;
@@ -16,14 +18,23 @@ public class AwsSqsClient {
     private final String queueUrl;
 
     public AwsSqsClient(String region, String queueUrl, Optional<String> sqsEndpoint) {
-        SqsClientBuilder amazonSqsBuilder = SqsClient.builder().region(Region.of(region));
+        ConditionalOtelTracingExecutionInterceptor otelInterceptor =
+                new ConditionalOtelTracingExecutionInterceptor();
+
+        SqsClientBuilder amazonSqsBuilder =
+                SqsClient.builder()
+                        .overrideConfiguration(
+                                ClientOverrideConfiguration.builder()
+                                        .addExecutionInterceptor(otelInterceptor)
+                                        .build())
+                        .region(Region.of(region));
 
         if (sqsEndpoint.isPresent()) {
             amazonSqsBuilder
                     .endpointOverride(URI.create(sqsEndpoint.get()))
                     .credentialsProvider(EnvironmentVariableCredentialsProvider.create());
         }
-        this.client = amazonSqsBuilder.build();
+        this.client = otelInterceptor.wrap(amazonSqsBuilder.build());
         this.queueUrl = queueUrl;
     }
 

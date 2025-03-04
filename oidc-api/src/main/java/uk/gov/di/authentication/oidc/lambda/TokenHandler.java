@@ -18,6 +18,7 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -62,7 +63,7 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
@@ -162,7 +163,7 @@ public class TokenHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(), () -> tokenRequestHandler(input));
     }
 
@@ -198,22 +199,15 @@ public class TokenHandler
 
         if (refreshTokenRequest(requestBody)) {
             LOG.info("Processing refresh token request");
-            return segmentedFunctionCall(
-                    "processRefreshTokenRequest",
-                    () ->
-                            processRefreshTokenRequest(
-                                    clientRegistry.getScopes(),
-                                    new RefreshToken(requestBody.get("refresh_token")),
-                                    clientRegistry.getClientID(),
-                                    getSigningAlgorithm(clientRegistry)));
+            return processRefreshTokenRequest(
+                    clientRegistry.getScopes(),
+                    new RefreshToken(requestBody.get("refresh_token")),
+                    clientRegistry.getClientID(),
+                    getSigningAlgorithm(clientRegistry));
         }
 
         Optional<AuthCodeExchangeData> authCodeExchangeDataMaybe =
-                segmentedFunctionCall(
-                        "authorisationCodeService",
-                        () ->
-                                authorisationCodeService.getExchangeDataForCode(
-                                        requestBody.get("code")));
+                authorisationCodeService.getExchangeDataForCode(requestBody.get("code"));
         if (authCodeExchangeDataMaybe.isEmpty()) {
             LOG.warn("Could not retrieve session data from code");
             return generateApiGatewayProxyResponse(
@@ -283,6 +277,7 @@ public class TokenHandler
                 400, invalidRequestParamError.toJSONObject().toJSONString());
     }
 
+    @Instrumented
     private APIGatewayProxyResponseEvent processRefreshTokenRequest(
             List<String> clientScopes,
             RefreshToken currentRefreshToken,
@@ -413,22 +408,19 @@ public class TokenHandler
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
             tokenResponse =
-                    segmentedFunctionCall(
-                            "generateTokenResponse",
-                            () ->
-                                    tokenService.generateTokenResponse(
-                                            clientRegistry.getClientID(),
-                                            clientSession.getDocAppSubjectId(),
-                                            authRequest.getScope(),
-                                            additionalTokenClaims,
-                                            clientSession.getDocAppSubjectId(),
-                                            clientSession.getDocAppSubjectId(),
-                                            finalClaimsRequest,
-                                            true,
-                                            signingAlgorithm,
-                                            authCodeExchangeData.getClientSessionId(),
-                                            vot,
-                                            null));
+                    tokenService.generateTokenResponse(
+                            clientRegistry.getClientID(),
+                            clientSession.getDocAppSubjectId(),
+                            authRequest.getScope(),
+                            additionalTokenClaims,
+                            clientSession.getDocAppSubjectId(),
+                            clientSession.getDocAppSubjectId(),
+                            finalClaimsRequest,
+                            true,
+                            signingAlgorithm,
+                            authCodeExchangeData.getClientSessionId(),
+                            vot,
+                            null);
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
@@ -444,22 +436,19 @@ public class TokenHandler
                             configurationService.getInternalSectorURI(),
                             dynamoService);
             tokenResponse =
-                    segmentedFunctionCall(
-                            "generateTokenResponse",
-                            () ->
-                                    tokenService.generateTokenResponse(
-                                            clientRegistry.getClientID(),
-                                            new Subject(userProfile.getSubjectID()),
-                                            authRequest.getScope(),
-                                            additionalTokenClaims,
-                                            rpPairwiseSubject,
-                                            internalPairwiseSubject,
-                                            finalClaimsRequest,
-                                            false,
-                                            signingAlgorithm,
-                                            authCodeExchangeData.getClientSessionId(),
-                                            vot,
-                                            authCodeExchangeData.getAuthTime()));
+                    tokenService.generateTokenResponse(
+                            clientRegistry.getClientID(),
+                            new Subject(userProfile.getSubjectID()),
+                            authRequest.getScope(),
+                            additionalTokenClaims,
+                            rpPairwiseSubject,
+                            internalPairwiseSubject,
+                            finalClaimsRequest,
+                            false,
+                            signingAlgorithm,
+                            authCodeExchangeData.getClientSessionId(),
+                            vot,
+                            authCodeExchangeData.getAuthTime());
         }
         return tokenResponse;
     }

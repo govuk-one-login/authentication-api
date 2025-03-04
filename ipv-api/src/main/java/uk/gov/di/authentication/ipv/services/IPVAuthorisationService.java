@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -85,6 +86,7 @@ public class IPVAuthorisationService {
         this.nowClock = nowClock;
     }
 
+    @Instrumented
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
         if (headers == null || headers.isEmpty()) {
             LOG.warn("No Query parameters in IPV Authorisation response");

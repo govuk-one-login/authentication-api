@@ -2,6 +2,7 @@ plugins {
     id "java"
     id "jacoco"
     id "au.com.dius.pact" version "4.6.17"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di.authentication.oidc"
@@ -25,6 +26,10 @@ dependencies {
             project(":client-registry-api"),
             project(":doc-checking-app-api")
 
+    implementation configurations.aspectjrt
+    implementation configurations.aspectjweaver
+    aspect project(":orchestration-shared")
+
     implementation project(path: ':ipv-api')
 
     testImplementation configurations.tests,
@@ -42,7 +47,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
     exclude 'uk/gov/di/authentication/oidc/contract/**'
 }
 

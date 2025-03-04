@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di.clientregistry"
@@ -19,6 +20,10 @@ dependencies {
 
     implementation project(":orchestration-shared")
 
+    implementation configurations.aspectjrt
+    implementation configurations.aspectjweaver
+    aspect project(":orchestration-shared")
+
     runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,
@@ -33,7 +38,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
 }
 
 task buildZip(type: Zip) {

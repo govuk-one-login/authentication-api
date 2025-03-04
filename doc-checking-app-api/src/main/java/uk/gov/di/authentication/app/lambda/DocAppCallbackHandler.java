@@ -52,7 +52,7 @@ import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.instrumentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -168,7 +168,7 @@ public class DocAppCallbackHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
+        return instrumentedFunctionCall(
                 "doc-app-api::" + getClass().getSimpleName(),
                 () -> docAppCallbackRequestHandler(input, context));
     }
@@ -304,7 +304,8 @@ public class DocAppCallbackHandler
                                         "Successful", Boolean.toString(true)));
                 cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
 
-                // TODO: ATO-922: delete once verified that session has no email address in DocApp
+                // TODO: ATO-922: delete once verified that session has no email address in
+                // DocApp
                 // journey
                 LOG.info("is session email address null: {}", session.getEmailAddress() == null);
                 //
