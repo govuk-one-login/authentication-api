@@ -33,8 +33,8 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -55,7 +55,7 @@ public class UpdateEmailHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final Json objectMapper = SerializationService.getInstance();
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
@@ -68,13 +68,13 @@ public class UpdateEmailHandler
     }
 
     public UpdateEmailHandler(
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
             AuditService auditService,
             ConfigurationService configurationService) {
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
@@ -83,7 +83,7 @@ public class UpdateEmailHandler
     }
 
     public UpdateEmailHandler(ConfigurationService configurationService) {
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.sqsClient =
@@ -137,12 +137,13 @@ public class UpdateEmailHandler
                 return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
             }
 
-            if (dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress())) {
+            if (dynamoAuthenticationService.userExists(
+                    updateInfoRequest.getReplacementEmailAddress())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
 
             var userProfile =
-                    dynamoService
+                    dynamoAuthenticationService
                             .getUserProfileByEmailMaybe(updateInfoRequest.getExistingEmailAddress())
                             .orElseThrow(
                                     () ->
@@ -189,11 +190,11 @@ public class UpdateEmailHandler
             if (PrincipalValidationHelper.principleIsInvalid(
                     userProfile,
                     configurationService.getInternalSectorUri(),
-                    dynamoService,
+                    dynamoAuthenticationService,
                     authorizerParams)) {
                 throw new InvalidPrincipalException("Invalid Principal in request");
             }
-            dynamoService.updateEmail(
+            dynamoAuthenticationService.updateEmail(
                     updateInfoRequest.getExistingEmailAddress(),
                     updateInfoRequest.getReplacementEmailAddress());
             LOG.info(
@@ -215,7 +216,7 @@ public class UpdateEmailHandler
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
                             configurationService.getInternalSectorUri(),
-                            dynamoService);
+                            dynamoAuthenticationService);
 
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,

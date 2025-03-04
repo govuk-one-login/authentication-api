@@ -13,7 +13,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
@@ -40,7 +40,7 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     private final BulkEmailUsersService bulkEmailUsersService;
 
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
 
     private final NotificationService notificationService;
 
@@ -57,13 +57,13 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     public BulkUserEmailSenderScheduledEventHandler(
             BulkEmailUsersService bulkEmailUsersService,
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             ConfigurationService configurationService,
             NotificationService notificationService,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
         this.bulkEmailUsersService = bulkEmailUsersService;
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.configurationService = configurationService;
         this.notificationService = notificationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -73,7 +73,7 @@ public class BulkUserEmailSenderScheduledEventHandler
     public BulkUserEmailSenderScheduledEventHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
         NotificationClient client =
                 configurationService
                         .getNotifyApiUrl()
@@ -137,7 +137,7 @@ public class BulkUserEmailSenderScheduledEventHandler
 
             userSubjectIdBatch.forEach(
                     subjectId -> {
-                        dynamoService
+                        dynamoAuthenticationService
                                 .getOptionalUserProfileFromSubject(subjectId)
                                 .ifPresentOrElse(
                                         userProfile ->
@@ -256,7 +256,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                         ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                         userProfile,
                                         configurationService.getInternalSectorUri(),
-                                        dynamoService)
+                                        dynamoAuthenticationService)
                                 .getValue()
                         : AuditService.UNKNOWN;
         auditService.submitAuditEvent(

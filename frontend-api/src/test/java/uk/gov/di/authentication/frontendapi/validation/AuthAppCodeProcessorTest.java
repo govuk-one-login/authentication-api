@@ -24,7 +24,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
@@ -53,7 +53,7 @@ class AuthAppCodeProcessorTest {
     AuthSessionItem authSession;
     CodeStorageService mockCodeStorageService;
     ConfigurationService mockConfigurationService;
-    DynamoService mockDynamoService;
+    DynamoAuthenticationService mockDynamoAuthenticationService;
     AuditService mockAuditService;
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
@@ -94,7 +94,7 @@ class AuthAppCodeProcessorTest {
                         .withInternalCommonSubjectId(INTERNAL_SUB_ID);
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
-        this.mockDynamoService = mock(DynamoService.class);
+        this.mockDynamoAuthenticationService = mock(DynamoAuthenticationService.class);
         this.mockAuditService = mock(AuditService.class);
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
@@ -217,9 +217,9 @@ class AuthAppCodeProcessorTest {
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
-        verify(mockDynamoService, never())
+        verify(mockDynamoAuthenticationService, never())
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
-        verify(mockDynamoService)
+        verify(mockDynamoAuthenticationService)
                 .setAuthAppAndAccountVerified(CommonTestVariables.EMAIL, AUTH_APP_SECRET);
         verify(mockAuditService)
                 .submitAuditEvent(
@@ -240,8 +240,9 @@ class AuthAppCodeProcessorTest {
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
-        verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
-        verify(mockDynamoService)
+        verify(mockDynamoAuthenticationService, never())
+                .setAuthAppAndAccountVerified(anyString(), anyString());
+        verify(mockDynamoAuthenticationService)
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(
                         CommonTestVariables.EMAIL, AUTH_APP_SECRET);
         verify(mockAuditService)
@@ -261,7 +262,7 @@ class AuthAppCodeProcessorTest {
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
-        verifyNoInteractions(mockDynamoService);
+        verifyNoInteractions(mockDynamoAuthenticationService);
         verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
         verify(mockAuditService)
                 .submitAuditEvent(
@@ -279,7 +280,7 @@ class AuthAppCodeProcessorTest {
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
-        verifyNoInteractions(mockDynamoService);
+        verifyNoInteractions(mockDynamoAuthenticationService);
         verify(mockAccountModifiersService, never())
                 .removeAccountRecoveryBlockIfPresent(anyString());
         verifyNoInteractions(mockAuditService);
@@ -297,7 +298,7 @@ class AuthAppCodeProcessorTest {
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
-                        mockDynamoService,
+                        mockDynamoAuthenticationService,
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
@@ -314,7 +315,7 @@ class AuthAppCodeProcessorTest {
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
-                        mockDynamoService,
+                        mockDynamoAuthenticationService,
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
@@ -332,7 +333,7 @@ class AuthAppCodeProcessorTest {
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
-                        mockDynamoService,
+                        mockDynamoAuthenticationService,
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
@@ -342,7 +343,7 @@ class AuthAppCodeProcessorTest {
     private void setUpNoAuthCodeForUser(CodeRequest codeRequest) {
         when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL))
+        when(mockDynamoAuthenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(mock(UserCredentials.class));
 
         this.authAppCodeProcessor =
@@ -350,7 +351,7 @@ class AuthAppCodeProcessorTest {
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
-                        mockDynamoService,
+                        mockDynamoAuthenticationService,
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
@@ -370,14 +371,15 @@ class AuthAppCodeProcessorTest {
         when(mockMfaMethod.isEnabled()).thenReturn(true);
         List<MFAMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
         when(mockUserCredentials.getMfaMethods()).thenReturn(mockMfaMethodList);
-        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(mockUserCredentials);
+        when(mockDynamoAuthenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(mockUserCredentials);
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
-                        mockDynamoService,
+                        mockDynamoAuthenticationService,
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,

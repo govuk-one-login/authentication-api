@@ -10,7 +10,7 @@ import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 
@@ -38,7 +38,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
     private final BulkEmailUsersService bulkEmailUsersService = mock(BulkEmailUsersService.class);
 
-    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoAuthenticationService dynamoAuthenticationService =
+            mock(DynamoAuthenticationService.class);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
@@ -59,7 +60,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         bulkUserEmailAudienceLoaderScheduledEventHandler =
                 new BulkUserEmailAudienceLoaderScheduledEventHandler(
                         bulkEmailUsersService,
-                        dynamoService,
+                        dynamoAuthenticationService,
                         configurationService,
                         lambdaInvokerService);
         when(configurationService.getBulkEmailLoaderLambdaName()).thenReturn(functionName);
@@ -71,7 +72,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+        when(dynamoAuthenticationService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
@@ -86,7 +87,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+        when(dynamoAuthenticationService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
@@ -101,7 +102,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+        when(dynamoAuthenticationService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
@@ -120,7 +121,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(3L);
         when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+        when(dynamoAuthenticationService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
@@ -138,7 +139,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[0], TEST_SUBJECT_IDS[1], TEST_SUBJECT_IDS[2]);
         var userProfiles = testUserProfilesFromSubjectIds(subjectIds);
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+        when(dynamoAuthenticationService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(userProfiles);
 
@@ -197,7 +198,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[3], TEST_SUBJECT_IDS[4]);
 
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+        when(dynamoAuthenticationService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         lastEvaluatedKey, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(subjectIds));
 
@@ -241,7 +242,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         var lastEvaluatedKey =
                 Map.of("SubjectID", AttributeValue.builder().s(lastEvaluatedSubjectId).build());
 
-        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+        when(dynamoAuthenticationService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(Stream.empty());
 

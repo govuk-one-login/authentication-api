@@ -19,7 +19,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,18 +38,19 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
     private static final Logger LOG = LogManager.getLogger(BulkTestUserCreateHandler.class);
     private static final String CSV_HEADER_ROW_TEXT =
             "Email,Password,Phone2FA,PhoneNumber,AuthApp2FA,AuthAppSecret";
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
     private final S3Client client;
     private final String latestTermsAndConditions;
 
-    public BulkTestUserCreateHandler(DynamoService dynamoService, S3Client client) {
-        this.dynamoService = dynamoService;
+    public BulkTestUserCreateHandler(
+            DynamoAuthenticationService dynamoAuthenticationService, S3Client client) {
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.client = client;
         this.latestTermsAndConditions = "test-terms-and-conditions-version";
     }
 
     public BulkTestUserCreateHandler(ConfigurationService configurationService, S3Client client) {
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
         this.client = client;
         this.latestTermsAndConditions = configurationService.getTermsAndConditionsVersion();
     }
@@ -130,7 +131,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
         try {
             segmentedFunctionCall(
                     "dynamoCreateBatchTestUsers",
-                    () -> dynamoService.createBatchTestUsers(testUsers));
+                    () -> dynamoAuthenticationService.createBatchTestUsers(testUsers));
         } catch (Exception e) {
             LOG.error("User Profile or Credentials Dynamo Table exception thrown", e);
         }

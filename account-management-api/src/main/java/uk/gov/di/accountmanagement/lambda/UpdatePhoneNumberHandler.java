@@ -28,7 +28,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -47,7 +47,7 @@ public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final Json objectMapper = SerializationService.getInstance();
-    private final DynamoService dynamoService;
+    private final DynamoAuthenticationService dynamoAuthenticationService;
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private final ConfigurationService configurationService;
@@ -59,12 +59,12 @@ public class UpdatePhoneNumberHandler
     }
 
     public UpdatePhoneNumberHandler(
-            DynamoService dynamoService,
+            DynamoAuthenticationService dynamoAuthenticationService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
             AuditService auditService,
             ConfigurationService configurationService) {
-        this.dynamoService = dynamoService;
+        this.dynamoAuthenticationService = dynamoAuthenticationService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
@@ -72,7 +72,7 @@ public class UpdatePhoneNumberHandler
     }
 
     public UpdatePhoneNumberHandler(ConfigurationService configurationService) {
-        this.dynamoService = new DynamoService(configurationService);
+        this.dynamoAuthenticationService = new DynamoAuthenticationService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -115,7 +115,7 @@ public class UpdatePhoneNumberHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
             var userProfile =
-                    dynamoService
+                    dynamoAuthenticationService
                             .getUserProfileByEmailMaybe(updatePhoneNumberRequest.getEmail())
                             .orElseThrow(
                                     () ->
@@ -126,11 +126,11 @@ public class UpdatePhoneNumberHandler
             if (PrincipalValidationHelper.principleIsInvalid(
                     userProfile,
                     configurationService.getInternalSectorUri(),
-                    dynamoService,
+                    dynamoAuthenticationService,
                     authorizerParams)) {
                 throw new InvalidPrincipalException("Invalid Principal in request");
             }
-            dynamoService.updatePhoneNumber(
+            dynamoAuthenticationService.updatePhoneNumber(
                     updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
             LOG.info("Phone Number has successfully been updated. Adding message to SQS queue");
             NotifyRequest notifyRequest =
@@ -145,7 +145,7 @@ public class UpdatePhoneNumberHandler
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
                             configurationService.getInternalSectorUri(),
-                            dynamoService);
+                            dynamoAuthenticationService);
 
             var auditContext =
                     new AuditContext(

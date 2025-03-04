@@ -46,16 +46,16 @@ import static java.util.Objects.nonNull;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
 
-public class DynamoService implements AuthenticationService {
+public class DynamoAuthenticationService implements AuthenticationService {
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
     private final DynamoDbTable<UserCredentials> dynamoUserCredentialsTable;
     private final DynamoDbEnhancedClient dynamoDbEnhancedClient;
     private static final String USER_PROFILE_TABLE = "user-profile";
     private static final String USER_CREDENTIAL_TABLE = "user-credentials";
     private static final String TEST_USER_INDEX_NAME = "TestUserIndex";
-    private static final Logger LOG = LogManager.getLogger(DynamoService.class);
+    private static final Logger LOG = LogManager.getLogger(DynamoAuthenticationService.class);
 
-    public DynamoService(ConfigurationService configurationService) {
+    public DynamoAuthenticationService(ConfigurationService configurationService) {
         String userProfileTableName =
                 configurationService.getEnvironment() + "-" + USER_PROFILE_TABLE;
         String userCredentialsTableName =
@@ -369,7 +369,8 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(String email, String phoneNumber) {
+    public void setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+            String email, String phoneNumber, boolean accountVerified) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         var userProfile =
@@ -380,7 +381,8 @@ public class DynamoService implements AuthenticationService {
                                         .build())
                         .withPhoneNumber(formattedPhoneNumber)
                         .withPhoneNumberVerified(true)
-                        .withUpdated(dateTime);
+                        .withUpdated(dateTime)
+                        .withAccountVerified(accountVerified ? 1 : 0);
 
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(

@@ -25,7 +25,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
@@ -51,7 +51,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class UpdatePasswordHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoAuthenticationService dynamoAuthenticationService =
+            mock(DynamoAuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CommonPasswordsService commonPasswordsService =
@@ -79,30 +80,31 @@ class UpdatePasswordHandlerTest {
     void setUp() {
         handler =
                 new UpdatePasswordHandler(
-                        dynamoService,
+                        dynamoAuthenticationService,
                         sqsClient,
                         auditService,
                         commonPasswordsService,
                         passwordValidator,
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
-        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(dynamoAuthenticationService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn(SALT);
     }
 
     @Test
     void shouldReturn204WhenPrincipalContainsInternalPairwiseSubjectId() throws Json.JsonException {
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         var userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
 
         var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        verify(dynamoAuthenticationService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verify(sqsClient)
                 .send(
                         objectMapper.writeValueAsString(
@@ -128,9 +130,10 @@ class UpdatePasswordHandlerTest {
     @Test
     void shouldThrowIfPrincipalIdIsInvalid() {
         var userProfile = new UserProfile().withSubjectID(new Subject().getValue());
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SaltHelper.generateNewSalt());
+        when(dynamoAuthenticationService.getOrGenerateSalt(userProfile))
+                .thenReturn(SaltHelper.generateNewSalt());
 
         var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
 
@@ -169,9 +172,9 @@ class UpdatePasswordHandlerTest {
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         var userCredentials =
                 new UserCredentials().withPassword(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD));
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
 
         var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
@@ -179,14 +182,15 @@ class UpdatePasswordHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
-        verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        verify(dynamoAuthenticationService, never())
+                .updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
     }
 
     @Test
     void shouldReturn400IfUserAccountDoesNotExistForCurrentEmail() {
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+        when(dynamoAuthenticationService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
         var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
@@ -194,7 +198,8 @@ class UpdatePasswordHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
-        verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        verify(dynamoAuthenticationService, never())
+                .updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
     }
@@ -210,7 +215,8 @@ class UpdatePasswordHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
-        verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        verify(dynamoAuthenticationService, never())
+                .updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(auditService);
     }
 
