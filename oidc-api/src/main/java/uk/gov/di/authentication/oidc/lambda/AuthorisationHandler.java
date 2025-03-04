@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -73,6 +74,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -124,6 +126,7 @@ public class AuthorisationHandler
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
     private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator;
@@ -141,6 +144,7 @@ public class AuthorisationHandler
             SessionService sessionService,
             OrchSessionService orchSessionService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
             QueryParamsAuthorizeValidator queryParamsAuthorizeValidator,
@@ -156,6 +160,7 @@ public class AuthorisationHandler
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
         this.queryParamsAuthorizeValidator = queryParamsAuthorizeValidator;
@@ -174,6 +179,7 @@ public class AuthorisationHandler
         this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -204,6 +210,7 @@ public class AuthorisationHandler
         this.sessionService = new SessionService(configurationService, redis);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
@@ -421,10 +428,15 @@ public class AuthorisationHandler
         Optional<OrchSessionItem> orchSessionOptional =
                 sessionId.flatMap(orchSessionService::getSession);
 
+        var creationDate = LocalDateTime.now();
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
+                        authRequest.toParameters(), creationDate, vtrList, client.getClientName());
+        OrchClientSessionItem orchClientSession =
+                orchClientSessionService.generateClientSession(
+                        clientSessionId,
                         authRequest.toParameters(),
-                        LocalDateTime.now(),
+                        creationDate,
                         vtrList,
                         client.getClientName());
 
@@ -435,6 +447,7 @@ public class AuthorisationHandler
                     sessionId,
                     orchSessionOptional,
                     clientSession,
+                    orchClientSession,
                     authRequest,
                     client,
                     clientSessionId,
@@ -458,6 +471,7 @@ public class AuthorisationHandler
                 sessionId,
                 orchSessionOptional,
                 clientSession,
+                orchClientSession,
                 authRequest,
                 persistentSessionId,
                 client,
@@ -507,6 +521,7 @@ public class AuthorisationHandler
             Optional<String> existingSessionId,
             Optional<OrchSessionItem> orchSessionOptional,
             ClientSession clientSession,
+            OrchClientSessionItem orchClientSession,
             AuthenticationRequest authenticationRequest,
             ClientRegistry client,
             String clientSessionId,
@@ -552,6 +567,8 @@ public class AuthorisationHandler
 
         clientSessionService.storeClientSession(
                 clientSessionId, clientSession.setDocAppSubjectId(subjectId));
+        orchClientSessionService.storeClientSession(
+                orchClientSession.withDocAppSubjectId(subjectId.getValue()));
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
 
         session.addClientSession(clientSessionId);
@@ -612,6 +629,7 @@ public class AuthorisationHandler
             Optional<String> existingSessionId,
             Optional<OrchSessionItem> existingOrchSessionOptional,
             ClientSession clientSession,
+            OrchClientSessionItem orchClientSession,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
             ClientRegistry client,
@@ -708,6 +726,7 @@ public class AuthorisationHandler
                 pair("new_authentication_required", newAuthenticationRequired));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
+        orchClientSessionService.storeClientSession(orchClientSession);
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);

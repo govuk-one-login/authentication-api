@@ -63,6 +63,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -108,6 +109,7 @@ public class AuthenticationCallbackHandler
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -134,6 +136,7 @@ public class AuthenticationCallbackHandler
         this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
@@ -176,6 +179,7 @@ public class AuthenticationCallbackHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
@@ -216,6 +220,7 @@ public class AuthenticationCallbackHandler
             SessionService sessionService,
             OrchSessionService orchSessionService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -232,6 +237,7 @@ public class AuthenticationCallbackHandler
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -286,6 +292,13 @@ public class AuthenticationCallbackHandler
                                     () ->
                                             new AuthenticationCallbackException(
                                                     "ClientSession not found"));
+            var orchClientSession =
+                    orchClientSessionService
+                            .getClientSession(clientSessionId)
+                            .orElseThrow(
+                                    () ->
+                                            new AuthenticationCallbackException(
+                                                    "OrchClientSession not found"));
 
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
@@ -420,10 +433,13 @@ public class AuthenticationCallbackHandler
                 orchSession.setAuthenticated(true);
                 clientSession.setRpPairwiseId(
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
+                orchClientSession.setRpPairwiseId(
+                        userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
 
                 sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
+                orchClientSessionService.updateStoredClientSession(orchClientSession);
 
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =

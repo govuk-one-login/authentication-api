@@ -46,6 +46,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -53,6 +54,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper;
@@ -95,10 +97,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
 
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
             new RpPublicKeyCacheExtension(180);
+
+    @RegisterExtension
+    public static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     @BeforeEach
     void setup() {
@@ -146,15 +153,16 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
 
-        assertThat(
-                OIDCTokenResponse.parse(jsonResponse)
-                        .getOIDCTokens()
-                        .getIDToken()
-                        .getJWTClaimsSet()
-                        .getClaim(VOT.getValue()),
-                equalTo(expectedVotClaim));
+        var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
+        assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo(expectedVotClaim));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+
+        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
+        assertEquals(idToken.serialize(), clientSession.getIdTokenHint());
+        var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+        assertTrue(orchClientSession.isPresent());
+        assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
     }
 
     @Test
@@ -715,15 +723,22 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     VectorOfTrust.parseFromAuthRequestAttribute(
                             singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
+        var creationDate = LocalDateTime.now();
         var clientSession =
                 new ClientSession(
                         generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
-                        LocalDateTime.now(),
+                        creationDate,
                         vtrList,
                         "client-name");
-        redis.createClientSession("a-client-session-id", clientSession);
-        redis.addAuthCode(
-                code, CLIENT_ID, "a-client-session-id", clientSession, TEST_EMAIL, AUTH_TIME);
+        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
+                        creationDate,
+                        vtrList,
+                        "client-name"));
+        redis.addAuthCode(code, CLIENT_ID, CLIENT_SESSION_ID, clientSession, TEST_EMAIL, AUTH_TIME);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));

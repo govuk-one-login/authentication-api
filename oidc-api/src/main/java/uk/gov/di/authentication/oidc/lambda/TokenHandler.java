@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
@@ -78,6 +79,7 @@ public class TokenHandler
     private final ConfigurationService configurationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
@@ -92,6 +94,7 @@ public class TokenHandler
             ConfigurationService configurationService,
             AuthorisationCodeService authorisationCodeService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
             RedisConnectionService redisConnectionService,
             TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory,
@@ -101,6 +104,7 @@ public class TokenHandler
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.tokenValidationService = tokenValidationService;
         this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
@@ -121,6 +125,7 @@ public class TokenHandler
                         configurationService, redisConnectionService, objectMapper);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
                         new JwksService(configurationService, kms), configurationService);
@@ -145,6 +150,7 @@ public class TokenHandler
                         configurationService, redisConnectionService, objectMapper);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
                         new JwksService(configurationService, kms), configurationService);
@@ -253,10 +259,17 @@ public class TokenHandler
                         getSigningAlgorithm(clientRegistry),
                         authCodeExchangeData);
 
+        var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
+        var clientSessionId = authCodeExchangeData.getClientSessionId();
         clientSessionService.updateStoredClientSession(
-                authCodeExchangeData.getClientSessionId(),
-                clientSession.setIdTokenHint(
-                        tokenResponse.getOIDCTokens().getIDToken().serialize()));
+                clientSessionId, clientSession.setIdTokenHint(idTokenHint));
+        var orchClientSession = orchClientSessionService.getClientSession(clientSessionId);
+        if (orchClientSession.isEmpty()) {
+            LOG.warn("No orch client session is present");
+        } else {
+            orchClientSessionService.updateStoredClientSession(
+                    orchClientSession.get().withIdTokenHint(idTokenHint));
+        }
 
         var dimensions =
                 new HashMap<>(
