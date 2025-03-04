@@ -34,7 +34,7 @@ public abstract class MfaCodeProcessor {
             AuthenticationService dynamoService,
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService) {
-        this.emailAddress = userContext.getSession().getEmailAddress();
+        this.emailAddress = userContext.getAuthSession().getEmailAddress();
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
