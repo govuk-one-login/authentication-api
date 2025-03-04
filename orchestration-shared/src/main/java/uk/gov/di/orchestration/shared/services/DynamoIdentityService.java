@@ -74,18 +74,6 @@ public class DynamoIdentityService {
             Map<String, String> additionalClaims,
             String ipvVot,
             String ipvCoreIdentity) {
-        var authIdentityCredentials =
-                new AuthIdentityCredentials()
-                        .withSubjectID(subjectID)
-                        .withAdditionalClaims(additionalClaims)
-                        .withIpvVot(ipvVot)
-                        .withIpvCoreIdentity(ipvCoreIdentity)
-                        .withTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
-        authIdentityCredentialsDynamoService.put(authIdentityCredentials);
-
         var identityCredentials =
                 new OrchIdentityCredentials()
                         .withClientSessionId(clientSessionId)
