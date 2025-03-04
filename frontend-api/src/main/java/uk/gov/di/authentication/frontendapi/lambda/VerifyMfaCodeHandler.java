@@ -174,7 +174,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 auditContextFromUserContext(
                         userContext,
                         authSession.getInternalCommonSubjectId(),
-                        userContext.getSession().getEmailAddress(),
+                        authSession.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
@@ -310,7 +310,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             if (errorResponse.equals(ErrorResponse.ERROR_1034)
                     || errorResponse.equals(ErrorResponse.ERROR_1042)) {
                 blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-                        userContext.getSession().getEmailAddress(),
+                        userContext.getAuthSession().getEmailAddress(),
                         codeRequest.getMfaMethodType(),
                         codeRequest.getJourneyType());
             }
@@ -349,13 +349,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 auditContextFromUserContext(
                         userContext,
                         authSession.getInternalCommonSubjectId(),
-                        session.getEmailAddress(),
+                        authSession.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
 
         var metadataPairs =
-                metadataPairsForEvent(auditableEvent, session.getEmailAddress(), codeRequest);
+                metadataPairsForEvent(auditableEvent, authSession.getEmailAddress(), codeRequest);
 
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
@@ -416,7 +416,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 clientId,
                 userContext.getClientName(),
                 levelOfConfidence.getValue(),
-                clientService.isTestJourney(clientId, session.getEmailAddress()),
+                clientService.isTestJourney(clientId, authSession.getEmailAddress()),
                 true);
 
         return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();

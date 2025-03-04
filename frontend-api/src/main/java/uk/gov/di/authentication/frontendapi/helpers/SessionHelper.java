@@ -21,12 +21,12 @@ public class SessionHelper {
             AuthenticationService authenticationService,
             ConfigurationService configurationService) {
         LOG.info("Calculating internal common subject identifier");
-        var session = userContext.getSession();
         var authSession = userContext.getAuthSession();
         UserProfile userProfile =
                 userContext.getUserProfile().isPresent()
                         ? userContext.getUserProfile().get()
-                        : authenticationService.getUserProfileByEmail(session.getEmailAddress());
+                        : authenticationService.getUserProfileByEmail(
+                                authSession.getEmailAddress());
         var internalCommonSubjectId =
                 authSession.getInternalCommonSubjectId() != null
                         ? authSession.getInternalCommonSubjectId()
