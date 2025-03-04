@@ -1,6 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import uk.gov.di.orchestration.shared.entity.AuthIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
@@ -11,15 +10,9 @@ import java.util.Optional;
 public class DynamoIdentityService {
 
     private final long timeToExist;
-    private final BaseDynamoService<AuthIdentityCredentials> authIdentityCredentialsDynamoService;
     private final BaseDynamoService<OrchIdentityCredentials> orchIdentityCredentialsDynamoService;
 
     public DynamoIdentityService(ConfigurationService configurationService) {
-        authIdentityCredentialsDynamoService =
-                new BaseDynamoService<>(
-                        AuthIdentityCredentials.class,
-                        "identity-credentials",
-                        configurationService);
         orchIdentityCredentialsDynamoService =
                 new BaseDynamoService<>(
                         OrchIdentityCredentials.class,
