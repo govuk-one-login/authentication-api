@@ -66,6 +66,10 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   lifecycle {
     create_before_destroy = false
   }
+
+  depends_on = [
+    aws_cloudwatch_log_group.lambda_log_group
+  ]
 }
 
 resource "aws_lambda_alias" "endpoint_lambda" {
@@ -73,6 +77,10 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.endpoint_lambda.arn
   function_version = aws_lambda_function.endpoint_lambda.version
+
+  depends_on = [
+    aws_lambda_function.endpoint_lambda
+  ]
 }
 
 resource "terraform_data" "wait_for_alias" {
