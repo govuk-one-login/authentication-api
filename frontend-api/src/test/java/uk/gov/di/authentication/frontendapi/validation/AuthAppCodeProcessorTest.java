@@ -49,6 +49,8 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 
 class AuthAppCodeProcessorTest {
     AuthAppCodeProcessor authAppCodeProcessor;
+    Session mockSession;
+    AuthSessionItem authSession;
     CodeStorageService mockCodeStorageService;
     ConfigurationService mockConfigurationService;
     DynamoService mockDynamoService;
@@ -56,7 +58,6 @@ class AuthAppCodeProcessorTest {
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
     private Session session;
-    private AuthSessionItem authSession;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -86,10 +87,10 @@ class AuthAppCodeProcessorTest {
                 new Session()
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(INTERNAL_SUB_ID);
+        this.mockSession = mock(Session.class);
         this.authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
-                        .withEmailAddress(EMAIL)
                         .withInternalCommonSubjectId(INTERNAL_SUB_ID);
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
@@ -98,7 +99,7 @@ class AuthAppCodeProcessorTest {
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
         when(mockUserContext.getSession()).thenReturn(session);
-        when(mockUserContext.getAuthSession()).thenReturn(authSession);
+        when(mockUserContext.getAuthSession()).thenReturn(mock(AuthSessionItem.class));
     }
 
     private static Stream<Arguments> validatorParams() {
