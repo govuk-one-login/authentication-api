@@ -11,6 +11,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -48,6 +49,7 @@ import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -62,6 +64,7 @@ import static java.lang.String.format;
 import static java.time.Clock.fixed;
 import static java.time.ZoneId.systemDefault;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -80,6 +83,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.LoginHandler.INTERNAL_SUBJECT_ID;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -138,6 +142,10 @@ class AccountInterventionsHandlerTest {
                     CommonTestVariables.DI_PERSISTENT_SESSION_ID,
                     Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS));
     private static final Json objectMapper = SerializationService.getInstance();
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(AccountInterventionsHandler.class);
 
     @BeforeEach
     void setUp() throws URISyntaxException {
@@ -457,12 +465,19 @@ class AccountInterventionsHandlerTest {
         verify(mockLambdaInvokerService)
                 .invokeAsyncWithPayload(payloadCaptor.capture(), lambdaNameCaptor.capture());
 
-        var ticfRequest = new Gson().fromJson(payloadCaptor.getValue(), TICFCRIRequest.class);
+        String capturedPayload = payloadCaptor.getValue();
+        var ticfRequest = new Gson().fromJson(capturedPayload, TICFCRIRequest.class);
         assertEquals(CommonTestVariables.CLIENT_SESSION_ID, ticfRequest.govukSigninJourneyId());
         var vtr = new ArrayList<String>();
         vtr.add(CredentialTrustLevel.LOW_LEVEL.getValue());
         assertEquals(ticfRequest.vtr(), vtr);
         verify(auditService).submitAuditEvent(expectedEvent, AUDIT_CONTEXT);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Invoking TICF CRI with payload: %s".formatted(capturedPayload))));
     }
 
     @Test
