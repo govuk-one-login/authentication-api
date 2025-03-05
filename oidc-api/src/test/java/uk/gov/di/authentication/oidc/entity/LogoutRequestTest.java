@@ -107,10 +107,7 @@ class LogoutRequestTest {
 
     @BeforeEach
     void sessionExistsSetup() throws ParseException {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         orchSession =
                 new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(SUBJECT.getValue());
         idTokenHint = signedIDToken.serialize();
@@ -225,10 +222,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWithNoTokenHint() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -266,10 +260,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWhenSignatureIdTokenIsInvalid() throws JOSEException {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -319,10 +310,7 @@ class LogoutRequestTest {
     @Test
     void shouldCorrectlyParseALogoutRequestWhenClientIsNotFoundInClientRegistry()
             throws JOSEException {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -372,11 +360,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenRedirectUriIsMissing() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
-
+        session = generateSession().setEmailAddress(EMAIL);
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session, orchSession);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
@@ -414,10 +398,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
-        session =
-                generateSession()
-                        .setEmailAddress(EMAIL)
-                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+        session = generateSession().setEmailAddress(EMAIL);
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
