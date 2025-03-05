@@ -16,7 +16,7 @@ resource "aws_dynamodb_table" "stub_account_interventions_table" {
   }
 
   tags = (
-    var.environment == "integration" ?
+    var.environment == "integration" || var.environment == "production" ?
     {
       "BackupFrequency" = "Bihourly"
     } : {}
