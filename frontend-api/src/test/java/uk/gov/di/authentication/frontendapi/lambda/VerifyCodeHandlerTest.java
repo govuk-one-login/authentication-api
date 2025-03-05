@@ -133,10 +133,7 @@ class VerifyCodeHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
     // TODO do we need both session and sessionForTestClient here?
-    private final Session session =
-            new Session()
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final Session sessionForTestClient = new Session().setEmailAddress(TEST_CLIENT_EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
@@ -396,7 +393,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         sessionForTestClient.setEmailAddress(email);
-        sessionForTestClient.setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
@@ -432,7 +428,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         sessionForTestClient.setEmailAddress(email);
-        sessionForTestClient.setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
         String body =
                 format("{ \"code\": \"%s\", \"notificationType\": \"%s\"  }", CODE, VERIFY_EMAIL);
         var result = makeCallWithCode(body, Optional.of(sessionForTestClient), TEST_CLIENT_ID);
@@ -566,8 +561,12 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
         verify(accountModifiersService)
                 .removeAccountRecoveryBlockIfPresent(INTERNAL_COMMON_SUBJECT_ID);
-        var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
-        verify(sessionService, times(saveSessionCount)).storeOrUpdateSession(session, SESSION_ID);
+        verify(authSessionService, atLeastOnce())
+                .updateSession(
+                        argThat(
+                                s ->
+                                        s.getInternalCommonSubjectId()
+                                                .equals(INTERNAL_COMMON_SUBJECT_ID)));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,

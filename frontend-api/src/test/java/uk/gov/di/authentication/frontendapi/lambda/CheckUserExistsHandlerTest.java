@@ -97,8 +97,7 @@ class CheckUserExistsHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
-    private final Session session =
-            new Session().setInternalCommonSubjectIdentifier("test-subject-id");
+    private final Session session = new Session();
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -185,8 +184,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
-            assertEquals(
-                    getExpectedInternalPairwiseId(), session.getInternalCommonSubjectIdentifier());
+            assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
         @Test
@@ -305,7 +303,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
-        assertNull(session.getInternalCommonSubjectIdentifier());
+        assertNull(authSession.getInternalCommonSubjectId());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,

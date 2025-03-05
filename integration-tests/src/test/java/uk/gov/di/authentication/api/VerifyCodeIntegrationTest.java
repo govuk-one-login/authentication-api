@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -352,7 +351,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
@@ -385,7 +383,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
@@ -429,8 +426,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        Session session = redis.getSession(sessionId);
-        assertThat(session.getInternalCommonSubjectIdentifier(), notNullValue());
+        var authSession = authSessionExtension.getSession(sessionId).orElseThrow();
+        assertThat(authSession.getInternalCommonSubjectId(), notNullValue());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
@@ -445,7 +442,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithSignUp(sessionId, withScope());

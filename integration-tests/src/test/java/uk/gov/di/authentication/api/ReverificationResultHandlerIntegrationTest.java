@@ -121,7 +121,6 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
                         new Subject().getValue(),
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
 
         authSessionStore.addSession(sessionId);
         authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
