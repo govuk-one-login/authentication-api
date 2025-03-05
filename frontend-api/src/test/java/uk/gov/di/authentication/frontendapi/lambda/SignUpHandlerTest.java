@@ -52,7 +52,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -201,13 +200,6 @@ class SignUpHandlerTest {
                                                 && Objects.equals(
                                                         s.getInternalCommonSubjectId(),
                                                         expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .storeOrUpdateSession(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)),
-                        eq(SESSION_ID));
     }
 
     @Test
