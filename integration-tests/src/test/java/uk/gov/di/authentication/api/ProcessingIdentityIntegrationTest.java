@@ -17,11 +17,13 @@ import uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 
@@ -61,6 +63,10 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @RegisterExtension
     protected static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    protected static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     @BeforeEach
     void setup() {
@@ -204,13 +210,22 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         orchSessionExtension.addSession(
                 new OrchSessionItem(SESSION_ID)
                         .withInternalCommonSubjectId(INTERNAL_SUBJECT.getValue()));
+        var creationDate = LocalDateTime.now();
         var clientSession =
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
-                        LocalDateTime.now(),
+                        creationDate,
                         List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
+        var orchClientSession =
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        creationDate,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME);
+        orchClientSessionExtension.storeClientSession(orchClientSession);
         redis.addStateToRedis(STATE, SESSION_ID);
         if (incrementProcessIdentityAttempts) {
             redis.incrementInitialProcessingIdentityAttemptsInSession(SESSION_ID);

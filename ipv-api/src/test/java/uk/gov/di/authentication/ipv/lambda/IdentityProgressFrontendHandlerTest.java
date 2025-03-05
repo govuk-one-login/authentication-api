@@ -21,10 +21,10 @@ import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
@@ -32,6 +32,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -45,7 +46,6 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -93,6 +93,8 @@ public class IdentityProgressFrontendHandlerTest {
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
+    private final OrchClientSessionService orchClientSessionService =
+            mock(OrchClientSessionService.class);
     private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
@@ -120,7 +122,8 @@ public class IdentityProgressFrontendHandlerTest {
                         sessionService,
                         userInfoStorageService,
                         clientSessionService,
-                        orchSessionService);
+                        orchSessionService,
+                        orchClientSessionService);
     }
 
     @Test
@@ -151,8 +154,10 @@ public class IdentityProgressFrontendHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(null)));
-        when(clientSessionService.getClientSession(any()))
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(getOrchClientSession()));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -170,8 +175,10 @@ public class IdentityProgressFrontendHandlerTest {
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSession(any()))
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(getOrchClientSession()));
 
         var result = handler.handleRequest(event, context);
 
@@ -208,8 +215,10 @@ public class IdentityProgressFrontendHandlerTest {
                         .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSession(any()))
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(getOrchClientSession()));
 
         var result = handler.handleRequest(event, context);
 
@@ -243,8 +252,10 @@ public class IdentityProgressFrontendHandlerTest {
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(clientSessionService.getClientSession(any()))
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(getOrchClientSession()));
 
         var result = handler.handleRequest(event, context);
 
@@ -277,8 +288,10 @@ public class IdentityProgressFrontendHandlerTest {
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(clientSessionService.getClientSession(any()))
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(getOrchClientSession()));
 
         var result = handler.handleRequest(event, context);
 
@@ -316,8 +329,10 @@ public class IdentityProgressFrontendHandlerTest {
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSession(any()))
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(getClientSession()));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(getOrchClientSession()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         Approvals.verify(result.getBody());
@@ -333,8 +348,21 @@ public class IdentityProgressFrontendHandlerTest {
                         .state(STATE)
                         .build();
 
-        return new ClientSession(
-                authRequest.toParameters(), null, List.of(mock(VectorOfTrust.class)), CLIENT_NAME);
+        return new ClientSession(authRequest.toParameters(), null, List.of(), CLIENT_NAME);
+    }
+
+    private OrchClientSessionItem getOrchClientSession() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
+                        .build();
+
+        return new OrchClientSessionItem(
+                CLIENT_SESSION_ID, authRequest.toParameters(), null, List.of(), CLIENT_NAME);
     }
 
     private void usingValidSession() {

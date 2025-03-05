@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -46,6 +47,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -86,6 +88,8 @@ class DocAppCallbackHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final OrchClientSessionService orchClientSessionService =
+            mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
@@ -127,6 +131,13 @@ class DocAppCallbackHandlerTest {
 
     private final ClientSession clientSession =
             new ClientSession(generateAuthRequest().toParameters(), null, emptyList(), null);
+    private final OrchClientSessionItem orchClientSession =
+            new OrchClientSessionItem(
+                    CLIENT_SESSION_ID,
+                    generateAuthRequest().toParameters(),
+                    null,
+                    emptyList(),
+                    null);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -144,6 +155,7 @@ class DocAppCallbackHandlerTest {
                         tokenService,
                         sessionService,
                         clientSessionService,
+                        orchClientSessionService,
                         auditService,
                         dynamoDocAppService,
                         authorisationCodeService,
@@ -602,6 +614,9 @@ class DocAppCallbackHandlerTest {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
         clientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID);
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(orchClientSession));
+        orchClientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID.getValue());
     }
 
     private static AuthenticationRequest generateAuthRequest() {
