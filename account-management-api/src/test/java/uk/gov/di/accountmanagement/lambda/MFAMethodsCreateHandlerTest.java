@@ -27,10 +27,10 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class CreateBackupMFAMethodTest {
+class MFAMethodsCreateHandlerTest {
     @RegisterExtension
     private final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(CreateBackupMFAMethod.class);
+            new CaptureLoggingExtension(MFAMethodsCreateHandler.class);
 
     private final Context context = mock(Context.class);
     private static final String PERSISTENT_ID = "some-persistent-session-id";
@@ -39,12 +39,12 @@ class CreateBackupMFAMethodTest {
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
 
-    private CreateBackupMFAMethod handler;
+    private MFAMethodsCreateHandler handler;
 
     @BeforeEach
     void setUp() {
         when(configurationService.getEnvironment()).thenReturn("test");
-        handler = new CreateBackupMFAMethod(configurationService);
+        handler = new MFAMethodsCreateHandler(configurationService);
     }
 
     @Test
@@ -61,7 +61,7 @@ class CreateBackupMFAMethodTest {
     @ValueSource(strings = {"production", "integration"})
     void shouldReturn400IfRequestIsMadeInProductionOrIntegration(String environment) {
         when(configurationService.getEnvironment()).thenReturn(environment);
-        handler = new CreateBackupMFAMethod(configurationService);
+        handler = new MFAMethodsCreateHandler(configurationService);
 
         var event = generateApiGatewayEvent("say hello");
 

@@ -19,7 +19,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
-public class CreateBackupMFAMethod
+public class MFAMethodsCreateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final String PRODUCTION = "production";
@@ -28,13 +28,13 @@ public class CreateBackupMFAMethod
     private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
-    private static final Logger LOG = LogManager.getLogger(CreateBackupMFAMethod.class);
+    private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
-    public CreateBackupMFAMethod() {
+    public MFAMethodsCreateHandler() {
         this(ConfigurationService.getInstance());
     }
 
-    public CreateBackupMFAMethod(ConfigurationService configurationService) {
+    public MFAMethodsCreateHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
     }
 
