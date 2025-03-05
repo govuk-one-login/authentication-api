@@ -91,6 +91,7 @@ class AuthAppCodeProcessorTest {
         this.authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
+                        .withEmailAddress(EMAIL)
                         .withInternalCommonSubjectId(INTERNAL_SUB_ID);
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
@@ -99,7 +100,7 @@ class AuthAppCodeProcessorTest {
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
         when(mockUserContext.getSession()).thenReturn(session);
-        when(mockUserContext.getAuthSession()).thenReturn(mock(AuthSessionItem.class));
+        when(mockUserContext.getAuthSession()).thenReturn(authSession);
     }
 
     private static Stream<Arguments> validatorParams() {
