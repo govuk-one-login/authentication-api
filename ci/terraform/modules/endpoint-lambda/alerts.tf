@@ -15,6 +15,10 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
     namespace = "LambdaErrorsNamespace"
     value     = "1"
   }
+
+  depends_on = [
+    aws_cloudwatch_log_group.lambda_log_group
+  ]
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
@@ -30,6 +34,10 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
   alarm_actions       = [var.slack_event_topic_arn]
 
   tags = local.extra_tags
+
+  depends_on = [
+    aws_cloudwatch_log_metric_filter.lambda_error_metric_filter
+  ]
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
@@ -79,4 +87,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
   alarm_actions = [var.slack_event_topic_arn]
 
   tags = local.extra_tags
+
+  depends_on = [
+    aws_lambda_function.endpoint_lambda
+  ]
 }
