@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
@@ -191,7 +192,11 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
             if (configurationService.isInvokeTicfCRILambdaEnabled()
                     && request.authenticated() != null) {
-                sendTICF(userContext, internalPairwiseId, request.authenticated());
+                sendTICF(
+                        userContext,
+                        internalPairwiseId,
+                        request.authenticated(),
+                        userContext.getAuthSession().getIsNewAccount());
             }
 
             LOG.info("Generating Account Interventions outbound response for frontend");
@@ -206,7 +211,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     }
 
     private void sendTICF(
-            UserContext userContext, String internalPairwiseId, boolean authenticated) {
+            UserContext userContext,
+            String internalPairwiseId,
+            boolean authenticated,
+            AuthSessionItem.AccountState accountState) {
         var vtr = new ArrayList<String>();
 
         try {
@@ -227,7 +235,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
         var ticfRequest =
                 TICFCRIRequest.basicTicfCriRequest(
-                        internalPairwiseId, vtr, journeyId, authenticated);
+                        internalPairwiseId, vtr, journeyId, authenticated, accountState);
 
         String payload;
 
