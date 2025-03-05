@@ -875,6 +875,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void whenPhoneNumberCodeIsBlockedReturn400(JourneyType journeyType) {
         setUpSmsRequest(journeyType, PHONE_NUMBER);
 
+        authSessionExtension.addEmailToSession(sessionId, EMAIL_ADDRESS);
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix);
@@ -909,6 +910,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
     void whenPhoneNumberCodeRetriesLimitExceededBlockEmailAndReturn400(JourneyType journeyType) {
         setUpSmsRequest(journeyType, PHONE_NUMBER);
+        authSessionExtension.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var codeRequest =
                 new VerifyMfaCodeRequest(
