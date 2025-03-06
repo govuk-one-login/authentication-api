@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
-import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -148,22 +147,20 @@ public class StartService {
             boolean upliftRequired) {
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
-        var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
-        if (Boolean.FALSE.equals(docCheckingAppUser)) {
-            var clientRegistry = userContext.getClient().orElseThrow();
-            identityRequired =
-                    IdentityHelper.identityRequired(
-                            userContext.getClientSession().getAuthRequestParams(),
-                            clientRegistry.isIdentityVerificationSupported(),
-                            identityEnabled);
-        }
+        var docCheckingAppUser = false;
+        var clientRegistry = userContext.getClient().orElseThrow();
+        identityRequired =
+                IdentityHelper.identityRequired(
+                        userContext.getClientSession().getAuthRequestParams(),
+                        clientRegistry.isIdentityVerificationSupported(),
+                        identityEnabled);
         if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
             mfaMethodType = MFAMethodType.SMS;
         } else if (authApp(userContext)) {
             mfaMethodType = MFAMethodType.AUTH_APP;
         }
 
-        var userIsAuthenticated = !docCheckingAppUser && isAuthenticated && !reauthenticate;
+        var userIsAuthenticated = isAuthenticated && !reauthenticate;
 
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}, IsBlockedForReauth: {}",
@@ -227,12 +224,8 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            ClientSession clientSession,
-            ClientRegistry client,
-            CredentialTrustLevel currentCredentialStrength) {
-        if (DocAppUserHelper.isDocCheckingAppUser(
-                        clientSession.getAuthRequestParams(), Optional.of(client))
-                || Objects.isNull(currentCredentialStrength)) {
+            ClientSession clientSession, CredentialTrustLevel currentCredentialStrength) {
+        if (Objects.isNull(currentCredentialStrength)) {
             return false;
         }
         return (currentCredentialStrength.compareTo(

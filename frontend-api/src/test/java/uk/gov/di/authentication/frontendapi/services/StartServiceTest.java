@@ -456,8 +456,6 @@ class StartServiceTest {
             UserProfile userProfile,
             UserCredentials userCredentials,
             MFAMethodType expectedMfaMethodType) {
-        var clientRegistry =
-                generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.getValue(), false);
         var userContext =
                 buildUserContext(
                         vtr,
@@ -472,8 +470,7 @@ class StartServiceTest {
         userContext.getSession().setEmailAddress(EMAIL);
 
         var upliftRequired =
-                startService.isUpliftRequired(
-                        userContext.getClientSession(), clientRegistry, credentialTrustLevel);
+                startService.isUpliftRequired(userContext.getClientSession(), credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
