@@ -550,7 +550,8 @@ Resources:
         SSEType: KMS
       TimeToLiveSpecification:
         AttributeName: ttl
-        Enabled: true
+        # TODO ATO-1507: Re-enable following attribute name change in subsequent PR.
+        Enabled: false
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       Tags:
