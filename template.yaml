@@ -1315,7 +1315,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
+      AlarmDescription: !Sub "Lambda error rate of 25 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       ActionsEnabled: !If
         - IsIntegration
         - false
@@ -1324,7 +1324,7 @@ Resources:
         - !Ref SlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      Threshold: 10
+      Threshold: 25
       Metrics:
         - Id: e1
           ReturnData: true
