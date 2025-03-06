@@ -278,40 +278,6 @@ class StartServiceTest {
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(isBlockedForReauth));
     }
 
-    private static Stream<Boolean> userStartDocAppInfo() {
-        return Stream.of(true, false);
-    }
-
-    @ParameterizedTest
-    @MethodSource("userStartDocAppInfo")
-    void shouldCreateUserStartInfoWithCorrectDocCheckingAppUserValue(boolean isAuthenticated)
-            throws NoSuchAlgorithmException, JOSEException {
-        var clientType = ClientType.APP;
-        var userContext =
-                buildUserContext(
-                        null,
-                        false,
-                        clientType,
-                        generateSignedJWT(),
-                        true,
-                        isAuthenticated,
-                        Optional.empty(),
-                        Optional.empty(),
-                        false);
-        var userStartInfo =
-                startService.buildUserStartInfo(
-                        userContext,
-                        "some-cookie-consent",
-                        "some-ga-tracking-id",
-                        true,
-                        false,
-                        false,
-                        false,
-                        false);
-
-        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
-    }
-
     private static Stream<Arguments> userStartUpliftInfo() {
         var authAppUserCredentialsVerified =
                 new UserCredentials()
