@@ -85,11 +85,7 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  IsIntegrationOrProduction:
-    !Or [
-      !Equals [!Ref Environment, integration],
-      !Equals [!Ref Environment, production],
-    ]
+  IsIntegration: !Equals [!Ref Environment, integration]
   SupportMaxAgeEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -1300,7 +1296,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: !If
-        - IsIntegrationOrProduction
+        - IsIntegration
         - false
         - true
       AlarmActions:
@@ -1321,7 +1317,7 @@ Resources:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       ActionsEnabled: !If
-        - IsIntegrationOrProduction
+        - IsIntegration
         - false
         - true
       AlarmActions:
