@@ -22,6 +22,42 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
     public List<MfaMethodData> getMfaMethods(String email) {
         var userProfile = dynamoService.getUserProfileByEmail(email);
         var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
+        if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
+            return getMfaMethodsForMigratedUser(userCredentials);
+        } else {
+            return getMfaMethodsForNonMigratedUser(userProfile, userCredentials);
+        }
+    }
+
+    private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials) {
+        return userCredentials.getMfaMethods().stream()
+                .map(
+                        mfaMethod -> {
+                            if (mfaMethod
+                                    .getMfaMethodType()
+                                    .equals(MFAMethodType.AUTH_APP.getValue())) {
+                                return MfaMethodData.authAppMfaData(
+                                        mfaMethod.getMfaIdentifier(),
+                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
+                                        mfaMethod.isMethodVerified(),
+                                        mfaMethod.getCredentialValue());
+                            } else if (mfaMethod
+                                    .getMfaMethodType()
+                                    .equals(MFAMethodType.SMS.getValue())) {
+                                return MfaMethodData.smsMethodData(
+                                        mfaMethod.getMfaIdentifier(),
+                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
+                                        mfaMethod.isMethodVerified(),
+                                        mfaMethod.getDestination());
+                            } else {
+                                throw new RuntimeException("TODO");
+                            }
+                        })
+                .toList();
+    }
+
+    private List<MfaMethodData> getMfaMethodsForNonMigratedUser(
+            UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();

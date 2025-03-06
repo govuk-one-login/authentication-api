@@ -2,18 +2,26 @@ package uk.gov.di.authentication.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaData;
 import uk.gov.di.authentication.shared.entity.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
@@ -21,8 +29,6 @@ import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.H
 
 class DynamoMfaMethodsServiceIntegrationTest {
 
-    private static final String TEST_EMAIL = "joe.bloggs@example.com";
-    private static final String INTERNAL_COMMON_SUBJECT_ID = "subject-1";
     private static final String PHONE_NUMBER = "+44123456789";
     private static final String AUTH_APP_CREDENTIAL = "some-credential";
     DynamoMfaMethodsService dynamoService =
@@ -30,68 +36,192 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
     @RegisterExtension static UserStoreExtension userStoreExtension = new UserStoreExtension();
 
-    @BeforeEach
-    void setUp() {
-        userStoreExtension.signUp(
-                TEST_EMAIL, "password-1", new Subject(INTERNAL_COMMON_SUBJECT_ID));
+    @Nested
+    class WhenAUserIsNotMigrated {
+
+        private static final String EMAIL = "joe.bloggs@example.com";
+        private static final String EXPLICITLY_NON_MIGRATED_USER_EMAIL = "not-migrated@example.com";
+
+        @BeforeEach
+        void setUp() {
+            userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+            userStoreExtension.signUp(
+                    EXPLICITLY_NON_MIGRATED_USER_EMAIL, "password-1", new Subject());
+            userStoreExtension.setMfaMethodsMigrated(EXPLICITLY_NON_MIGRATED_USER_EMAIL, false);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void shouldReturnSingleSmsMethodWhenVerified(String email) {
+            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+
+            var result = dynamoService.getMfaMethods(email);
+
+            var authAppDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
+            var expectedData =
+                    new MfaMethodData(
+                            HARDCODED_SMS_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
+            assertEquals(result, List.of(expectedData));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void shouldReturnSingleAuthAppMethodWhenEnabled(String email) {
+            userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
+
+            var result = dynamoService.getMfaMethods(email);
+
+            var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
+            var expectedData =
+                    new MfaMethodData(
+                            HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
+            assertEquals(result, List.of(expectedData));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void authAppShouldTakePrecedenceOverSmsMethodForNonMigratedUser(String email) {
+            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+            userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
+
+            var result = dynamoService.getMfaMethods(email);
+
+            var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
+            var expectedData =
+                    new MfaMethodData(
+                            HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
+            assertEquals(List.of(expectedData), result);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void shouldReturnNoMethodsWhenAuthAppMethodNotEnabled(String email) {
+            userStoreExtension.addAuthAppMethod(email, true, false, AUTH_APP_CREDENTIAL);
+
+            var result = dynamoService.getMfaMethods(email);
+
+            assertEquals(result, List.of());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void shouldReturnNoMethodsWhenSmsMethodNotVerified(String email) {
+            userStoreExtension.setPhoneNumberAndVerificationStatus(
+                    email, PHONE_NUMBER, false, true);
+
+            var result = dynamoService.getMfaMethods(email);
+
+            assertEquals(result, List.of());
+        }
     }
 
-    @Test
-    void shouldReturnSingleSmsMethodWhenVerified() {
-        userStoreExtension.addVerifiedPhoneNumber(TEST_EMAIL, PHONE_NUMBER);
+    @Nested
+    class WhenAUserIsMigrated {
 
-        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+        private static final String EMAIL = "joe.bloggs@example.com";
 
-        var authAppDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
-        var expectedData =
-                new MfaMethodData(
-                        HARDCODED_SMS_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
-        assertEquals(result, List.of(expectedData));
-    }
+        private static final String SMS_MFA_IDENTIFIER_1 = "ea83592f-b9bf-436f-b4f4-ee33f610ee05";
+        private static final String SMS_MFA_IDENTIFIER_2 = "3634a5e3-dac8-4804-8d40-181722b48ae1";
+        private static final String APP_MFA_IDENTIFIER_1 = "a87e57e5-6175-4be7-af7d-547a390b36c1";
+        private static final String APP_MFA_IDENTIFIER_2 = "898a7e13-c354-430a-a3ca-8cc6c6391057";
+        private static final String PHONE_NUMBER_TWO = "987654321";
 
-    @Test
-    void shouldReturnSingleAuthAppMethodWhenEnabled() {
-        userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
+        private static final AuthAppMfaData defaultPriorityAuthApp =
+                new AuthAppMfaData(
+                        AUTH_APP_CREDENTIAL,
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        APP_MFA_IDENTIFIER_1);
+        private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
+        private static final AuthAppMfaData backupPriorityAuthApp =
+                new AuthAppMfaData(
+                        AUTH_APP_CREDENTIAL_TWO,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        APP_MFA_IDENTIFIER_2);
+        private static final SmsMfaData defaultPrioritySms =
+                new SmsMfaData(
+                        PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
+        private static final SmsMfaData backupPrioritySms =
+                new SmsMfaData(
+                        PHONE_NUMBER_TWO,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        SMS_MFA_IDENTIFIER_2);
 
-        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+        private MfaMethodData mfaMethodDataFrom(MfaData mfaData) {
+            if (mfaData instanceof AuthAppMfaData authAppMfaData) {
+                var detail =
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, authAppMfaData.credential());
+                return new MfaMethodData(
+                        authAppMfaData.mfaIdentifier(),
+                        authAppMfaData.priority(),
+                        authAppMfaData.verified(),
+                        detail);
+            } else {
+                SmsMfaData smsMfaData = (SmsMfaData) mfaData;
+                var detail = new SmsMfaDetail(MFAMethodType.SMS, smsMfaData.endpoint());
+                return new MfaMethodData(
+                        smsMfaData.mfaIdentifier(),
+                        smsMfaData.priority(),
+                        smsMfaData.verified(),
+                        detail);
+            }
+        }
 
-        var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
-        var expectedData =
-                new MfaMethodData(
-                        HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
-        assertEquals(result, List.of(expectedData));
-    }
+        @BeforeEach
+        void setUp() {
+            userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+        }
 
-    @Test
-    void authAppShouldTakePrecedenceOverSmsMethodForNonMigratedUser() {
-        userStoreExtension.addVerifiedPhoneNumber(TEST_EMAIL, PHONE_NUMBER);
-        userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
+        @Test
+        void shouldReturnSingleSmsMethodRegardlessOfNumberInUserProfile() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
 
-        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+            // Adds a number to the user profile table. Users should not be able to get into a state
+            // where they have a verified number here and a different number in user credentials,
+            // but regardless for a migrated user we will ignore this entry
+            userStoreExtension.addVerifiedPhoneNumber(EMAIL, "+44987654321");
 
-        var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
-        var expectedData =
-                new MfaMethodData(
-                        HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
-        assertEquals(List.of(expectedData), result);
-    }
+            var result = dynamoService.getMfaMethods(EMAIL);
 
-    @Test
-    void shouldReturnNoMethodsWhenAuthAppMethodNotEnabled() {
-        userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, false, AUTH_APP_CREDENTIAL);
+            var expectedData = mfaMethodDataFrom(defaultPrioritySms);
+            assertEquals(List.of(expectedData), result);
+        }
 
-        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+        @Test
+        void shouldReturnSingleAuthAppMethodWhenEnabled() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-        assertEquals(result, List.of());
-    }
+            var result = dynamoService.getMfaMethods(EMAIL);
 
-    @Test
-    void shouldReturnNoMethodsWhenSmsMethodNotVerified() {
-        userStoreExtension.setPhoneNumberAndVerificationStatus(
-                TEST_EMAIL, PHONE_NUMBER, false, true);
+            var expectedData = mfaMethodDataFrom(defaultPriorityAuthApp);
+            assertEquals(result, List.of(expectedData));
+        }
 
-        var result = dynamoService.getMfaMethods(TEST_EMAIL);
+        private static Stream<List<MfaData>> mfaMethodsCombinations() {
+            return Stream.of(
+                    List.of(defaultPriorityAuthApp, backupPriorityAuthApp),
+                    List.of(defaultPrioritySms, backupPrioritySms),
+                    List.of(defaultPriorityAuthApp, backupPrioritySms),
+                    List.of(defaultPrioritySms, backupPriorityAuthApp));
+        }
 
-        assertEquals(result, List.of());
+        @ParameterizedTest
+        @MethodSource("mfaMethodsCombinations")
+        void shouldReturnMultipleMethodsWhenTheyExist(List<MfaData> mfaMethods) {
+            mfaMethods.forEach(
+                    mfaMethod ->
+                            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, mfaMethod));
+
+            var result = dynamoService.getMfaMethods(EMAIL);
+
+            var expectedData = mfaMethods.stream().map(this::mfaMethodDataFrom).toList();
+            assertEquals(expectedData, result);
+        }
     }
 }

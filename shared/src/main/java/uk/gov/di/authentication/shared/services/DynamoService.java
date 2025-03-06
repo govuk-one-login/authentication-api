@@ -563,6 +563,17 @@ public class DynamoService implements AuthenticationService {
                         .withAccountVerified(1));
     }
 
+    @Override
+    public void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
+        dynamoUserProfileTable.updateItem(
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withMfaMethodsMigrated(mfaMethodsMigrated));
+    }
+
     public List<UserProfile> getAllBulkTestUsers() {
         Expression filterExpression =
                 Expression.builder()

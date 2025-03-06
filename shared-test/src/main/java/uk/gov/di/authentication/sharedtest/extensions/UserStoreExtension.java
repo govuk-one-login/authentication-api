@@ -145,6 +145,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.setAccountVerified(email);
     }
 
+    public void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
+        dynamoService.setMfaMethodsMigrated(email, mfaMethodsMigrated);
+    }
+
     public List<MFAMethod> getMfaMethod(String email) {
         return dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
     }
