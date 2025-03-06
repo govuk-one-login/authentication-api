@@ -10,6 +10,10 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
 
     private final DynamoService dynamoService;
 
+    // TODO generate and store UUID (AUT-4122)
+    public static final String HARDCODED_APP_MFA_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
+    public static final String HARDCODED_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
+
     public DynamoMfaMethodsService(ConfigurationService configurationService) {
         this.dynamoService = new DynamoService(configurationService);
     }
@@ -19,19 +23,21 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
         var userProfile = dynamoService.getUserProfileByEmail(email);
         var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
-        // TODO how to get identifier?
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();
             return List.of(
                     MfaMethodData.authAppMfaData(
-                            1,
+                            HARDCODED_APP_MFA_ID,
                             PriorityIdentifier.DEFAULT,
                             method.isMethodVerified(),
                             method.getCredentialValue()));
         } else if (userProfile.isPhoneNumberVerified()) {
             return List.of(
                     MfaMethodData.smsMethodData(
-                            1, PriorityIdentifier.DEFAULT, true, userProfile.getPhoneNumber()));
+                            HARDCODED_SMS_MFA_ID,
+                            PriorityIdentifier.DEFAULT,
+                            true,
+                            userProfile.getPhoneNumber()));
         } else {
             return List.of();
         }

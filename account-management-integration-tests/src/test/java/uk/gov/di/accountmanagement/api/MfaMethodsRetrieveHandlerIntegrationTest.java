@@ -14,8 +14,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
+import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -47,9 +50,10 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
         assertEquals(200, response.getStatusCode());
         var expectedResponse =
-                """
+                format(
+                        """
                 [{
-                     "mfaIdentifier": 1,
+                     "mfaIdentifier": "%s",
                      "priorityIdentifier": "DEFAULT",
                      "methodVerified": true,
                      "method": {
@@ -57,7 +61,8 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                        "phoneNumber": "+441234567890"
                      }
                    }]
-                """;
+                """,
+                        HARDCODED_SMS_MFA_ID);
         var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
         assertThat(response, hasJsonBody(expectedResponseAsJson));
     }
@@ -78,9 +83,10 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
         assertEquals(200, response.getStatusCode());
         var expectedResponse =
-                """
+                format(
+                        """
                 [{
-                     "mfaIdentifier": 1,
+                     "mfaIdentifier": "%s",
                      "priorityIdentifier": "DEFAULT",
                      "methodVerified": true,
                      "method": {
@@ -88,7 +94,8 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                        "credential": "some-credential"
                      }
                    }]
-                """;
+                """,
+                        HARDCODED_APP_MFA_ID);
         var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
         assertThat(response, hasJsonBody(expectedResponseAsJson));
     }

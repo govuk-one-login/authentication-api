@@ -90,7 +90,9 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCopyMfaDetailsAndReturn204WhenUpdatingEmailIsSuccessful() {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
         userStore.addMfaMethod(EXISTING_EMAIL_ADDRESS, AUTH_APP, true, true, "cred");
-        var newStyleSmsData = new SmsMfaData("1234", true, true, PriorityIdentifier.BACKUP, 1);
+        var mfaIdentifier = "03a89933-cddd-471d-8fdb-562f14a2404f";
+        var newStyleSmsData =
+                new SmsMfaData("1234", true, true, PriorityIdentifier.BACKUP, mfaIdentifier);
         userStore.addMfaMethodSupportingMultiple(EXISTING_EMAIL_ADDRESS, newStyleSmsData);
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 

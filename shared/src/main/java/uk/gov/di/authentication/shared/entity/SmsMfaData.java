@@ -5,7 +5,7 @@ public record SmsMfaData(
         boolean verified,
         boolean enabled,
         PriorityIdentifier priority,
-        int mfaIdentifier)
+        String mfaIdentifier)
         implements MfaData {
     @Override
     public MFAMethod toDatabaseRecord(String updated) {

@@ -159,15 +159,33 @@ class DynamoServiceIntegrationTest {
         }
 
         private SmsMfaData defaultPrioritySmsData =
-                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, 1);
+                new SmsMfaData(
+                        PHONE_NUMBER,
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        "04615937-eb48-4a1f-9de2-2ff0a3dc3bc4");
         private SmsMfaData backupPrioritySmsData =
-                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP, 2);
+                new SmsMfaData(
+                        PHONE_NUMBER,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        "daa4b59d-4efa-4e97-8b48-e6732c953060");
         private AuthAppMfaData defaultPriorityAuthAppData =
                 new AuthAppMfaData(
-                        TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT, 3);
+                        TEST_MFA_APP_CREDENTIAL,
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        "7968d195-7db3-45f6-b7d3-a627aad118b7");
         private AuthAppMfaData backupAuthAppData =
                 new AuthAppMfaData(
-                        TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, 4);
+                        TEST_MFA_APP_CREDENTIAL,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        "03a89933-cddd-471d-8fdb-562f14a2404f");
 
         @Test
         void shouldAddDefaultPriorityAuthAppMFAMethodWhenNoOtherMethodExists() {
