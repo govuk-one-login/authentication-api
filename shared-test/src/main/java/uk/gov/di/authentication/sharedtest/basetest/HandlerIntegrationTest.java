@@ -27,7 +27,6 @@ import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
-import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
@@ -201,9 +200,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
-
-    @RegisterExtension
-    protected static final IdentityStoreExtension identityStore = new IdentityStoreExtension(180);
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionStore = new AuthSessionExtension();
