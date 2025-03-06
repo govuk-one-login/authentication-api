@@ -549,9 +549,8 @@ Resources:
         KMSMasterKeyId: !GetAtt AuthUserInfoTableEncryptionKey.Arn
         SSEType: KMS
       TimeToLiveSpecification:
-        AttributeName: ttl
-        # TODO ATO-1507: Re-enable following attribute name change in subsequent PR.
-        Enabled: false
+        AttributeName: TimeToExist
+        Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       Tags:
