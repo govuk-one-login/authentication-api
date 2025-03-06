@@ -122,6 +122,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 emptyList(),
                 jarValidationRequired,
                 clientLoCs,
+                false,
                 false);
     }
 
@@ -140,7 +141,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             ClientType clientType,
             boolean jarValidationRequired,
             List<String> clientLoCs,
-            boolean maxAgeEnabled) {
+            boolean maxAgeEnabled,
+            boolean pkceEnforced) {
         registerClient(
                 clientID,
                 clientName,
@@ -157,7 +159,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 emptyList(),
                 jarValidationRequired,
                 clientLoCs,
-                maxAgeEnabled);
+                maxAgeEnabled,
+                pkceEnforced);
     }
 
     public void registerClient(
@@ -198,6 +201,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 null,
                 emptyList(),
                 Channel.WEB.getValue(),
+                false,
                 false);
     }
 
@@ -217,7 +221,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             List<String> claims,
             boolean jarValidationRequired,
             List<String> clientLoCs,
-            boolean maxAgeEnabled) {
+            boolean maxAgeEnabled,
+            boolean pkceEnforced) {
         dynamoClientService.addClient(
                 clientID,
                 clientName,
@@ -241,7 +246,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 null,
                 clientLoCs,
                 Channel.WEB.getValue(),
-                maxAgeEnabled);
+                maxAgeEnabled,
+                pkceEnforced);
     }
 
     public void registerClient(
@@ -284,6 +290,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 isTokenSigningAlgorithm,
                 emptyList(),
                 Channel.WEB.getValue(),
+                false,
                 false);
     }
 
@@ -325,6 +332,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 isTokenSigningAlgorithm,
                 emptyList(),
                 Channel.WEB.getValue(),
+                false,
                 false);
     }
 

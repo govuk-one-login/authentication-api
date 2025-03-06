@@ -152,6 +152,8 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getChannel()).ifPresent(clientRegistry::withChannel);
         Optional.ofNullable(updateRequest.getMaxAgeEnabled())
                 .ifPresent(clientRegistry::withMaxAgeEnabled);
+        Optional.ofNullable(updateRequest.getPKCEEnforced())
+                .ifPresent(clientRegistry::withPKCEEnforced);
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }
