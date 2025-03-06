@@ -209,10 +209,6 @@ output "client_registry_encryption_policy_arn" {
   value = aws_iam_policy.client_registry_encryption_key_kms_policy.arn
 }
 
-output "identity_credentials_encryption_policy_arn" {
-  value = aws_iam_policy.identity_credentials_encryption_key_kms_policy.arn
-}
-
 output "doc_app_credential_encryption_policy_arn" {
   value = aws_iam_policy.doc_app_credential_encryption_key_kms_policy.arn
 }
@@ -235,10 +231,6 @@ output "email_check_results_encryption_policy_arn" {
 
 output "client_registry_encryption_key_arn" {
   value = aws_kms_key.client_registry_table_encryption_key.arn
-}
-
-output "identity_credentials_encryption_key_arn" {
-  value = aws_kms_key.identity_credentials_table_encryption_key.arn
 }
 
 output "user_profile_kms_key_arn" {
