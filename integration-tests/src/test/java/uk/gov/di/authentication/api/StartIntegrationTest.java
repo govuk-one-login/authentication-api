@@ -53,7 +53,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_START_INFO_FOUND;
@@ -305,7 +304,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
 
-        assertNotNull(clientSession.getDocAppSubjectId());
         assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
