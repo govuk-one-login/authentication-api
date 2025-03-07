@@ -151,12 +151,13 @@ public class StartHandler
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var clientSession =
+        var clientSessionOpt =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
 
-        if (clientSession.isEmpty()) {
+        if (clientSessionOpt.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
+        var clientSession = clientSessionOpt.get();
 
         StartRequest startRequest;
         try {
@@ -189,12 +190,11 @@ public class StartHandler
             }
             var upliftRequired =
                     startService.isUpliftRequired(
-                            clientSession.get(), startRequest.currentCredentialStrength());
+                            clientSession, startRequest.currentCredentialStrength());
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
-            var userContext =
-                    startService.buildUserContext(session, clientSession.get(), authSession);
+            var userContext = startService.buildUserContext(session, clientSession, authSession);
 
             attachLogFieldToLogs(
                     CLIENT_ID,
