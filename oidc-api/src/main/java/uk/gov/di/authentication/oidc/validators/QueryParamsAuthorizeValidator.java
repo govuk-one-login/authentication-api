@@ -171,6 +171,10 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             redirectURI,
                             state));
         }
+
+        Optional.ofNullable(authRequest.getResponseMode())
+                .ifPresent(mode -> LOG.info("Attached response mode in query params: {}", mode));
+
         return Optional.empty();
     }
 
