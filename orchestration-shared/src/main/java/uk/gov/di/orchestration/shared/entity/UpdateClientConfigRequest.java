@@ -49,7 +49,7 @@ public class UpdateClientConfigRequest {
 
     @SerializedName("jar_validation_required")
     @Expose
-    private boolean jarValidationRequired;
+    private Boolean jarValidationRequired;
 
     @SerializedName("claims")
     @Expose
@@ -129,7 +129,7 @@ public class UpdateClientConfigRequest {
         return serviceType;
     }
 
-    public boolean getJarValidationRequired() {
+    public Boolean getJarValidationRequired() {
         return jarValidationRequired;
     }
 
