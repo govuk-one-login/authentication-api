@@ -74,7 +74,8 @@ public enum ErrorResponse {
     ERROR_1060(1060, "Failed to generate MFA Reset Authorize JAR for IPV"),
     ERROR_1061(1061, "State returned from IPV does not match expected state"),
     ERROR_1062(1062, "Invalid MFAMethod"),
-    ERROR_1063(1063, "New method management api not available in environment");
+    ERROR_1063(1063, "New method management api not available in environment"),
+    ERROR_1064(1064, "Unknown mfa method type");
 
     private int code;
 

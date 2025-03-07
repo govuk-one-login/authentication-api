@@ -1,12 +1,16 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 
 import java.util.List;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 
 public class DynamoMfaMethodsService implements MfaMethodsService {
+    private static final Logger LOG = LogManager.getLogger(DynamoMfaMethodsService.class);
 
     private final DynamoService dynamoService;
 
@@ -29,7 +33,8 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
         }
     }
 
-    private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials) {
+    private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials)
+            throws UnknownMfaTypeException {
         return userCredentials.getMfaMethods().stream()
                 .map(
                         mfaMethod -> {
@@ -50,7 +55,11 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
                                         mfaMethod.isMethodVerified(),
                                         mfaMethod.getDestination());
                             } else {
-                                throw new RuntimeException("TODO");
+                                LOG.error(
+                                        "Unknown mfa method type: {}",
+                                        mfaMethod.getMfaMethodType());
+                                throw new UnknownMfaTypeException(
+                                        "Unknown mfa method type: " + mfaMethod.getMfaMethodType());
                             }
                         })
                 .toList();
