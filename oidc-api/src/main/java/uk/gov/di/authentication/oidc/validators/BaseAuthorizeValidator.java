@@ -98,8 +98,15 @@ public abstract class BaseAuthorizeValidator {
     }
 
     protected Optional<ErrorObject> validateCodeChallengeAndMethod(
-            String codeChallenge, String codeChallengeMethod) {
+            String codeChallenge, String codeChallengeMethod, boolean isPKCEEnforced) {
         if (codeChallenge == null) {
+            if (isPKCEEnforced) {
+                logErrorInProdElseWarn("PKCE is enforced but code_challenge is missing.");
+                return Optional.of(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code_challenge parameter, but PKCE is enforced."));
+            }
             return Optional.empty();
         }
 

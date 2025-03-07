@@ -161,7 +161,6 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
                 List.of(),
                 true,
                 false);
-
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";
         updateRequest.setClientName(expectedClientName);
