@@ -2224,7 +2224,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "15 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/I4AVFgE"
+      AlarmDescription: !Sub "15 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-authentication-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -2238,7 +2238,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-authentication-callback-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/I4AVFgE"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
