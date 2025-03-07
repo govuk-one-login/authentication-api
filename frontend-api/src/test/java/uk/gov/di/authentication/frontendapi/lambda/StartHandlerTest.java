@@ -94,6 +94,8 @@ class StartHandlerTest {
     public static final State STATE = new State();
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
     private static final Json objectMapper = SerializationService.getInstance();
+    private static final String COOKIE_CONSENT = "accept";
+    private static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID.getValue());
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
@@ -566,21 +568,18 @@ class StartHandlerTest {
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType,
-                                scope,
-                                new ClientID(TEST_CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
+                                responseType, scope, new ClientID(TEST_CLIENT_ID), REDIRECT_URL)
+                        .customParameter("cookie_consent", COOKIE_CONSENT)
+                        .customParameter("state", STATE.toString())
                         .build();
         return new ClientSession(
                 authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
     }
 
     private ClientStartInfo getClientStartInfo() {
-        Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
-
         return new ClientStartInfo(
                 TEST_CLIENT_NAME,
-                scope.toStringList(),
+                SCOPE.toStringList(),
                 "MANDATORY",
                 false,
                 REDIRECT_URL,
@@ -642,12 +641,12 @@ class StartHandlerTest {
                         previousGovUkSignInJourneyId,
                         authenticated,
                         currentCredentialStrength,
+                        COOKIE_CONSENT,
                         null,
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null));
+                        STATE.toString(),
+                        TEST_CLIENT_ID,
+                        REDIRECT_URL.toString(),
+                        SCOPE.toString()));
     }
 }

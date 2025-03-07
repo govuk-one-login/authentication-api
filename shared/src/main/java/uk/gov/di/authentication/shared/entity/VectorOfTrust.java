@@ -91,9 +91,18 @@ public class VectorOfTrust {
     }
 
     private static VectorOfTrust parseVtrSet(JSONArray vtrJsonArray) {
+        return parseVtrStringList(vtrJsonArray.stream().map(Object::toString).toList());
+    }
+
+    public static VectorOfTrust parseVtrStringList(List<String> vtrStringArray) {
+        if (isNull(vtrStringArray) || vtrStringArray.isEmpty()) {
+            LOG.info(
+                    "VTR attribute is not present so defaulting to {}",
+                    CredentialTrustLevel.getDefault().getValue());
+            return new VectorOfTrust(CredentialTrustLevel.getDefault());
+        }
         List<VectorOfTrust> vectorOfTrusts = new ArrayList<>();
-        for (Object obj : vtrJsonArray) {
-            String vtr = (String) obj;
+        for (String vtr : vtrStringArray) {
             var splitVtr = vtr.split("\\.");
 
             var levelOfConfidence =
