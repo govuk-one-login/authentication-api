@@ -145,7 +145,7 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withBackChannelLogoutUri);
         Optional.ofNullable(updateRequest.getIdTokenSigningAlgorithm())
                 .ifPresent(clientRegistry::withIdTokenSigningAlgorithm);
-        Optional.ofNullable(updateRequest.getidentityVerificationSupported())
+        Optional.ofNullable(updateRequest.getIdentityVerificationSupported())
                 .ifPresent(clientRegistry::withIdentityVerificationSupported);
         Optional.ofNullable(updateRequest.getChannel()).ifPresent(clientRegistry::withChannel);
         Optional.ofNullable(updateRequest.getMaxAgeEnabled())

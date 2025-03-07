@@ -157,7 +157,7 @@ public class UpdateClientConfigRequest {
         return idTokenSigningAlgorithm;
     }
 
-    public Boolean getidentityVerificationSupported() {
+    public Boolean getIdentityVerificationSupported() {
         return identityVerificationSupported;
     }
 
