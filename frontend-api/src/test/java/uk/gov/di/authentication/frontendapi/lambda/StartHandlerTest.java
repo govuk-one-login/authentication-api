@@ -641,6 +641,13 @@ class StartHandlerTest {
                         rpPairwiseIdForReauth,
                         previousGovUkSignInJourneyId,
                         authenticated,
-                        currentCredentialStrength));
+                        currentCredentialStrength,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null));
     }
 }
