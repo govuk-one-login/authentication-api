@@ -16,6 +16,8 @@ import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
+import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
 
 class DynamoMfaMethodsServiceIntegrationTest {
 
@@ -41,7 +43,9 @@ class DynamoMfaMethodsServiceIntegrationTest {
         var result = dynamoService.getMfaMethods(TEST_EMAIL);
 
         var authAppDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
-        var expectedData = new MfaMethodData(1, PriorityIdentifier.DEFAULT, true, authAppDetail);
+        var expectedData =
+                new MfaMethodData(
+                        HARDCODED_SMS_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
         assertEquals(result, List.of(expectedData));
     }
 
@@ -52,7 +56,9 @@ class DynamoMfaMethodsServiceIntegrationTest {
         var result = dynamoService.getMfaMethods(TEST_EMAIL);
 
         var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
-        var expectedData = new MfaMethodData(1, PriorityIdentifier.DEFAULT, true, authAppDetail);
+        var expectedData =
+                new MfaMethodData(
+                        HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
         assertEquals(result, List.of(expectedData));
     }
 
@@ -64,7 +70,9 @@ class DynamoMfaMethodsServiceIntegrationTest {
         var result = dynamoService.getMfaMethods(TEST_EMAIL);
 
         var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
-        var expectedData = new MfaMethodData(1, PriorityIdentifier.DEFAULT, true, authAppDetail);
+        var expectedData =
+                new MfaMethodData(
+                        HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
         assertEquals(List.of(expectedData), result);
     }
 

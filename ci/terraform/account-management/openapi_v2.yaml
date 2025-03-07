@@ -1,7 +1,7 @@
 openapi: "3.0.1"
 info:
   title: "auth-account-management-method-management-api"
-  version: 0.1.0
+  version: 1.0.1
   description: Auth Account Management API
 paths:
   /authenticate:
@@ -98,7 +98,7 @@ paths:
                 user-with-single-mfa-type-app:
                   summary: a user with a single MFA
                   value:
-                    - mfaIdentifier: 1
+                    - mfaIdentifier: "bb5ccc7d-2591-4ccd-ae04-2b2c95b4e256"
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
@@ -107,13 +107,13 @@ paths:
                 user-with-multiple-mfa-types-primary-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method
                   value:
-                    - mfaIdentifier: 1
+                    - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
                       priorityIdentifier: DEFAULT
                       method:
                         mfaMethodType: SMS
                         phoneNumber: "070"
                       methodVerified: true
-                    - mfaIdentifier: 2
+                    - mfaIdentifier: "4372e333-266c-4245-8c4d-385aafdd3fb3"
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
@@ -201,6 +201,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - name: publicSubjectId
         in: path
         required: true
@@ -269,6 +270,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
         - name: publicSubjectId
           in: path
           required: true
@@ -309,7 +311,8 @@ components:
       type: object
       properties:
         mfaIdentifier:
-          type: integer
+          type: string
+          format: uuid
         priorityIdentifier:
           $ref: "#/components/schemas/PriorityEnum"
         method:

@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -35,6 +36,7 @@ class MFAMethodsRetrieveHandlerTest {
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final UserProfile userProfile = mock(UserProfile.class);
     private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
+    private static final String MFA_IDENTIFIER = "03a89933-cddd-471d-8fdb-562f14a2404f";
 
     private MFAMethodsRetrieveHandler handler;
 
@@ -54,7 +56,7 @@ class MFAMethodsRetrieveHandlerTest {
 
         var method =
                 new MfaMethodData(
-                        1,
+                        MFA_IDENTIFIER,
                         PriorityIdentifier.DEFAULT,
                         true,
                         new SmsMfaDetail(MFAMethodType.SMS, "+44123456789"));
@@ -68,9 +70,11 @@ class MFAMethodsRetrieveHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        assertEquals(
-                "[{\"mfaIdentifier\":1,\"priorityIdentifier\":\"DEFAULT\",\"methodVerified\":true,\"method\":{\"mfaMethodType\":\"SMS\",\"phoneNumber\":\"+44123456789\"}}]",
-                result.getBody());
+        var expectedBody =
+                format(
+                        "[{\"mfaIdentifier\":\"%s\",\"priorityIdentifier\":\"DEFAULT\",\"methodVerified\":true,\"method\":{\"mfaMethodType\":\"SMS\",\"phoneNumber\":\"+44123456789\"}}]",
+                        MFA_IDENTIFIER);
+        assertEquals(expectedBody, result.getBody());
     }
 
     @Test

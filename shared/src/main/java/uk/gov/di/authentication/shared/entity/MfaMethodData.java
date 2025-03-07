@@ -4,12 +4,12 @@ import com.google.gson.annotations.Expose;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public record MfaMethodData(
-        @Expose int mfaIdentifier,
+        @Expose String mfaIdentifier,
         @Expose @Required PriorityIdentifier priorityIdentifier,
         @Expose @Required boolean methodVerified,
         @Expose @Required MfaDetail method) {
     public static MfaMethodData smsMethodData(
-            int mfaIdentifier,
+            String mfaIdentifier,
             PriorityIdentifier priorityIdentifier,
             boolean methodVerified,
             String phoneNumber) {
@@ -21,7 +21,7 @@ public record MfaMethodData(
     }
 
     public static MfaMethodData authAppMfaData(
-            int mfaIdentifier,
+            String mfaIdentifier,
             PriorityIdentifier priorityIdentifier,
             boolean methodVerified,
             String credential) {
