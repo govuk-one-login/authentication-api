@@ -626,7 +626,7 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
-            Optional<String> existingSessionId,
+            Optional<String> previousSessionIdFromCookie,
             Optional<OrchSessionItem> existingOrchSessionOptional,
             ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
@@ -653,13 +653,16 @@ public class AuthorisationHandler
         OrchSessionItem orchSession;
         var newSessionId = IdGenerator.generate();
         var newBrowserSessionId = IdGenerator.generate();
-        var existingSession = existingSessionId.flatMap(sessionService::getSession);
-        if (existingSessionId.isEmpty()
+        var existingSession = previousSessionIdFromCookie.flatMap(sessionService::getSession);
+        if (previousSessionIdFromCookie.isEmpty()
                 || existingSession.isEmpty()
                 || existingOrchSessionOptional.isEmpty()) {
             session = sessionService.generateSession();
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
+            // We re-assign here to ensure that we only pass auth previous session id
+            // When there is a previous session present (ie hasn't logged out or expired)
+            previousSessionIdFromCookie = Optional.empty();
         } else {
             var maxAgeParam = getMaxAge(authenticationRequest);
             boolean isMaxAgeSupported =
@@ -676,7 +679,7 @@ public class AuthorisationHandler
                 session =
                         updateSharedSessionDueToMaxAgeExpiry(
                                 existingSession.get(),
-                                existingSessionId.get(),
+                                previousSessionIdFromCookie.get(),
                                 newSessionIdForPreviousSession,
                                 newSessionId);
 
@@ -699,7 +702,7 @@ public class AuthorisationHandler
 
             } else {
                 var previousSession = existingSession.get();
-                var previousSessionId = existingSessionId.get();
+                var previousSessionId = previousSessionIdFromCookie.get();
                 session =
                         sessionService.updateWithNewSessionId(
                                 previousSession, previousSessionId, newSessionId);
@@ -742,7 +745,7 @@ public class AuthorisationHandler
                 reauthRequested,
                 requestedCredentialTrustLevel,
                 user,
-                existingSessionId,
+                previousSessionIdFromCookie,
                 orchSession);
     }
 

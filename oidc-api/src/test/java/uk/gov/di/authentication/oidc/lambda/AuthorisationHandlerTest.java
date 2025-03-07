@@ -1700,8 +1700,9 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAddPreviousSessionIdClaimIfThereIsAnExistingSession() throws ParseException {
+        void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws ParseException {
             when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
+            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
 
             var requestParams =
                     buildRequestParams(
@@ -1717,6 +1718,27 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
             assertThat(
                     argument.getValue().getStringClaim("previous_session_id"), equalTo(SESSION_ID));
+        }
+
+        @Test
+        void shouldNotAddPreviousSessionIdWhenSessionCookiePresentButNotOrchSession()
+                throws ParseException {
+            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
+            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
+
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getStringClaim("previous_session_id"));
         }
 
         @Test
