@@ -85,7 +85,7 @@ public class UpdateClientConfigRequest {
 
     @SerializedName("max_age_enabled")
     @Expose
-    private boolean maxAgeEnabled;
+    private Boolean maxAgeEnabled;
 
     public UpdateClientConfigRequest() {}
 
@@ -165,7 +165,7 @@ public class UpdateClientConfigRequest {
         return channel;
     }
 
-    public boolean getMaxAgeEnabled() {
+    public Boolean getMaxAgeEnabled() {
         return maxAgeEnabled;
     }
 

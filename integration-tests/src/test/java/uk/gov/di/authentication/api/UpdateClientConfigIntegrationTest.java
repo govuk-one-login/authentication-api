@@ -21,6 +21,7 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
@@ -138,6 +139,50 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(
                 persistedClient.getBackChannelLogoutUri(), equalTo(expectedBackchannelLogoutUri));
 
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
+    }
+
+    @Test
+    void shouldRetainMaxAgeEnabledWhenUpdating() throws Json.JsonException {
+        clientStore.registerClient(
+                CLIENT_ID,
+                "The test client",
+                singletonList("http://localhost:1000/redirect"),
+                singletonList("test-client@test.com"),
+                singletonList("openid"),
+                VALID_PUBLIC_CERT,
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public",
+                ClientType.WEB,
+                false,
+                List.of(),
+                true);
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
+
+        assertThat(response, hasStatus(200));
+        ClientRegistrationResponse clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        assertThat(clientResponse.getClientId(), equalTo(CLIENT_ID));
+
+        assertThat(clientResponse.getClientName(), equalTo(expectedClientName));
+        assertTrue(clientResponse.isMaxAgeEnabled());
+
+        var persistedClient = clientStore.getClient(CLIENT_ID).orElseThrow();
+        assertTrue(persistedClient.getMaxAgeEnabled());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
     }
 
