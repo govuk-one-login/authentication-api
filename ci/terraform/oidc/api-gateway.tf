@@ -19,6 +19,9 @@ data "aws_iam_policy_document" "api_gateway_can_assume_policy" {
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
   name           = "${var.environment}-di-authentication-api"
   api_key_source = "HEADER"
+  tags = {
+    FMSRegionalPolicy : "false"
+  }
 }
 
 resource "aws_api_gateway_api_key" "client_registry_api_key" {
