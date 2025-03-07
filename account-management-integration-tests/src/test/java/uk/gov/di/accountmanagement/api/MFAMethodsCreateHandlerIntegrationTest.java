@@ -1,17 +1,21 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -33,32 +37,41 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         var response =
                 makeRequest(
                         Optional.of(
-                                "{\n"
-                                        + "\"mfaMethod\": {\n"
-                                        + "\"priorityIdentifier\": \"BACKUP\",\n"
-                                        + "\"method\": {\n"
-                                        + "\"mfaMethodType\": \"AUTH_APP\",\n"
-                                        + "\"credential\": \"AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444\"\n"
-                                        + "}\n"
-                                        + "}\n"
-                                        + "}"),
+                                format(
+                                        """
+                                        { "mfaMethod": {
+                                            "priorityIdentifier": "BACKUP",
+                                            "method": {
+                                                "mfaMethodType": "%s",
+                                                "credential": "%s" }
+                                            }
+                                        }
+                                       """,
+                                        MFAMethodType.AUTH_APP.getValue(), TEST_CREDENTIAL)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
                         Collections.emptyMap());
 
         assertEquals(200, response.getStatusCode());
-        assertEquals(
-                "{"
-                        + "\"mfaIdentifier\":2,"
-                        + "\"priorityIdentifier\":\"BACKUP\","
-                        + "\"methodVerified\":true,"
-                        + "\"method\":{"
-                        + "\"mfaMethodType\":\"AUTH_APP\","
-                        + "\"credential\":\"AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444\""
-                        + "}"
-                        + "}",
-                response.getBody());
+        var expectedResponse =
+                format(
+                        """
+                {
+                  "mfaIdentifier": "%s",
+                  "priorityIdentifier": "BACKUP",
+                  "methodVerified": true,
+                  "method": {
+                    "mfaMethodType": "AUTH_APP",
+                    "credential": "%s"
+                  }
+                }
+                """,
+                        HARDCODED_APP_MFA_ID, TEST_CREDENTIAL);
+        var expectedResponseParsedToString =
+                JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
+
+        assertEquals(expectedResponseParsedToString, response.getBody());
     }
 
     @Test
@@ -66,15 +79,17 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         var response =
                 makeRequest(
                         Optional.of(
-                                "{\n"
-                                        + "\"mfaMethod\": {\n"
-                                        + "\"priorityIdentifier\": \"BACKUP\",\n"
-                                        + "\"method\": {\n"
-                                        + "\"mfaMethodType\": \"AUTH_APP\",\n"
-                                        + "\"credential\": \"AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444\"\n"
-                                        + "}\n"
-                                        + "}\n"
-                                        + "}"),
+                                format(
+                                        """
+                                        { "mfaMethod": {
+                                            "priorityIdentifier": "BACKUP",
+                                            "method": {
+                                                "mfaMethodType": "%s",
+                                                "credential": "%s" }
+                                            }
+                                        }
+                                       """,
+                                        MFAMethodType.AUTH_APP.getValue(), TEST_CREDENTIAL)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),

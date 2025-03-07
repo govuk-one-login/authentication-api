@@ -21,6 +21,7 @@ import java.util.List;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
 
 public class MFAMethodsCreateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -72,7 +73,9 @@ public class MFAMethodsCreateHandler
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
             return generateApiGatewayProxyResponse(
-                    200, new MfaMethodData(2, priorityIdentifier, true, mfaMethod), true);
+                    200,
+                    new MfaMethodData(HARDCODED_APP_MFA_ID, priorityIdentifier, true, mfaMethod),
+                    true);
 
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

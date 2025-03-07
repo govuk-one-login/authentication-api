@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -24,6 +25,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -38,7 +40,7 @@ class MFAMethodsCreateHandlerTest {
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final String SESSION_ID = "some-session-id";
     private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
-    private static final String CREDENTIAL = "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444";
+    private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
 
@@ -55,22 +57,28 @@ class MFAMethodsCreateHandlerTest {
     void shouldReturn200WhenAndHelloWorld() {
         var event =
                 generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, CREDENTIAL);
+                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, TEST_CREDENTIAL);
 
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        assertEquals(
-                "{"
-                        + "\"mfaIdentifier\":2,"
-                        + "\"priorityIdentifier\":\"BACKUP\","
-                        + "\"methodVerified\":true,"
-                        + "\"method\":{"
-                        + "\"mfaMethodType\":\"AUTH_APP\","
-                        + "\"credential\":\"AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444\""
-                        + "}"
-                        + "}",
-                result.getBody());
+        var expectedResponse =
+                format(
+                        """
+                {
+                  "mfaIdentifier": "%s",
+                  "priorityIdentifier": "BACKUP",
+                  "methodVerified": true,
+                  "method": {
+                    "mfaMethodType": "AUTH_APP",
+                    "credential": "%s"
+                  }
+                }
+                """,
+                        HARDCODED_APP_MFA_ID, TEST_CREDENTIAL);
+        var expectedResponseParsedToString =
+                JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
+        assertEquals(expectedResponseParsedToString, result.getBody());
     }
 
     @ParameterizedTest
@@ -81,7 +89,7 @@ class MFAMethodsCreateHandlerTest {
 
         var event =
                 generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, CREDENTIAL);
+                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, TEST_CREDENTIAL);
 
         var result = handler.handleRequest(event, context);
 
@@ -92,7 +100,7 @@ class MFAMethodsCreateHandlerTest {
     void shouldReturn400WhenPathParameterIsIncorrect() {
         var event =
                 generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, CREDENTIAL);
+                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, TEST_CREDENTIAL);
         event.setPathParameters(Map.of());
 
         var result = handler.handleRequest(event, context);
@@ -110,7 +118,7 @@ class MFAMethodsCreateHandlerTest {
     void shouldReturn400WhenJsonIsInvalid() {
         var event =
                 generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, CREDENTIAL);
+                        PriorityIdentifier.BACKUP, MFAMethodType.AUTH_APP, TEST_CREDENTIAL);
         event.setBody("Invalid JSON");
 
         var result = handler.handleRequest(event, context);
@@ -126,15 +134,15 @@ class MFAMethodsCreateHandlerTest {
         event.setPathParameters(Map.of("publicSubjectId", "helloPath"));
         event.setBody(
                 format(
-                        "{\n"
-                                + "\"mfaMethod\": {\n"
-                                + "\"priorityIdentifier\": \"%s\",\n"
-                                + "\"method\": {\n"
-                                + "\"mfaMethodType\": \"%s\",\n"
-                                + "\"credential\": \"%s\"\n"
-                                + "}\n"
-                                + "}\n"
-                                + "}",
+                        """
+                                        { "mfaMethod": {
+                                            "priorityIdentifier": "%s",
+                                            "method": {
+                                                "mfaMethodType": "%s",
+                                                "credential": "%s" }
+                                            }
+                                        }
+                                       """,
                         priorityIdentifier, mfaMethodType, credential));
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
