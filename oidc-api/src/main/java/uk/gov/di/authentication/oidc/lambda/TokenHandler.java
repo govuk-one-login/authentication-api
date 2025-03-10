@@ -29,6 +29,7 @@ import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
+import uk.gov.di.orchestration.shared.exceptions.PkceValidationException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -255,23 +256,24 @@ public class TokenHandler
                     400, e.getErrorObject().toJSONObject().toJSONString());
         }
 
-        if (configurationService.isPkceEnabled()
-                && Objects.nonNull(authRequest.getCodeChallenge())) {
-            var codeChallenge = authRequest.getCodeChallenge();
-            var codeVerifierString = requestBody.get("code_verifier");
-
-            if (codeVerifierString.isBlank()) {
-                LOG.warn("PKCE verification failed as code_verifier does not exist");
-                return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
+        // ATO-1372: add logging to see how many RPs are sending the correct code verifiers
+        var codeChallenge = authRequest.getCodeChallenge();
+        var codeVerifierString = requestBody.get("code_verifier");
+        if (Objects.nonNull(codeChallenge)) {
+            String pkceValidated;
+            try {
+                validatePkce(codeVerifierString, codeChallenge);
+                pkceValidated = "is successful";
+            } catch (Exception e) {
+                pkceValidated = "has failed";
             }
+            LOG.info("PKCE validation {}", pkceValidated);
+        }
 
-            var hashedVerifierString =
-                    CodeChallenge.compute(
-                                    CodeChallengeMethod.S256, new CodeVerifier(codeVerifierString))
-                            .toString();
-
-            if (!hashedVerifierString.equals(codeChallenge.toString())) {
-                LOG.warn("PKCE verification failed as code_verifier did not match code_challenge");
+        if (configurationService.isPkceEnabled() && Objects.nonNull(codeChallenge)) {
+            try {
+                validatePkce(codeVerifierString, codeChallenge);
+            } catch (Exception e) {
                 return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
             }
         }
@@ -307,6 +309,19 @@ public class TokenHandler
 
         LOG.info("Successfully generated tokens");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+    }
+
+    private void validatePkce(String codeVerifierString, CodeChallenge codeChallenge) {
+        LOG.info("PKCE Validation");
+        var hashedVerifierString =
+                CodeChallenge.compute(
+                                CodeChallengeMethod.S256, new CodeVerifier(codeVerifierString))
+                        .toString();
+
+        if (!hashedVerifierString.equals(codeChallenge.toString())) {
+            LOG.warn("PKCE verification failed as code_verifier did not match code_challenge");
+            throw new PkceValidationException("PKCE validation failed");
+        }
     }
 
     private static boolean refreshTokenRequest(Map<String, String> requestBody) {
