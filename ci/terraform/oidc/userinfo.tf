@@ -1,11 +1,10 @@
-module "oidc_userinfo_role_1" {
+module "oidc_userinfo_role_2" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-userinfo-role"
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
-    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.oidc_token_kms_signing_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
@@ -58,7 +57,7 @@ module "userinfo" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_userinfo_role_1.arn
+  lambda_role_arn                        = module.oidc_userinfo_role_2.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
