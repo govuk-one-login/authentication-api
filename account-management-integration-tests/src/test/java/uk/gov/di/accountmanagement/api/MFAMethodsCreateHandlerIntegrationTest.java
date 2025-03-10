@@ -60,8 +60,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
-                        Collections.emptyMap());
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
         assertEquals(200, response.getStatusCode());
 
         String extractedMfaIdentifier =
@@ -100,8 +99,6 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
                                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap());
         assertEquals(400, response.getStatusCode());
