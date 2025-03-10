@@ -63,30 +63,6 @@ public class UserInfoService {
                 AuthUserInfoClaims.NEW_ACCOUNT.getValue(), accessTokenInfo.getIsNewAccount());
         userInfo.setClaim("password_reset_time", accessTokenInfo.getPasswordResetTime());
 
-        // TODO: ATO-1129: delete temporary logs
-        LOG.info(
-                "is email a requested claim: {}",
-                accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL.getValue()));
-        LOG.info(
-                "is verified_mfa a requested claim: {}",
-                accessTokenInfo
-                        .getClaims()
-                        .contains(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue()));
-        LOG.info(
-                "is current_credential_strength a requested claim: {}",
-                accessTokenInfo
-                        .getClaims()
-                        .contains(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()));
-        LOG.info(
-                "is uplift_required a requested claim: {}",
-                accessTokenInfo
-                        .getClaims()
-                        .contains(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()));
-        LOG.info(
-                "is salt a requested claim: {}",
-                accessTokenInfo.getClaims().contains(AuthUserInfoClaims.SALT.getValue()));
-        //
-
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue())) {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
         }
