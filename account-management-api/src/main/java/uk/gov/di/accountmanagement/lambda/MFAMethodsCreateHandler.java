@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.accountmanagement.entity.MfaMethodCreateRequest;
+import uk.gov.di.authentication.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MfaDetail;
 import uk.gov.di.authentication.shared.entity.MfaMethodData;

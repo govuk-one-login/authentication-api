@@ -2,7 +2,9 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 
 import java.util.List;
@@ -86,5 +88,33 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
         } else {
             return List.of();
         }
+    }
+
+    @Override
+    public MfaMethodData addBackupMfa(String email, MfaMethodCreateRequest.MfaMethod mfaMethod)
+            throws InvalidPriorityIdentifierException {
+        if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
+            throw new InvalidPriorityIdentifierException(
+                    "Priority identifier for newly added MFA method should be BACKUP");
+        }
+
+        if (mfaMethod.method() instanceof SmsMfaDetail smsMfaDetail) {
+            dynamoService.addMFAMethodSupportingMultiple(
+                    email,
+                    new SmsMfaData(
+                            smsMfaDetail.phoneNumber(),
+                            true,
+                            true,
+                            mfaMethod.priorityIdentifier(),
+                            HARDCODED_SMS_MFA_ID));
+            return MfaMethodData.smsMethodData(
+                    HARDCODED_SMS_MFA_ID,
+                    mfaMethod.priorityIdentifier(),
+                    true,
+                    smsMfaDetail.phoneNumber());
+        }
+
+        //      Further implementation to come in subsequent commits
+        return null;
     }
 }

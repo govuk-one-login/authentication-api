@@ -1,4 +1,4 @@
-package uk.gov.di.accountmanagement.entity;
+package uk.gov.di.authentication.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.JsonAdapter;
