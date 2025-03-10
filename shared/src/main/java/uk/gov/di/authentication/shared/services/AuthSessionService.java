@@ -152,6 +152,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
     public void updateSession(AuthSessionItem sessionItem) {
         try {
+            LOG.info("Updating auth session item {}", sessionItem.toLogSafeString());
             update(sessionItem);
         } catch (Exception e) {
             logAndThrowAuthSessionException(

@@ -169,4 +169,26 @@ public class AuthSessionItem {
         this.emailAddress = emailAddress;
         return this;
     }
+
+    /**
+     * Return a string representation of the instance that is safe to record in logs (e.g. does not
+     * contain PII)
+     */
+    public String toLogSafeString() {
+        return "AuthSessionItem{sessionId = '"
+                + sessionId
+                + "', verifiedMfaMethodType = '"
+                + verifiedMfaMethodType
+                + "', timeToLive = '"
+                + timeToLive
+                + "', isNewAccount = '"
+                + isNewAccount
+                + "', resetPasswordState = '"
+                + resetPasswordState
+                + "', internalCommonSubjectId = '"
+                + internalCommonSubjectId
+                + "', upliftRequired = '"
+                + upliftRequired
+                + "'}}";
+    }
 }
