@@ -11,6 +11,9 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
+import com.nimbusds.oauth2.sdk.pkce.CodeVerifier;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -252,6 +255,27 @@ public class TokenHandler
                     400, e.getErrorObject().toJSONObject().toJSONString());
         }
 
+        if (configurationService.isPkceEnabled()
+                && Objects.nonNull(authRequest.getCodeChallenge())) {
+            var codeChallenge = authRequest.getCodeChallenge();
+            var codeVerifierString = requestBody.get("code_verifier");
+
+            if (codeVerifierString.isBlank()) {
+                LOG.warn("PKCE verification failed as code_verifier does not exist");
+                return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
+            }
+
+            var hashedVerifierString =
+                    CodeChallenge.compute(
+                                    CodeChallengeMethod.S256, new CodeVerifier(codeVerifierString))
+                            .toString();
+
+            if (!hashedVerifierString.equals(codeChallenge.toString())) {
+                LOG.warn("PKCE verification failed as code_verifier did not match code_challenge");
+                return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
+            }
+        }
+
         var tokenResponse =
                 getTokenResponse(
                         clientSession,
@@ -320,7 +344,7 @@ public class TokenHandler
             jti = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse RefreshToken");
-            return generateInvalidGrantCodeApiGatewayProxyResponse();
+            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
         }
         boolean areScopesValid =
                 tokenValidationService.validateRefreshTokenScopes(clientScopes, scopes);
@@ -337,11 +361,11 @@ public class TokenHandler
             tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
         } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
             LOG.warn("Refresh token not found with given key");
-            return generateInvalidGrantCodeApiGatewayProxyResponse();
+            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
         }
         if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
             LOG.warn("Refresh token store does not contain Refresh token in request");
-            return generateInvalidGrantCodeApiGatewayProxyResponse();
+            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
         }
 
         OIDCTokenResponse tokenResponse =
@@ -480,10 +504,21 @@ public class TokenHandler
         return tokenResponse;
     }
 
-    private APIGatewayProxyResponseEvent generateInvalidGrantCodeApiGatewayProxyResponse() {
+    private APIGatewayProxyResponseEvent
+            generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse() {
+        return generateInvalidGrantCodeApiGatewayProxyResponse("Invalid Refresh token");
+    }
+
+    private APIGatewayProxyResponseEvent
+            generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse() {
+        return generateInvalidGrantCodeApiGatewayProxyResponse("PKCE code verification failed");
+    }
+
+    private APIGatewayProxyResponseEvent generateInvalidGrantCodeApiGatewayProxyResponse(
+            String description) {
         return generateApiGatewayProxyResponse(
                 400,
-                new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
+                new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, description)
                         .toJSONObject()
                         .toJSONString());
     }
