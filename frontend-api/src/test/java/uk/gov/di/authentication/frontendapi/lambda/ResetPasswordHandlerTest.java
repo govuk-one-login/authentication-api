@@ -63,6 +63,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -416,6 +417,26 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
         verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
+    }
+
+    @Test
+    void shouldRecordPasswordResetSuccessInSession() {
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
+
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+        handler.handleRequest(event, context);
+
+        verify(authSessionService, times(1))
+                .updateSession(
+                        argThat(
+                                state ->
+                                        state.getResetPasswordState()
+                                                .equals(
+                                                        AuthSessionItem.ResetPasswordState
+                                                                .SUCCEEDED)));
     }
 
     private APIGatewayProxyRequestEvent generateRequest(

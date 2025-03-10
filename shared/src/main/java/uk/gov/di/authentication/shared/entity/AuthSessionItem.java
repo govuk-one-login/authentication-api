@@ -9,6 +9,7 @@ public class AuthSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
+    public static final String ATTRIBUTE_RESET_PASSWORD_STATE = "resetPasswordState";
     public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "currentCredentialStrength";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
@@ -23,10 +24,16 @@ public class AuthSessionItem {
         UNKNOWN
     }
 
+    public enum ResetPasswordState {
+        NONE,
+        SUCCEEDED,
+    }
+
     private String sessionId;
     private String verifiedMfaMethodType;
     private long timeToLive;
     private AccountState isNewAccount;
+    private ResetPasswordState resetPasswordState = ResetPasswordState.NONE;
     private CredentialTrustLevel currentCredentialStrength;
     private String internalCommonSubjectId;
     private boolean upliftRequired;
@@ -102,6 +109,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withAccountState(AccountState accountState) {
         this.isNewAccount = accountState;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RESET_PASSWORD_STATE)
+    public ResetPasswordState getResetPasswordState() {
+        return this.resetPasswordState;
+    }
+
+    public void setResetPasswordState(ResetPasswordState resetPasswordState) {
+        this.resetPasswordState = resetPasswordState;
+    }
+
+    public AuthSessionItem withResetPasswordState(ResetPasswordState resetPasswordState) {
+        this.resetPasswordState = resetPasswordState;
         return this;
     }
 

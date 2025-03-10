@@ -19,7 +19,8 @@ module "frontend_api_reset_password_role" {
     local.client_registry_encryption_policy_arn,
     local.common_passwords_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
-    aws_iam_policy.dynamo_auth_session_read_policy.arn
+    aws_iam_policy.dynamo_auth_session_read_policy.arn,
+    aws_iam_policy.dynamo_auth_session_write_policy.arn
   ]
   extra_tags = {
     Service = "reset-password"
