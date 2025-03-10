@@ -13,7 +13,7 @@ moved {
 data "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
   name = replace("/aws/lambda/${var.environment}-spot-response-lambda", ".", "")
   depends_on = [
-    module.ipv_spot_response_role
+    module.ipv_spot_response_role_1
   ]
 }
 moved {
