@@ -550,7 +550,7 @@ Resources:
         SSEType: KMS
       TimeToLiveSpecification:
         AttributeName: TimeToExist
-        Enabled: true
+        Enabled: false
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       Tags:
