@@ -8,12 +8,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -52,6 +54,8 @@ class TicfCriHandlerTest {
 
     private TicfCriHandler handler;
 
+    private static final AuthSessionItem.AccountState EXISTING_ACCOUNT_STATE =
+            AuthSessionItem.AccountState.EXISTING;
     private static final String SERVICE_URI = "http://www.example.com";
     private static final String COMMON_SUBJECTID = "a-subject-id";
     private static final String JOURNEY_ID = "journey-id";
@@ -79,12 +83,16 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldMakeTheCorrectCallToTheTicfCri(boolean userIsAuthenticated)
+    @ValueSource(booleans = {false, true})
+    void shouldMakeTheCorrectCallToTheTicfCriForAuthenticated(boolean userIsAuthenticated)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
                 basicTicfCriRequest(
-                        COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID, userIsAuthenticated);
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        userIsAuthenticated,
+                        EXISTING_ACCOUNT_STATE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"}",
@@ -109,12 +117,53 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
+    @EnumSource(AuthSessionItem.AccountState.class)
+    void shouldMakeTheCorrectCallToTheTicfCri(AuthSessionItem.AccountState accountState)
+            throws IOException, InterruptedException, ExecutionException {
+        var ticfRequest =
+                basicTicfCriRequest(
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        USER_IS_AUTHENTICATED,
+                        accountState);
+        var expectedRequestBody =
+                format(
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
+                        COMMON_SUBJECTID,
+                        jsonArrayFrom(VECTORS_OF_TRUST),
+                        JOURNEY_ID,
+                        "Y",
+                        accountState == AuthSessionItem.AccountState.NEW
+                                ? ",\"initial_registration\":\"Y\""
+                                : "");
+
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        handler.handleRequest(ticfRequest, context);
+
+        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
+
+        var actualRequestBody =
+                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
+
+        var expectedUri = URI.create(SERVICE_URI + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
+        assertEquals(expectedRequestBody, actualRequestBody);
+    }
+
+    @ParameterizedTest
     @MethodSource("statusCodes")
     void sendsMetricsAndLogsBasedOnTheHttpStatusCode(Integer statusCode, Level expectedLogLevel)
             throws IOException, InterruptedException {
         var ticfRequest =
                 basicTicfCriRequest(
-                        COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID, USER_IS_AUTHENTICATED);
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        USER_IS_AUTHENTICATED,
+                        EXISTING_ACCOUNT_STATE);
         when(httpResponse.statusCode()).thenReturn(statusCode);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
@@ -151,7 +200,11 @@ class TicfCriHandlerTest {
 
         handler.handleRequest(
                 basicTicfCriRequest(
-                        COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID, USER_IS_AUTHENTICATED),
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        USER_IS_AUTHENTICATED,
+                        EXISTING_ACCOUNT_STATE),
                 context);
 
         verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);
