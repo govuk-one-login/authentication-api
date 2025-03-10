@@ -201,6 +201,8 @@ class TicfCriHandlerTest {
         return List.of(
                 Arguments.of(false, AuthSessionItem.ResetPasswordState.NONE, false),
                 Arguments.of(true, AuthSessionItem.ResetPasswordState.NONE, false),
+                Arguments.of(false, AuthSessionItem.ResetPasswordState.ATTEMPTED, true),
+                Arguments.of(true, AuthSessionItem.ResetPasswordState.ATTEMPTED, false),
                 Arguments.of(true, AuthSessionItem.ResetPasswordState.SUCCEEDED, true));
     }
 

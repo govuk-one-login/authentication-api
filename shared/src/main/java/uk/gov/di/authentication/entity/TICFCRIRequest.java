@@ -22,12 +22,17 @@ public record TICFCRIRequest(
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
             ResetPasswordState resetPasswordState) {
+        boolean passwordResetSuccess = resetPasswordState.equals(ResetPasswordState.SUCCEEDED);
+        boolean reportablePasswordAttempted =
+                (!authenticated && resetPasswordState.equals(ResetPasswordState.ATTEMPTED));
+        boolean passwordReset = passwordResetSuccess || reportablePasswordAttempted;
+
         return new TICFCRIRequest(
                 internalPairwiseId,
                 vtr,
                 journeyId,
                 authenticated ? "Y" : "N",
                 accountState == AuthSessionItem.AccountState.NEW ? "Y" : null,
-                resetPasswordState.equals(ResetPasswordState.SUCCEEDED) ? "Y" : null);
+                passwordReset ? "Y" : null);
     }
 }
