@@ -30,12 +30,14 @@ import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -43,6 +45,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
@@ -50,6 +53,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -84,6 +88,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    public static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     @RegisterExtension
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
@@ -149,8 +157,19 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .nonce(new Nonce())
                         .state(RP_STATE);
         redis.createSession(SESSION_ID);
+        var clientCreationTime = LocalDateTime.now();
         redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                authRequestBuilder.build().toParameters(),
+                clientCreationTime);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        clientCreationTime,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
 
@@ -276,8 +295,19 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce())
                         .state(RP_STATE);
+        var clientCreationTime = LocalDateTime.now();
         redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                authRequestBuilder.build().toParameters(),
+                clientCreationTime);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        clientCreationTime,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME));
         redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -319,8 +349,19 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce())
                         .state(RP_STATE);
+        var clientCreationTime = LocalDateTime.now();
         redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                authRequestBuilder.build().toParameters(),
+                clientCreationTime);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        clientCreationTime,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME));
 
         var response =
                 makeRequest(
@@ -364,8 +405,19 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .state(RP_STATE)
                         .claims(oidcValidClaimsRequest);
         redis.createSession(SESSION_ID);
+        var clientCreationTime = LocalDateTime.now();
         redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                authRequestBuilder.build().toParameters(),
+                clientCreationTime);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        clientCreationTime,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
 
@@ -450,8 +502,19 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .claims(oidcValidClaimsRequest);
 
         redis.createSession(SESSION_ID);
+        var clientCreationTime = LocalDateTime.now();
         redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                authRequestBuilder.build().toParameters(),
+                clientCreationTime);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        clientCreationTime,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
 
@@ -498,8 +561,19 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .state(RP_STATE);
 
         redis.createSession(sessionId);
+        var clientCreationTime = LocalDateTime.now();
         redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                authRequestBuilder.build().toParameters(),
+                clientCreationTime);
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestBuilder.build().toParameters(),
+                        clientCreationTime,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME));
         redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
 

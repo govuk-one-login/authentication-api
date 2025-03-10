@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -64,6 +65,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSes
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -76,6 +78,7 @@ public class AuthCodeHandler
     private final AuthorisationCodeService authorisationCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
@@ -89,6 +92,7 @@ public class AuthCodeHandler
             AuthorisationCodeService authorisationCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
@@ -100,6 +104,7 @@ public class AuthCodeHandler
         this.authorisationCodeService = authorisationCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
@@ -114,6 +119,7 @@ public class AuthCodeHandler
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
@@ -131,6 +137,7 @@ public class AuthCodeHandler
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService, redis);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
@@ -332,6 +339,11 @@ public class AuthCodeHandler
                 clientSessionService
                         .getClientSessionFromRequestHeaders(input.getHeaders())
                         .orElse(null);
+        var orchClientSession =
+                orchClientSessionService
+                        .getClientSessionFromRequestHeaders(input.getHeaders())
+                        .orElse(null);
+        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
         if (Objects.isNull(clientSession)) {
             LOG.info("ClientSession not found");
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1018);

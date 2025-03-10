@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -60,6 +61,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class DocAppCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -70,6 +72,7 @@ public class DocAppCallbackHandler
     private final DocAppCriService tokenService;
     private final SessionService sessionService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -90,6 +93,7 @@ public class DocAppCallbackHandler
             DocAppCriService tokenService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
             AuthorisationCodeService authorisationCodeService,
@@ -103,6 +107,7 @@ public class DocAppCallbackHandler
         this.tokenService = tokenService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
         this.authorisationCodeService = authorisationCodeService;
@@ -127,6 +132,7 @@ public class DocAppCallbackHandler
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
@@ -152,6 +158,7 @@ public class DocAppCallbackHandler
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.sessionService = new SessionService(configurationService, redis);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
         this.authorisationCodeService =
@@ -222,6 +229,11 @@ public class DocAppCallbackHandler
                             .getClientSession(clientSessionId)
                             .orElseThrow(
                                     () -> new DocAppCallbackException("ClientSession not found"));
+            var orchClientSession =
+                    orchClientSessionService.getClientSession(clientSessionId).orElse(null);
+
+            logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
+
             if (Objects.isNull(clientSession.getDocAppSubjectId()))
                 throw new DocAppCallbackException("No DocAppSubjectId present in ClientSession");
 

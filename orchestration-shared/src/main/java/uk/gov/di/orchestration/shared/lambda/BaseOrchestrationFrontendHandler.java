@@ -13,6 +13,7 @@ import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
@@ -26,6 +27,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeadersOpt;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public abstract class BaseOrchestrationFrontendHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -35,16 +37,19 @@ public abstract class BaseOrchestrationFrontendHandler
     protected final SessionService sessionService;
     protected final ClientSessionService clientSessionService;
     protected final OrchSessionService orchSessionService;
+    protected final OrchClientSessionService orchClientSessionService;
 
     protected BaseOrchestrationFrontendHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
-            OrchSessionService orchSessionService) {
+            OrchSessionService orchSessionService,
+            OrchClientSessionService orchClientSessionService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.orchSessionService = orchSessionService;
+        this.orchClientSessionService = orchClientSessionService;
     }
 
     protected BaseOrchestrationFrontendHandler(ConfigurationService configurationService) {
@@ -52,6 +57,7 @@ public abstract class BaseOrchestrationFrontendHandler
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
+        this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }
 
     @Override
@@ -99,6 +105,10 @@ public abstract class BaseOrchestrationFrontendHandler
         }
 
         var clientSession = clientSessionIdOpt.flatMap(clientSessionService::getClientSession);
+        var orchClientSession =
+                clientSessionIdOpt.flatMap(orchClientSessionService::getClientSession);
+
+        logIfClientSessionsAreNotEqual(clientSession.orElse(null), orchClientSession.orElse(null));
 
         attachSessionIdToLogs(sessionId);
         attachLogFieldToLogs(

@@ -15,11 +15,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
 public class OrchClientSessionService extends BaseDynamoService<OrchClientSessionItem> {
     private static final Logger LOG = LogManager.getLogger(OrchClientSessionService.class);
 
+    private final ConfigurationService configurationService;
     private final long timeToLive;
     private final NowClock nowClock;
 
@@ -29,6 +33,7 @@ public class OrchClientSessionService extends BaseDynamoService<OrchClientSessio
 
     public OrchClientSessionService(ConfigurationService configurationService, Clock clock) {
         super(OrchClientSessionItem.class, "Client-Session", configurationService, true);
+        this.configurationService = configurationService;
         this.timeToLive = configurationService.getSessionExpiry();
         this.nowClock = new NowClock(clock);
     }
@@ -38,6 +43,7 @@ public class OrchClientSessionService extends BaseDynamoService<OrchClientSessio
             DynamoDbTable<OrchClientSessionItem> dynamoDbTable,
             ConfigurationService configurationService) {
         super(dynamoDbTable, dynamoDbClient);
+        this.configurationService = configurationService;
         this.timeToLive = configurationService.getSessionExpiry();
         this.nowClock = new NowClock(Clock.systemUTC());
     }
@@ -118,5 +124,29 @@ public class OrchClientSessionService extends BaseDynamoService<OrchClientSessio
         LOG.error(
                 "{}. Client Session ID: {}. Error message: {}", message, sessionId, e.getMessage());
         throw new OrchClientSessionException(message);
+    }
+
+    public Optional<OrchClientSessionItem> getClientSessionFromRequestHeaders(
+            Map<String, String> headers) {
+        if (!headersContainValidHeader(
+                headers,
+                CLIENT_SESSION_ID_HEADER,
+                configurationService.getHeadersCaseInsensitive())) {
+            return Optional.empty();
+        }
+        String clientSessionId =
+                getHeaderValueFromHeaders(
+                        headers,
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        if (clientSessionId == null) {
+            LOG.warn("Value not found for Client-Session-Id header");
+            return Optional.empty();
+        }
+        try {
+            return getClientSession(clientSessionId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

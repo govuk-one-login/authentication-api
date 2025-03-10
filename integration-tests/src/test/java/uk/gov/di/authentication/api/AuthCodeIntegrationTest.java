@@ -22,19 +22,20 @@ import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +57,10 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    public static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI =
@@ -82,8 +87,18 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSessionId = "some-client-session-id";
         redis.addEmailToSession(sessionID, EMAIL);
         redis.setVerifiedMfaMethodType(sessionID, MFAMethodType.AUTH_APP);
+        var creationDate = LocalDateTime.now();
+        var authRequestParams = generateAuthRequest().toParameters();
         redis.addAuthRequestToSession(
-                clientSessionId, sessionID, generateAuthRequest().toParameters(), CLIENT_NAME);
+                clientSessionId, sessionID, authRequestParams, CLIENT_NAME, creationDate);
+        var orchClientSession =
+                new OrchClientSessionItem(
+                        clientSessionId,
+                        authRequestParams,
+                        creationDate,
+                        List.of(VectorOfTrust.getDefaults()),
+                        CLIENT_NAME);
+        orchClientSessionExtension.storeClientSession(orchClientSession);
         userStore.signUp(EMAIL, "password");
         registerClient(new Scope(OIDCScopeValue.OPENID));
         Map<String, String> headers = new HashMap<>();
@@ -114,16 +129,20 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn200WithSuccessfulAuthResponseForDocAppJourney()
             throws Json.JsonException, JOSEException {
         var clientSessionId = "some-client-session-id";
-        Map<String, List<String>> authRequestParams = generateDocAppAuthRequest().toParameters();
+        var creationDate = LocalDateTime.now();
+        var authRequestParams = generateDocAppAuthRequest().toParameters();
+        var docAppSubjectId = new Subject();
+        var vtrList = List.of(VectorOfTrust.getDefaults());
         var clientSession =
-                new ClientSession(
-                        authRequestParams,
-                        LocalDateTime.now(ZoneId.of("UTC")),
-                        List.of(VectorOfTrust.getDefaults()),
-                        CLIENT_NAME);
-        clientSession.setDocAppSubjectId(new Subject());
+                new ClientSession(authRequestParams, creationDate, vtrList, CLIENT_NAME);
+        clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.addAuthRequestToSession(clientSessionId, sessionID, authRequestParams, CLIENT_NAME);
         redis.createClientSession(clientSessionId, clientSession);
+        var orchClientSession =
+                new OrchClientSessionItem(
+                        clientSessionId, authRequestParams, creationDate, vtrList, CLIENT_NAME);
+        orchClientSession.setDocAppSubjectId(docAppSubjectId.getValue());
+        orchClientSessionExtension.storeClientSession(orchClientSession);
         registerClient(new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP));
 
         Map<String, String> headers = new HashMap<>();
