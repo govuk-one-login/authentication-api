@@ -100,6 +100,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL);
         authSessionExtension.addSession(sessionId);
+        authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL);
         requestHeaders = createHeaders(sessionId);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
         handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE, redisConnectionService);

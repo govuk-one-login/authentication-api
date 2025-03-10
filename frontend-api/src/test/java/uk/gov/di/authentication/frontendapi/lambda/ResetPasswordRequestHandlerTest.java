@@ -139,6 +139,7 @@ class ResetPasswordRequestHandlerTest {
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
+                    .withEmailAddress(CommonTestVariables.EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
