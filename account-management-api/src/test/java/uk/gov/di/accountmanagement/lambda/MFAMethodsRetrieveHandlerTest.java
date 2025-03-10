@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.entity.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.MfaMethodsService;
@@ -117,5 +118,22 @@ class MFAMethodsRetrieveHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(404));
+    }
+
+    @Test
+    void shouldReturn500IfDynamoServiceReturnsError() {
+        when(configurationService.getEnvironment()).thenReturn("test-environment");
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenThrow(UnknownMfaTypeException.class);
+
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withPathParameters((Map.of("publicSubjectId", PUBLIC_SUBJECT_ID)))
+                        .withHeaders(VALID_HEADERS);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
     }
 }

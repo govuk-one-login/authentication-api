@@ -78,4 +78,6 @@ public interface AuthenticationService {
     void setAuthAppAndAccountVerified(String email, String credentialValue);
 
     void setVerifiedAuthAppAndRemoveExistingMfaMethod(String email, String credentialValue);
+
+    void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated);
 }

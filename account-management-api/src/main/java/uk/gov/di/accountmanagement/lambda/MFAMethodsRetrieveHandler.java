@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
@@ -91,12 +92,17 @@ public class MFAMethodsRetrieveHandler
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
 
-        var retrievedMethods = mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());
+        try {
+            var retrievedMethods =
+                    mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());
 
-        var serialisationService = SerializationService.getInstance();
-        var response = serialisationService.writeValueAsStringCamelCase(retrievedMethods);
+            var serialisationService = SerializationService.getInstance();
+            var response = serialisationService.writeValueAsStringCamelCase(retrievedMethods);
 
-        return generateApiGatewayProxyResponse(200, response);
+            return generateApiGatewayProxyResponse(200, response);
+        } catch (UnknownMfaTypeException e) {
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+        }
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {

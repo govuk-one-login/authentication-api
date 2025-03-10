@@ -1,12 +1,16 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 
 import java.util.List;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 
 public class DynamoMfaMethodsService implements MfaMethodsService {
+    private static final Logger LOG = LogManager.getLogger(DynamoMfaMethodsService.class);
 
     private final DynamoService dynamoService;
 
@@ -22,6 +26,47 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
     public List<MfaMethodData> getMfaMethods(String email) {
         var userProfile = dynamoService.getUserProfileByEmail(email);
         var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
+        if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
+            return getMfaMethodsForMigratedUser(userCredentials);
+        } else {
+            return getMfaMethodsForNonMigratedUser(userProfile, userCredentials);
+        }
+    }
+
+    private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials)
+            throws UnknownMfaTypeException {
+        return userCredentials.getMfaMethods().stream()
+                .map(
+                        mfaMethod -> {
+                            if (mfaMethod
+                                    .getMfaMethodType()
+                                    .equals(MFAMethodType.AUTH_APP.getValue())) {
+                                return MfaMethodData.authAppMfaData(
+                                        mfaMethod.getMfaIdentifier(),
+                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
+                                        mfaMethod.isMethodVerified(),
+                                        mfaMethod.getCredentialValue());
+                            } else if (mfaMethod
+                                    .getMfaMethodType()
+                                    .equals(MFAMethodType.SMS.getValue())) {
+                                return MfaMethodData.smsMethodData(
+                                        mfaMethod.getMfaIdentifier(),
+                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
+                                        mfaMethod.isMethodVerified(),
+                                        mfaMethod.getDestination());
+                            } else {
+                                LOG.error(
+                                        "Unknown mfa method type: {}",
+                                        mfaMethod.getMfaMethodType());
+                                throw new UnknownMfaTypeException(
+                                        "Unknown mfa method type: " + mfaMethod.getMfaMethodType());
+                            }
+                        })
+                .toList();
+    }
+
+    private List<MfaMethodData> getMfaMethodsForNonMigratedUser(
+            UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();

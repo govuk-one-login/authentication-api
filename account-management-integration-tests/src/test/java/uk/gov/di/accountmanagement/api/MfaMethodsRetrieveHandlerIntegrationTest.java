@@ -5,8 +5,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsRetrieveHandler;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
@@ -96,6 +99,61 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                    }]
                 """,
                         HARDCODED_APP_MFA_ID);
+        var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
+        assertThat(response, hasJsonBody(expectedResponseAsJson));
+    }
+
+    @Test
+    void shouldReturn200WithMultipleMethodsWhenMigratedUserExists() {
+        var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
+        userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+
+        var authAppIdentifier = "14895398-33e5-41f0-b059-811b07df348d";
+        var smsIdentifier = "e2d3f441-a17f-44a3-b608-b32c129b48b4";
+        var authApp =
+                new AuthAppMfaData(
+                        "some-credential",
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        authAppIdentifier);
+        var sms =
+                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP, smsIdentifier);
+        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, authApp);
+        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, sms);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", publicSubjectId),
+                        Collections.emptyMap());
+
+        assertEquals(200, response.getStatusCode());
+        var expectedResponse =
+                format(
+                        """
+                [{
+                     "mfaIdentifier": "%s",
+                     "priorityIdentifier": "DEFAULT",
+                     "methodVerified": true,
+                     "method": {
+                       "mfaMethodType": "AUTH_APP",
+                       "credential": "some-credential"
+                     }
+                   },
+                   {
+                     "mfaIdentifier": "%s",
+                     "priorityIdentifier": "BACKUP",
+                     "methodVerified": true,
+                     "method": {
+                       "mfaMethodType": "SMS",
+                       "phoneNumber": "+441234567890"
+                     }
+                   }]
+                """,
+                        authAppIdentifier, smsIdentifier);
         var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
         assertThat(response, hasJsonBody(expectedResponseAsJson));
     }
