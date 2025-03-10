@@ -686,4 +686,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getIPVAuthorisationClientId() {
         return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
     }
+
+    public boolean isMfaMethodManagementApiEnabled() {
+        return System.getenv()
+                .getOrDefault("MFA_METHOD_MANAGEMENT_API_ENABLED", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
 }

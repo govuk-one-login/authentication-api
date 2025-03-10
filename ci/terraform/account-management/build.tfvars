@@ -10,3 +10,6 @@ logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_c
 # Sizing
 redis_node_size        = "cache.t2.small"
 lambda_min_concurrency = 1
+
+# Feature flags
+mfa_method_management_api_enabled = true

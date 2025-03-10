@@ -18,10 +18,11 @@ module "mfa-methods-create" {
 
   endpoint_name = "mfa-methods-create"
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    REDIS_KEY            = local.redis_key
-    TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
+    ENVIRONMENT                       = var.environment
+    REDIS_KEY                         = local.redis_key
+    TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI               = var.internal_sector_uri
+    MFA_METHOD_MANAGEMENT_API_ENABLED = var.mfa_method_management_api_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler::handleRequest"
 

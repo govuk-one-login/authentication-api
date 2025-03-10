@@ -202,3 +202,9 @@ variable "vpc_environment" {
   type        = string
   default     = null
 }
+
+variable "mfa_method_management_api_enabled" {
+  description = "Feature flag for the method management api, enabling us to manage multiple mfa methods for a user"
+  type        = bool
+  default     = false
+}
