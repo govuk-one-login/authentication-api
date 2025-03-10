@@ -166,6 +166,7 @@ public class UserInfoHandler
                 throw new AccessTokenException(
                         "Invalid bearer token", BearerTokenError.INVALID_TOKEN);
             }
+            logNewAccountValues(accessTokenStore, authSession);
             userInfo = userInfoService.populateUserInfo(accessTokenStore, authSession);
         } catch (AccessTokenException e) {
             LOG.warn(
@@ -219,5 +220,16 @@ public class UserInfoHandler
             return false;
         }
         return true;
+    }
+
+    private void logNewAccountValues(
+            AccessTokenStore accessTokenStore, AuthSessionItem authSession) {
+        try {
+            LOG.info("Value from session: {}", authSession.getIsNewAccount());
+            LOG.info("Value from token: {}", accessTokenStore.getIsNewAccount());
+
+        } catch (Exception e) {
+            LOG.warn("Unexpected error when: {}", e.getMessage());
+        }
     }
 }
