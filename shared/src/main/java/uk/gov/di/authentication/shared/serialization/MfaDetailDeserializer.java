@@ -20,12 +20,11 @@ public class MfaDetailDeserializer implements JsonDeserializer<MfaDetail> {
         String type = jsonObject.get("mfaMethodType").getAsString();
 
         if (MFAMethodType.SMS.getValue().equalsIgnoreCase(type)) {
-            SmsMfaDetail smsDetail = context.deserialize(jsonObject, SmsMfaDetail.class);
-            return new SmsMfaDetail(MFAMethodType.SMS, smsDetail.phoneNumber());
+            String phoneNumber = jsonObject.get("phoneNumber").getAsString();
+            return new SmsMfaDetail(MFAMethodType.SMS, phoneNumber);
         } else if (MFAMethodType.AUTH_APP.getValue().equalsIgnoreCase(type)) {
-            AuthAppMfaDetail authAppDetail =
-                    context.deserialize(jsonObject, AuthAppMfaDetail.class);
-            return new AuthAppMfaDetail(MFAMethodType.AUTH_APP, authAppDetail.credential());
+            String credential = jsonObject.get("credential").getAsString();
+            return new AuthAppMfaDetail(MFAMethodType.AUTH_APP, credential);
         } else {
             throw new JsonParseException("Unknown mfa detail type: " + type);
         }
