@@ -192,11 +192,13 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
             if (configurationService.isInvokeTicfCRILambdaEnabled()
                     && request.authenticated() != null) {
+                AuthSessionItem authSession = userContext.getAuthSession();
                 sendTICF(
                         userContext,
                         internalPairwiseId,
                         request.authenticated(),
-                        userContext.getAuthSession().getIsNewAccount());
+                        authSession.getIsNewAccount(),
+                        authSession.getResetPasswordState());
             }
 
             LOG.info("Generating Account Interventions outbound response for frontend");
@@ -214,7 +216,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             UserContext userContext,
             String internalPairwiseId,
             boolean authenticated,
-            AuthSessionItem.AccountState accountState) {
+            AuthSessionItem.AccountState accountState,
+            AuthSessionItem.ResetPasswordState resetPasswordState) {
         var vtr = new ArrayList<String>();
 
         try {
@@ -235,7 +238,12 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
         var ticfRequest =
                 TICFCRIRequest.basicTicfCriRequest(
-                        internalPairwiseId, vtr, journeyId, authenticated, accountState);
+                        internalPairwiseId,
+                        vtr,
+                        journeyId,
+                        authenticated,
+                        accountState,
+                        resetPasswordState);
 
         String payload;
 

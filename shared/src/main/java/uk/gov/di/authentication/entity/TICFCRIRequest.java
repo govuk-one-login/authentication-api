@@ -2,6 +2,7 @@ package uk.gov.di.authentication.entity;
 
 import com.google.gson.annotations.Expose;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState;
 import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
@@ -19,13 +20,14 @@ public record TICFCRIRequest(
             List<String> vtr,
             String journeyId,
             boolean authenticated,
-            AuthSessionItem.AccountState accountState) {
+            AuthSessionItem.AccountState accountState,
+            ResetPasswordState resetPasswordState) {
         return new TICFCRIRequest(
                 internalPairwiseId,
                 vtr,
                 journeyId,
                 authenticated ? "Y" : "N",
                 accountState == AuthSessionItem.AccountState.NEW ? "Y" : null,
-                null);
+                resetPasswordState.equals(ResetPasswordState.SUCCEEDED) ? "Y" : null);
     }
 }
