@@ -18,25 +18,6 @@ module "identity_progress_role_2" {
   }
 }
 
-module "identity_progress_role_1" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "identity-progress-role"
-  vpc_arn     = local.authentication_vpc_arn
-
-  policies_to_attach = concat([
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
-    module.oidc_txma_audit.access_policy_arn,
-    ], var.is_orch_stubbed ? [] : [
-    aws_iam_policy.dynamo_orch_session_cross_account_read_access_policy[0].arn
-  ])
-  extra_tags = {
-    Service = "identity-progress"
-  }
-}
-
 module "identity_progress" {
   source = "../modules/endpoint-module-v2"
 
@@ -74,7 +55,7 @@ module "identity_progress" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.identity_progress_role_1.arn
+  lambda_role_arn                        = module.identity_progress_role_2.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
