@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.SmsMfaData;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
@@ -35,7 +36,14 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @BeforeEach
     void setUp() {
-        handler = new MFAMethodsRetrieveHandler(TEST_CONFIGURATION_SERVICE);
+        ConfigurationService mfaMethodEnabledConfigurationService =
+                new ConfigurationService() {
+                    @Override
+                    public boolean isMfaMethodManagementApiEnabled() {
+                        return true;
+                    }
+                };
+        handler = new MFAMethodsRetrieveHandler(mfaMethodEnabledConfigurationService);
     }
 
     @Test
