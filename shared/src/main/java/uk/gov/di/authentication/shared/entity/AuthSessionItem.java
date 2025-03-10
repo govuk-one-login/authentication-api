@@ -26,6 +26,7 @@ public class AuthSessionItem {
 
     public enum ResetPasswordState {
         NONE,
+        ATTEMPTED,
         SUCCEEDED,
     }
 

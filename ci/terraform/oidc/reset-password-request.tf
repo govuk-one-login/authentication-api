@@ -13,7 +13,8 @@ module "frontend_api_reset_password_request_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
-    aws_iam_policy.dynamo_auth_session_read_policy.arn
+    aws_iam_policy.dynamo_auth_session_read_policy.arn,
+    aws_iam_policy.dynamo_auth_session_write_policy.arn
   ]
   extra_tags = {
     Service = "reset-password-request"
