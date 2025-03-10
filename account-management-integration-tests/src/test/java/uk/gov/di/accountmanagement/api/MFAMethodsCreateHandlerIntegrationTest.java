@@ -58,8 +58,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
-                        Collections.emptyMap());
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
         assertEquals(200, response.getStatusCode());
         var expectedResponseParsedToString =
                 JsonParser.parseString(
@@ -82,8 +81,6 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                         PriorityIdentifier.BACKUP,
                                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
                         Collections.emptyMap());
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
@@ -99,8 +96,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("publicSubjectId", "incorrect-public-subject-id"),
-                        Collections.emptyMap());
+                        Map.of("publicSubjectId", "incorrect-public-subject-id"));
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
     }
