@@ -8,27 +8,36 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.AuthAppMfaDetail;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.MfaData;
 import uk.gov.di.authentication.shared.entity.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
+import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
 import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
 
 class DynamoMfaMethodsServiceIntegrationTest {
 
+    private static final String TEST_EMAIL = "joe.bloggs@example.com";
     private static final String PHONE_NUMBER = "+44123456789";
     private static final String AUTH_APP_CREDENTIAL = "some-credential";
     DynamoMfaMethodsService dynamoService =
@@ -222,6 +231,65 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             var expectedData = mfaMethods.stream().map(this::mfaMethodDataFrom).toList();
             assertEquals(expectedData, result);
+        }
+
+        @Nested
+        class AddBackupMfaTests {
+            @Test
+            void authAppUserShouldSuccessfullyAddSmsMfaInPost()
+                    throws InvalidPriorityIdentifierException {
+                userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
+                SmsMfaDetail smsMfaDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
+
+                MfaMethodCreateRequest.MfaMethod mfaMethod =
+                        new MfaMethodCreateRequest.MfaMethod(
+                                PriorityIdentifier.BACKUP, smsMfaDetail);
+
+                var result = dynamoService.addBackupMfa(TEST_EMAIL, mfaMethod);
+
+                List<MFAMethod> mfaMethods = userStoreExtension.getMfaMethod(TEST_EMAIL);
+                boolean smsMethodExists =
+                        mfaMethods.stream()
+                                .anyMatch(
+                                        method ->
+                                                method.getMfaMethodType()
+                                                        .equals(MFAMethodType.SMS.getValue()));
+
+                assertTrue(smsMethodExists);
+                assertDoesNotThrow(() -> UUID.fromString(result.mfaIdentifier()));
+                assertEquals(PriorityIdentifier.BACKUP, result.priorityIdentifier());
+                assertTrue(result.methodVerified());
+                assertEquals(smsMfaDetail, result.method());
+            }
+
+            @Test
+            void shouldErrorWhenPriorityIdentifierIsDefault() {
+                userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
+                SmsMfaDetail smsMfaDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
+
+                MfaMethodCreateRequest request =
+                        new MfaMethodCreateRequest(
+                                new MfaMethodCreateRequest.MfaMethod(
+                                        PriorityIdentifier.DEFAULT, smsMfaDetail));
+
+                assertThrows(
+                        InvalidPriorityIdentifierException.class,
+                        () -> dynamoService.addBackupMfa(TEST_EMAIL, request.mfaMethod()));
+            }
+
+            @Test
+            void shouldReturnNullWhenAuthAppMfaAdded() throws InvalidPriorityIdentifierException {
+                AuthAppMfaDetail authAppMfaDetail =
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
+
+                MfaMethodCreateRequest request =
+                        new MfaMethodCreateRequest(
+                                new MfaMethodCreateRequest.MfaMethod(
+                                        PriorityIdentifier.BACKUP, authAppMfaDetail));
+
+                var result = dynamoService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
+                assertNull(result);
+            }
         }
     }
 }
