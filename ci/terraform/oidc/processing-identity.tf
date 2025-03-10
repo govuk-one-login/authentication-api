@@ -8,7 +8,6 @@ module "ipv_processing_identity_role" {
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
-    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.pepper_parameter_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
@@ -23,41 +22,6 @@ module "ipv_processing_identity_role" {
   }
 }
 
-module "ipv_processing_identity_role_with_orch_session_table_access" {
-  count = var.is_orch_stubbed ? 0 : 1
-
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "ipv-processing-identity-role-with-orch-session-access"
-  vpc_arn     = local.authentication_vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.dynamo_user_read_access_policy.arn,
-    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
-    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
-    aws_iam_policy.lambda_sns_policy.arn,
-    aws_iam_policy.pepper_parameter_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
-    module.oidc_txma_audit.access_policy_arn,
-    local.account_modifiers_encryption_policy_arn,
-    local.client_registry_encryption_policy_arn,
-    local.identity_credentials_encryption_policy_arn,
-    local.user_credentials_encryption_policy_arn,
-    aws_iam_policy.dynamo_orch_session_encryption_key_cross_account_decrypt_policy[0].arn,
-    aws_iam_policy.dynamo_orch_session_cross_account_read_and_delete_access_policy[0].arn,
-    aws_iam_policy.dynamo_orch_client_session_encryption_key_cross_account_decrypt_policy[0].arn,
-    aws_iam_policy.dynamo_orch_client_session_cross_account_read_and_delete_access_policy[0].arn,
-    aws_iam_policy.dynamo_orch_identity_credentials_cross_account_read_access_policy[0].arn
-  ]
-}
-moved {
-  from = module.ipv_processing_identity_role_with_orch_session_table_access
-  to   = module.ipv_processing_identity_role_with_orch_session_table_access[0]
-}
-
-// ATO-1471: We're duplicating the role without the old identity credentials table
-// access policies to enable us to safely remove them
 module "ipv_processing_identity_role_with_orch_session_table_access_1" {
   count = var.is_orch_stubbed ? 0 : 1
 
@@ -131,7 +95,7 @@ module "processing-identity" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role.arn : module.ipv_processing_identity_role_with_orch_session_table_access[0].arn
+  lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role.arn : module.ipv_processing_identity_role_with_orch_session_table_access_1[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
