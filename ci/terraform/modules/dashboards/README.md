@@ -1,3 +1,4 @@
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -28,3 +29,4 @@
 |------|-------------|------|---------|:--------:|
 | <a name="input_api_gateway_name"></a> [api\_gateway\_name](#input\_api\_gateway\_name) | The endpoint that will be monitored by the dashboard | `string` | n/a | yes |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->

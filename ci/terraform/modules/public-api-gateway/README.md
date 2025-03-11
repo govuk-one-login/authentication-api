@@ -2,6 +2,7 @@
 
 Similar to [private-api-gateway](../private-api-gateway/), this is a wrapper for [api-gateway](../api-gateway/), but this will also provision a domain mapping, which allows the gateway to be routable from the public internet.
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -57,3 +58,4 @@ Similar to [private-api-gateway](../private-api-gateway/), this is a wrapper for
 | <a name="output_api_gateway_id"></a> [api\_gateway\_id](#output\_api\_gateway\_id) | n/a |
 | <a name="output_api_gateway_name"></a> [api\_gateway\_name](#output\_api\_gateway\_name) | n/a |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->

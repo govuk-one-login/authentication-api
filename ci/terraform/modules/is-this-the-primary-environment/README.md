@@ -1,3 +1,4 @@
+<!-- prettier-ignore-start -->
 <!-- BEGIN_TF_DOCS -->
 # Is This The Primary Environment?
 
@@ -38,3 +39,4 @@ which could lead to inconsistencies.
 |------|-------------|
 | <a name="output_is_primary_environment"></a> [is\_primary\_environment](#output\_is\_primary\_environment) | true if this environment is the primary environment in this account:region else false |
 <!-- END_TF_DOCS -->
+<!-- prettier-ignore-end -->
