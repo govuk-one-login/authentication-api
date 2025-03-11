@@ -6,8 +6,6 @@ import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -48,7 +46,7 @@ class MFAMethodsCreateHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getEnvironment()).thenReturn("test");
+        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler = new MFAMethodsCreateHandler(configurationService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
     }
@@ -81,10 +79,9 @@ class MFAMethodsCreateHandlerTest {
         assertEquals(expectedResponseParsedToString, result.getBody());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"production", "integration"})
-    void shouldReturn400IfRequestIsMadeInProductionOrIntegration(String environment) {
-        when(configurationService.getEnvironment()).thenReturn(environment);
+    @Test
+    void shouldReturn400IfRequestIsMadeInEnvWhereApiNotEnabled() {
+        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
         handler = new MFAMethodsCreateHandler(configurationService);
 
         var event =

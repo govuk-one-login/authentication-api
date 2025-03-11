@@ -27,3 +27,6 @@ performance_tuning = {
 
 lambda_min_concurrency = 1
 lambda_max_concurrency = 3
+
+# Feature flags
+mfa_method_management_api_enabled = true

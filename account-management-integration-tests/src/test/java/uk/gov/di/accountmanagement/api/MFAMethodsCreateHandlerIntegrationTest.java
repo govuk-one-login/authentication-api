@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
@@ -26,7 +27,15 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @BeforeEach
     void setUp() {
-        handler = new MFAMethodsCreateHandler(TEST_CONFIGURATION_SERVICE);
+        ConfigurationService mfaMethodEnabledConfigurationService =
+                new ConfigurationService() {
+                    @Override
+                    public boolean isMfaMethodManagementApiEnabled() {
+                        return true;
+                    }
+                };
+
+        handler = new MFAMethodsCreateHandler(mfaMethodEnabledConfigurationService);
         userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
         TEST_PUBLIC_SUBJECT =
                 userStore.getUserProfileFromEmail(TEST_EMAIL).get().getPublicSubjectID();

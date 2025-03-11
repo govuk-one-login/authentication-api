@@ -15,3 +15,6 @@ openapi_spec_filename = "openapi_v2.yaml"
 # Sizing
 redis_node_size        = "cache.t2.small"
 lambda_min_concurrency = 1
+
+# Feature flags
+mfa_method_management_api_enabled = true

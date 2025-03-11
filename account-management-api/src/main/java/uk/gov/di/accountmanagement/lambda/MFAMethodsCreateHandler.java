@@ -16,8 +16,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.util.List;
-
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -26,8 +24,7 @@ import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.H
 public class MFAMethodsCreateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final String PRODUCTION = "production";
-    private static final String INTEGRATION = "integration";
+    private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
@@ -51,8 +48,7 @@ public class MFAMethodsCreateHandler
 
     public APIGatewayProxyResponseEvent mfaMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        var disabledEnvironments = List.of(PRODUCTION, INTEGRATION);
-        if (disabledEnvironments.contains(configurationService.getEnvironment())) {
+        if (!configurationService.isMfaMethodManagementApiEnabled()) {
             LOG.error(
                     "Request to create MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
@@ -85,7 +81,6 @@ public class MFAMethodsCreateHandler
     private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
             throws Json.JsonException {
         MfaMethodCreateRequest mfaMethodCreateRequest;
-        var objectMapper = SerializationService.getInstance();
         try {
             mfaMethodCreateRequest =
                     segmentedFunctionCall(

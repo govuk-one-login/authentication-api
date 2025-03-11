@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -30,9 +29,6 @@ public class MFAMethodsRetrieveHandler
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
     private final MfaMethodsService mfaMethodsService;
-
-    private static final String PRODUCTION = "production";
-    private static final String INTEGRATION = "integration";
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsRetrieveHandler.class);
 
@@ -69,8 +65,7 @@ public class MFAMethodsRetrieveHandler
 
         addSessionIdToLogs(input);
 
-        var disabledEnvironments = List.of(PRODUCTION, INTEGRATION);
-        if (disabledEnvironments.contains(configurationService.getEnvironment())) {
+        if (!configurationService.isMfaMethodManagementApiEnabled()) {
             LOG.error(
                     "Request to create MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());

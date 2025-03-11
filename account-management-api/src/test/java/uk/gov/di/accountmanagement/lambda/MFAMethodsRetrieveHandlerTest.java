@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -44,6 +42,7 @@ class MFAMethodsRetrieveHandlerTest {
     @BeforeEach
     void setUp() {
         when(userProfile.getEmail()).thenReturn(EMAIL);
+        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsRetrieveHandler(
                         configurationService, dynamoService, mfaMethodsService);
@@ -51,7 +50,6 @@ class MFAMethodsRetrieveHandlerTest {
 
     @Test
     void shouldReturn200WithTheMethodReturnedByTheMfaMethodsService() {
-        when(configurationService.getEnvironment()).thenReturn("test-environment");
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
 
@@ -80,7 +78,6 @@ class MFAMethodsRetrieveHandlerTest {
 
     @Test
     void shouldReturn400IfPublicSubjectIdNotIncludedInPath() {
-        when(configurationService.getEnvironment()).thenReturn("test-environment");
         var event =
                 new APIGatewayProxyRequestEvent()
                         .withPathParameters((Map.of("publicSubjectId", "")))
@@ -91,10 +88,9 @@ class MFAMethodsRetrieveHandlerTest {
         assertThat(result, hasStatus(400));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"production", "integration"})
-    void shouldReturn400IfRequestIsMadeInProductionOrIntegration(String environment) {
-        when(configurationService.getEnvironment()).thenReturn(environment);
+    @Test
+    void shouldReturn400IfRequestIsMadeInEnvironmentWhereApiIsDisabled() {
+        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
         var event =
                 new APIGatewayProxyRequestEvent()
                         .withPathParameters((Map.of("publicSubjectId", PUBLIC_SUBJECT_ID)))
@@ -107,7 +103,6 @@ class MFAMethodsRetrieveHandlerTest {
 
     @Test
     void shouldReturn404IfNoUserProfileForPublicSubjectId() {
-        when(configurationService.getEnvironment()).thenReturn("test-environment");
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.empty());
         var event =
@@ -122,7 +117,6 @@ class MFAMethodsRetrieveHandlerTest {
 
     @Test
     void shouldReturn500IfDynamoServiceReturnsError() {
-        when(configurationService.getEnvironment()).thenReturn("test-environment");
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenThrow(UnknownMfaTypeException.class);

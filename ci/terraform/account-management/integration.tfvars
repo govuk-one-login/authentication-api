@@ -13,3 +13,6 @@ lambda_min_concurrency = 1
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
+
+# Feature flags
+mfa_method_management_api_enabled = false
