@@ -164,16 +164,15 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
 
-        setUpSession(internalCommonSubjectId);
+        setUpSession();
         addSessionToSessionStore(internalCommonSubjectId);
         createClientSession();
         registerClient();
         addUserToUserStore();
     }
 
-    private void setUpSession(String internalCommonSubjectId) throws Json.JsonException {
+    private void setUpSession() throws Json.JsonException {
         sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
-        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
     }
 
     private void addSessionToSessionStore(String internalCommonSubjectId) {

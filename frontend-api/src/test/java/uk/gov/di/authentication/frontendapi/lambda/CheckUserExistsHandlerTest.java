@@ -97,8 +97,7 @@ class CheckUserExistsHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
-    private final Session session =
-            new Session().setInternalCommonSubjectIdentifier("test-subject-id");
+    private final Session session = new Session();
     private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";

@@ -81,7 +81,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_TEMP_SUSPENDED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.LoginHandler.INTERNAL_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -122,10 +121,7 @@ class AccountInterventionsHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     private static final ClientSession clientSession = getClientSession();
-    private final Session session =
-            new Session()
-                    .setEmailAddress(EMAIL)
-                    .setInternalCommonSubjectIdentifier(INTERNAL_COMMON_SUBJECT_ID);
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
