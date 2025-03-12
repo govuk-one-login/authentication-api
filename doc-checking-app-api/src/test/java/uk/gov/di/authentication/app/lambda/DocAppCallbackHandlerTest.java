@@ -37,7 +37,6 @@ import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -49,7 +48,6 @@ import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -84,7 +82,6 @@ class DocAppCallbackHandlerTest {
     private final DocAppAuthorisationService responseService =
             mock(DocAppAuthorisationService.class);
     private final DocAppCriService tokenService = mock(DocAppCriService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -123,7 +120,6 @@ class DocAppCallbackHandlerTest {
     private static final State RP_STATE = new State();
     private static final Nonce NONCE = new Nonce();
 
-    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY);
@@ -152,7 +148,6 @@ class DocAppCallbackHandlerTest {
                         configService,
                         responseService,
                         tokenService,
-                        sessionService,
                         clientSessionService,
                         orchClientSessionService,
                         auditService,
@@ -172,7 +167,6 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToRPForSuccessfulResponse() throws UnsuccessfulCredentialResponseException {
-        usingValidRedisSession();
         usingValidClientSession();
         usingValidOrchSession();
         var successfulTokenResponse =
@@ -244,7 +238,6 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenNoOrchSession() {
-        usingValidRedisSession();
         usingValidClientSession();
         withNoOrchSession();
         var event = new APIGatewayProxyRequestEvent();
@@ -267,7 +260,6 @@ class DocAppCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        usingValidRedisSession();
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
 
@@ -284,7 +276,6 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToRPWhenAuthnResponseContainsError() {
-        usingValidRedisSession();
         usingValidClientSession();
         usingValidOrchSession();
 
@@ -338,7 +329,6 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
-        usingValidRedisSession();
         usingValidClientSession();
         usingValidOrchSession();
         var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
@@ -387,7 +377,6 @@ class DocAppCallbackHandlerTest {
     @Test
     void shouldRedirectToFrontendErrorPageWhenCRIRequestIsNotSuccessful()
             throws UnsuccessfulCredentialResponseException {
-        usingValidRedisSession();
         usingValidClientSession();
         usingValidOrchSession();
         var successfulTokenResponse =
@@ -441,7 +430,6 @@ class DocAppCallbackHandlerTest {
     void
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
                     throws NoSessionException {
-        usingValidRedisSession();
         usingValidClientSession();
         when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
 
@@ -496,7 +484,6 @@ class DocAppCallbackHandlerTest {
     void
             shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
                     throws NoSessionException {
-        usingValidRedisSession();
         usingValidClientSession();
 
         Map<String, String> queryParameters = new HashMap<>();
@@ -533,7 +520,6 @@ class DocAppCallbackHandlerTest {
     @Test
     void shouldGenerateAuthenticationErrorResponseWhenCRIRequestReturns404()
             throws UnsuccessfulCredentialResponseException {
-        usingValidRedisSession();
         usingValidClientSession();
         usingValidOrchSession();
         var successfulTokenResponse =
@@ -595,10 +581,6 @@ class DocAppCallbackHandlerTest {
         return format(
                 "%s=%s.%s; Max-Age=%d; %s",
                 "gs", SESSION_ID, CLIENT_SESSION_ID, 3600, "Secure; HttpOnly;");
-    }
-
-    private void usingValidRedisSession() {
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
     }
 
     private void usingValidOrchSession() {

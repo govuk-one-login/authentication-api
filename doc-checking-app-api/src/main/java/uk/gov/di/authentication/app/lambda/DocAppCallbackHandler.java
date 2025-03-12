@@ -42,7 +42,6 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,7 +69,6 @@ public class DocAppCallbackHandler
     private final ConfigurationService configurationService;
     private final DocAppAuthorisationService authorisationService;
     private final DocAppCriService tokenService;
-    private final SessionService sessionService;
     private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
@@ -91,7 +89,6 @@ public class DocAppCallbackHandler
             ConfigurationService configurationService,
             DocAppAuthorisationService responseService,
             DocAppCriService tokenService,
-            SessionService sessionService,
             ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
@@ -105,7 +102,6 @@ public class DocAppCallbackHandler
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
-        this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
@@ -130,7 +126,6 @@ public class DocAppCallbackHandler
                         new JwksService(configurationService, kmsConnectionService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
-        this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -156,7 +151,6 @@ public class DocAppCallbackHandler
                         new JwksService(configurationService, kmsConnectionService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
-        this.sessionService = new SessionService(configurationService, redis);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -210,10 +204,6 @@ public class DocAppCallbackHandler
             }
             var sessionId = sessionCookiesIds.getSessionId();
             var clientSessionId = sessionCookiesIds.getClientSessionId();
-            var session =
-                    sessionService
-                            .getSession(sessionId)
-                            .orElseThrow(() -> new DocAppCallbackException("Session not found"));
 
             var orchSession =
                     orchSessionService
