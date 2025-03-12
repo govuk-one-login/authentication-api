@@ -74,6 +74,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -375,6 +376,23 @@ class ResetPasswordRequestHandlerTest {
                             auditContext.withTxmaAuditEncoded(Optional.empty()),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
+        }
+
+        @Test
+        void shouldRecordPasswordResetAttemptInSession() {
+            usingValidSession();
+            usingValidClientSession();
+
+            handler.handleRequest(validEvent, context);
+
+            verify(authSessionService, times(1))
+                    .updateSession(
+                            argThat(
+                                    state ->
+                                            state.getResetPasswordState()
+                                                    .equals(
+                                                            AuthSessionItem.ResetPasswordState
+                                                                    .ATTEMPTED)));
         }
 
         @Test

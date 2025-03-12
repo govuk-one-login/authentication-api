@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -161,6 +162,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return generateApiGatewayProxyErrorResponse(
                         400, userIsNewlyLockedOutOfPasswordReset.get());
             }
+
+            authSessionService.updateSession(
+                    userContext
+                            .getAuthSession()
+                            .withResetPasswordState(AuthSessionItem.ResetPasswordState.ATTEMPTED));
 
             return processPasswordResetRequest(request, userContext, isTestClient);
         } catch (SdkClientException ex) {

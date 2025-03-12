@@ -11,6 +11,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -168,6 +169,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             var userProfile =
                     authenticationService.getUserProfileByEmail(
                             userContext.getSession().getEmailAddress());
+
+            authSessionService.updateSession(
+                    userContext
+                            .getAuthSession()
+                            .withResetPasswordState(AuthSessionItem.ResetPasswordState.SUCCEEDED));
 
             LOG.info("Calculating internal common subject identifier");
             var internalCommonSubjectId =

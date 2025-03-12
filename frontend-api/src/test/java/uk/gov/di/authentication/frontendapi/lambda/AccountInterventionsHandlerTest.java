@@ -284,19 +284,33 @@ class AccountInterventionsHandlerTest {
                 Arguments.of(
                         true,
                         AuthSessionItem.AccountState.NEW,
+                        AuthSessionItem.ResetPasswordState.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"initialRegistration\":\"Y\"}"),
                 Arguments.of(
                         true,
                         AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.SUCCEEDED,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"passwordReset\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.NEW,
+                        AuthSessionItem.ResetPasswordState.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"initialRegistration\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.EXISTING,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"));
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"),
+                Arguments.of(
+                        false,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.ATTEMPTED,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"passwordReset\":\"Y\"}"));
     }
 
     @ParameterizedTest
@@ -304,6 +318,7 @@ class AccountInterventionsHandlerTest {
     void checkInvokesTICFLambdaWithCorrectValues(
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
+            AuthSessionItem.ResetPasswordState resetPasswordState,
             String expectedPayload)
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
@@ -314,9 +329,12 @@ class AccountInterventionsHandlerTest {
         when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
                 .thenReturn(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
-        var authSessionWithAccountState = authSession.withAccountState(accountState);
+        var authSessionWithChanges =
+                authSession
+                        .withAccountState(accountState)
+                        .withResetPasswordState(resetPasswordState);
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(authSessionWithAccountState));
+                .thenReturn(Optional.of(authSessionWithChanges));
 
         var result = handler.handleRequest(apiRequestEventForTICF(authenticated), context);
 
