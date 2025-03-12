@@ -227,6 +227,14 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.id_reverification_state,
     aws_api_gateway_deployment.deployment,
   ]
+
+  tags = (
+    var.fms_enabled ?
+    {
+      "FMSRegionalPolicy" = "false"
+      "CustomPolicy"      = "authenticationfrontend"
+    } : {}
+  )
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_frontend_logging_settings" {
@@ -342,6 +350,7 @@ moved {
 }
 
 resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
+  count        = var.fms_enabled ? 0 : 1
   resource_arn = aws_api_gateway_stage.endpoint_frontend_stage.arn
   web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_frontend_api.arn
 

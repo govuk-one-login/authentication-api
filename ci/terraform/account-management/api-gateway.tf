@@ -175,6 +175,14 @@ resource "aws_api_gateway_stage" "stage" {
     module.authenticate,
     aws_api_gateway_deployment.deployment,
   ]
+
+  tags = (
+    var.fms_enabled ?
+    {
+      "FMSRegionalPolicy" = "false"
+      "CustomPolicy"      = "accountmanagement"
+    } : {}
+  )
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
@@ -295,6 +303,7 @@ moved {
 }
 
 resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
+  count        = var.fms_enabled ? 0 : 1
   resource_arn = aws_api_gateway_stage.stage.arn
   web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_am_api[local.legacy_web_acl_name].arn
 

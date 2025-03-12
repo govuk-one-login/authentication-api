@@ -722,3 +722,9 @@ locals {
     scaling_trigger = var.scaling_trigger
   }
 }
+
+variable "fms_enabled" {
+  default     = false
+  description = "To enable FMS WAF on Auth API gateway , this flag will remove existing waf Assocaition on resource"
+  type        = bool
+}
