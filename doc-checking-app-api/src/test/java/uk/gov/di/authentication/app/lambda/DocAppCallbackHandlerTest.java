@@ -146,7 +146,7 @@ class DocAppCallbackHandlerTest {
     @BeforeEach
     void setUp() {
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        CLIENT_ID.getValue(), CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
+                        CLIENT_ID.getValue(), CLIENT_SESSION_ID, clientSession))
                 .thenReturn(AUTH_CODE);
         handler =
                 new DocAppCallbackHandler(
