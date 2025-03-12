@@ -110,7 +110,6 @@ class DocAppCallbackHandlerTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String REQUEST_ID = "a-request-id";
-    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
@@ -124,7 +123,7 @@ class DocAppCallbackHandlerTest {
     private static final State RP_STATE = new State();
     private static final Nonce NONCE = new Nonce();
 
-    private final Session session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY);
@@ -624,7 +623,6 @@ class DocAppCallbackHandlerTest {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
-        scope.add("email");
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                 .state(RP_STATE)
                 .nonce(NONCE)
