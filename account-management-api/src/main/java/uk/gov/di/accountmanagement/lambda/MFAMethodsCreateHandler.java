@@ -105,7 +105,7 @@ public class MFAMethodsCreateHandler
                             "SerializationService::GSON::fromJson",
                             () ->
                                     objectMapper.readValue(
-                                            input.getBody(), MfaMethodCreateRequest.class));
+                                            input.getBody(), MfaMethodCreateRequest.class, true));
 
         } catch (RuntimeException e) {
             LOG.error("Error during JSON deserialization", e);
