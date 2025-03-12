@@ -281,31 +281,36 @@ class AccountInterventionsHandlerTest {
 
     private static Stream<Arguments> ticfParametersSource() {
         return Stream.of(
-                Arguments.of(
-                        true,
-                        AuthSessionItem.AccountState.NEW,
-                        AuthSessionItem.ResetPasswordState.NONE,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"initialRegistration\":\"Y\"}"),
+                // Testing authenticated combinations
                 Arguments.of(
                         true,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
                 Arguments.of(
-                        true,
+                        false,
                         AuthSessionItem.AccountState.EXISTING,
-                        AuthSessionItem.ResetPasswordState.SUCCEEDED,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"passwordReset\":\"Y\"}"),
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"),
+
+                // Testing initial registration combinations
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.NEW,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"initialRegistration\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.NEW,
                         AuthSessionItem.ResetPasswordState.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"initialRegistration\":\"Y\"}"),
+
+                // Testing password reset combinations
                 Arguments.of(
-                        false,
+                        true,
                         AuthSessionItem.AccountState.EXISTING,
-                        AuthSessionItem.ResetPasswordState.NONE,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"),
+                        AuthSessionItem.ResetPasswordState.SUCCEEDED,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"passwordReset\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.EXISTING,
