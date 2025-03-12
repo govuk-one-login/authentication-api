@@ -73,9 +73,8 @@ resource "aws_lambda_alias" "authorizer_alias" {
 }
 
 resource "aws_cloudwatch_log_group" "authorizer_lambda_log_group" {
-  name       = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
-  kms_key_id = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-  #checkov:skip=CKV_AWS_338:Cloudwatch logs do not need to be retained for a year, as they are shipped elsewhere (Splunk)
+  name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 
   depends_on = [
