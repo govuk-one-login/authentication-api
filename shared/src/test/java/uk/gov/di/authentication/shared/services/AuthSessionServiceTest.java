@@ -133,6 +133,7 @@ class AuthSessionServiceTest {
                 authSession.getCurrentCredentialStrength(), is(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(
                 authSession.getResetPasswordState(), is(AuthSessionItem.ResetPasswordState.NONE));
+        assertThat(authSession.getResetMfaState(), is(AuthSessionItem.ResetMfaState.NONE));
     }
 
     @Test
