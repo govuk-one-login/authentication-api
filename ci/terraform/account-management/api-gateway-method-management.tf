@@ -10,6 +10,8 @@ locals {
     update-phone-number   = module.update_phone_number
     mfa-methods-retrieve  = module.mfa-methods-retrieve
     mfa-methods-create    = module.mfa-methods-create
+    mfa-methods-delete    = module.mfa-methods-delete
+    mfa-methods-update    = module.mfa-methods-update
   }
   openapi_spec = templatefile(
     "${path.module}/${var.openapi_spec_filename}",

@@ -84,10 +84,6 @@ resource "aws_api_gateway_stage" "stage" {
     format          = var.access_logging_template
   }
 
-  lifecycle {
-    replace_triggered_by = [aws_api_gateway_deployment.deployment.id]
-  }
-
   tags = var.extra_tags
   # checkov:skip=CKV_AWS_51:Client cert authentication is something we might want to consider in the future
   # checkov:skip=CKV2_AWS_51:Client cert authentication is something we might want to consider in the future

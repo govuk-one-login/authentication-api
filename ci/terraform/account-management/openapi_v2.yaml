@@ -213,7 +213,7 @@ paths:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
-        uri: "${endpoint_modules.mfa-methods-create.integration_uri}"
+        uri: "${endpoint_modules.mfa-methods-update.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
       tags:
@@ -257,7 +257,7 @@ paths:
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
-        uri: "${endpoint_modules.mfa-methods-create.integration_uri}"
+        uri: "${endpoint_modules.mfa-methods-delete.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
       tags:
