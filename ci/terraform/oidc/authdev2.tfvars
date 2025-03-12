@@ -1,5 +1,8 @@
 shared_state_bucket = "di-auth-development-tfstate"
 
+# FMS Flag
+fms_enabled = true
+
 # App-specific
 test_clients_enabled                        = true
 ipv_api_enabled                             = true
