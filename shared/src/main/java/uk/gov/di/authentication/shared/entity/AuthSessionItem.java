@@ -33,6 +33,7 @@ public class AuthSessionItem {
 
     public enum ResetMfaState {
         NONE,
+        ATTEMPTED,
     }
 
     private String sessionId;
