@@ -34,6 +34,7 @@ public class AuthSessionItem {
     public enum ResetMfaState {
         NONE,
         ATTEMPTED,
+        SUCCEEDED,
     }
 
     private String sessionId;
