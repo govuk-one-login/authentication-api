@@ -10,6 +10,9 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.MfaMethodsService;
 
 import java.util.Map;
 
@@ -24,6 +27,8 @@ public class MFAMethodsDeleteHandler
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsDeleteHandler.class);
     private final ConfigurationService configurationService;
+    private final DynamoService dynamoService;
+    private final MfaMethodsService mfaMethodsService;
 
     public MFAMethodsDeleteHandler() {
         this(ConfigurationService.getInstance());
@@ -31,6 +36,17 @@ public class MFAMethodsDeleteHandler
 
     public MFAMethodsDeleteHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.dynamoService = new DynamoService(configurationService);
+        this.mfaMethodsService = new DynamoMfaMethodsService(configurationService);
+    }
+
+    public MFAMethodsDeleteHandler(
+            ConfigurationService configurationService,
+            DynamoService dynamoService,
+            MfaMethodsService mfaMethodsService) {
+        this.configurationService = configurationService;
+        this.dynamoService = dynamoService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     @Override
@@ -52,6 +68,21 @@ public class MFAMethodsDeleteHandler
                     "Request to delete MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
+        }
+
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+
+        if (publicSubjectId.isEmpty()) {
+            LOG.error("Request does not include public subject id");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);
+        }
+
+        var maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+
+        if (maybeUserProfile.isEmpty()) {
+            LOG.error("Unknown public subject ID");
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
 
         return generateEmptySuccessApiGatewayResponse();
