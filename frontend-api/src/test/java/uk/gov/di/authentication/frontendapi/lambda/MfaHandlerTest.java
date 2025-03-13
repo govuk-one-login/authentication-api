@@ -244,6 +244,23 @@ class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
+        verify(sessionService)
+                .storeOrUpdateSession(
+                        argThat(
+                                session ->
+                                        session.getCodeRequestCount(
+                                                        NotificationType.MFA_SMS,
+                                                        JourneyType.SIGN_IN)
+                                                == 1),
+                        eq(SESSION_ID));
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                session ->
+                                        session.getCodeRequestCount(
+                                                        NotificationType.MFA_SMS,
+                                                        JourneyType.SIGN_IN)
+                                                == 1));
         assertThat(result, hasStatus(204));
 
         verify(auditService)
@@ -404,6 +421,14 @@ class MfaHandlerTest {
                                                         NotificationType.MFA_SMS, journeyType)
                                                 == 0),
                         eq(SESSION_ID));
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                sessionForTestUser ->
+                                        sessionForTestUser.getCodeRequestCount(
+                                                        NotificationType.MFA_SMS, journeyType)
+                                                == 0));
 
         verify(auditService)
                 .submitAuditEvent(
