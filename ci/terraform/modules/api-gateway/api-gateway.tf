@@ -1,5 +1,3 @@
-
-
 resource "aws_api_gateway_rest_api" "rest_api" {
   name = var.api_gateway_name
 
@@ -20,12 +18,19 @@ resource "aws_api_gateway_rest_api" "rest_api" {
 }
 
 resource "aws_api_gateway_rest_api_policy" "rest_api_policy" {
+  count       = length(var.vpc_endpoint_ids) > 0 ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
-  policy      = data.aws_iam_policy_document.rest_api_policy_document.json
+  policy      = data.aws_iam_policy_document.rest_api_policy_document[count.index].json
+}
+
+moved {
+  from = aws_api_gateway_rest_api_policy.rest_api_policy
+  to   = aws_api_gateway_rest_api_policy.rest_api_policy[0]
 }
 
 
 data "aws_iam_policy_document" "rest_api_policy_document" {
+  count = length(var.vpc_endpoint_ids) > 0 ? 1 : 0
   statement {
     effect = "Allow"
 
@@ -55,6 +60,10 @@ data "aws_iam_policy_document" "rest_api_policy_document" {
       variable = "aws:SourceVpce"
     }
   }
+}
+moved {
+  from = data.aws_iam_policy_document.rest_api_policy_document
+  to   = data.aws_iam_policy_document.rest_api_policy_document[0]
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
@@ -187,7 +196,7 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
 
 resource "aws_cloudwatch_log_subscription_filter" "waf_log_subscription" {
   count           = length(var.waf_arns) != 0 ? length(var.logging_endpoint_arns) : 0
-  name            = "${var.api_gateway_name}-waf-logs-subscription"
+  name            = "${var.api_gateway_name}-waf-logs-subscription-${count.index}"
   log_group_name  = aws_cloudwatch_log_group.waf_logs[0].name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
@@ -202,6 +211,8 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_configuration" {
 
   log_destination_configs = [aws_cloudwatch_log_group.waf_logs[0].arn]
   resource_arn            = var.waf_arns[count.index]
+
+  depends_on = [aws_cloudwatch_log_group.waf_logs]
 
   logging_filter {
     default_behavior = "KEEP"
