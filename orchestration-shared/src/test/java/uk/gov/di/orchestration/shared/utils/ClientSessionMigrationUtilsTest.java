@@ -48,7 +48,7 @@ class ClientSessionMigrationUtilsTest {
     }
 
     @Test
-    void shouldIdentifyClientSessionsAsNotEqual() {
+    void shouldIdentifyClientSessionsAsNotEqualWhenBothFieldsAreNotNull() {
         var clientSession =
                 new ClientSession(AUTH_REQUEST_PARAMS, CREATION_DATE, VTR_LIST, CLIENT_NAME);
         var orchClientSession =
@@ -58,6 +58,21 @@ class ClientSessionMigrationUtilsTest {
                         CREATION_DATE,
                         VTR_LIST,
                         "a-different-client-name");
+
+        assertFalse(areClientSessionsEqual(clientSession, orchClientSession));
+    }
+
+    @Test
+    void shouldIdentifyClientSessionsAsNotEqualWhenOneFieldIsNull() {
+        var clientSession =
+                new ClientSession(AUTH_REQUEST_PARAMS, CREATION_DATE, VTR_LIST, CLIENT_NAME);
+        var orchClientSession =
+                new OrchClientSessionItem(
+                        "test-client-session-id",
+                        AUTH_REQUEST_PARAMS,
+                        CREATION_DATE,
+                        VTR_LIST,
+                        null);
 
         assertFalse(areClientSessionsEqual(clientSession, orchClientSession));
     }
