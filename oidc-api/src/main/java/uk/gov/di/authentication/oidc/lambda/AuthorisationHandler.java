@@ -57,6 +57,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -358,7 +359,7 @@ public class AuthorisationHandler
                 LOG.info("Validating request object");
                 authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
             }
-        } catch (ClientRedirectUriValidationException e) {
+        } catch (ClientRedirectUriValidationException | InvalidResponseModeException e) {
             return generateBadRequestResponse(user, e.getMessage(), client.getClientID());
         } catch (ClientSignatureValidationException e) {
             return generateApiGatewayProxyResponse(
