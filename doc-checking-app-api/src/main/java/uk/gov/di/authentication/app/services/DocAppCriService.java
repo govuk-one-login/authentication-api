@@ -150,6 +150,7 @@ public class DocAppCriService {
             }
 
             if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
+                    && !configurationService.getEnvironment().equals("dev")
                     && !configurationService.getEnvironment().equals("build")) {
                 throw new UnsuccessfulCredentialResponseException(
                         "Sub in CRI response does not match docAppSubjectId in client session");
