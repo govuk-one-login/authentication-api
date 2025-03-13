@@ -1696,6 +1696,50 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertResponseJarHasClaims(response, List.of("state"));
     }
 
+    @Test
+    void shouldForwardRequestObjectParamsAsClaimsToAuthFrontendApi() throws JOSEException {
+        setupForAuthJourney();
+        Map<String, String> extraParams = new HashMap<>();
+        extraParams.put("_ga", "12345");
+        extraParams.put("cookie_consent", "approve");
+        extraParams.put("vtr", jsonArrayOf("Cl.Cm", "Cl"));
+        var requestObject =
+                createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, extraParams);
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        requestObject.serialize(),
+                        "scope",
+                        "openid");
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        requestParams,
+                        Optional.of("GET"));
+        assertThat(response, hasStatus(302));
+        assertResponseJarHasClaimsWithValues(
+                response,
+                Map.of(
+                        "vtr_list",
+                        jsonArrayOf("Cl.Cm", "Cl"),
+                        "_ga",
+                        "12345",
+                        "cookie_consent",
+                        "approve",
+                        "client_id",
+                        configuration.getOrchestrationClientId(),
+                        "scope",
+                        "openid",
+                        "redirect_uri",
+                        configuration.getOrchestrationRedirectURI()));
+        assertResponseJarHasClaims(response, List.of("state"));
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
         return constructQueryStringParameters(
@@ -1924,6 +1968,19 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             CodeChallenge codeChallenge,
             CodeChallengeMethod codeChallengeMethod)
             throws JOSEException {
+        return createSignedJWT(
+                uiLocales, claims, scopes, maxAge, codeChallenge, codeChallengeMethod, Map.of());
+    }
+
+    private SignedJWT createSignedJWT(
+            String uiLocales,
+            String claims,
+            List<String> scopes,
+            Integer maxAge,
+            CodeChallenge codeChallenge,
+            CodeChallengeMethod codeChallengeMethod,
+            Map<String, String> extraClaims)
+            throws JOSEException {
         var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
                         .audience("http://localhost/authorize")
@@ -1961,6 +2018,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         if (codeChallengeMethod != null) {
             jwtClaimsSetBuilder.claim("code_challenge_method", codeChallengeMethod.getValue());
         }
+        extraClaims.forEach(jwtClaimsSetBuilder::claim);
 
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
