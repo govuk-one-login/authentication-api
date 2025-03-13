@@ -2,6 +2,7 @@ package uk.gov.di.authentication.oidc.validators;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -13,6 +14,7 @@ import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -135,5 +137,16 @@ public abstract class BaseAuthorizeValidator {
         }
 
         return Optional.empty();
+    }
+
+    protected void validateResponseMode(String responseMode) throws InvalidResponseModeException {
+        if (!responseMode.equals(ResponseMode.QUERY.getValue())
+                && !responseMode.equals(ResponseMode.FRAGMENT.getValue())) {
+            var errorMessage =
+                    String.format("Invalid response mode included in request: %s", responseMode);
+
+            logErrorInProdElseWarn(errorMessage);
+            throw new InvalidResponseModeException(errorMessage);
+        }
     }
 }
