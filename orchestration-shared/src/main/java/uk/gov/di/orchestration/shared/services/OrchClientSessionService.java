@@ -100,8 +100,13 @@ public class OrchClientSessionService extends BaseDynamoService<OrchClientSessio
     }
 
     public void updateStoredClientSession(OrchClientSessionItem clientSession) {
+        var item =
+                clientSession.withTimeToLive(
+                        nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond());
         try {
-            update(clientSession);
+            update(item);
         } catch (Exception e) {
             logAndThrowOrchClientSessionException(
                     "Error updating Orch client session item",

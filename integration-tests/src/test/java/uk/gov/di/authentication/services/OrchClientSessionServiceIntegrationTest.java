@@ -114,6 +114,21 @@ class OrchClientSessionServiceIntegrationTest {
     }
 
     @Test
+    void shouldUpdateTimeToLiveWhenUpdatingClientSession() {
+        fixTime(Instant.parse("2025-02-18T11:00:00Z"));
+        clientSessionExtension.storeClientSession(clientSession);
+
+        // Reset TTL, so should be valid for another hour
+        fixTime(Instant.parse("2025-02-18T11:50:00Z"));
+        clientSessionExtension.updateStoredClientSession(clientSession);
+
+        fixTime(Instant.parse("2025-02-18T12:00:01Z"));
+        var clientSessionOpt = clientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+
+        assertTrue(clientSessionOpt.isPresent());
+    }
+
+    @Test
     void shouldUpdateClientSession() {
         clientSessionExtension.storeClientSession(clientSession);
 
