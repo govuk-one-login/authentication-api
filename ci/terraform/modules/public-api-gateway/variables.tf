@@ -2,6 +2,7 @@ variable "environment" {
   description = "The environment the API Gateway is in"
   type        = string
 }
+
 variable "api_gateway_name" {
   description = "The name of the API Gateway"
   type        = string
@@ -14,6 +15,11 @@ variable "extra_tags" {
 
 variable "openapi_spec" {
   description = "The content of the OpenAPI spec to deploy"
+  type        = string
+}
+
+variable "domain_name" {
+  description = "The domain name to bind to the API Gateway"
   type        = string
 }
 
@@ -50,11 +56,6 @@ variable "access_logging_template" {
 variable "waf_arns" {
   description = "The ARNs of any WAFs to attach to the API Gateway"
   type        = list(string)
-}
-
-variable "domain_name" {
-  description = "The domain name to bind to the API Gateway"
-  type        = string
 }
 
 variable "metrics_enabled" {

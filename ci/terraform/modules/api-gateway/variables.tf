@@ -2,6 +2,7 @@ variable "environment" {
   description = "The environment the API Gateway is in"
   type        = string
 }
+
 variable "api_gateway_name" {
   description = "The name of the API Gateway"
   type        = string
