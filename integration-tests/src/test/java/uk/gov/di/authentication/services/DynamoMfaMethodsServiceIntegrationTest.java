@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.List;
@@ -32,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
-import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
 
 class DynamoMfaMethodsServiceIntegrationTest {
 
@@ -323,7 +324,11 @@ class DynamoMfaMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPriorityAuthApp);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
 
-            dynamoService.deleteMfaMethod(EMAIL, backupPriorityAuthApp.mfaIdentifier());
+            var identifierToDelete = backupPriorityAuthApp.mfaIdentifier();
+
+            var result = dynamoService.deleteMfaMethod(EMAIL, identifierToDelete);
+
+            assertEquals(Either.right(identifierToDelete), result);
 
             var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
 
@@ -336,7 +341,11 @@ class DynamoMfaMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-            dynamoService.deleteMfaMethod(EMAIL, backupPrioritySms.mfaIdentifier());
+            var identifierToDelete = backupPrioritySms.mfaIdentifier();
+
+            var result = dynamoService.deleteMfaMethod(EMAIL, identifierToDelete);
+
+            assertEquals(Either.right(identifierToDelete), result);
 
             var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
 

@@ -1,11 +1,15 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.authentication.shared.services.mfa;
 
+import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.MfaMethodsService;
 
 import java.util.List;
 import java.util.UUID;
@@ -68,8 +72,10 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
                 .toList();
     }
 
-    public void deleteMfaMethod(String email, String mfaIdentifier) {
+    public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
+            String email, String mfaIdentifier) {
         dynamoService.deleteMfaMethodByIdentifier(email, mfaIdentifier);
+        return Either.right(mfaIdentifier);
     }
 
     private List<MfaMethodData> getMfaMethodsForNonMigratedUser(
