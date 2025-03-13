@@ -86,7 +86,26 @@ public class MFAMethodsDeleteHandler
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
 
-        mfaMethodsService.deleteMfaMethod(maybeUserProfile.get().getEmail(), mfaIdentifier);
+        var deleteResult =
+                mfaMethodsService.deleteMfaMethod(maybeUserProfile.get().getEmail(), mfaIdentifier);
+
+        if (deleteResult.isLeft()) {
+            var failureReason = deleteResult.getLeft();
+            LOG.warn(
+                    "Attempted to delete mfa with identifier {} but failed for reason {}",
+                    mfaIdentifier,
+                    failureReason.name());
+            return switch (failureReason) {
+                case CANNOT_DELETE_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
+                        409, ErrorResponse.ERROR_1066);
+                case CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER -> generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.ERROR_1067);
+                case MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST -> generateApiGatewayProxyErrorResponse(
+                        404, ErrorResponse.ERROR_1065);
+            };
+        }
+
+        LOG.info("Successfully deleted MFA method {}", mfaIdentifier);
 
         return generateEmptySuccessApiGatewayResponse();
     }

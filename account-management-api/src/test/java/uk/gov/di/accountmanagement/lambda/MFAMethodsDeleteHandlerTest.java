@@ -5,19 +5,26 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MFAMethodsDeleteHandlerTest {
@@ -66,6 +73,40 @@ class MFAMethodsDeleteHandlerTest {
                 .thenReturn(Optional.empty());
         var result = handler.handleRequest(event, context);
         assertEquals(404, result.getStatusCode());
+    }
+
+    private static Stream<Arguments> failureReasonsToResponseCodes() {
+        return Stream.of(
+                Arguments.of(
+                        MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD,
+                        409,
+                        ErrorResponse.ERROR_1066),
+                Arguments.of(
+                        MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER,
+                        400,
+                        ErrorResponse.ERROR_1067),
+                Arguments.of(
+                        MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST,
+                        404,
+                        ErrorResponse.ERROR_1065));
+    }
+
+    @ParameterizedTest
+    @MethodSource("failureReasonsToResponseCodes")
+    void shouldReturnAppropriateResponseWhenMfaMethodsServiceIndicatesMethodCouldNotBeDeleted(
+            MfaDeleteFailureReason failureReason,
+            int expectedStatusCode,
+            ErrorResponse expectedErrorResponse) {
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.of(userProfile));
+        when(userProfile.getEmail()).thenReturn(EMAIL);
+
+        when(mfaMethodsService.deleteMfaMethod(EMAIL, MFA_IDENTIFIER_TO_DELETE))
+                .thenReturn(Either.left(failureReason));
+
+        var result = handler.handleRequest(event, context);
+        assertEquals(expectedStatusCode, result.getStatusCode());
+        assertThat(result, hasJsonBody(expectedErrorResponse));
     }
 
     @Test
