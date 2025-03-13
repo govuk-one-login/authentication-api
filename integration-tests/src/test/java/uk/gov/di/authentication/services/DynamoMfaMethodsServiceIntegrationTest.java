@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.List;
@@ -350,6 +351,27 @@ class DynamoMfaMethodsServiceIntegrationTest {
             var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
 
             assertEquals(List.of(mfaMethodDataFrom(defaultPriorityAuthApp)), remainingMfaMethods);
+        }
+
+        @Test
+        void shouldNotDeleteAPriorityMethodForAMigratedUser() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            var mfaMethods = List.of(backupPrioritySms, defaultPriorityAuthApp);
+            mfaMethods.forEach(m -> userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, m));
+
+            var identifierToDelete = defaultPriorityAuthApp.mfaIdentifier();
+
+            var result = dynamoService.deleteMfaMethod(EMAIL, identifierToDelete);
+
+            assertEquals(Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD), result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            var expectedRemainingMfaMethods =
+                    mfaMethods.stream()
+                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
+
+            assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
         }
     }
 

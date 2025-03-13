@@ -74,6 +74,21 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
 
     public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
             String email, String mfaIdentifier) {
+        var mfaMethods = dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
+
+        var maybeMethodToDelete =
+                mfaMethods.stream()
+                        .filter(mfaMethod -> mfaMethod.getMfaIdentifier().equals(mfaIdentifier))
+                        .findFirst();
+
+        if (maybeMethodToDelete.isPresent()
+                && maybeMethodToDelete
+                        .get()
+                        .getPriority()
+                        .equals(PriorityIdentifier.DEFAULT.name())) {
+            return Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
+        }
+
         dynamoService.deleteMfaMethodByIdentifier(email, mfaIdentifier);
         return Either.right(mfaIdentifier);
     }
