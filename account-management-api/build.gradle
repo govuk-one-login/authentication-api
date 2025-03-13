@@ -14,9 +14,11 @@ dependencies {
             configurations.s3,
             configurations.dynamodb
 
+
     implementation configurations.nimbus,
             configurations.govuk_notify,
-            configurations.gson
+            configurations.gson,
+            configurations.vavr
 
     implementation project(":shared")
 

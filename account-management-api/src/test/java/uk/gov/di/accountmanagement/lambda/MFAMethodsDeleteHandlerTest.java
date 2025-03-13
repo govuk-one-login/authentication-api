@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -25,6 +26,8 @@ class MFAMethodsDeleteHandlerTest {
             mock(ConfigurationService.class);
     private static final Context context = mock(Context.class);
     private static final String PUBLIC_SUBJECT_ID = "some-subject-id";
+    private static final String MFA_IDENTIFIER_TO_DELETE = "8e18b315-995e-434e-a236-4fbfb72d6ce0";
+    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final UserProfile userProfile = mock(UserProfile.class);
     private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
@@ -34,7 +37,7 @@ class MFAMethodsDeleteHandlerTest {
                     .withPathParameters(
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID),
-                                    Map.entry("mfaIdentifier", "some-mfa-identifier")))
+                                    Map.entry("mfaIdentifier", MFA_IDENTIFIER_TO_DELETE)))
                     .withHeaders(VALID_HEADERS);
 
     private MFAMethodsDeleteHandler handler;
@@ -50,6 +53,9 @@ class MFAMethodsDeleteHandlerTest {
     void shouldReturn204WhenFeatureFlagEnabled() {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
+        when(userProfile.getEmail()).thenReturn(EMAIL);
+        when(mfaMethodsService.deleteMfaMethod(EMAIL, MFA_IDENTIFIER_TO_DELETE))
+                .thenReturn(Either.right(MFA_IDENTIFIER_TO_DELETE));
         var result = handler.handleRequest(event, context);
         assertEquals(204, result.getStatusCode());
     }

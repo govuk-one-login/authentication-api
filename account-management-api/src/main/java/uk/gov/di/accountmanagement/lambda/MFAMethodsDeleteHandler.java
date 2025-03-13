@@ -71,6 +71,7 @@ public class MFAMethodsDeleteHandler
         }
 
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+        var mfaIdentifier = input.getPathParameters().get("mfaIdentifier"); // TODO what if empty
 
         if (publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
@@ -84,6 +85,8 @@ public class MFAMethodsDeleteHandler
             LOG.error("Unknown public subject ID");
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
+
+        mfaMethodsService.deleteMfaMethod(maybeUserProfile.get().getEmail(), mfaIdentifier);
 
         return generateEmptySuccessApiGatewayResponse();
     }
