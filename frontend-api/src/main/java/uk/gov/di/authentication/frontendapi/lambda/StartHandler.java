@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -182,10 +181,9 @@ public class StartHandler
                                         CLIENT_SESSION_ID_HEADER,
                                         configurationService.getHeadersCaseInsensitive()));
             }
-            var client = startService.getClient(clientSession.get());
             var upliftRequired =
                     startService.isUpliftRequired(
-                            clientSession.get(), client, startRequest.currentCredentialStrength());
+                            clientSession.get(), startRequest.currentCredentialStrength());
 
             var authSession =
                     authSessionService.getUpdatedPreviousSessionOrCreateNew(
@@ -295,8 +293,6 @@ public class StartHandler
             var errorMessage = "Unable to serialize start response";
             LOG.error(errorMessage, e);
             return generateApiGatewayProxyResponse(400, errorMessage);
-        } catch (ClientNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
         }
