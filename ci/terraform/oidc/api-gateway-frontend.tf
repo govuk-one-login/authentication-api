@@ -131,10 +131,7 @@ resource "aws_cloudwatch_log_group" "frontend_api_stage_execution_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.frontend_api_stage_execution_logs[0]
-  to   = aws_cloudwatch_log_group.frontend_api_stage_execution_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "frontend_api_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
@@ -153,10 +150,7 @@ resource "aws_cloudwatch_log_group" "frontend_stage_access_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.frontend_stage_access_logs[0]
-  to   = aws_cloudwatch_log_group.frontend_stage_access_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "frontend_api_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
@@ -175,10 +169,7 @@ resource "aws_cloudwatch_log_group" "frontend_waf_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.frontend_waf_logs[0]
-  to   = aws_cloudwatch_log_group.frontend_waf_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "frontend_api_waf_log_subscription" {
   count           = length(var.logging_endpoint_arns)
@@ -259,10 +250,7 @@ resource "aws_api_gateway_base_path_mapping" "frontend_api" {
   stage_name  = aws_api_gateway_stage.endpoint_frontend_stage.stage_name
   domain_name = local.frontend_api_fqdn
 }
-moved {
-  from = aws_api_gateway_base_path_mapping.frontend_api[0]
-  to   = aws_api_gateway_base_path_mapping.frontend_api
-}
+
 
 module "dashboard_frontend_api" {
   source           = "../modules/dashboards"
@@ -344,10 +332,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
     sampled_requests_enabled   = true
   }
 }
-moved {
-  from = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[0]
-  to   = aws_wafv2_web_acl.wafregional_web_acl_frontend_api
-}
+
 
 resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
   count        = var.fms_enabled ? 0 : 1
@@ -358,10 +343,6 @@ resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
     aws_api_gateway_stage.endpoint_frontend_stage,
     aws_wafv2_web_acl.wafregional_web_acl_frontend_api
   ]
-}
-moved {
-  from = aws_wafv2_web_acl_association.waf_association_frontend_api
-  to   = aws_wafv2_web_acl_association.waf_association_frontend_api[0]
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_api" {
@@ -387,8 +368,4 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_
   depends_on = [
     aws_cloudwatch_log_group.frontend_waf_logs
   ]
-}
-moved {
-  from = aws_wafv2_web_acl_logging_configuration.waf_logging_config_frontend_api[0]
-  to   = aws_wafv2_web_acl_logging_configuration.waf_logging_config_frontend_api
 }

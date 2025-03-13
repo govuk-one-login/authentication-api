@@ -297,10 +297,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
     sampled_requests_enabled   = true
   }
 }
-moved {
-  from = aws_wafv2_web_acl.wafregional_web_acl_am_api[0]
-  to   = aws_wafv2_web_acl.wafregional_web_acl_am_api["am-waf-web-acl"] # local.legacy_web_acl_name
-}
+
 
 resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
   count        = var.fms_enabled ? 0 : 1

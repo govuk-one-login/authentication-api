@@ -48,10 +48,7 @@ resource "aws_cloudwatch_log_group" "test_services_api_stage_execution_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.test_services_api_stage_execution_logs[0]
-  to   = aws_cloudwatch_log_group.test_services_api_stage_execution_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "test_services_api_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
@@ -70,10 +67,7 @@ resource "aws_cloudwatch_log_group" "test_services_stage_access_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.test_services_stage_access_logs[0]
-  to   = aws_cloudwatch_log_group.test_services_stage_access_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "test_services_api_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)

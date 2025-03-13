@@ -171,10 +171,7 @@ resource "aws_cloudwatch_log_group" "oidc_stage_execution_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.oidc_stage_execution_logs[0]
-  to   = aws_cloudwatch_log_group.oidc_stage_execution_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "oidc_api_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
@@ -193,10 +190,7 @@ resource "aws_cloudwatch_log_group" "oidc_stage_access_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.oidc_stage_access_logs[0]
-  to   = aws_cloudwatch_log_group.oidc_stage_access_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
@@ -215,10 +209,7 @@ resource "aws_cloudwatch_log_group" "oidc_waf_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
-moved {
-  from = aws_cloudwatch_log_group.oidc_waf_logs[0]
-  to   = aws_cloudwatch_log_group.oidc_waf_logs
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   count           = length(var.logging_endpoint_arns)
@@ -304,10 +295,7 @@ resource "aws_api_gateway_base_path_mapping" "api" {
   stage_name  = aws_api_gateway_stage.endpoint_stage.stage_name
   domain_name = local.oidc_api_fqdn
 }
-moved {
-  from = aws_api_gateway_base_path_mapping.api[0]
-  to   = aws_api_gateway_base_path_mapping.api
-}
+
 
 module "dashboard" {
   source           = "../modules/dashboards"
@@ -657,10 +645,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     sampled_requests_enabled   = true
   }
 }
-moved {
-  from = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[0]
-  to   = aws_wafv2_web_acl.wafregional_web_acl_oidc_api
-}
+
 
 data "aws_cloudformation_export" "oidc_origin_cloaking_waf_arn" {
   count = var.oidc_cloudfront_enabled ? 1 : 0
@@ -695,10 +680,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api"
     aws_cloudwatch_log_group.oidc_waf_logs
   ]
 }
-moved {
-  from = aws_wafv2_web_acl_logging_configuration.waf_logging_config_oidc_api[0]
-  to   = aws_wafv2_web_acl_logging_configuration.waf_logging_config_oidc_api
-}
+
 
 resource "aws_api_gateway_resource" "robots_txt_resource" {
   count       = var.use_robots_txt ? 1 : 0

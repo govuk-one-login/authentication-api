@@ -6,10 +6,7 @@ data "aws_cloudwatch_log_group" "orchestration_redirect_lambda_log_group" {
   count = local.isP1Alarm ? 1 : 0
   name  = replace("/aws/lambda/${var.environment}-orchestration-redirect-lambda", ".", "")
 }
-moved {
-  from = aws_cloudwatch_log_group.orchestration_redirect_lambda_log_group
-  to   = aws_cloudwatch_log_group.orchestration_redirect_lambda_log_group[0]
-}
+
 
 resource "aws_cloudwatch_log_metric_filter" "account_interventions_metric_filter" {
   count          = local.isP1Alarm ? 1 : 0
@@ -23,10 +20,7 @@ resource "aws_cloudwatch_log_metric_filter" "account_interventions_metric_filter
     value     = "1"
   }
 }
-moved {
-  from = aws_cloudwatch_log_metric_filter.account_interventions_metric_filter
-  to   = aws_cloudwatch_log_metric_filter.account_interventions_metric_filter[0]
-}
+
 
 resource "aws_cloudwatch_metric_alarm" "account_interventions_p1_cloudwatch_alarm" {
   count               = local.isP1Alarm ? 1 : 0

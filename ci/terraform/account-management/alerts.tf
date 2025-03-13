@@ -14,10 +14,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}"
   alarm_actions     = [local.slack_event_sns_topic_arn]
 }
-moved {
-  from = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm[0]
-  to   = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm
-}
+
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_am_blocked_request_cloudwatch_alarm" {

@@ -75,10 +75,7 @@ resource "aws_cloudwatch_log_group" "account_metrics_lambda_log_group" {
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 }
-moved {
-  from = aws_cloudwatch_log_group.account_metrics_lambda_log_group[0]
-  to   = aws_cloudwatch_log_group.account_metrics_lambda_log_group
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "account_metrics_log_subscription" {
   count           = length(var.logging_endpoint_arns)

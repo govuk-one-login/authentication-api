@@ -6,10 +6,7 @@ resource "aws_elasticache_subnet_group" "sessions_store" {
   name       = "${var.environment}-session-store-cache-subnet"
   subnet_ids = local.private_subnet_ids
 }
-moved {
-  from = aws_elasticache_subnet_group.sessions_store[0]
-  to   = aws_elasticache_subnet_group.sessions_store
-}
+
 
 resource "random_password" "redis_password" {
   length = 32
@@ -55,8 +52,4 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   depends_on = [
     aws_sns_topic.slack_events,
   ]
-}
-moved {
-  from = aws_elasticache_replication_group.sessions_store[0]
-  to   = aws_elasticache_replication_group.sessions_store
 }

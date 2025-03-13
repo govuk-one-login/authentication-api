@@ -58,10 +58,7 @@ resource "aws_cloudwatch_log_group" "common_passwords_update_lambda_log_group" {
     aws_lambda_function.common_passwords_dynamo_update_lambda
   ]
 }
-moved {
-  from = aws_cloudwatch_log_group.common_passwords_update_lambda_log_group[0]
-  to   = aws_cloudwatch_log_group.common_passwords_update_lambda_log_group
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "common_passwords_update_lambda_log_subscription" {
   count           = length(var.logging_endpoint_arns)
