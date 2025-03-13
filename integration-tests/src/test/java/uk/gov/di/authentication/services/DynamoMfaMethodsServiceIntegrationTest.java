@@ -373,6 +373,29 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
         }
+
+        @Test
+        void shouldNotDeleteAnyMethodsAndReturnAnAppropriateResultWhenMfaMethodDoesNotExist() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            var mfaMethods = List.of(backupPrioritySms, defaultPriorityAuthApp);
+            mfaMethods.forEach(m -> userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, m));
+
+            var identifierToDelete = "5f27adb6-32ae-4397-a223-4b76840ddd01";
+
+            var result = dynamoService.deleteMfaMethod(EMAIL, identifierToDelete);
+
+            assertEquals(
+                    Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST),
+                    result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            var expectedRemainingMfaMethods =
+                    mfaMethods.stream()
+                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
+
+            assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
+        }
     }
 
     private static MfaMethodData mfaMethodDataFrom(MfaData mfaData) {

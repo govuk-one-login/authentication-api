@@ -89,6 +89,10 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
             return Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
         }
 
+        if (maybeMethodToDelete.isEmpty()) {
+            return Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST);
+        }
+
         dynamoService.deleteMfaMethodByIdentifier(email, mfaIdentifier);
         return Either.right(mfaIdentifier);
     }
