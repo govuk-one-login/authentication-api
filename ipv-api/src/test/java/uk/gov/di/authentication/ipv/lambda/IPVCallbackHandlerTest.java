@@ -73,7 +73,6 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -128,7 +127,6 @@ class IPVCallbackHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final AuthenticationUserInfoStorageService authUserInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -295,7 +293,6 @@ class IPVCallbackHandlerTest {
                         sessionService,
                         orchSessionService,
                         authUserInfoStorageService,
-                        dynamoService,
                         clientSessionService,
                         orchClientSessionService,
                         dynamoClientService,
