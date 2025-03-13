@@ -2,10 +2,7 @@ resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.api_gateway_name}-dashboard"
   dashboard_body = jsonencode(local.template)
 }
-moved {
-  from = aws_cloudwatch_dashboard.main[0]
-  to   = aws_cloudwatch_dashboard.main
-}
+
 
 locals {
   template = {

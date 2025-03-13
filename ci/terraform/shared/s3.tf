@@ -36,10 +36,7 @@ resource "aws_iam_policy" "s3_smoketest_policy" {
 
   policy = data.aws_iam_policy_document.s3_smoketest_policy_document.json
 }
-moved {
-  from = aws_iam_policy.s3_smoketest_policy[0]
-  to   = aws_iam_policy.s3_smoketest_policy
-}
+
 
 data "aws_iam_policy_document" "s3_smoketest_policy_document" {
   statement {
@@ -55,16 +52,9 @@ data "aws_iam_policy_document" "s3_smoketest_policy_document" {
     ]
   }
 }
-moved {
-  from = data.aws_iam_policy_document.s3_smoketest_policy_document[0]
-  to   = data.aws_iam_policy_document.s3_smoketest_policy_document
-}
+
 
 resource "aws_iam_role_policy_attachment" "notification_lambda_smoketest_s3" {
   role       = aws_iam_role.email_lambda_iam_role.name
   policy_arn = aws_iam_policy.s3_smoketest_policy.arn
-}
-moved {
-  from = aws_iam_role_policy_attachment.notification_lambda_smoketest_s3[0]
-  to   = aws_iam_role_policy_attachment.notification_lambda_smoketest_s3
 }

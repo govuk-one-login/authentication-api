@@ -49,10 +49,7 @@ resource "aws_cloudwatch_log_group" "backchannel_logout_request_lambda_log_group
     aws_lambda_function.backchannel_logout_request_lambda
   ]
 }
-moved {
-  from = aws_cloudwatch_log_group.backchannel_logout_request_lambda_log_group[0]
-  to   = aws_cloudwatch_log_group.backchannel_logout_request_lambda_log_group
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "backchannel_logout_request_lambda_log_subscription" {
   count           = length(var.logging_endpoint_arns)

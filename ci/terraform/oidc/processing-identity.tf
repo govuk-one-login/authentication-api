@@ -51,10 +51,7 @@ module "ipv_processing_identity_role_with_orch_session_table_access" {
     aws_iam_policy.dynamo_orch_identity_credentials_cross_account_read_access_policy[0].arn
   ]
 }
-moved {
-  from = module.ipv_processing_identity_role_with_orch_session_table_access
-  to   = module.ipv_processing_identity_role_with_orch_session_table_access[0]
-}
+
 
 module "processing-identity" {
   source = "../modules/endpoint-module-v2"

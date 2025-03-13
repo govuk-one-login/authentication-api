@@ -14,10 +14,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/4164649233/BAU+Daytime+Support+Hygiene+and+Optimisation+Rota#SUP-7%3A-Resolve-DLQ-messages"
   alarm_actions     = [local.slack_event_sns_topic_arn]
 }
-moved {
-  from = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm[0]
-  to   = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm
-}
+
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   alarm_name          = replace("${var.environment}-spot-request-queue-dlq-alarm", ".", "")
@@ -35,10 +32,7 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/DYDMBgE"
   alarm_actions     = [local.slack_event_sns_topic_arn]
 }
-moved {
-  from = aws_cloudwatch_metric_alarm.spot_request_sqs_dlq_cloudwatch_alarm[0]
-  to   = aws_cloudwatch_metric_alarm.spot_request_sqs_dlq_cloudwatch_alarm
-}
+
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_alarm" {
   alarm_name          = replace("${var.environment}-spot-request-queue-alarm", ".", "")

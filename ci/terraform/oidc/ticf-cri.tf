@@ -57,22 +57,10 @@ module "ticf_cri_lambda" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 }
-moved {
-  from = aws_lambda_function.ticf_cri_lambda[0]
-  to   = module.ticf_cri_lambda[0].aws_lambda_function.endpoint_lambda
-}
-moved {
-  from = aws_cloudwatch_log_group.ticf_cri_lambda_log_group[0]
-  to   = module.ticf_cri_lambda[0].aws_cloudwatch_log_group.lambda_log_group
-}
-moved {
-  from = aws_cloudwatch_log_subscription_filter.ticf_cri_lambda_log_subscription[0]
-  to   = module.ticf_cri_lambda[0].aws_cloudwatch_log_subscription_filter.log_subscription
-}
-moved {
-  from = aws_lambda_alias.ticf_cri_lambda_alias[0]
-  to   = module.ticf_cri_lambda[0].aws_lambda_alias.endpoint_lambda
-}
+
+
+
+
 
 resource "aws_iam_policy" "ticf_cri_lambda_invocation_policy" {
   count       = local.deploy_ticf_cri_count

@@ -50,8 +50,3 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
     ]
   }
 }
-
-moved {
-  from = aws_elasticache_replication_group.account_management_sessions_store[0]
-  to   = aws_elasticache_replication_group.account_management_sessions_store
-}

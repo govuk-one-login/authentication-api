@@ -36,10 +36,7 @@ resource "time_sleep" "wait_60_seconds" {
 
   create_duration = "60s"
 }
-moved {
-  from = time_sleep.wait_60_seconds[0]
-  to   = time_sleep.wait_60_seconds
-}
+
 
 data "aws_iam_policy_document" "email_queue_policy_document" {
   statement {
@@ -202,10 +199,7 @@ resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
     aws_lambda_function.email_sqs_lambda
   ]
 }
-moved {
-  from = aws_cloudwatch_log_group.sqs_lambda_log_group[0]
-  to   = aws_cloudwatch_log_group.sqs_lambda_log_group
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "sqs_lambda_log_subscription" {
   count = length(var.logging_endpoint_arns)

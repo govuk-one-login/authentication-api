@@ -110,10 +110,7 @@ resource "aws_cloudwatch_log_group" "sns_log_group" {
     aws_sns_topic.slack_events
   ]
 }
-moved {
-  from = aws_cloudwatch_log_group.sns_log_group[0]
-  to   = aws_cloudwatch_log_group.sns_log_group
-}
+
 
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   count           = length(var.logging_endpoint_arns)

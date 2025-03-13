@@ -82,10 +82,7 @@ resource "aws_iam_policy" "lambda_kms_signing_policy" {
 
   policy = data.aws_iam_policy_document.kms_signing_policy_document.json
 }
-moved {
-  from = aws_iam_policy.lambda_kms_signing_policy[0]
-  to   = aws_iam_policy.lambda_kms_signing_policy
-}
+
 
 
 resource "aws_iam_policy" "lambda_kms_policy" {
@@ -95,28 +92,19 @@ resource "aws_iam_policy" "lambda_kms_policy" {
 
   policy = data.aws_iam_policy_document.kms_policy_document.json
 }
-moved {
-  from = aws_iam_policy.lambda_kms_policy[0]
-  to   = aws_iam_policy.lambda_kms_policy
-}
+
 
 resource "aws_iam_role_policy_attachment" "lambda_kms" {
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_kms_policy.arn
 }
-moved {
-  from = aws_iam_role_policy_attachment.lambda_kms[0]
-  to   = aws_iam_role_policy_attachment.lambda_kms
-}
+
 
 resource "aws_iam_role_policy_attachment" "lambda_kms_signing_policy" {
   role       = aws_iam_role.token_lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_kms_signing_policy.arn
 }
-moved {
-  from = aws_iam_role_policy_attachment.lambda_kms_signing_policy[0]
-  to   = aws_iam_role_policy_attachment.lambda_kms_signing_policy
-}
+
 
 # Audit signing key
 
@@ -148,10 +136,7 @@ data "aws_iam_policy_document" "audit_payload_kms_signing_policy_document" {
     ]
   }
 }
-moved {
-  from = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document[0]
-  to   = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document
-}
+
 
 resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
   name        = "${var.environment}-standard-lambda-audit-payload-kms-signing-policy"
@@ -160,37 +145,25 @@ resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
 
   policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document.json
 }
-moved {
-  from = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0]
-  to   = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy
-}
+
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_default" {
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
 }
-moved {
-  from = aws_iam_role_policy_attachment.attach_audit_signing_key_policy_default[0]
-  to   = aws_iam_role_policy_attachment.attach_audit_signing_key_policy_default
-}
+
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_token" {
   role       = aws_iam_role.token_lambda_iam_role.name
   policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
 }
-moved {
-  from = aws_iam_role_policy_attachment.attach_audit_signing_key_policy_token[0]
-  to   = aws_iam_role_policy_attachment.attach_audit_signing_key_policy_token
-}
+
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_dynamo" {
   role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
   policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
 }
-moved {
-  from = aws_iam_role_policy_attachment.attach_audit_signing_key_policy_dynamo[0]
-  to   = aws_iam_role_policy_attachment.attach_audit_signing_key_policy_dynamo
-}
+
 
 # Cloudwatch Log Encryption
 data "aws_partition" "current" {}
@@ -277,10 +250,7 @@ data "aws_iam_policy_document" "lambda_env_vars_encryption_key_policy_document" 
     ]
   }
 }
-moved {
-  from = data.aws_iam_policy_document.lambda_env_vars_encryption_key_policy_document[0]
-  to   = data.aws_iam_policy_document.lambda_env_vars_encryption_key_policy_document
-}
+
 
 resource "aws_iam_policy" "lambda_env_vars_encryption_kms_policy" {
   name        = "${var.environment}-lambda-env-vars-encryption-key-kms-policy"
@@ -289,19 +259,13 @@ resource "aws_iam_policy" "lambda_env_vars_encryption_kms_policy" {
 
   policy = data.aws_iam_policy_document.lambda_env_vars_encryption_key_policy_document.json
 }
-moved {
-  from = aws_iam_policy.lambda_env_vars_encryption_kms_policy[0]
-  to   = aws_iam_policy.lambda_env_vars_encryption_kms_policy
-}
+
 
 resource "aws_iam_role_policy_attachment" "lambda_env_vars_encryption_kms_policy" {
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_env_vars_encryption_kms_policy.arn
 }
-moved {
-  from = aws_iam_role_policy_attachment.lambda_env_vars_encryption_kms_policy[0]
-  to   = aws_iam_role_policy_attachment.lambda_env_vars_encryption_kms_policy
-}
+
 ### Events flow encryption key
 
 resource "aws_kms_key" "events_topic_encryption" {

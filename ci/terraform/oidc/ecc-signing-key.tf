@@ -76,10 +76,7 @@ data "aws_iam_policy_document" "mfa_reset_signing_key_access_policy" {
   }
 }
 
-moved {
-  from = aws_kms_key.mfa_reset_jar_signing_key_ecc
-  to   = aws_kms_key.ipv_reverification_request_signing_key
-}
+
 
 resource "aws_kms_key" "ipv_reverification_request_signing_key" {
   description              = "KMS signing key (ECC) for JARs sent from Authentication to IPV for MFA reset"
@@ -90,10 +87,7 @@ resource "aws_kms_key" "ipv_reverification_request_signing_key" {
   policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_access_policy.json
 }
 
-moved {
-  from = aws_kms_alias.mfa_reset_jar_signing_key_alias
-  to   = aws_kms_alias.ipv_reverification_request_signing_key_alias
-}
+
 
 resource "aws_kms_alias" "ipv_reverification_request_signing_key_alias" {
   name          = "alias/${var.environment}-ipv_reverification_request_signing_key"

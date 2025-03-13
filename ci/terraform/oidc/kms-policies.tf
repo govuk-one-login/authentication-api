@@ -227,10 +227,7 @@ data "aws_iam_policy_document" "ipv_reverification_request_signing_key_policy_do
   }
 }
 
-moved {
-  from = aws_iam_policy.mfa_reset_jar_kms_signing_policy
-  to   = aws_iam_policy.ipv_reverification_request_signing_key_policy
-}
+
 
 resource "aws_iam_policy" "ipv_reverification_request_signing_key_policy" {
   name_prefix = "kms-mfa-reset-jar-signing-policy"
