@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 
@@ -50,6 +51,10 @@ class AuthSessionServiceTest {
         assertEquals(SESSION_ID, session.getSessionId());
         assertEquals(AuthSessionItem.AccountState.UNKNOWN, session.getIsNewAccount());
         assertTrue(session.getTimeToLive() > Instant.now().getEpochSecond());
+
+        for (CodeRequestType requestType : CodeRequestType.values()) {
+            assertEquals(session.getCodeRequestCount(requestType), 0);
+        }
     }
 
     @Test

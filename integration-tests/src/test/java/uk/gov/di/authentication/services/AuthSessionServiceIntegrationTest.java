@@ -3,6 +3,7 @@ package uk.gov.di.authentication.services;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
@@ -34,6 +35,10 @@ class AuthSessionServiceIntegrationTest {
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(AuthSessionItem.AccountState.UNKNOWN));
+
+        for (CodeRequestType requestType : CodeRequestType.values()) {
+            assertEquals(retrievedSession.get().getCodeRequestCount(requestType), 0);
+        }
     }
 
     @Test
