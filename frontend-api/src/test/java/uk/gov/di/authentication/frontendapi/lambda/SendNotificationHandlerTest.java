@@ -286,6 +286,14 @@ class SendNotificationHandlerTest {
                                                 isSessionWithEmailSent(
                                                         session, notificationType, journeyType)),
                                 eq(SESSION_ID));
+
+                verify(authSessionService)
+                        .updateSession(
+                                argThat(
+                                        authSession ->
+                                                authSession.getCodeRequestCount(
+                                                                notificationType, journeyType)
+                                                        == 1));
                 verify(auditService)
                         .submitAuditEvent(
                                 notificationType.equals(VERIFY_EMAIL)
