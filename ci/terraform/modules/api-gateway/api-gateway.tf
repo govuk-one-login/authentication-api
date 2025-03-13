@@ -23,11 +23,6 @@ resource "aws_api_gateway_rest_api_policy" "rest_api_policy" {
   policy      = data.aws_iam_policy_document.rest_api_policy_document[count.index].json
 }
 
-moved {
-  from = aws_api_gateway_rest_api_policy.rest_api_policy
-  to   = aws_api_gateway_rest_api_policy.rest_api_policy[0]
-}
-
 
 data "aws_iam_policy_document" "rest_api_policy_document" {
   count = length(var.vpc_endpoint_ids) > 0 ? 1 : 0
@@ -60,10 +55,6 @@ data "aws_iam_policy_document" "rest_api_policy_document" {
       variable = "aws:SourceVpce"
     }
   }
-}
-moved {
-  from = data.aws_iam_policy_document.rest_api_policy_document
-  to   = data.aws_iam_policy_document.rest_api_policy_document[0]
 }
 
 resource "aws_api_gateway_deployment" "deployment" {

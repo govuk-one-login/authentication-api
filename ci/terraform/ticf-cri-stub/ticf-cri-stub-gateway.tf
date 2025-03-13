@@ -18,10 +18,13 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
   }
 }
 
+module "ticf_cri_stub_api_gateway" {
+  source = "../modules/private-api-gateway"
 
-resource "aws_api_gateway_rest_api" "ticf_cri_stub" {
-  name = "${var.environment}-di-ticf-cri-stub"
-  body = jsonencode({
+  environment      = var.environment
+  api_gateway_name = "${var.environment}-di-ticf-cri-stub"
+
+  openapi_spec = jsonencode({
     openapi = "3.0.1"
     info = {
       title = "${var.environment}-di-ticf-cri-stub"
@@ -40,55 +43,14 @@ resource "aws_api_gateway_rest_api" "ticf_cri_stub" {
     }
   })
 
-  endpoint_configuration {
-    types            = ["PRIVATE"]
-    vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+  vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
 
-data "aws_iam_policy_document" "ticf_cri_stub_policy" {
-  statement {
-    effect = "Allow"
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-    actions = [
-      "execute-api:Invoke"
-    ]
-    resources = [
-      "${aws_api_gateway_rest_api.ticf_cri_stub.execution_arn}/*"
-    ]
-  }
-
-  statement {
-    effect = "Deny"
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-    actions = [
-      "execute-api:Invoke"
-    ]
-    resources = [
-      "${aws_api_gateway_rest_api.ticf_cri_stub.execution_arn}/*"
-    ]
-    condition {
-      test     = "StringNotEquals"
-      variable = "aws:SourceVpce"
-      values = [
-        data.aws_vpc_endpoint.auth_api_vpc_endpoint.id
-      ]
-    }
-  }
-}
-
-resource "aws_api_gateway_rest_api_policy" "ticf_cri_stub_policy" {
-  rest_api_id = aws_api_gateway_rest_api.ticf_cri_stub.id
-  policy      = data.aws_iam_policy_document.ticf_cri_stub_policy.json
+  enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
+  enable_api_gateway_execution_request_tracing = local.request_tracing_allowed
+  cloudwatch_log_retention                     = var.cloudwatch_log_retention
+  logging_endpoint_arns                        = var.logging_endpoint_arns
+  cloudwatch_encryption_key_arn                = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  access_logging_template                      = local.access_logging_template
 }
 
 resource "aws_lambda_permission" "endpoint_execution_permission" {
@@ -100,74 +62,41 @@ resource "aws_lambda_permission" "endpoint_execution_permission" {
 
   # The "/*/*" portion grants access from any method on any resource
   # within the API Gateway REST API.
-  source_arn = "${aws_api_gateway_rest_api.ticf_cri_stub.execution_arn}/*/*"
+  source_arn = "${module.ticf_cri_stub_api_gateway.api_gateway_execution_arn}/*/*"
 }
 
-
-resource "aws_api_gateway_stage" "ticf_cri_stub_stage" {
-  deployment_id         = aws_api_gateway_deployment.ticf_cri_stub_deployment.id
-  rest_api_id           = aws_api_gateway_rest_api.ticf_cri_stub.id
-  stage_name            = var.environment
-  cache_cluster_enabled = false
-  xray_tracing_enabled  = true
-
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.ticf_cri_stub_stage_access_logs.arn
-    format          = local.access_logging_template
-  }
-
-  depends_on = [
-    module.ticf_cri_stub_role,
-    aws_api_gateway_deployment.ticf_cri_stub_deployment
-  ]
+# State management for the migration to the module
+moved {
+  from = aws_api_gateway_rest_api.ticf_cri_stub
+  to   = module.ticf_cri_stub_api_gateway.module.api-gateway.aws_api_gateway_rest_api.rest_api
 }
 
-resource "aws_api_gateway_deployment" "ticf_cri_stub_deployment" {
-  rest_api_id = aws_api_gateway_rest_api.ticf_cri_stub.id
-
-  triggers = {
-    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.ticf_cri_stub.body))
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-  depends_on = [
-    module.ticf_cri_stub_lambda,
-  ]
+moved {
+  from = aws_api_gateway_rest_api_policy.ticf_cri_stub_policy
+  to   = module.ticf_cri_stub_api_gateway.module.api-gateway.aws_api_gateway_rest_api_policy.rest_api_policy[0]
 }
 
-resource "aws_api_gateway_method_settings" "ticf_cri_stub_logging_settings" {
-  count = var.enable_api_gateway_execution_logging ? 1 : 0
-
-  rest_api_id = aws_api_gateway_rest_api.ticf_cri_stub.id
-  stage_name  = aws_api_gateway_stage.ticf_cri_stub_stage.stage_name
-  method_path = "*/*"
-
-  settings {
-    metrics_enabled    = true
-    data_trace_enabled = local.request_tracing_allowed
-    logging_level      = "INFO"
-    caching_enabled    = false
-  }
-  depends_on = [
-    aws_api_gateway_stage.ticf_cri_stub_stage
-  ]
+moved {
+  from = aws_api_gateway_deployment.ticf_cri_stub_deployment
+  to   = module.ticf_cri_stub_api_gateway.module.api-gateway.aws_api_gateway_deployment.deployment
 }
 
-resource "aws_cloudwatch_log_group" "ticf_cri_stub_stage_access_logs" {
-  name              = "${var.environment}-auth-ticf-cri-stub-access-logs"
-  retention_in_days = var.cloudwatch_log_retention
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+moved {
+  from = aws_api_gateway_stage.ticf_cri_stub_stage
+  to   = module.ticf_cri_stub_api_gateway.module.api-gateway.aws_api_gateway_stage.stage
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "ticf_cri_stub_access_log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "${var.environment}-auth-ticf-cri-stub-access-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.ticf_cri_stub_stage_access_logs.name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
+moved {
+  from = aws_api_gateway_method_settings.ticf_cri_stub_logging_settings[0]
+  to   = module.ticf_cri_stub_api_gateway.module.api-gateway.aws_api_gateway_method_settings.logging_settings[0]
+}
 
-  lifecycle {
-    create_before_destroy = false
-  }
+moved {
+  from = aws_cloudwatch_log_group.ticf_cri_stub_stage_access_logs
+  to   = module.ticf_cri_stub_api_gateway.module.api-gateway.aws_cloudwatch_log_group.access_logs
+}
+
+moved {
+  from = aws_cloudwatch_log_subscription_filter.ticf_cri_stub_access_log_subscription
+  to   = module.ticf_cri_stub_api_gateway.module.api-gateway.aws_cloudwatch_log_subscription_filter.access_log_subscription
 }
