@@ -152,7 +152,7 @@ class DynamoServiceIntegrationTest {
     }
 
     @Nested
-    class AddMFAMethodSupportingMultipleTests {
+    class MfaMethodsSupportingMultipleTests {
         @BeforeEach
         void setup() {
             userStore.signUp(TEST_EMAIL, "password-1", new Subject());
@@ -243,6 +243,30 @@ class DynamoServiceIntegrationTest {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
 
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        @Test
+        void shouldDeleteAnMfaMethodByIdentifier() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            dynamoService.deleteMfaMethodByIdentifier(
+                    TEST_EMAIL, backupPrioritySmsData.mfaIdentifier());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPrioritySmsData);
+        }
+
+        @Test
+        void shouldNotDeleteAnyMfaMethodsIfNoneWithTheIdentifierExists() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            dynamoService.deleteMfaMethodByIdentifier(TEST_EMAIL, "some-other-identifier");
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
             assertBackupAndDefaultMfaMethodsWithData(

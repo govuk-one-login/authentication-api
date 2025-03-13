@@ -161,26 +161,6 @@ class DynamoMfaMethodsServiceIntegrationTest {
                         PriorityIdentifier.BACKUP,
                         SMS_MFA_IDENTIFIER_2);
 
-        private MfaMethodData mfaMethodDataFrom(MfaData mfaData) {
-            if (mfaData instanceof AuthAppMfaData authAppMfaData) {
-                var detail =
-                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, authAppMfaData.credential());
-                return new MfaMethodData(
-                        authAppMfaData.mfaIdentifier(),
-                        authAppMfaData.priority(),
-                        authAppMfaData.verified(),
-                        detail);
-            } else {
-                SmsMfaData smsMfaData = (SmsMfaData) mfaData;
-                var detail = new SmsMfaDetail(MFAMethodType.SMS, smsMfaData.endpoint());
-                return new MfaMethodData(
-                        smsMfaData.mfaIdentifier(),
-                        smsMfaData.priority(),
-                        smsMfaData.verified(),
-                        detail);
-            }
-        }
-
         @BeforeEach
         void setUp() {
             userStoreExtension.signUp(EMAIL, "password-1", new Subject());
@@ -229,7 +209,10 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             var result = dynamoService.getMfaMethods(EMAIL);
 
-            var expectedData = mfaMethods.stream().map(this::mfaMethodDataFrom).toList();
+            var expectedData =
+                    mfaMethods.stream()
+                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom)
+                            .toList();
             assertEquals(expectedData, result);
         }
 
@@ -290,6 +273,93 @@ class DynamoMfaMethodsServiceIntegrationTest {
                 var result = dynamoService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
                 assertNull(result);
             }
+        }
+    }
+
+    @Nested
+    class DeleteMfaMethod {
+        private static final String EMAIL = "joe.bloggs@example.com";
+
+        private static final String SMS_MFA_IDENTIFIER_1 = "ea83592f-b9bf-436f-b4f4-ee33f610ee05";
+        private static final String SMS_MFA_IDENTIFIER_2 = "3634a5e3-dac8-4804-8d40-181722b48ae1";
+        private static final String APP_MFA_IDENTIFIER_1 = "a87e57e5-6175-4be7-af7d-547a390b36c1";
+        private static final String APP_MFA_IDENTIFIER_2 = "898a7e13-c354-430a-a3ca-8cc6c6391057";
+        private static final String PHONE_NUMBER_TWO = "987654321";
+
+        private static final AuthAppMfaData defaultPriorityAuthApp =
+                new AuthAppMfaData(
+                        AUTH_APP_CREDENTIAL,
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        APP_MFA_IDENTIFIER_1);
+        private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
+        private static final AuthAppMfaData backupPriorityAuthApp =
+                new AuthAppMfaData(
+                        AUTH_APP_CREDENTIAL_TWO,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        APP_MFA_IDENTIFIER_2);
+        private static final SmsMfaData defaultPrioritySms =
+                new SmsMfaData(
+                        PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
+        private static final SmsMfaData backupPrioritySms =
+                new SmsMfaData(
+                        PHONE_NUMBER_TWO,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        SMS_MFA_IDENTIFIER_2);
+
+        @BeforeEach
+        void setUp() {
+            userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+        }
+
+        @Test
+        void shouldDeleteABackupAuthAppMfaMethodForAMigratedUser() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPriorityAuthApp);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+
+            dynamoService.deleteMfaMethod(EMAIL, backupPriorityAuthApp.mfaIdentifier());
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            assertEquals(List.of(mfaMethodDataFrom(defaultPrioritySms)), remainingMfaMethods);
+        }
+
+        @Test
+        void shouldDeleteABackupSmsMfaMethodForAMigratedUser() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            dynamoService.deleteMfaMethod(EMAIL, backupPrioritySms.mfaIdentifier());
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            assertEquals(List.of(mfaMethodDataFrom(defaultPriorityAuthApp)), remainingMfaMethods);
+        }
+    }
+
+    private static MfaMethodData mfaMethodDataFrom(MfaData mfaData) {
+        if (mfaData instanceof AuthAppMfaData authAppMfaData) {
+            var detail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, authAppMfaData.credential());
+            return new MfaMethodData(
+                    authAppMfaData.mfaIdentifier(),
+                    authAppMfaData.priority(),
+                    authAppMfaData.verified(),
+                    detail);
+        } else {
+            SmsMfaData smsMfaData = (SmsMfaData) mfaData;
+            var detail = new SmsMfaDetail(MFAMethodType.SMS, smsMfaData.endpoint());
+            return new MfaMethodData(
+                    smsMfaData.mfaIdentifier(),
+                    smsMfaData.priority(),
+                    smsMfaData.verified(),
+                    detail);
         }
     }
 }

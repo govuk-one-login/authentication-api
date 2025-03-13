@@ -68,6 +68,10 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
                 .toList();
     }
 
+    public void deleteMfaMethod(String email, String mfaIdentifier) {
+        dynamoService.deleteMfaMethodByIdentifier(email, mfaIdentifier);
+    }
+
     private List<MfaMethodData> getMfaMethodsForNonMigratedUser(
             UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
