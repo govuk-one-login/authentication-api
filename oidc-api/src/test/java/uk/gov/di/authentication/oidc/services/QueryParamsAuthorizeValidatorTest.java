@@ -7,6 +7,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -25,12 +26,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
+import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -759,6 +762,48 @@ class QueryParamsAuthorizeValidatorTest {
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Value of max age cannot be lower than -1")));
         assertEquals(STATE, errorObject.get().state());
+    }
+
+    @Test
+    void shouldThrowInvalidResponseModeErrorWhenResponseModeIsInvalid() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(NONCE)
+                        .responseMode(new ResponseMode("code"));
+
+        assertThrows(
+                InvalidResponseModeException.class,
+                () -> queryParamsAuthorizeValidator.validate(authRequestBuilder.build()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"query", "fragment"})
+    void shouldAllowValidResponseModes(String responseMode) {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(NONCE)
+                        .responseMode(new ResponseMode(responseMode));
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequestBuilder.build());
+
+        assertTrue(errorObject.isEmpty());
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
