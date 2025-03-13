@@ -32,7 +32,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -840,16 +839,6 @@ class AuthCodeHandlerTest {
                 .nonce(NONCE)
                 .requestObject(signedJWT)
                 .build();
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withClientID(CLIENT_ID.getValue())
-                .withSectorIdentifierUri("https://rp-sector-uri")
-                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .withTestClient(false)
-                .withScopes(singletonList("openid"));
     }
 
     private void generateAuthUserInfo() throws ParseException {
