@@ -360,8 +360,8 @@ resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
   ]
 }
 moved {
-  from = aws_wafv2_web_acl_association.waf_association_frontend_api[0]
-  to   = aws_wafv2_web_acl_association.waf_association_frontend_api
+  from = aws_wafv2_web_acl_association.waf_association_frontend_api
+  to   = aws_wafv2_web_acl_association.waf_association_frontend_api[0]
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_api" {
