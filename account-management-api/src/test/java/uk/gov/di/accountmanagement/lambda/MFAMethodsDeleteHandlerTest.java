@@ -111,12 +111,30 @@ class MFAMethodsDeleteHandlerTest {
 
     @Test
     void shouldReturn400IfPublicSubjectIdNotIncludedInPath() {
-        var event =
+        var eventWithoutPublicSubjectId =
                 new APIGatewayProxyRequestEvent()
-                        .withPathParameters((Map.of("publicSubjectId", "")))
+                        .withPathParameters(
+                                (Map.of(
+                                        "publicSubjectId",
+                                        "",
+                                        "mfaIdentifier",
+                                        MFA_IDENTIFIER_TO_DELETE)))
                         .withHeaders(VALID_HEADERS);
 
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(eventWithoutPublicSubjectId, context);
+
+        assertThat(result, hasStatus(400));
+    }
+
+    @Test
+    void shouldReturn400IfMfaIdentifierNotIncludedInPath() {
+        var eventWithoutMfaIdentifier =
+                new APIGatewayProxyRequestEvent()
+                        .withPathParameters(
+                                (Map.of("publicSubjectId", PUBLIC_SUBJECT_ID, "mfaIdentifier", "")))
+                        .withHeaders(VALID_HEADERS);
+
+        var result = handler.handleRequest(eventWithoutMfaIdentifier, context);
 
         assertThat(result, hasStatus(400));
     }

@@ -71,11 +71,16 @@ public class MFAMethodsDeleteHandler
         }
 
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
-        var mfaIdentifier = input.getPathParameters().get("mfaIdentifier"); // TODO what if empty
+        var mfaIdentifier = input.getPathParameters().get("mfaIdentifier");
 
         if (publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);
+        }
+
+        if (mfaIdentifier.isEmpty()) {
+            LOG.error("Request does not include mfa identifier");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1064);
         }
 
         var maybeUserProfile =
