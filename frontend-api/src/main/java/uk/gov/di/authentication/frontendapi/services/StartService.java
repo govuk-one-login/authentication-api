@@ -74,8 +74,8 @@ public class StartService {
         UserContext userContext;
         try {
             var clientRegistry = getClient(clientSession);
-            Optional.of(session)
-                    .map(Session::getEmailAddress)
+            Optional.of(authSession)
+                    .map(AuthSessionItem::getEmailAddress)
                     .flatMap(dynamoService::getUserProfileByEmailMaybe)
                     .ifPresent(
                             t ->
@@ -84,7 +84,7 @@ public class StartService {
                                                     Optional.of(
                                                             dynamoService
                                                                     .getUserCredentialsFromEmail(
-                                                                            session
+                                                                            authSession
                                                                                     .getEmailAddress()))));
             userContext = builder.withClient(clientRegistry).build();
         } catch (ClientNotFoundException e) {
@@ -217,8 +217,8 @@ public class StartService {
         }
     }
 
-    public boolean isUserProfileEmpty(Session session) {
-        return Optional.ofNullable(session.getEmailAddress())
+    public boolean isUserProfileEmpty(AuthSessionItem authSession) {
+        return Optional.ofNullable(authSession.getEmailAddress())
                 .flatMap(dynamoService::getUserProfileByEmailMaybe)
                 .isEmpty();
     }
