@@ -35,40 +35,60 @@ public class ClientSessionMigrationUtils {
             LOG.warn("Client sessions are both null");
             return true;
         }
-        var equal = true;
-        if (!Objects.equals(clientSession.getClientName(), orchClientSession.getClientName())) {
-            LOG.warn("Client sessions do not have matching clientName");
-            equal = false;
-        }
-        if (!Objects.equals(
-                clientSession.getAuthRequestParams(), orchClientSession.getAuthRequestParams())) {
-            LOG.warn("Client sessions do not have matching authRequestParams");
-            equal = false;
-        }
+
         var clientSessionDocAppSubjectId =
                 Optional.ofNullable(clientSession.getDocAppSubjectId())
                         .map(Subject::getValue)
                         .orElse(null);
-        if (!Objects.equals(clientSessionDocAppSubjectId, orchClientSession.getDocAppSubjectId())) {
-            LOG.warn("Client sessions do not have matching docAppSubjectId");
-            equal = false;
+
+        return areFieldsEqual(
+                        "clientName",
+                        clientSession.getClientName(),
+                        orchClientSession.getClientName())
+                && areFieldsEqual(
+                        "authRequestParams",
+                        clientSession.getAuthRequestParams(),
+                        orchClientSession.getAuthRequestParams())
+                && areFieldsEqual(
+                        "docAppSubjectId",
+                        clientSessionDocAppSubjectId,
+                        orchClientSession.getDocAppSubjectId())
+                && areFieldsEqual(
+                        "creationDate",
+                        clientSession.getCreationDate(),
+                        orchClientSession.getCreationDate())
+                && areFieldsEqual(
+                        "vtrList", clientSession.getVtrList(), orchClientSession.getVtrList())
+                && areFieldsEqual(
+                        "idTokenHint",
+                        clientSession.getIdTokenHint(),
+                        orchClientSession.getIdTokenHint())
+                && areFieldsEqual(
+                        "rpPairwiseId",
+                        clientSession.getRpPairwiseId(),
+                        orchClientSession.getRpPairwiseId());
+    }
+
+    private static <T> boolean areFieldsEqual(
+            String fieldName, T clientSessionField, T orchClientSessionField) {
+        if (Objects.isNull(clientSessionField) && Objects.nonNull(orchClientSessionField)) {
+            LOG.warn(
+                    "Client sessions do not have matching {} (clientSession field is null)",
+                    fieldName);
+            return false;
         }
-        if (!Objects.equals(clientSession.getCreationDate(), orchClientSession.getCreationDate())) {
-            LOG.warn("Client sessions do not have matching creationDate");
-            equal = false;
+        if (Objects.nonNull(clientSessionField) && Objects.isNull(orchClientSessionField)) {
+            LOG.warn(
+                    "Client sessions do not have matching {} (orchClientSession field is null)",
+                    fieldName);
+            return false;
         }
-        if (!Objects.equals(clientSession.getVtrList(), orchClientSession.getVtrList())) {
-            LOG.warn("Client sessions do not have matching vtrList");
-            equal = false;
+        if (!Objects.equals(clientSessionField, orchClientSessionField)) {
+            LOG.warn(
+                    "Client sessions do not have matching {} (both fields are not null)",
+                    fieldName);
+            return false;
         }
-        if (!Objects.equals(clientSession.getIdTokenHint(), orchClientSession.getIdTokenHint())) {
-            LOG.warn("Client sessions do not have matching idTokenHint");
-            equal = false;
-        }
-        if (!Objects.equals(clientSession.getRpPairwiseId(), orchClientSession.getRpPairwiseId())) {
-            LOG.warn("Client sessions do not have matching rpPairwiseId");
-            equal = false;
-        }
-        return equal;
+        return true;
     }
 }
