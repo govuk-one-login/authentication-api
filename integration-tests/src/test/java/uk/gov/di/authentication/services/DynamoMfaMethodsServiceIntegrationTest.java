@@ -396,6 +396,30 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
         }
+
+        @Test
+        void shouldNotDeleteAnyMethodsAndReturnAnAppropriateResultWhenUserIsNotMigrated() {
+            userStoreExtension.addMfaMethod(
+                    EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
+
+            var result = dynamoService.deleteMfaMethod(EMAIL, HARDCODED_APP_MFA_ID);
+
+            assertEquals(
+                    Either.left(
+                            MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER),
+                    result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            var expectedRemainingMfaMethod =
+                    new MfaMethodData(
+                            HARDCODED_APP_MFA_ID,
+                            PriorityIdentifier.DEFAULT,
+                            true,
+                            new AuthAppMfaDetail(MFAMethodType.AUTH_APP, "some-credential"));
+
+            assertEquals(List.of(expectedRemainingMfaMethod), remainingMfaMethods);
+        }
     }
 
     private static MfaMethodData mfaMethodDataFrom(MfaData mfaData) {
