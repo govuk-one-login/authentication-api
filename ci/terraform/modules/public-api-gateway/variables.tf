@@ -56,3 +56,9 @@ variable "domain_name" {
   description = "The domain name to bind to the API Gateway"
   type        = string
 }
+
+variable "metrics_enabled" {
+  description = "Enable detailed CloudWatch metrics for API Gateway"
+  type        = bool
+  default     = true
+}

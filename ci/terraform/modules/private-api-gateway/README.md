@@ -38,6 +38,7 @@ it's immediately obvious that this provisions a **_private_** gateway (as oppose
 | <a name="input_openapi_spec"></a> [openapi\_spec](#input\_openapi\_spec) | The content of the OpenAPI spec to deploy | `string` | n/a | yes |
 | <a name="input_vpc_endpoint_ids"></a> [vpc\_endpoint\_ids](#input\_vpc\_endpoint\_ids) | The VPC endpoint IDs | `list(string)` | n/a | yes |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Additional tags to apply to created resources, in addition to the default tags from the provider. This is unlikely to be needed in most cases. | `map(string)` | `{}` | no |
+| <a name="input_metrics_enabled"></a> [metrics\_enabled](#input\_metrics\_enabled) | Enable detailed CloudWatch metrics for API Gateway | `bool` | `true` | no |
 | <a name="input_waf_arns"></a> [waf\_arns](#input\_waf\_arns) | The ARNs of any WAFs to attach to the API Gateway | `list(string)` | `[]` | no |
 
 ## Outputs

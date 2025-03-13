@@ -59,3 +59,8 @@ variable "waf_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "metrics_enabled" {
+  description = "Enable detailed CloudWatch metrics for API Gateway"
+  type        = bool
+}

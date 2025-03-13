@@ -13,4 +13,5 @@ module "api-gateway" {
   access_logging_template                      = var.access_logging_template
   waf_arns                                     = var.waf_arns
   vpc_endpoint_ids                             = []
+  metrics_enabled                              = var.metrics_enabled
 }

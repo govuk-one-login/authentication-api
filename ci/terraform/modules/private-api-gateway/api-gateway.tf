@@ -13,4 +13,5 @@ module "api-gateway" {
   cloudwatch_encryption_key_arn                = var.cloudwatch_encryption_key_arn
   access_logging_template                      = var.access_logging_template
   waf_arns                                     = var.waf_arns
+  metrics_enabled                              = var.metrics_enabled
 }

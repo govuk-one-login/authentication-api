@@ -2,6 +2,7 @@ variable "environment" {
   description = "The environment the API Gateway is in"
   type        = string
 }
+
 variable "api_gateway_name" {
   description = "The name of the API Gateway"
   type        = string
@@ -57,4 +58,10 @@ variable "waf_arns" {
   description = "The ARNs of any WAFs to attach to the API Gateway"
   type        = list(string)
   default     = []
+}
+
+variable "metrics_enabled" {
+  description = "Enable detailed CloudWatch metrics for API Gateway"
+  type        = bool
+  default     = true
 }
