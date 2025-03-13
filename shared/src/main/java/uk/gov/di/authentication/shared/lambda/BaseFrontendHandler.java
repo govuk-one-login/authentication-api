@@ -234,7 +234,8 @@ public abstract class BaseFrontendHandler<T>
                 Objects.equals(
                         session.get().getEmailAddress(), authSession.get().getEmailAddress()));
 
-        session.map(Session::getEmailAddress)
+        authSession
+                .map(AuthSessionItem::getEmailAddress)
                 .map(authenticationService::getUserProfileFromEmail)
                 .ifPresentOrElse(
                         userProfile ->
@@ -253,7 +254,8 @@ public abstract class BaseFrontendHandler<T>
                         });
 
         if (loadUserCredentials) {
-            session.map(Session::getEmailAddress)
+            authSession
+                    .map(AuthSessionItem::getEmailAddress)
                     .map(authenticationService::getUserCredentialsFromEmail)
                     .ifPresent(
                             userCredentials ->
