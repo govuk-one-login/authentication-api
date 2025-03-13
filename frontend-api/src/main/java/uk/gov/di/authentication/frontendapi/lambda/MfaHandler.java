@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -202,6 +203,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType),
                     userContext.getAuthSession().getSessionId());
 
+            authSessionService.updateSession(
+                    userContext
+                            .getAuthSession()
+                            .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType));
+
             Optional<ErrorResponse> thisRequestExceedsMaximumAllowedRequests =
                     validateCodeRequestAttempts(email, journeyType, userContext);
 
@@ -275,8 +281,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             blockUsersOnAllJourneysOtherThanReauthenticatingUsers(
                     email, journeyType, newCodeRequestBlockPrefix);
 
-            clearCountOfFailedCodeRequests(
-                    journeyType, session, userContext.getAuthSession().getSessionId());
+            clearCountOfFailedCodeRequests(journeyType, session, userContext.getAuthSession());
 
             return Optional.of(ErrorResponse.ERROR_1025);
         }
@@ -319,9 +324,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     }
 
     private void clearCountOfFailedCodeRequests(
-            JourneyType journeyType, Session session, String sessionId) {
+            JourneyType journeyType, Session session, AuthSessionItem authSessionItem) {
         LOG.info("Resetting code request count");
         sessionService.storeOrUpdateSession(
-                session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType), sessionId);
+                session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType),
+                authSessionItem.getSessionId());
+        authSessionService.updateSession(
+                authSessionItem.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
     }
 }
