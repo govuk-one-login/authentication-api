@@ -139,7 +139,6 @@ class MfaMethodsServiceIntegrationTest {
                         AUTH_APP_CREDENTIAL,
                         true,
                         true,
-                        "updated-at",
                         PriorityIdentifier.DEFAULT,
                         APP_MFA_IDENTIFIER_1);
         private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
@@ -148,23 +147,16 @@ class MfaMethodsServiceIntegrationTest {
                         AUTH_APP_CREDENTIAL_TWO,
                         true,
                         true,
-                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         APP_MFA_IDENTIFIER_2);
         private static final MFAMethod defaultPrioritySms =
                 MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        PHONE_NUMBER,
-                        "updated-at",
-                        PriorityIdentifier.DEFAULT,
-                        SMS_MFA_IDENTIFIER_1);
+                        true, true, PHONE_NUMBER, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
         private static final MFAMethod backupPrioritySms =
                 MFAMethod.smsMfaMethod(
                         true,
                         true,
                         PHONE_NUMBER_TWO,
-                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         SMS_MFA_IDENTIFIER_2);
 
@@ -298,7 +290,6 @@ class MfaMethodsServiceIntegrationTest {
                         AUTH_APP_CREDENTIAL,
                         true,
                         true,
-                        "updated-at",
                         PriorityIdentifier.DEFAULT,
                         APP_MFA_IDENTIFIER_1);
         private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
@@ -307,23 +298,16 @@ class MfaMethodsServiceIntegrationTest {
                         AUTH_APP_CREDENTIAL_TWO,
                         true,
                         true,
-                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         APP_MFA_IDENTIFIER_2);
         private static final MFAMethod defaultPrioritySms =
                 MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        PHONE_NUMBER,
-                        "updated-at",
-                        PriorityIdentifier.DEFAULT,
-                        SMS_MFA_IDENTIFIER_1);
+                        true, true, PHONE_NUMBER, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
         private static final MFAMethod backupPrioritySms =
                 MFAMethod.smsMfaMethod(
                         true,
                         true,
                         PHONE_NUMBER_TWO,
-                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         SMS_MFA_IDENTIFIER_2);
         private String publicSubjectId;

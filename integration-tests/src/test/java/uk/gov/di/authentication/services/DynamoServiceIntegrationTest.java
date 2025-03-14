@@ -160,7 +160,6 @@ class DynamoServiceIntegrationTest {
                         true,
                         true,
                         PHONE_NUMBER,
-                        "time",
                         PriorityIdentifier.DEFAULT,
                         "04615937-eb48-4a1f-9de2-2ff0a3dc3bc4");
 
@@ -169,7 +168,6 @@ class DynamoServiceIntegrationTest {
                         true,
                         true,
                         PHONE_NUMBER,
-                        "time",
                         PriorityIdentifier.BACKUP,
                         "daa4b59d-4efa-4e97-8b48-e6732c953060");
 
@@ -178,7 +176,6 @@ class DynamoServiceIntegrationTest {
                         TEST_MFA_APP_CREDENTIAL,
                         true,
                         true,
-                        "time",
                         PriorityIdentifier.DEFAULT,
                         "7968d195-7db3-45f6-b7d3-a627aad118b7");
 
@@ -187,7 +184,6 @@ class DynamoServiceIntegrationTest {
                         TEST_MFA_APP_CREDENTIAL,
                         true,
                         true,
-                        "time",
                         PriorityIdentifier.BACKUP,
                         "03a89933-cddd-471d-8fdb-562f14a2404f");
 

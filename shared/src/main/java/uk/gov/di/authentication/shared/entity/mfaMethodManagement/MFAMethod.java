@@ -48,7 +48,6 @@ public class MFAMethod {
             String credentialValue,
             boolean methodVerified,
             boolean enabled,
-            String updated,
             PriorityIdentifier priority,
             String mfaIdentifier) {
         return new MFAMethod()
@@ -56,7 +55,6 @@ public class MFAMethod {
                 .withCredentialValue(credentialValue)
                 .withMethodVerified(methodVerified)
                 .withEnabled(enabled)
-                .withUpdated(updated)
                 .withPriority(priority.name())
                 .withMfaIdentifier(mfaIdentifier);
     }
@@ -65,7 +63,6 @@ public class MFAMethod {
             boolean methodVerified,
             boolean enabled,
             String destination,
-            String updated,
             PriorityIdentifier priority,
             String mfaIdentifier) {
         return new MFAMethod()
@@ -73,7 +70,6 @@ public class MFAMethod {
                 .withMethodVerified(methodVerified)
                 .withEnabled(enabled)
                 .withDestination(destination)
-                .withUpdated(updated)
                 .withPriority(priority.name())
                 .withMfaIdentifier(mfaIdentifier);
     }
