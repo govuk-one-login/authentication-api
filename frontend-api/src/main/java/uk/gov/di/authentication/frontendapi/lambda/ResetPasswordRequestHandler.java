@@ -131,7 +131,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         LOG.info("Processing request");
         try {
-            if (Objects.isNull(userContext.getSession().getEmailAddress())
+            if (Objects.isNull(userContext.getAuthSession().getEmailAddress())
                     || !userContext.getSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
@@ -185,7 +185,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         LOG.info("Setting block for email as user has requested too many OTPs");
         codeStorageService.saveBlockedForEmail(
-                userContext.getSession().getEmailAddress(),
+                userContext.getAuthSession().getEmailAddress(),
                 codeRequestBlockedKeyPrefix,
                 configurationService.getLockoutDuration());
         sessionService.storeOrUpdateSession(

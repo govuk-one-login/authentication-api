@@ -136,7 +136,8 @@ class ResetPasswordHandlerTest {
 
     private ResetPasswordHandler handler;
     private final Session session = new Session().setEmailAddress(EMAIL);
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()

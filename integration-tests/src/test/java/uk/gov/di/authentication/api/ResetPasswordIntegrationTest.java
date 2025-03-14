@@ -79,7 +79,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -107,7 +107,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -145,7 +145,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -172,7 +172,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var body =
                 format(
@@ -197,7 +197,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -232,7 +232,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         userStore.setPhoneNumberAndVerificationStatus(
                 EMAIL_ADDRESS, phoneNumber, phoneNumberVerified, phoneNumberVerified);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
 
         var response =
@@ -283,7 +283,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addMfaMethod(
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, authAppVerified, true, "credential");
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
