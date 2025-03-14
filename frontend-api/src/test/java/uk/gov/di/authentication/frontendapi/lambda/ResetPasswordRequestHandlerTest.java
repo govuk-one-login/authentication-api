@@ -600,8 +600,6 @@ class ResetPasswordRequestHandlerTest {
         session.resetPasswordResetCount();
         authSession.resetPasswordResetCount();
         IntStream.range(0, passwordResetCount)
-                .forEach((i) -> session.incrementPasswordResetCount());
-        IntStream.range(0, passwordResetCount)
                 .forEach((i) -> authSession.incrementPasswordResetCount());
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));

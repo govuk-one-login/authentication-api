@@ -150,10 +150,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             emitPasswordResetRequestedAuditEvent(input, request, userContext, isTestClient);
 
-            sessionService.storeOrUpdateSession(
-                    userContext.getSession().incrementPasswordResetCount(),
-                    userContext.getAuthSession().getSessionId());
-
             authSessionService.updateSession(
                     userContext.getAuthSession().incrementPasswordResetCount());
 
