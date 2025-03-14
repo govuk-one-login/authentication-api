@@ -199,10 +199,6 @@ class ResetPasswordRequestHandlerTest {
 
         public static APIGatewayProxyRequestEvent validEvent;
 
-        private boolean isSessionWithEmailSent(Session session) {
-            return authSession.getEmailAddress().equals(CommonTestVariables.EMAIL);
-        }
-
         private boolean isAuthSessionWithCountAndResetState(
                 AuthSessionItem authSession, int count, AuthSessionItem.ResetPasswordState state) {
             return authSession.getPasswordResetCount() == count
@@ -257,8 +253,6 @@ class ResetPasswordRequestHandlerTest {
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
-            verify(sessionService)
-                    .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
             verify(authSessionService, atLeastOnce())
                     .updateSession(
                             argThat(
@@ -356,8 +350,6 @@ class ResetPasswordRequestHandlerTest {
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
-            verify(sessionService)
-                    .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
             verify(authSessionService, atLeastOnce())
                     .updateSession(
                             argThat(
@@ -483,8 +475,6 @@ class ResetPasswordRequestHandlerTest {
             assertEquals(400, result.getStatusCode());
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
             verifyNoInteractions(awsSqsClient);
-            verify(sessionService, atLeastOnce())
-                    .storeOrUpdateSession(any(Session.class), eq(SESSION_ID));
             verify(authSessionService, atLeastOnce())
                     .updateSession(argThat(as -> as.getPasswordResetCount() == 0));
         }
@@ -597,7 +587,6 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {
-        session.resetPasswordResetCount();
         authSession.resetPasswordResetCount();
         IntStream.range(0, passwordResetCount)
                 .forEach((i) -> authSession.incrementPasswordResetCount());

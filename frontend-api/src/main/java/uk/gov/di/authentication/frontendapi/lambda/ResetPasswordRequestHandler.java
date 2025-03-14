@@ -187,9 +187,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 userContext.getAuthSession().getEmailAddress(),
                 codeRequestBlockedKeyPrefix,
                 configurationService.getLockoutDuration());
-        sessionService.storeOrUpdateSession(
-                userContext.getSession().resetPasswordResetCount(),
-                userContext.getAuthSession().getSessionId());
         authSessionService.updateSession(userContext.getAuthSession().resetPasswordResetCount());
     }
 
