@@ -39,6 +39,7 @@ class AuthSessionServiceIntegrationTest {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             assertEquals(retrievedSession.get().getCodeRequestCount(requestType), 0);
         }
+        assertEquals(0, retrievedSession.get().getPasswordResetCount());
     }
 
     @Test
