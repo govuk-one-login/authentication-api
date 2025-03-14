@@ -266,7 +266,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private Optional<ErrorResponse> validateCodeRequestAttempts(
             String email, JourneyType journeyType, UserContext userContext) {
         Session session = userContext.getSession();
-        var codeRequestCount = session.getCodeRequestCount(MFA_SMS, journeyType);
+        AuthSessionItem authSession = userContext.getAuthSession();
+        var codeRequestCount = authSession.getCodeRequestCount(MFA_SMS, journeyType);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
         var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, journeyType);
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
