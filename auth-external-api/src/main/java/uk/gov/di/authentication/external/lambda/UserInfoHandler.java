@@ -36,7 +36,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATIO
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class UserInfoHandler
@@ -142,7 +142,7 @@ public class UserInfoHandler
         }
         authSession = optionalAuthSession.get();
 
-        attachAuthSessionIdToLogs(authSession);
+        attachSessionIdToLogs(authSession.getSessionId());
 
         UserInfo userInfo;
         AccessToken accessToken;
