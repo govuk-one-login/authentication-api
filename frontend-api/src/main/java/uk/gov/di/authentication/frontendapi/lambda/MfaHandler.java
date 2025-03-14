@@ -277,7 +277,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             blockUsersOnAllJourneysOtherThanReauthenticatingUsers(
                     email, journeyType, newCodeRequestBlockPrefix);
 
-            clearCountOfFailedCodeRequests(journeyType, session, userContext.getAuthSession());
+            clearCountOfFailedCodeRequests(journeyType, userContext.getAuthSession());
 
             return Optional.of(ErrorResponse.ERROR_1025);
         }
@@ -320,11 +320,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     }
 
     private void clearCountOfFailedCodeRequests(
-            JourneyType journeyType, Session session, AuthSessionItem authSessionItem) {
+            JourneyType journeyType, AuthSessionItem authSessionItem) {
         LOG.info("Resetting code request count");
-        sessionService.storeOrUpdateSession(
-                session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType),
-                authSessionItem.getSessionId());
         authSessionService.updateSession(
                 authSessionItem.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
     }
