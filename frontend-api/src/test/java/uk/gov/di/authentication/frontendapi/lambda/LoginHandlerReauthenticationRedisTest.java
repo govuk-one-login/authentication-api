@@ -291,6 +291,7 @@ class LoginHandlerReauthenticationRedisTest {
                         Optional.of(
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
+                                        .withEmailAddress(EMAIL)
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
     }
 
