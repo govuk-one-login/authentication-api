@@ -1,9 +1,10 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.authentication.shared.entity.mfaMethodManagement;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 
 import java.util.Objects;
 

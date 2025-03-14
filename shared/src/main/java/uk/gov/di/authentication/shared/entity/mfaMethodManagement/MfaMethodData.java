@@ -1,6 +1,7 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.authentication.shared.entity.mfaMethodManagement;
 
 import com.google.gson.annotations.Expose;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public record MfaMethodData(

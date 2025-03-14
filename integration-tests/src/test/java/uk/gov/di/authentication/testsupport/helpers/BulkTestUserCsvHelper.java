@@ -1,8 +1,8 @@
 package uk.gov.di.authentication.testsupport.helpers;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;

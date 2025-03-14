@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.authentication.shared.entity.mfaMethodManagement;
 
 public enum MFAMethodType {
     EMAIL("EMAIL"),

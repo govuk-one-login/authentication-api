@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.authentication.shared.entity.mfaMethodManagement;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;

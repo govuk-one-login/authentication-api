@@ -1,7 +1,9 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.authentication.shared.entity.mfaMethodManagement;
 
-public record SmsMfaData(
-        String endpoint,
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+
+public record AuthAppMfaData(
+        String credential,
         boolean verified,
         boolean enabled,
         PriorityIdentifier priority,
@@ -10,10 +12,10 @@ public record SmsMfaData(
     @Override
     public MFAMethod toDatabaseRecord(String updated) {
         return new MFAMethod(
-                MFAMethodType.SMS.getValue(),
+                MFAMethodType.AUTH_APP.getValue(),
+                credential,
                 verified,
                 enabled,
-                endpoint,
                 updated,
                 priority,
                 mfaIdentifier);
