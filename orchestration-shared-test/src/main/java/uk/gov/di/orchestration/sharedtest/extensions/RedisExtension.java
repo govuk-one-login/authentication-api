@@ -191,12 +191,7 @@ public class RedisExtension
     }
 
     public void addAuthCode(
-            String authCode,
-            String clientId,
-            String clientSessionId,
-            ClientSession clientSession,
-            String email,
-            Long authTime)
+            String authCode, String clientId, String clientSessionId, String email, Long authTime)
             throws Json.JsonException {
         redis.saveWithExpiry(
                 AUTH_CODE_PREFIX.concat(authCode),
