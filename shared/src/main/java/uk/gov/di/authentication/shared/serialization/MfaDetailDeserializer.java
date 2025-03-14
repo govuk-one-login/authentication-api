@@ -5,10 +5,10 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.AuthAppMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 
 import java.lang.reflect.Type;
 

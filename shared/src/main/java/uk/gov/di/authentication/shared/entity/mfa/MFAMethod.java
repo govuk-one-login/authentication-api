@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity.mfaMethodManagement;
+package uk.gov.di.authentication.shared.entity.mfa;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;

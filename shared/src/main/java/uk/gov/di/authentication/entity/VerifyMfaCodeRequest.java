@@ -3,7 +3,7 @@ package uk.gov.di.authentication.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public class VerifyMfaCodeRequest extends CodeRequest {
