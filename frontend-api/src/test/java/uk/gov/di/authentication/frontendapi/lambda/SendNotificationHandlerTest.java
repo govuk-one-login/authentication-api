@@ -280,11 +280,7 @@ class SendNotificationHandlerTest {
                 verify(codeStorageService).getOtpCode(EMAIL, notificationType);
                 verify(sessionService)
                         .storeOrUpdateSession(
-                                argThat(
-                                        session ->
-                                                isSessionWithEmailSent(
-                                                        session, notificationType, journeyType)),
-                                eq(SESSION_ID));
+                                argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
 
                 verify(authSessionService)
                         .updateSession(
@@ -478,12 +474,7 @@ class SendNotificationHandlerTest {
         verify(codeStorageService)
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
         verify(sessionService)
-                .storeOrUpdateSession(
-                        argThat(
-                                session ->
-                                        isSessionWithEmailSent(
-                                                session, notificationType, journeyType)),
-                        eq(SESSION_ID));
+                .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
 
         var testClientAuditContext = auditContext.withClientId(TEST_CLIENT_ID);
 
@@ -511,12 +502,7 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(codeStorageService);
         verify(sessionService, never())
-                .storeOrUpdateSession(
-                        argThat(
-                                session ->
-                                        isSessionWithEmailSent(
-                                                session, notificationType, journeyType)),
-                        eq(SESSION_ID));
+                .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
         verifyNoInteractions(auditService);
     }
 
@@ -1074,12 +1060,12 @@ class SendNotificationHandlerTest {
 
     private void maxOutCodeRequestCount(
             NotificationType notificationType, JourneyType journeyType) {
-        session.resetCodeRequestCount(notificationType, journeyType);
-        session.incrementCodeRequestCount(notificationType, journeyType);
-        session.incrementCodeRequestCount(notificationType, journeyType);
-        session.incrementCodeRequestCount(notificationType, journeyType);
-        session.incrementCodeRequestCount(notificationType, journeyType);
-        session.incrementCodeRequestCount(notificationType, journeyType);
+        authSession.resetCodeRequestCount(notificationType, journeyType);
+        authSession.incrementCodeRequestCount(notificationType, journeyType);
+        authSession.incrementCodeRequestCount(notificationType, journeyType);
+        authSession.incrementCodeRequestCount(notificationType, journeyType);
+        authSession.incrementCodeRequestCount(notificationType, journeyType);
+        authSession.incrementCodeRequestCount(notificationType, journeyType);
     }
 
     private void usingValidSession() {
@@ -1104,9 +1090,7 @@ class SendNotificationHandlerTest {
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 
-    private boolean isSessionWithEmailSent(
-            Session session, NotificationType notificationType, JourneyType journeyType) {
-        return session.getEmailAddress().equals(EMAIL)
-                && session.getCodeRequestCount(notificationType, journeyType) == 1;
+    private boolean isSessionWithEmailSent(Session session) {
+        return session.getEmailAddress().equals(EMAIL);
     }
 }

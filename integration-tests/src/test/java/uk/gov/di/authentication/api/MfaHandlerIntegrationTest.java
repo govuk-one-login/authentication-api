@@ -147,9 +147,9 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private static void aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(
-            String authenticatedSessionId) throws Json.JsonException {
+            String authenticatedSessionId) {
         for (int i = 0; i < ConfigurationService.getInstance().getCodeMaxRetries(); i++) {
-            redis.incrementSessionCodeRequestCount(
+            authSessionStore.incrementSessionCodeRequestCount(
                     authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
         }
     }
