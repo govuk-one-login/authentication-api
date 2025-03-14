@@ -940,7 +940,6 @@ public class TokenHandlerTest {
                                 new AuthCodeExchangeData()
                                         .setEmail(TEST_EMAIL)
                                         .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(clientSession)
                                         .setAuthTime(AUTH_TIME)
                                         .setClientId(clientId)));
         var orchClientSession =
