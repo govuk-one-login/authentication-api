@@ -355,7 +355,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 URI.create(REDIRECT_URI))
                         .state(RP_STATE)
                         .nonce(new Nonce());
-        redis.createSession(SESSION_ID);
         var clientSessionCreationDate =
                 LocalDateTime.ofInstant(
                         Instant.parse("2025-02-19T15:00:00Z"), ZoneId.systemDefault());
