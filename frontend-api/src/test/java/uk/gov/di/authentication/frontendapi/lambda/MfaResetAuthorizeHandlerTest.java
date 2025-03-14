@@ -41,8 +41,10 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
@@ -170,6 +172,12 @@ class MfaResetAuthorizeHandlerTest {
                         pair("rpPairwiseId", "urn:fdc:gov.uk:2022:" + CALCULATED_PAIRWISE_ID),
                         pair("journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
         verify(cloudwatchMetricsService).incrementMfaResetHandoffCount();
+        verify(authSessionService, times(1))
+                .updateSession(
+                        argThat(
+                                state ->
+                                        state.getResetMfaState()
+                                                .equals(AuthSessionItem.ResetMfaState.ATTEMPTED)));
 
         assertThat(response, hasStatus(200));
         assertThat(response, hasBody(expectedBody));

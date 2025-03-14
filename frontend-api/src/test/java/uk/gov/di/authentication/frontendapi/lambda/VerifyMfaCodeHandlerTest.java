@@ -451,6 +451,12 @@ class VerifyMfaCodeHandlerTest {
                         "P0",
                         false,
                         true);
+        verify(authSessionService, times(2))
+                .updateSession(
+                        argThat(
+                                state ->
+                                        state.getResetMfaState()
+                                                .equals(AuthSessionItem.ResetMfaState.SUCCEEDED)));
     }
 
     @ParameterizedTest
@@ -497,6 +503,12 @@ class VerifyMfaCodeHandlerTest {
                         "P0",
                         false,
                         true);
+        verify(authSessionService, times(2))
+                .updateSession(
+                        argThat(
+                                state ->
+                                        state.getResetMfaState()
+                                                .equals(AuthSessionItem.ResetMfaState.SUCCEEDED)));
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {

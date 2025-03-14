@@ -13,7 +13,8 @@ module "mfa_reset_authorize_role" {
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     aws_iam_policy.dynamo_id_reverification_state_write_policy.arn,
-    aws_iam_policy.dynamo_auth_session_read_policy.arn
+    aws_iam_policy.dynamo_auth_session_read_policy.arn,
+    aws_iam_policy.dynamo_auth_session_write_policy.arn
   ]
   extra_tags = {
     Service = "mfa-reset-authorize"

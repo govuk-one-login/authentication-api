@@ -164,6 +164,11 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                                     configurationService.getInternalSectorUri())
                             .toString();
 
+            authSessionService.updateSession(
+                    userContext
+                            .getAuthSession()
+                            .withResetMfaState(AuthSessionItem.ResetMfaState.ATTEMPTED));
+
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_AUTHORISATION_REQUESTED,
                     auditContext,

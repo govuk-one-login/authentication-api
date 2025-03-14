@@ -58,6 +58,8 @@ class TicfCriHandlerTest {
             AuthSessionItem.AccountState.EXISTING;
     private static final AuthSessionItem.ResetPasswordState NA_RESET_PASSWORD_STATE =
             AuthSessionItem.ResetPasswordState.NONE;
+    private static final AuthSessionItem.ResetMfaState NA_RESET_MFA_STATE =
+            AuthSessionItem.ResetMfaState.NONE;
     private static final String SERVICE_URI = "http://www.example.com";
     private static final String COMMON_SUBJECTID = "a-subject-id";
     private static final String JOURNEY_ID = "journey-id";
@@ -95,7 +97,8 @@ class TicfCriHandlerTest {
                         JOURNEY_ID,
                         userIsAuthenticated,
                         EXISTING_ACCOUNT_STATE,
-                        NA_RESET_PASSWORD_STATE);
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"}",
@@ -131,7 +134,8 @@ class TicfCriHandlerTest {
                         JOURNEY_ID,
                         USER_IS_AUTHENTICATED,
                         accountState,
-                        NA_RESET_PASSWORD_STATE);
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
@@ -172,7 +176,8 @@ class TicfCriHandlerTest {
                         JOURNEY_ID,
                         authenticated,
                         EXISTING_ACCOUNT_STATE,
-                        resetPasswordState);
+                        resetPasswordState,
+                        NA_RESET_MFA_STATE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
@@ -207,6 +212,56 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
+    @MethodSource("resetMfa")
+    void shouldMakeTheCorrectCallToTheTicfCriForResetMfa(
+            boolean authenticated,
+            AuthSessionItem.ResetMfaState resetMfaState,
+            boolean expectMfaReset)
+            throws IOException, InterruptedException, ExecutionException {
+        var ticfRequest =
+                basicTicfCriRequest(
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        authenticated,
+                        EXISTING_ACCOUNT_STATE,
+                        NA_RESET_PASSWORD_STATE,
+                        resetMfaState);
+        var expectedRequestBody =
+                format(
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
+                        COMMON_SUBJECTID,
+                        jsonArrayFrom(VECTORS_OF_TRUST),
+                        JOURNEY_ID,
+                        authenticated ? "Y" : "N",
+                        expectMfaReset ? ",\"2fa_reset\":\"Y\"" : "");
+
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        handler.handleRequest(ticfRequest, context);
+
+        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
+
+        var actualRequestBody =
+                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
+
+        var expectedUri = URI.create(SERVICE_URI + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
+        assertEquals(expectedRequestBody, actualRequestBody);
+    }
+
+    private static List<Arguments> resetMfa() {
+        return List.of(
+                Arguments.of(false, AuthSessionItem.ResetMfaState.NONE, false),
+                Arguments.of(true, AuthSessionItem.ResetMfaState.NONE, false),
+                Arguments.of(false, AuthSessionItem.ResetMfaState.ATTEMPTED, true),
+                Arguments.of(true, AuthSessionItem.ResetMfaState.ATTEMPTED, false),
+                Arguments.of(false, AuthSessionItem.ResetMfaState.SUCCEEDED, true),
+                Arguments.of(true, AuthSessionItem.ResetMfaState.SUCCEEDED, true));
+    }
+
+    @ParameterizedTest
     @MethodSource("statusCodes")
     void sendsMetricsAndLogsBasedOnTheHttpStatusCode(Integer statusCode, Level expectedLogLevel)
             throws IOException, InterruptedException {
@@ -217,7 +272,8 @@ class TicfCriHandlerTest {
                         JOURNEY_ID,
                         USER_IS_AUTHENTICATED,
                         EXISTING_ACCOUNT_STATE,
-                        NA_RESET_PASSWORD_STATE);
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE);
         when(httpResponse.statusCode()).thenReturn(statusCode);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
@@ -259,7 +315,8 @@ class TicfCriHandlerTest {
                         JOURNEY_ID,
                         USER_IS_AUTHENTICATED,
                         EXISTING_ACCOUNT_STATE,
-                        NA_RESET_PASSWORD_STATE),
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE),
                 context);
 
         verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);

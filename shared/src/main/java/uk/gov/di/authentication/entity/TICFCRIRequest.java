@@ -1,7 +1,9 @@
 package uk.gov.di.authentication.entity;
 
 import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetMfaState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState;
 import uk.gov.di.authentication.shared.validation.Required;
 
@@ -13,7 +15,8 @@ public record TICFCRIRequest(
         @Expose @Required String govukSigninJourneyId,
         @Expose @Required String authenticated,
         @Expose String initialRegistration,
-        @Expose String passwordReset) {
+        @Expose String passwordReset,
+        @Expose @SerializedName("2fa_reset") String mfaReset) {
 
     public static TICFCRIRequest basicTicfCriRequest(
             String internalPairwiseId,
@@ -21,11 +24,17 @@ public record TICFCRIRequest(
             String journeyId,
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
-            ResetPasswordState resetPasswordState) {
+            ResetPasswordState resetPasswordState,
+            ResetMfaState resetMfaState) {
         boolean passwordResetSuccess = resetPasswordState.equals(ResetPasswordState.SUCCEEDED);
         boolean reportablePasswordAttempted =
                 (!authenticated && resetPasswordState.equals(ResetPasswordState.ATTEMPTED));
         boolean passwordReset = passwordResetSuccess || reportablePasswordAttempted;
+
+        boolean mfaResetSuccess = resetMfaState.equals(ResetMfaState.SUCCEEDED);
+        boolean reportableMfaAttempted =
+                (!authenticated && resetMfaState.equals(ResetMfaState.ATTEMPTED));
+        boolean mfaReset = mfaResetSuccess || reportableMfaAttempted;
 
         return new TICFCRIRequest(
                 internalPairwiseId,
@@ -33,6 +42,7 @@ public record TICFCRIRequest(
                 journeyId,
                 authenticated ? "Y" : "N",
                 accountState == AuthSessionItem.AccountState.NEW ? "Y" : null,
-                passwordReset ? "Y" : null);
+                passwordReset ? "Y" : null,
+                mfaReset ? "Y" : null);
     }
 }
