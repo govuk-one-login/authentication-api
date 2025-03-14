@@ -2,6 +2,7 @@ package uk.gov.di.authentication.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler;
@@ -9,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,10 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String USER_EMAIL = "test@email.com";
     private String SESSION_ID;
 
+    @RegisterExtension
+    protected static final EmailCheckResultExtension emailCheckResultExtension =
+            new EmailCheckResultExtension();
+
     @BeforeEach
     void setup() throws Json.JsonException {
         txmaAuditQueue.clear();
@@ -30,6 +36,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
         authSessionStore.addSession(SESSION_ID);
+        authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
     }
 
     @Test
