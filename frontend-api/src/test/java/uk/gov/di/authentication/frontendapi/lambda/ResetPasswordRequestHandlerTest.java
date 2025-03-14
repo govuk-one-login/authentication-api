@@ -467,6 +467,7 @@ class ResetPasswordRequestHandlerTest {
 
         @Test
         void shouldReturn400IfUserIsNewlyBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
+            when(configurationService.getCodeMaxRetries()).thenReturn(6);
             usingSessionWithPasswordResetCount(5);
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
@@ -481,6 +482,11 @@ class ResetPasswordRequestHandlerTest {
             assertEquals(400, result.getStatusCode());
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
             verifyNoInteractions(awsSqsClient);
+            verify(sessionService, atLeastOnce())
+                    .storeOrUpdateSession(
+                            argThat(s -> s.getPasswordResetCount() == 0), eq(SESSION_ID));
+            verify(authSessionService, atLeastOnce())
+                    .updateSession(argThat(as -> as.getPasswordResetCount() == 0));
         }
 
         @Test
@@ -598,8 +604,7 @@ class ResetPasswordRequestHandlerTest {
         IntStream.range(0, passwordResetCount)
                 .forEach((i) -> authSession.incrementPasswordResetCount());
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session))
-                .thenReturn(Optional.of(session.incrementPasswordResetCount()));
+                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }
