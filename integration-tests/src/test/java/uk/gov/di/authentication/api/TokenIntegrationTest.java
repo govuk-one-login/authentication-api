@@ -735,7 +735,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         creationDate,
                         vtrList,
                         "client-name"));
-        redis.addAuthCode(code, CLIENT_ID, CLIENT_SESSION_ID, clientSession, TEST_EMAIL, AUTH_TIME);
+        redis.addAuthCode(code, CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
