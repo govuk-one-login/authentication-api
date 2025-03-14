@@ -209,7 +209,6 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        eq(clientSession),
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         when(UNSUCCESSFUL_TOKEN_RESPONSE.indicatesSuccess()).thenReturn(false);
@@ -617,7 +616,6 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        eq(mediumRequestSession),
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         usingValidClient();
@@ -1462,7 +1460,6 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        eq(clientSessionWithCredentialTrustLevel),
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))

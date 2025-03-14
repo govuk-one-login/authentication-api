@@ -29,7 +29,6 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -171,11 +170,7 @@ class IPVCallbackHelperTest {
                         new AccountIntervention(
                                 new AccountInterventionState(false, true, false, false)));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        any(ClientSession.class),
-                        any(Long.class)))
+                        anyString(), anyString(), anyString(), any(Long.class)))
                 .thenReturn(AUTH_CODE);
 
         when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);

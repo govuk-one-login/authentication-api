@@ -418,7 +418,6 @@ public class AuthCodeHandler
                 clientID.getValue(),
                 clientSessionId,
                 session.getEmailAddress(),
-                clientSession,
                 orchSession.getAuthTime());
     }
 }
