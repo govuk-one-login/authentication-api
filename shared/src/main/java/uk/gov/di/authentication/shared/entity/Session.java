@@ -3,7 +3,7 @@ package uk.gov.di.authentication.shared.entity;
 import com.google.gson.annotations.Expose;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.util.ArrayList;
 import java.util.HashMap;

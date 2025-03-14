@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;

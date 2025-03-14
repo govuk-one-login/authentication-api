@@ -17,7 +17,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AccessTokenService;

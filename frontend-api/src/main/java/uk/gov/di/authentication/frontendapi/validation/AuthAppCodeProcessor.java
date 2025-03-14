@@ -7,8 +7,8 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -27,7 +27,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class AuthAppCodeProcessor extends MfaCodeProcessor {

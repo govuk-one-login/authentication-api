@@ -7,8 +7,8 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
