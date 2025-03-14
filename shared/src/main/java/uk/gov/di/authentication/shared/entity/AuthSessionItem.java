@@ -1,11 +1,20 @@
 package uk.gov.di.authentication.shared.entity;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import uk.gov.di.authentication.shared.converters.CodeRequestCountMapConverter;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @DynamoDbBean
 public class AuthSessionItem {
+
+    private static final Logger LOG = LogManager.getLogger(AuthSessionItem.class);
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
@@ -16,6 +25,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
     public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_TTL = "ttl";
+    public static final String ATTRIBUTE_CODE_REQUEST_COUNT_MAP = "CodeRequestCountMap";
 
     public enum AccountState {
         NEW,
@@ -39,8 +49,12 @@ public class AuthSessionItem {
     private String internalCommonSubjectId;
     private boolean upliftRequired;
     private String emailAddress;
+    private Map<CodeRequestType, Integer> codeRequestCountMap;
 
-    public AuthSessionItem() {}
+    public AuthSessionItem() {
+        this.codeRequestCountMap = new HashMap<>();
+        initializeCodeRequestMap();
+    }
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_SESSION_ID)
@@ -168,6 +182,60 @@ public class AuthSessionItem {
     public AuthSessionItem withEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
         return this;
+    }
+
+    /**
+     * These getters and setters are required as a minimum for this to be a compliant DynamoDB Bean
+     * class
+     */
+    @DynamoDbAttribute(ATTRIBUTE_CODE_REQUEST_COUNT_MAP)
+    @DynamoDbConvertedBy(CodeRequestCountMapConverter.class)
+    public Map<CodeRequestType, Integer> getCodeRequestCountMap() {
+        return this.codeRequestCountMap;
+    }
+
+    public void setCodeRequestCountMap(Map<CodeRequestType, Integer> codeRequestCountMap) {
+        this.codeRequestCountMap = codeRequestCountMap;
+    }
+
+    public int getCodeRequestCount(NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return getCodeRequestCount(requestType);
+    }
+
+    public int getCodeRequestCount(CodeRequestType requestType) {
+        if (requestType == null) {
+            throw new IllegalArgumentException("CodeRequestType cannot be null");
+        }
+        LOG.info("CodeRequest count map: {}", codeRequestCountMap);
+        return codeRequestCountMap.getOrDefault(requestType, 0);
+    }
+
+    public AuthSessionItem incrementCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        int currentCount = getCodeRequestCount(requestType);
+        LOG.info("CodeRequest count: {} is: {}", requestType, currentCount);
+        codeRequestCountMap.put(requestType, currentCount + 1);
+        LOG.info("CodeRequest count: {} incremented to: {}", requestType, currentCount + 1);
+        return this;
+    }
+
+    public AuthSessionItem resetCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        codeRequestCountMap.put(requestType, 0);
+        LOG.info("CodeRequest count reset: {}", codeRequestCountMap);
+        return this;
+    }
+
+    private void initializeCodeRequestMap() {
+        for (CodeRequestType requestType : CodeRequestType.values()) {
+            codeRequestCountMap.put(requestType, 0);
+        }
     }
 
     /**
