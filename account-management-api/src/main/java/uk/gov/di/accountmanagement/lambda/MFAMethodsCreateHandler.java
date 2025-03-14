@@ -7,19 +7,19 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.accountmanagement.entity.MfaMethodCreateRequest;
+import uk.gov.di.authentication.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MfaDetail;
 import uk.gov.di.authentication.shared.entity.MfaMethodData;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
 
 public class MFAMethodsCreateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -27,6 +27,8 @@ public class MFAMethodsCreateHandler
     private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
+    private final DynamoMfaMethodsService mfaMethodsService;
+    private final DynamoService dynamoService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
     public MFAMethodsCreateHandler() {
@@ -35,6 +37,17 @@ public class MFAMethodsCreateHandler
 
     public MFAMethodsCreateHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.mfaMethodsService = new DynamoMfaMethodsService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
+    }
+
+    public MFAMethodsCreateHandler(
+            ConfigurationService configurationService,
+            DynamoMfaMethodsService mfaMethodsService,
+            DynamoService dynamoService) {
+        this.configurationService = configurationService;
+        this.mfaMethodsService = mfaMethodsService;
+        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -61,25 +74,30 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
+        var maybeUserProfile = dynamoService.getOptionalUserProfileFromPublicSubject(subject);
+        if (maybeUserProfile.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+        }
+        String email = maybeUserProfile.get().getEmail();
+
         try {
             MfaMethodCreateRequest mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
-            MfaDetail mfaMethod = mfaMethodCreateRequest.mfaMethod().method();
-            PriorityIdentifier priorityIdentifier =
-                    mfaMethodCreateRequest.mfaMethod().priorityIdentifier();
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
-            return generateApiGatewayProxyResponse(
-                    200,
-                    new MfaMethodData(HARDCODED_APP_MFA_ID, priorityIdentifier, true, mfaMethod),
-                    true);
 
-        } catch (Json.JsonException e) {
+            MfaMethodData mfaMethodData =
+                    mfaMethodsService.addBackupMfa(email, mfaMethodCreateRequest.mfaMethod());
+
+            return generateApiGatewayProxyResponse(200, mfaMethodData, true);
+
+        } catch (Json.JsonException | InvalidPriorityIdentifierException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
 
     private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
             throws Json.JsonException {
+
         MfaMethodCreateRequest mfaMethodCreateRequest;
         try {
             mfaMethodCreateRequest =
@@ -87,7 +105,7 @@ public class MFAMethodsCreateHandler
                             "SerializationService::GSON::fromJson",
                             () ->
                                     objectMapper.readValue(
-                                            input.getBody(), MfaMethodCreateRequest.class));
+                                            input.getBody(), MfaMethodCreateRequest.class, true));
 
         } catch (RuntimeException e) {
             LOG.error("Error during JSON deserialization", e);
