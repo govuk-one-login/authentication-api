@@ -87,6 +87,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private Boolean maxAgeEnabled;
 
+    @SerializedName("pkce_enforced")
+    @Expose
+    private Boolean pkceEnforced;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -167,6 +171,10 @@ public class UpdateClientConfigRequest {
 
     public Boolean getMaxAgeEnabled() {
         return maxAgeEnabled;
+    }
+
+    public Boolean getPKCEEnforced() {
+        return pkceEnforced;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -267,6 +275,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setMaxAgeEnabled(boolean maxAgeEnabled) {
         this.maxAgeEnabled = maxAgeEnabled;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setPKCEEnforced(boolean pkceEnforced) {
+        this.pkceEnforced = pkceEnforced;
         return this;
     }
 }

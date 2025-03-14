@@ -41,6 +41,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final List<String> CLIENT_LOCS = List.of();
     private static final String CHANNEL = Channel.WEB.getValue();
     private static final boolean MAX_AGE_ENABLED = false;
+    private static final boolean PKCE_ENFORCED = false;
 
     private DynamoClientService clientService;
 
@@ -93,6 +94,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 ID_TOKEN_SIGNING_ALGORITHM,
                 CLIENT_LOCS,
                 CHANNEL,
-                MAX_AGE_ENABLED);
+                MAX_AGE_ENABLED,
+                PKCE_ENFORCED);
     }
 }

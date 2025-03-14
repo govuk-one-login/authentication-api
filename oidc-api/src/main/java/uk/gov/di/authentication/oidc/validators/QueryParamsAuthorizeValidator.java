@@ -15,7 +15,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -104,16 +103,19 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
 
-        if (configurationService.isPkceEnabled()
-                && Objects.nonNull(authRequest.getCodeChallenge())) {
-            var codeChallenge = authRequest.getCodeChallenge().getValue();
+        if (configurationService.isPkceEnabled()) {
+            var codeChallenge =
+                    Optional.ofNullable(authRequest.getCodeChallenge())
+                            .map(Identifier::getValue)
+                            .orElse(null);
             var codeChallengeMethod =
                     Optional.ofNullable(authRequest.getCodeChallengeMethod())
                             .map(Identifier::getValue)
                             .orElse(null);
 
             var codeChallengeError =
-                    validateCodeChallengeAndMethod(codeChallenge, codeChallengeMethod);
+                    validateCodeChallengeAndMethod(
+                            codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
             if (codeChallengeError.isPresent()) {
                 return Optional.of(
                         new AuthRequestError(codeChallengeError.get(), redirectURI, state));

@@ -452,6 +452,44 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
+    void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var clientRegistry =
+                generateClientRegistry(
+                        ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
+        clientRegistry.setPKCEEnforced(true);
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(clientRegistry));
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(
+                requestObjectError.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing code_challenge parameter, but PKCE is enforced.")
+                                .toJSONObject()));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Test
     void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         when(configurationService.isPkceEnabled()).thenReturn(true);

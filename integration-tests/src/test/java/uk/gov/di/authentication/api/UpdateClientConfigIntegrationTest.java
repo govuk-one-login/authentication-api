@@ -159,8 +159,8 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
                 ClientType.WEB,
                 false,
                 List.of(),
-                true);
-
+                true,
+                false);
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";
         updateRequest.setClientName(expectedClientName);
@@ -183,6 +183,51 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
         var persistedClient = clientStore.getClient(CLIENT_ID).orElseThrow();
         assertTrue(persistedClient.getMaxAgeEnabled());
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
+    }
+
+    @Test
+    void shouldRetainPKCEEnforcedWhenUpdating() throws Json.JsonException {
+        clientStore.registerClient(
+                CLIENT_ID,
+                "The test client",
+                singletonList("http://localhost:1000/redirect"),
+                singletonList("test-client@test.com"),
+                singletonList("openid"),
+                VALID_PUBLIC_CERT,
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public",
+                ClientType.WEB,
+                false,
+                List.of(),
+                false,
+                true);
+
+        UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("clientId", CLIENT_ID));
+
+        assertThat(response, hasStatus(200));
+        ClientRegistrationResponse clientResponse =
+                objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
+
+        assertThat(clientResponse.getClientId(), equalTo(CLIENT_ID));
+
+        assertThat(clientResponse.getClientName(), equalTo(expectedClientName));
+        assertTrue(clientResponse.isPKCEEnforced());
+
+        var persistedClient = clientStore.getClient(CLIENT_ID).orElseThrow();
+        assertTrue(persistedClient.getPKCEEnforced());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
     }
 

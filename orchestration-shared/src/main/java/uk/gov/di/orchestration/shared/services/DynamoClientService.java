@@ -80,7 +80,8 @@ public class DynamoClientService implements ClientService {
             String idTokenSigningAlgorithm,
             List<String> clientLoCs,
             String channel,
-            boolean maxAgeEnabled) {
+            boolean maxAgeEnabled,
+            boolean pkceEnforced) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(clientID)
@@ -104,7 +105,8 @@ public class DynamoClientService implements ClientService {
                         .withTokenAuthMethod(tokenAuthMethod)
                         .withActive(true)
                         .withChannel(channel)
-                        .withMaxAgeEnabled(maxAgeEnabled);
+                        .withMaxAgeEnabled(maxAgeEnabled)
+                        .withPKCEEnforced(pkceEnforced);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
         }
@@ -150,6 +152,8 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getChannel()).ifPresent(clientRegistry::withChannel);
         Optional.ofNullable(updateRequest.getMaxAgeEnabled())
                 .ifPresent(clientRegistry::withMaxAgeEnabled);
+        Optional.ofNullable(updateRequest.getPKCEEnforced())
+                .ifPresent(clientRegistry::withPKCEEnforced);
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }

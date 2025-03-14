@@ -133,6 +133,7 @@ class ClientRegistrationHandlerTest {
                         "ES256",
                         emptyList(),
                         Channel.WEB.getValue(),
+                        false,
                         false);
     }
 
@@ -174,6 +175,7 @@ class ClientRegistrationHandlerTest {
                         "ES256",
                         emptyList(),
                         Channel.WEB.getValue(),
+                        false,
                         false);
     }
 
@@ -215,6 +217,7 @@ class ClientRegistrationHandlerTest {
                         "ES256",
                         emptyList(),
                         Channel.WEB.getValue(),
+                        false,
                         false);
     }
 

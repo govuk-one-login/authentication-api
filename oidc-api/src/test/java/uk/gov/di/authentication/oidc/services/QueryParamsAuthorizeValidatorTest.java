@@ -532,6 +532,39 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     @SuppressWarnings("deprecation")
+    void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing() throws ParseException {
+        var clientRegistry = generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString());
+        clientRegistry.setPKCEEnforced(true);
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(clientRegistry));
+        when(configurationService.isPkceEnabled()).thenReturn(true);
+
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .build();
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing code_challenge parameter, but PKCE is enforced.")
+                                .toJSONObject()));
+        assertEquals(STATE, errorObject.get().state());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
     void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
             throws ParseException {
         when(configurationService.isPkceEnabled()).thenReturn(true);

@@ -46,6 +46,7 @@ public class ClientRegistry {
     private boolean permitMissingNonce = false;
     private String channel;
     private boolean maxAgeEnabled = false;
+    private boolean pkceEnforced = false;
 
     private static final Set<String> RS256_MAPPINGS =
             Set.of(JWSAlgorithm.RS256.getName(), "RSA256");
@@ -498,6 +499,20 @@ public class ClientRegistry {
 
     public ClientRegistry withMaxAgeEnabled(boolean maxAgeEnabled) {
         this.maxAgeEnabled = maxAgeEnabled;
+        return this;
+    }
+
+    @DynamoDbAttribute("PKCEEnforced")
+    public boolean getPKCEEnforced() {
+        return pkceEnforced;
+    }
+
+    public void setPKCEEnforced(boolean pkceEnforced) {
+        this.pkceEnforced = pkceEnforced;
+    }
+
+    public ClientRegistry withPKCEEnforced(boolean pkceEnforced) {
+        this.pkceEnforced = pkceEnforced;
         return this;
     }
 }

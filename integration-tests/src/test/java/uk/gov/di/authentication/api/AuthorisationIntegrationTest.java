@@ -1578,6 +1578,90 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         AUTHORISATION_INITIATED));
     }
 
+    @Test
+    void shouldReturnInvalidRequestWhenCodeChallengeIsMissingAndPKCEEnforced() throws Exception {
+        registerClient(
+                CLIENT_ID,
+                "test-client",
+                singletonList("openid"),
+                ClientType.WEB,
+                false,
+                true,
+                emptyList(),
+                true);
+        var previousClientSessionId = "a-previous-client-session";
+        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
+        orchSessionExtension.addSession(
+                new OrchSessionItem(previousSessionId)
+                        .withAuthenticated(true)
+                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var previousSession = orchSessionExtension.getSession(previousSessionId);
+        assertTrue(previousSession.isPresent());
+        assertTrue(previousSession.get().getAuthenticated());
+        assertNull(previousSession.get().getPreviousSessionId());
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
+                        constructQueryStringParameters(
+                                CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
+    }
+
+    @Test
+    void shouldReturnInvalidRequestWhenCodeChallengeIsMissingInRequestObjectAndPKCEEnforced()
+            throws JOSEException, ParseException {
+        setupForAuthJourneyWithPKCEEnforced();
+
+        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
+
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        signedJWT.serialize(),
+                        "scope",
+                        "openid");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        requestParams,
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(
+                locationHeaderUri.getQuery(),
+                containsString(
+                        "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
         return constructQueryStringParameters(
@@ -1673,7 +1757,22 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ClientType.WEB,
                 false,
                 false,
-                List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()));
+                List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
+                false);
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+    }
+
+    private void setupForAuthJourneyWithPKCEEnforced() {
+        registerClient(
+                CLIENT_ID,
+                "test-client",
+                singletonList("openid"),
+                ClientType.WEB,
+                false,
+                false,
+                List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
+                true);
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
@@ -1726,7 +1825,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             ClientType clientType,
             boolean jarValidationRequired,
             boolean maxAgeEnabled,
-            List<String> claimsSupported) {
+            List<String> claimsSupported,
+            boolean pkceEnforced) {
         clientStore.registerClient(
                 clientId,
                 clientName,
@@ -1745,7 +1845,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(
                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                         LevelOfConfidence.HMRC200.getValue()),
-                maxAgeEnabled);
+                maxAgeEnabled,
+                pkceEnforced);
     }
 
     private void registerClient(
@@ -1762,7 +1863,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 clientType,
                 jarValidationRequired,
                 maxAgeEnabled,
-                emptyList());
+                emptyList(),
+                false);
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {

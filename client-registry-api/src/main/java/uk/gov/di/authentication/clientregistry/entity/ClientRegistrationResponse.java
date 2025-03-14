@@ -106,6 +106,11 @@ public class ClientRegistrationResponse {
     @Required
     private boolean maxAgeEnabled;
 
+    @SerializedName("pkce_enforced")
+    @Expose
+    @Required
+    private boolean pkceEnforced;
+
     public ClientRegistrationResponse(
             String clientName,
             String clientId,
@@ -125,7 +130,8 @@ public class ClientRegistrationResponse {
             String clientType,
             String idTokenSigningAlgorithm,
             String channel,
-            boolean maxAgeEnabled) {
+            boolean maxAgeEnabled,
+            boolean pkceEnforced) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -145,6 +151,7 @@ public class ClientRegistrationResponse {
         this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
         this.channel = channel;
         this.maxAgeEnabled = maxAgeEnabled;
+        this.pkceEnforced = pkceEnforced;
     }
 
     public ClientRegistrationResponse() {}
@@ -233,5 +240,9 @@ public class ClientRegistrationResponse {
 
     public boolean isMaxAgeEnabled() {
         return maxAgeEnabled;
+    }
+
+    public boolean isPKCEEnforced() {
+        return pkceEnforced;
     }
 }

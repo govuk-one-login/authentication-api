@@ -100,6 +100,10 @@ public class ClientRegistrationRequest {
     @Expose
     private boolean maxAgeEnabled;
 
+    @SerializedName("pkce_enforced")
+    @Expose
+    private boolean pkceEnforced;
+
     public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
@@ -120,7 +124,8 @@ public class ClientRegistrationRequest {
             String clientType,
             String idTokenSigningAlgorithm,
             String channel,
-            boolean maxAgeEnabled) {
+            boolean maxAgeEnabled,
+            boolean pkceEnforced) {
         this(
                 clientName,
                 redirectUris,
@@ -140,7 +145,8 @@ public class ClientRegistrationRequest {
                 idTokenSigningAlgorithm,
                 null,
                 channel,
-                maxAgeEnabled);
+                maxAgeEnabled,
+                pkceEnforced);
     }
 
     public ClientRegistrationRequest(
@@ -162,7 +168,8 @@ public class ClientRegistrationRequest {
             String idTokenSigningAlgorithm,
             List<String> clientLoCs,
             String channel,
-            boolean maxAgeEnabled) {
+            boolean maxAgeEnabled,
+            boolean pkceEnforced) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -194,6 +201,7 @@ public class ClientRegistrationRequest {
         }
         this.channel = channel;
         this.maxAgeEnabled = maxAgeEnabled;
+        this.pkceEnforced = pkceEnforced;
     }
 
     public String getClientName() {
@@ -274,5 +282,9 @@ public class ClientRegistrationRequest {
 
     public boolean isMaxAgeEnabled() {
         return maxAgeEnabled;
+    }
+
+    public boolean isPkceEnforced() {
+        return pkceEnforced;
     }
 }

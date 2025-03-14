@@ -120,7 +120,8 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getIdTokenSigningAlgorithm(),
                     clientRegistrationRequest.getClientLoCs(),
                     clientRegistrationRequest.getChannel(),
-                    clientRegistrationRequest.isMaxAgeEnabled());
+                    clientRegistrationRequest.isMaxAgeEnabled(),
+                    clientRegistrationRequest.isPkceEnforced());
 
             var clientRegistrationResponse =
                     new ClientRegistrationResponse(
@@ -142,7 +143,8 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.getClientType(),
                             clientRegistrationRequest.getIdTokenSigningAlgorithm(),
                             clientRegistrationRequest.getChannel(),
-                            clientRegistrationRequest.isMaxAgeEnabled());
+                            clientRegistrationRequest.isMaxAgeEnabled(),
+                            clientRegistrationRequest.isPkceEnforced());
             LOG.info("Generating successful Client registration response");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException e) {
