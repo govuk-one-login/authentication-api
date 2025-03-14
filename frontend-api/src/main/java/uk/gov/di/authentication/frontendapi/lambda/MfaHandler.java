@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -260,7 +259,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
     private Optional<ErrorResponse> validateCodeRequestAttempts(
             String email, JourneyType journeyType, UserContext userContext) {
-        Session session = userContext.getSession();
         AuthSessionItem authSession = userContext.getAuthSession();
         var codeRequestCount = authSession.getCodeRequestCount(MFA_SMS, journeyType);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
@@ -277,7 +275,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             blockUsersOnAllJourneysOtherThanReauthenticatingUsers(
                     email, journeyType, newCodeRequestBlockPrefix);
 
-            clearCountOfFailedCodeRequests(journeyType, session, userContext.getAuthSession());
+            clearCountOfFailedCodeRequests(journeyType, userContext.getAuthSession());
 
             return Optional.of(ErrorResponse.ERROR_1025);
         }
@@ -320,11 +318,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     }
 
     private void clearCountOfFailedCodeRequests(
-            JourneyType journeyType, Session session, AuthSessionItem authSessionItem) {
+            JourneyType journeyType, AuthSessionItem authSessionItem) {
         LOG.info("Resetting code request count");
-        sessionService.storeOrUpdateSession(
-                session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType),
-                authSessionItem.getSessionId());
         authSessionService.updateSession(
                 authSessionItem.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
     }
