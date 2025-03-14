@@ -11,7 +11,7 @@ public record SmsMfaData(
         implements MfaData {
     @Override
     public MFAMethod toDatabaseRecord(String updated) {
-        return new MFAMethod(
+        return MFAMethod.smsMfaMethod(
                 MFAMethodType.SMS.getValue(),
                 verified,
                 enabled,

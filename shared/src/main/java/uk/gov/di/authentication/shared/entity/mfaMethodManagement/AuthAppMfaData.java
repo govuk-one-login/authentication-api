@@ -11,7 +11,7 @@ public record AuthAppMfaData(
         implements MfaData {
     @Override
     public MFAMethod toDatabaseRecord(String updated) {
-        return new MFAMethod(
+        return MFAMethod.authAppMfaMethod(
                 MFAMethodType.AUTH_APP.getValue(),
                 credential,
                 verified,

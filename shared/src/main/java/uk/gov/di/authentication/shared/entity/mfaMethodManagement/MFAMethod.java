@@ -44,7 +44,7 @@ public class MFAMethod {
         this.updated = updated;
     }
 
-    public MFAMethod(
+    public static MFAMethod authAppMfaMethod(
             String mfaMethodType,
             String credentialValue,
             boolean methodVerified,
@@ -52,16 +52,17 @@ public class MFAMethod {
             String updated,
             PriorityIdentifier priority,
             String mfaIdentifier) {
-        this.mfaMethodType = mfaMethodType;
-        this.credentialValue = credentialValue;
-        this.methodVerified = methodVerified;
-        this.enabled = enabled;
-        this.updated = updated;
-        this.priority = priority.name();
-        this.mfaIdentifier = mfaIdentifier;
+        return new MFAMethod()
+                .withMfaMethodType(mfaMethodType)
+                .withCredentialValue(credentialValue)
+                .withMethodVerified(methodVerified)
+                .withEnabled(enabled)
+                .withUpdated(updated)
+                .withPriority(priority.name())
+                .withMfaIdentifier(mfaIdentifier);
     }
 
-    public MFAMethod(
+    public static MFAMethod smsMfaMethod(
             String mfaMethodType,
             boolean methodVerified,
             boolean enabled,
@@ -69,13 +70,14 @@ public class MFAMethod {
             String updated,
             PriorityIdentifier priority,
             String mfaIdentifier) {
-        this.mfaMethodType = mfaMethodType;
-        this.methodVerified = methodVerified;
-        this.enabled = enabled;
-        this.destination = destination;
-        this.updated = updated;
-        this.priority = priority.name();
-        this.mfaIdentifier = mfaIdentifier;
+        return new MFAMethod()
+                .withMfaMethodType(mfaMethodType)
+                .withMethodVerified(methodVerified)
+                .withEnabled(enabled)
+                .withDestination(destination)
+                .withUpdated(updated)
+                .withPriority(priority.name())
+                .withMfaIdentifier(mfaIdentifier);
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHOD_TYPE)
