@@ -10,7 +10,7 @@ import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaData;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -91,9 +91,16 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
         userStore.addMfaMethod(EXISTING_EMAIL_ADDRESS, AUTH_APP, true, true, "cred");
         var mfaIdentifier = "03a89933-cddd-471d-8fdb-562f14a2404f";
-        var newStyleSmsData =
-                new SmsMfaData("1234", true, true, PriorityIdentifier.BACKUP, mfaIdentifier);
-        userStore.addMfaMethodSupportingMultiple(EXISTING_EMAIL_ADDRESS, newStyleSmsData);
+        var smsMethod =
+                MFAMethod.smsMfaMethod(
+                        SMS.getValue(),
+                        true,
+                        true,
+                        "1234",
+                        "updated-at",
+                        PriorityIdentifier.BACKUP,
+                        mfaIdentifier);
+        userStore.addMfaMethodSupportingMultiple(EXISTING_EMAIL_ADDRESS, smsMethod);
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
         Map<String, Object> requestParams =
@@ -116,23 +123,23 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(retrievedMfaMethods.size(), equalTo(2));
 
-        var authAppMethod =
+        var retrievedAuthAppMethod =
                 retrievedMfaMethods.stream()
                         .filter(m -> m.getMfaMethodType().equals(AUTH_APP.getValue()))
                         .findFirst()
                         .get();
-        var smsMethod =
+        var retrievedSmsMethod =
                 retrievedMfaMethods.stream()
                         .filter(m -> m.getMfaMethodType().equals(SMS.getValue()))
                         .findFirst()
                         .get();
 
-        assertThat(authAppMethod.isEnabled(), equalTo(true));
-        assertThat(authAppMethod.isMethodVerified(), equalTo(true));
-        assertThat(smsMethod.isEnabled(), equalTo(true));
-        assertThat(smsMethod.isMethodVerified(), equalTo(true));
-        assertThat(smsMethod.getDestination(), equalTo("1234"));
-        assertThat(smsMethod.getPriority(), equalTo("BACKUP"));
+        assertThat(retrievedAuthAppMethod.isEnabled(), equalTo(true));
+        assertThat(retrievedAuthAppMethod.isMethodVerified(), equalTo(true));
+        assertThat(retrievedSmsMethod.isEnabled(), equalTo(true));
+        assertThat(retrievedSmsMethod.isMethodVerified(), equalTo(true));
+        assertThat(retrievedSmsMethod.getDestination(), equalTo("1234"));
+        assertThat(retrievedSmsMethod.getPriority(), equalTo("BACKUP"));
 
         assertNotificationsReceived(
                 notificationsQueue,

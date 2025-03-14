@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaData;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
@@ -209,8 +208,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.updateMFAMethod(email, mfaMethodType, isVerified, isEnabled, credentialValue);
     }
 
-    public void addMfaMethodSupportingMultiple(String email, MfaData mfaData) {
-        MFAMethod mfaMethod = mfaData.toDatabaseRecord("time");
+    public void addMfaMethodSupportingMultiple(String email, MFAMethod mfaMethod) {
         dynamoService.addMFAMethodSupportingMultiple(email, mfaMethod);
     }
 
