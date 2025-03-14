@@ -1,0 +1,87 @@
+name: Mirror integration test docker images
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/mirror-docker-images.yml
+      - .github/workflows/pre-merge-checks.yml
+
+jobs:
+  get-images-to-mirror:
+    name: Get images to mirror
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.output-images.outputs.images }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: 🏗 Set up yq
+        uses: frenck/action-setup-yq@c4b5be8b4a215c536a41d436757d9feb92836d4f # v1.0.2
+
+      - name: Parse workflow to get image names
+        id: get-image-names
+        run: |
+          all_images="$(yq --output-format json '[.jobs.*.services.*.image |line_comment | select(. != "") | capture("(?P<image_name>.*):(?<image_tag>.*)") ]' .github/workflows/pre-merge-checks.yml | jq -c)"
+          echo "all_images=${all_images}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for duplicates and error
+        run: |
+          echo "${{ steps.get-image-names.outputs.images }}" | jq -r '.[] | .image_name' | sort | uniq -d | while read -r duplicate; do
+            echo "Duplicate image name with different tag: $duplicate"
+            exit 1
+          done
+
+      - name: Output unique images
+        id: output-images
+        run: |
+          unique_images="$(echo '${{ steps.get-image-names.outputs.all_images }}' | jq -cr 'unique')"
+          echo "images=${unique_images}" >> "$GITHUB_OUTPUT"
+
+  pull-and-mirror:
+    name: Pull and mirror images
+    needs: get-images-to-mirror
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      attestations: write
+      id-token: write
+    strategy:
+      matrix:
+        include: ${{fromJson(needs.get-images-to-mirror.outputs.images)}}
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image name
+        run: "echo ${{ matrix.image }} | cut -d':' -f1"
+
+      - name: Pull image
+        run: docker pull "${{ matrix.image_name }}:${{ matrix.image_tag }}"
+
+      - name: Tag image
+        id: tag-image
+        run: |
+          ghcr_name="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ matrix.image_name }}"
+
+          docker tag "${{ matrix.image_name }}:${{ matrix.image_tag }}" "${ghcr_name}:latest"
+          version_tagged_image="${ghcr_name}:${{ matrix.image_tag }}"
+          docker tag "${{ matrix.image_name }}:${{ matrix.image_tag }}" "${version_tagged_image}"
+
+          echo "ghcr_name=${ghcr_name}" >> "$GITHUB_OUTPUT"
+          echo "version_tagged_image=${version_tagged_image}" >> "$GITHUB_OUTPUT"
+
+      - name: Push image with version tag
+        run: |
+          docker push "${{ steps.tag-image.outputs.version_tagged_image }}"
+
+      - name: Push latest
+        if: ( github.event_name == 'push' && github.ref == 'refs/heads/main' ) || github.event_name == 'schedule'
+        run: |
+          docker push "${{ steps.tag-image.outputs.ghcr_name }}:latest"
