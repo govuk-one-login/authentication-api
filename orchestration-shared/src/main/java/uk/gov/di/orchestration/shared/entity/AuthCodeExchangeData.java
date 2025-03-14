@@ -15,10 +15,6 @@ public class AuthCodeExchangeData {
     @Expose private String email;
 
     @Expose
-    @SerializedName("clientSession")
-    private ClientSession clientSession;
-
-    @Expose
     @SerializedName("authTime")
     private Long authTime;
 
@@ -37,11 +33,6 @@ public class AuthCodeExchangeData {
 
     public AuthCodeExchangeData setEmail(String email) {
         this.email = email;
-        return this;
-    }
-
-    public AuthCodeExchangeData setClientSession(ClientSession clientSession) {
-        this.clientSession = clientSession;
         return this;
     }
 
