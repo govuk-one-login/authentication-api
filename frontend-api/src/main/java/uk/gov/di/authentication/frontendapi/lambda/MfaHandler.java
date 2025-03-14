@@ -197,11 +197,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
 
             LOG.info("Incrementing code request count for {}", journeyType);
-            sessionService.storeOrUpdateSession(
-                    userContext
-                            .getSession()
-                            .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType),
-                    userContext.getAuthSession().getSessionId());
 
             authSessionService.updateSession(
                     userContext
