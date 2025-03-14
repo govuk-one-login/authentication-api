@@ -22,6 +22,9 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
+import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
+import com.nimbusds.oauth2.sdk.pkce.CodeVerifier;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
@@ -53,6 +56,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
@@ -97,7 +101,29 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
+    private final CodeVerifier CODE_VERIFIER = new CodeVerifier();
+    private final String CODE_CHALLENGE_STRING = createCodeChallengeFromCodeVerifier(CODE_VERIFIER);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
+
+    protected static final ConfigurationService configuration =
+            new IntegrationTestConfigurationService(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public boolean isPkceEnabled() {
+                    return true;
+                }
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+            };
 
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
@@ -109,7 +135,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new TokenHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new TokenHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -536,7 +562,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
                         Optional.of("test-client-1"),
-                        "test-auth-code-2");
+                        "test-auth-code-2",
+                        CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithClientSecretPost(
                         "test-client-1", baseTokenRequest, clientSecret);
@@ -565,13 +592,46 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
                         Optional.of("test-client-1"),
-                        "test-auth-code-2");
+                        "test-auth-code-2",
+                        CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithPrivateKeyJWT(
                         "test-client-1", baseTokenRequest, keyPair.getPrivate());
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+    }
+
+    @Test
+    void shouldCallTokenResourceAndWarnWhenPkceValidationFails() throws Exception {
+        CodeVerifier invalidCodeVerifier = new CodeVerifier();
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PUBLIC);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope,
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(CLIENT_ID),
+                        new AuthorizationCode().toString(),
+                        invalidCodeVerifier.getValue());
+
+        var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
+
+        assertThat(response, hasStatus(400));
+        assertThat(
+                response,
+                hasBody(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_GRANT_CODE,
+                                        "PKCE code verification failed")
+                                .toJSONObject()
+                                .toJSONString()));
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {
@@ -658,7 +718,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 new ClientID(CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .state(state)
-                        .nonce(nonce);
+                        .nonce(nonce)
+                        .customParameter("code_challenge", CODE_CHALLENGE_STRING);
         claimsRequest.ifPresent(builder::claims);
         vtr.ifPresent(v -> builder.customParameter("vtr", v));
 
@@ -707,7 +768,12 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> clientId)
             throws Json.JsonException {
         return constructBaseTokenRequest(
-                scope, vtr, oidcClaimsRequest, clientId, new AuthorizationCode().toString());
+                scope,
+                vtr,
+                oidcClaimsRequest,
+                clientId,
+                new AuthorizationCode().toString(),
+                CODE_VERIFIER.getValue());
     }
 
     private Map<String, List<String>> constructBaseTokenRequest(
@@ -715,7 +781,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId,
-            String code)
+            String code,
+            String codeVerifier)
             throws Json.JsonException {
         List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
         if (vtr.isPresent()) {
@@ -742,6 +809,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
         customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
+        customParams.put("code_verifier", Collections.singletonList(codeVerifier));
         return customParams;
     }
 
@@ -754,5 +822,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         return customParams;
+    }
+
+    private String createCodeChallengeFromCodeVerifier(CodeVerifier codeVerifier) {
+        return CodeChallenge.compute(CodeChallengeMethod.S256, codeVerifier).toString();
     }
 }

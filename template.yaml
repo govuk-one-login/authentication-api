@@ -1618,6 +1618,10 @@ Resources:
             - IsReturnAuthTimeInIdTokenEnabled
             - true
             - false
+          PKCE_ENABLED: !If
+            - PkceEnabled
+            - true
+            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
