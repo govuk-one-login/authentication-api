@@ -44,7 +44,6 @@ class AuthorisationCodeServiceTest {
                         .setClientId("test-client-id")
                         .setClientSessionId("test-client-session")
                         .setEmail("test@email.com")
-                        .setClientSession(clientSession)
                         .setAuthTime(12345L);
         String expectedJson = objectMapper.writeValueAsString(expectedExchangeData);
         verify(redisConnectionService)

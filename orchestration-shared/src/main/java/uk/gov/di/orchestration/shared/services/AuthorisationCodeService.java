@@ -61,7 +61,6 @@ public class AuthorisationCodeService {
                                     .setEmail(email)
                                     .setClientId(clientId)
                                     .setClientSessionId(clientSessionId)
-                                    .setClientSession(clientSession)
                                     .setAuthTime(authTime)),
                     authorisationCodeExpiry);
             return authorizationCode;

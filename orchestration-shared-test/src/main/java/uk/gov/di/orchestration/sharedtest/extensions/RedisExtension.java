@@ -204,7 +204,6 @@ public class RedisExtension
                         new AuthCodeExchangeData()
                                 .setClientSessionId(clientSessionId)
                                 .setEmail(email)
-                                .setClientSession(clientSession)
                                 .setAuthTime(authTime)
                                 .setClientId(clientId)),
                 300);
