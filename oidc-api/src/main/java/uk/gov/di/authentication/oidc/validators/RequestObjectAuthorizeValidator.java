@@ -226,10 +226,10 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 return errorResponse(redirectURI, maxAgeError.get(), state);
             }
 
-            var responseMode = jwtClaimsSet.getClaim("response_mode");
+            var responseMode = jwtClaimsSet.getStringClaim("response_mode");
 
             if (Objects.nonNull(responseMode)) {
-                LOG.info("Attached response mode in request object: {}", responseMode);
+                validateResponseMode(responseMode);
             }
 
             LOG.info("RequestObject has passed initial validation");

@@ -17,6 +17,8 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -27,6 +29,7 @@ import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -403,6 +406,47 @@ class RequestObjectAuthorizeValidatorTest {
                                         "Request vtr is not permitted")
                                 .toJSONObject()));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldThrowErrorForInvalidResponseMode()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("response_mode", "code")
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        assertThrows(InvalidResponseModeException.class, () -> service.validate(authRequest));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"query", "fragment"})
+    void shouldNotErrorIfResponseModeValid(String responseMode)
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("response_mode", responseMode)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isEmpty());
     }
 
     @Test

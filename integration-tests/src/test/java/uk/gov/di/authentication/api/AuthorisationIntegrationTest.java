@@ -67,6 +67,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
@@ -96,6 +97,7 @@ import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieF
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -1346,6 +1348,27 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 locationHeaderUri.getQuery(),
                 containsString(
                         "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
+    }
+
+    @Test
+    void shouldReturnBadRequestUnsupportedResponseMode() {
+        registerClient(
+                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        txmaAuditQueue.clear();
+
+        var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
+        queryParams.put("response_mode", "form_post");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        queryParams,
+                        Optional.of("GET"));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
     }
 
     @Test

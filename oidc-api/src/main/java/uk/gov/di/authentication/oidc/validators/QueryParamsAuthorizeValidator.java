@@ -11,6 +11,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
+import uk.gov.di.orchestration.shared.exceptions.InvalidResponseModeException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
@@ -38,7 +39,8 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
     }
 
     @Override
-    public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
+    public Optional<AuthRequestError> validate(AuthenticationRequest authRequest)
+            throws InvalidResponseModeException {
 
         var clientId = authRequest.getClientID().toString();
         attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -174,8 +176,9 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
 
-        Optional.ofNullable(authRequest.getResponseMode())
-                .ifPresent(mode -> LOG.info("Attached response mode in query params: {}", mode));
+        var responseMode = Optional.ofNullable(authRequest.getResponseMode());
+
+        responseMode.ifPresent(mode -> validateResponseMode(mode.getValue()));
 
         return Optional.empty();
     }
