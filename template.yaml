@@ -5578,6 +5578,30 @@ Resources:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
 
+  OrchAuthCodeTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Orch-Auth-Code
+      AttributeDefinitions:
+        - AttributeName: AuthCode
+          AttributeType: S
+      KeySchema:
+        - AttributeName: AuthCode
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt OrchAuthCodeTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: OrchAuthCodeTable
+
   #endregion
 
 Outputs:
