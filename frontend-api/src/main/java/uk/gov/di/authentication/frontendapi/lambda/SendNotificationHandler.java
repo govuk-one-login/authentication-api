@@ -422,10 +422,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
 
             LOG.info("Resetting code request count");
-            sessionService.storeOrUpdateSession(
-                    session.resetCodeRequestCount(notificationType, journeyType),
-                    authSession.getSessionId());
-
             authSessionService.updateSession(
                     authSession.resetCodeRequestCount(notificationType, journeyType));
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));

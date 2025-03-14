@@ -67,7 +67,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -279,9 +278,6 @@ class SendNotificationHandlerTest {
                         .saveOtpCode(
                                 EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
                 verify(codeStorageService).getOtpCode(EMAIL, notificationType);
-                verify(sessionService)
-                        .storeOrUpdateSession(
-                                argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
 
                 verify(authSessionService)
                         .updateSession(
@@ -474,8 +470,13 @@ class SendNotificationHandlerTest {
         verify(codeStorageService).getOtpCode(EMAIL, notificationType);
         verify(codeStorageService)
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
-        verify(sessionService)
-                .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                authSession ->
+                                        authSession.getCodeRequestCount(
+                                                        notificationType, journeyType)
+                                                == 1));
 
         var testClientAuditContext = auditContext.withClientId(TEST_CLIENT_ID);
 
@@ -502,8 +503,13 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(codeStorageService);
-        verify(sessionService, never())
-                .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
+        verify(authSessionService, never())
+                .updateSession(
+                        argThat(
+                                authSessionItem ->
+                                        authSessionItem.getCodeRequestCount(
+                                                        notificationType, journeyType)
+                                                == 1));
         verifyNoInteractions(auditService);
     }
 
@@ -1089,9 +1095,5 @@ class SendNotificationHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
-    }
-
-    private boolean isSessionWithEmailSent(Session session) {
-        return session.getEmailAddress().equals(EMAIL);
     }
 }
