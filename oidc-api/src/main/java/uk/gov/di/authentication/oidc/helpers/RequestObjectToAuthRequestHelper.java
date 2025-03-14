@@ -98,6 +98,15 @@ public class RequestObjectToAuthRequestHelper {
                 builder.codeChallenge(parsedCodeChallenge, parsedCodeChallengeMethod);
             }
 
+            if (Objects.nonNull(jwtClaimsSet.getStringClaim("_ga"))) {
+                builder.customParameter("_ga", jwtClaimsSet.getStringClaim("_ga"));
+            }
+
+            if (Objects.nonNull(jwtClaimsSet.getStringClaim("cookie_consent"))) {
+                builder.customParameter(
+                        "cookie_consent", jwtClaimsSet.getStringClaim("cookie_consent"));
+            }
+
             return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | Json.JsonException e) {
             LOG.error("Parse exception thrown whilst converting RequestObject to Auth Request", e);
