@@ -5547,6 +5547,39 @@ Resources:
       Location: ./orchestration-canary-alarms.template.yaml
   #endregion
 
+  #region OrchAuthCode DynamoDB Table
+
+  OrchAuthCodeTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for OrchAuthCode DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  #endregion
+
 Outputs:
   SlackEventsArn:
     Description: "ARN of the SlackEvents SNS topic"
