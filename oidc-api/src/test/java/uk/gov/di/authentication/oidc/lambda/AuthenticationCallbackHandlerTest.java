@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.oidc.lambda;
 
+import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
@@ -191,6 +192,7 @@ class AuthenticationCallbackHandlerTest {
     private static final TokenResponse UNSUCCESSFUL_TOKEN_RESPONSE = mock(TokenResponse.class);
     private static final String TEST_ERROR_MESSAGE = "test-error-message";
     private static final UserInfo USER_INFO = mock(UserInfo.class);
+    private static final Context CONTEXT = mock(Context.class);
     private AuthenticationCallbackHandler handler;
 
     @BeforeAll
@@ -227,6 +229,7 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(MFAMethodType.AUTH_APP.getValue());
         when(USER_INFO.getBooleanClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()))
                 .thenReturn(false);
+        when(CONTEXT.getAwsRequestId()).thenReturn("test-request-id");
     }
 
     @BeforeEach
@@ -286,7 +289,7 @@ class AuthenticationCallbackHandlerTest {
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
-        var response = handler.handleRequest(event, null);
+        var response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
         String redirectLocation = response.getHeaders().get("Location");
@@ -363,7 +366,7 @@ class AuthenticationCallbackHandlerTest {
                 .when(authorizationService)
                 .validateRequest(any(), any());
 
-        var response = handler.handleRequest(event, null);
+        var response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
         String locationHeaderRedirect = response.getHeaders().get("Location");
@@ -397,7 +400,7 @@ class AuthenticationCallbackHandlerTest {
                         new NoSessionEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, clientSession));
 
-        var response = handler.handleRequest(event, null);
+        var response = handler.handleRequest(event, CONTEXT);
 
         var expectedURI =
                 new AuthenticationErrorResponse(
@@ -436,7 +439,7 @@ class AuthenticationCallbackHandlerTest {
                 .when(noSessionOrchestrationService)
                 .generateNoSessionOrchestrationEntity(queryParameters);
 
-        var response = handler.handleRequest(event, null);
+        var response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
@@ -457,7 +460,7 @@ class AuthenticationCallbackHandlerTest {
                 .when(authorizationService)
                 .validateRequest(any(), any());
 
-        var response = handler.handleRequest(event, null);
+        var response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
         String locationHeaderRedirect = response.getHeaders().get("Location");
@@ -493,7 +496,7 @@ class AuthenticationCallbackHandlerTest {
         setValidHeadersAndQueryParameters(event);
         when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
 
-        var response = handler.handleRequest(event, null);
+        var response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
@@ -518,7 +521,7 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                 .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
 
-        var response = handler.handleRequest(event, null);
+        var response = handler.handleRequest(event, CONTEXT);
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
@@ -543,7 +546,7 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
-        handler.handleRequest(event, null);
+        handler.handleRequest(event, CONTEXT);
 
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
@@ -570,7 +573,7 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
-        handler.handleRequest(event, null);
+        handler.handleRequest(event, CONTEXT);
 
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
@@ -629,7 +632,7 @@ class AuthenticationCallbackHandlerTest {
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
-        handler.handleRequest(event, null);
+        handler.handleRequest(event, CONTEXT);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -668,7 +671,7 @@ class AuthenticationCallbackHandlerTest {
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
-        handler.handleRequest(event, null);
+        handler.handleRequest(event, CONTEXT);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -726,7 +729,7 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
-        handler.handleRequest(event, null);
+        handler.handleRequest(event, CONTEXT);
 
         assertCurrentCredentialSetCorrectly(correctCurrentCredentialStrengthSet);
     }
@@ -764,7 +767,7 @@ class AuthenticationCallbackHandlerTest {
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
-            handler.handleRequest(event, null);
+            handler.handleRequest(event, CONTEXT);
 
             var captor = ArgumentCaptor.forClass(OrchSessionItem.class);
             verify(orchSessionService, times(2)).updateSession(captor.capture());
@@ -815,7 +818,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                var response = handler.handleRequest(event, null);
+                var response = handler.handleRequest(event, CONTEXT);
 
                 assertThat(response, hasStatus(302));
                 String redirectLocation = response.getHeaders().get("Location");
@@ -837,7 +840,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
@@ -856,7 +859,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
@@ -875,7 +878,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
@@ -894,7 +897,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                var response = handler.handleRequest(event, null);
+                var response = handler.handleRequest(event, CONTEXT);
 
                 assertThat(response, hasStatus(302));
                 String redirectLocation = response.getHeaders().get("Location");
@@ -915,7 +918,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
@@ -945,7 +948,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(initiateIPVAuthorisationService)
                         .sendRequestToIPV(
@@ -973,7 +976,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
@@ -998,7 +1001,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(initiateIPVAuthorisationService)
                         .sendRequestToIPV(
@@ -1026,7 +1029,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
@@ -1049,7 +1052,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(initiateIPVAuthorisationService)
                         .sendRequestToIPV(
@@ -1077,7 +1080,7 @@ class AuthenticationCallbackHandlerTest {
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
 
-                handler.handleRequest(event, null);
+                handler.handleRequest(event, CONTEXT);
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
@@ -1127,7 +1130,7 @@ class AuthenticationCallbackHandlerTest {
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
-            var response = handler.handleRequest(event, null);
+            var response = handler.handleRequest(event, CONTEXT);
 
             assertThat(response, hasStatus(302));
             String redirectLocation = response.getHeaders().get("Location");
@@ -1162,7 +1165,7 @@ class AuthenticationCallbackHandlerTest {
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
-            var response = handler.handleRequest(event, null);
+            var response = handler.handleRequest(event, CONTEXT);
 
             assertThat(response, hasStatus(302));
             String redirectLocation = response.getHeaders().get("Location");
@@ -1196,7 +1199,7 @@ class AuthenticationCallbackHandlerTest {
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
-            var response = handler.handleRequest(event, null);
+            var response = handler.handleRequest(event, CONTEXT);
 
             assertThat(response, hasStatus(302));
             String redirectLocation = response.getHeaders().get("Location");
@@ -1232,7 +1235,7 @@ class AuthenticationCallbackHandlerTest {
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
-            var response = handler.handleRequest(event, null);
+            var response = handler.handleRequest(event, CONTEXT);
 
             assertThat(response, hasStatus(302));
             String redirectLocation = response.getHeaders().get("Location");
