@@ -154,6 +154,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     userContext.getSession().incrementPasswordResetCount(),
                     userContext.getAuthSession().getSessionId());
 
+            authSessionService.updateSession(
+                    userContext.getAuthSession().incrementPasswordResetCount());
+
             var userIsNewlyLockedOutOfPasswordReset =
                     hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
 

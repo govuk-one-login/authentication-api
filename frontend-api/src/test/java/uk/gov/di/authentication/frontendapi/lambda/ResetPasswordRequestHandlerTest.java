@@ -72,6 +72,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -201,6 +202,12 @@ class ResetPasswordRequestHandlerTest {
             return session.getEmailAddress().equals(CommonTestVariables.EMAIL);
         }
 
+        private boolean isAuthSessionWithCountAndResetState(
+                AuthSessionItem authSession, int count, AuthSessionItem.ResetPasswordState state) {
+            return authSession.getPasswordResetCount() == count
+                    && authSession.getResetPasswordState().equals(state);
+        }
+
         @BeforeEach
         void setup() {
             validEvent = apiRequestEventWithHeadersAndBody(VALID_HEADERS, VALID_REQUEST_BODY);
@@ -251,6 +258,14 @@ class ResetPasswordRequestHandlerTest {
                             RESET_PASSWORD_WITH_CODE);
             verify(sessionService)
                     .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
+            verify(authSessionService, atLeastOnce())
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            isAuthSessionWithCountAndResetState(
+                                                    s,
+                                                    1,
+                                                    AuthSessionItem.ResetPasswordState.ATTEMPTED)));
         }
 
         @Test
@@ -342,7 +357,14 @@ class ResetPasswordRequestHandlerTest {
                             RESET_PASSWORD_WITH_CODE);
             verify(sessionService)
                     .storeOrUpdateSession(argThat(this::isSessionWithEmailSent), eq(SESSION_ID));
-
+            verify(authSessionService, atLeastOnce())
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            isAuthSessionWithCountAndResetState(
+                                                    s,
+                                                    1,
+                                                    AuthSessionItem.ResetPasswordState.ATTEMPTED)));
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
@@ -385,14 +407,14 @@ class ResetPasswordRequestHandlerTest {
 
             handler.handleRequest(validEvent, context);
 
-            verify(authSessionService, times(1))
+            verify(authSessionService, times(2))
                     .updateSession(
                             argThat(
-                                    state ->
-                                            state.getResetPasswordState()
-                                                    .equals(
-                                                            AuthSessionItem.ResetPasswordState
-                                                                    .ATTEMPTED)));
+                                    s ->
+                                            isAuthSessionWithCountAndResetState(
+                                                    s,
+                                                    1,
+                                                    AuthSessionItem.ResetPasswordState.ATTEMPTED)));
         }
 
         @Test
@@ -570,8 +592,11 @@ class ResetPasswordRequestHandlerTest {
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {
         session.resetPasswordResetCount();
+        authSession.resetPasswordResetCount();
         IntStream.range(0, passwordResetCount)
                 .forEach((i) -> session.incrementPasswordResetCount());
+        IntStream.range(0, passwordResetCount)
+                .forEach((i) -> authSession.incrementPasswordResetCount());
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session))
                 .thenReturn(Optional.of(session.incrementPasswordResetCount()));
