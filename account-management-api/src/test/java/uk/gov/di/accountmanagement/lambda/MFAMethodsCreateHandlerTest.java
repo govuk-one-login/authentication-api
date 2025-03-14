@@ -20,7 +20,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Map;
@@ -55,8 +55,7 @@ class MFAMethodsCreateHandlerTest {
     private static final String TEST_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
-    private static final DynamoMfaMethodsService mfaMethodsService =
-            mock(DynamoMfaMethodsService.class);
+    private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final UserProfile userProfile = mock(UserProfile.class);
 

@@ -12,7 +12,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 
 import java.util.List;
 import java.util.Map;

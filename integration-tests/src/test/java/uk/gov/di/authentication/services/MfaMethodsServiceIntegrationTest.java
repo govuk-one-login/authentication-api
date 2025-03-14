@@ -21,8 +21,8 @@ import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
+import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.List;
@@ -34,16 +34,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
-import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_APP_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_SMS_MFA_ID;
 
-class DynamoMfaMethodsServiceIntegrationTest {
+class MfaMethodsServiceIntegrationTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@example.com";
     private static final String PHONE_NUMBER = "+44123456789";
     private static final String AUTH_APP_CREDENTIAL = "some-credential";
-    DynamoMfaMethodsService dynamoService =
-            new DynamoMfaMethodsService(ConfigurationService.getInstance());
+    MfaMethodsService mfaMethodsService = new MfaMethodsService(ConfigurationService.getInstance());
 
     @RegisterExtension static UserStoreExtension userStoreExtension = new UserStoreExtension();
 
@@ -66,7 +65,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
         void shouldReturnSingleSmsMethodWhenVerified(String email) {
             userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
 
-            var result = dynamoService.getMfaMethods(email);
+            var result = mfaMethodsService.getMfaMethods(email);
 
             var authAppDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
             var expectedData =
@@ -80,7 +79,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
         void shouldReturnSingleAuthAppMethodWhenEnabled(String email) {
             userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
 
-            var result = dynamoService.getMfaMethods(email);
+            var result = mfaMethodsService.getMfaMethods(email);
 
             var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
             var expectedData =
@@ -95,7 +94,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
             userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
             userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
 
-            var result = dynamoService.getMfaMethods(email);
+            var result = mfaMethodsService.getMfaMethods(email);
 
             var authAppDetail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
             var expectedData =
@@ -109,7 +108,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
         void shouldReturnNoMethodsWhenAuthAppMethodNotEnabled(String email) {
             userStoreExtension.addAuthAppMethod(email, true, false, AUTH_APP_CREDENTIAL);
 
-            var result = dynamoService.getMfaMethods(email);
+            var result = mfaMethodsService.getMfaMethods(email);
 
             assertEquals(result, List.of());
         }
@@ -120,7 +119,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
             userStoreExtension.setPhoneNumberAndVerificationStatus(
                     email, PHONE_NUMBER, false, true);
 
-            var result = dynamoService.getMfaMethods(email);
+            var result = mfaMethodsService.getMfaMethods(email);
 
             assertEquals(result, List.of());
         }
@@ -178,7 +177,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
             // but regardless for a migrated user we will ignore this entry
             userStoreExtension.addVerifiedPhoneNumber(EMAIL, "+44987654321");
 
-            var result = dynamoService.getMfaMethods(EMAIL);
+            var result = mfaMethodsService.getMfaMethods(EMAIL);
 
             var expectedData = mfaMethodDataFrom(defaultPrioritySms);
             assertEquals(List.of(expectedData), result);
@@ -188,7 +187,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
         void shouldReturnSingleAuthAppMethodWhenEnabled() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-            var result = dynamoService.getMfaMethods(EMAIL);
+            var result = mfaMethodsService.getMfaMethods(EMAIL);
 
             var expectedData = mfaMethodDataFrom(defaultPriorityAuthApp);
             assertEquals(result, List.of(expectedData));
@@ -209,11 +208,11 @@ class DynamoMfaMethodsServiceIntegrationTest {
                     mfaMethod ->
                             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, mfaMethod));
 
-            var result = dynamoService.getMfaMethods(EMAIL);
+            var result = mfaMethodsService.getMfaMethods(EMAIL);
 
             var expectedData =
                     mfaMethods.stream()
-                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom)
+                            .map(MfaMethodsServiceIntegrationTest::mfaMethodDataFrom)
                             .toList();
             assertEquals(expectedData, result);
         }
@@ -230,7 +229,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
                         new MfaMethodCreateRequest.MfaMethod(
                                 PriorityIdentifier.BACKUP, smsMfaDetail);
 
-                var result = dynamoService.addBackupMfa(TEST_EMAIL, mfaMethod);
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, mfaMethod);
 
                 List<MFAMethod> mfaMethods = userStoreExtension.getMfaMethod(TEST_EMAIL);
                 boolean smsMethodExists =
@@ -259,7 +258,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
                 assertThrows(
                         InvalidPriorityIdentifierException.class,
-                        () -> dynamoService.addBackupMfa(TEST_EMAIL, request.mfaMethod()));
+                        () -> mfaMethodsService.addBackupMfa(TEST_EMAIL, request.mfaMethod()));
             }
 
             @Test
@@ -272,7 +271,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
                                 new MfaMethodCreateRequest.MfaMethod(
                                         PriorityIdentifier.BACKUP, authAppMfaDetail));
 
-                var result = dynamoService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
                 assertNull(result);
             }
         }
@@ -328,11 +327,11 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             var identifierToDelete = backupPriorityAuthApp.mfaIdentifier();
 
-            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
 
             assertEquals(Either.right(identifierToDelete), result);
 
-            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+            var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
 
             assertEquals(List.of(mfaMethodDataFrom(defaultPrioritySms)), remainingMfaMethods);
         }
@@ -345,11 +344,11 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             var identifierToDelete = backupPrioritySms.mfaIdentifier();
 
-            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
 
             assertEquals(Either.right(identifierToDelete), result);
 
-            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+            var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
 
             assertEquals(List.of(mfaMethodDataFrom(defaultPriorityAuthApp)), remainingMfaMethods);
         }
@@ -362,15 +361,14 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             var identifierToDelete = defaultPriorityAuthApp.mfaIdentifier();
 
-            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
 
             assertEquals(Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD), result);
 
-            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+            var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
 
             var expectedRemainingMfaMethods =
-                    mfaMethods.stream()
-                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
+                    mfaMethods.stream().map(MfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
 
             assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
         }
@@ -383,17 +381,16 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             var identifierToDelete = "5f27adb6-32ae-4397-a223-4b76840ddd01";
 
-            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
 
             assertEquals(
                     Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST),
                     result);
 
-            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+            var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
 
             var expectedRemainingMfaMethods =
-                    mfaMethods.stream()
-                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
+                    mfaMethods.stream().map(MfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
 
             assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
         }
@@ -403,14 +400,14 @@ class DynamoMfaMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethod(
                     EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
 
-            var result = dynamoService.deleteMfaMethod(publicSubjectId, HARDCODED_APP_MFA_ID);
+            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, HARDCODED_APP_MFA_ID);
 
             assertEquals(
                     Either.left(
                             MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER),
                     result);
 
-            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+            var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
 
             var expectedRemainingMfaMethod =
                     new MfaMethodData(
@@ -424,7 +421,7 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
         @Test
         void shouldReturnAnErrorWhenUserProfileNotFoundForPublicSubjectId() {
-            var result = dynamoService.deleteMfaMethod("some-other-id", HARDCODED_APP_MFA_ID);
+            var result = mfaMethodsService.deleteMfaMethod("some-other-id", HARDCODED_APP_MFA_ID);
 
             assertEquals(
                     Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID),

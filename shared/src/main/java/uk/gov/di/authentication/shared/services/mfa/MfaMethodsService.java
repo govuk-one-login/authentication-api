@@ -7,32 +7,31 @@ import uk.gov.di.authentication.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.MfaMethodsService;
 
 import java.util.List;
 import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 
-public class DynamoMfaMethodsService implements MfaMethodsService {
-    private static final Logger LOG = LogManager.getLogger(DynamoMfaMethodsService.class);
+public class MfaMethodsService {
+    private static final Logger LOG = LogManager.getLogger(MfaMethodsService.class);
 
-    private final DynamoService dynamoService;
+    private final AuthenticationService persistentService;
 
     // TODO generate and store UUID (AUT-4122)
     public static final String HARDCODED_APP_MFA_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
     public static final String HARDCODED_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
 
-    public DynamoMfaMethodsService(ConfigurationService configurationService) {
-        this.dynamoService = new DynamoService(configurationService);
+    public MfaMethodsService(ConfigurationService configurationService) {
+        this.persistentService = new DynamoService(configurationService);
     }
 
-    @Override
     public List<MfaMethodData> getMfaMethods(String email) {
-        var userProfile = dynamoService.getUserProfileByEmail(email);
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
+        var userProfile = persistentService.getUserProfileByEmail(email);
+        var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
             return getMfaMethodsForMigratedUser(userCredentials);
         } else {
@@ -75,7 +74,7 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
     public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
             String publicSubjectId, String mfaIdentifier) {
         var maybeUserProfile =
-                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+                persistentService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
 
         if (maybeUserProfile.isEmpty()) {
             return Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID);
@@ -87,7 +86,9 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
         }
 
         var mfaMethods =
-                dynamoService.getUserCredentialsFromEmail(userProfile.getEmail()).getMfaMethods();
+                persistentService
+                        .getUserCredentialsFromEmail(userProfile.getEmail())
+                        .getMfaMethods();
 
         var maybeMethodToDelete =
                 mfaMethods.stream()
@@ -102,7 +103,7 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
             return Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
         }
 
-        dynamoService.deleteMfaMethodByIdentifier(userProfile.getEmail(), mfaIdentifier);
+        persistentService.deleteMfaMethodByIdentifier(userProfile.getEmail(), mfaIdentifier);
         return Either.right(mfaIdentifier);
     }
 
@@ -129,7 +130,6 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
         }
     }
 
-    @Override
     public MfaMethodData addBackupMfa(String email, MfaMethodCreateRequest.MfaMethod mfaMethod)
             throws InvalidPriorityIdentifierException {
         if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
@@ -139,7 +139,7 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
 
         if (mfaMethod.method() instanceof SmsMfaDetail smsMfaDetail) {
             String uuid = UUID.randomUUID().toString();
-            dynamoService.addMFAMethodSupportingMultiple(
+            persistentService.addMFAMethodSupportingMultiple(
                     email,
                     new SmsMfaData(
                             smsMfaDetail.phoneNumber(),
