@@ -3,12 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.serialization.Json;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -33,11 +28,8 @@ class AuthorisationCodeServiceTest {
 
     @Test
     void shouldSaveToRedisWhenGeneratingAuthCode() throws Json.JsonException {
-        ClientSession clientSession =
-                new ClientSession(Map.of(), LocalDateTime.now(), List.of(), "test-client");
-
         authCodeService.generateAndSaveAuthorisationCode(
-                "test-client-id", "test-client-session", "test@email.com", clientSession, 12345L);
+                "test-client-id", "test-client-session", "test@email.com", 12345L);
 
         AuthCodeExchangeData expectedExchangeData =
                 new AuthCodeExchangeData()

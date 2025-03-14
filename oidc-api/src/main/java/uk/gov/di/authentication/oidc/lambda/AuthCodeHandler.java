@@ -471,7 +471,6 @@ public class AuthCodeHandler
                 clientID.getValue(),
                 clientSessionId,
                 emailOptional.orElse(null),
-                clientSession,
                 orchSession.getAuthTime());
     }
 }

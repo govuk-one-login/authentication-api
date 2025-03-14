@@ -4,7 +4,6 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
@@ -40,17 +39,7 @@ public class AuthorisationCodeService {
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientId, String clientSessionId, ClientSession clientSession) {
-        return generateAndSaveAuthorisationCode(
-                clientId, clientSessionId, null, clientSession, null);
-    }
-
-    public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientId,
-            String clientSessionId,
-            String email,
-            ClientSession clientSession,
-            Long authTime) {
+            String clientId, String clientSessionId, String email, Long authTime) {
         LOG.info("Generating and saving AuthorisationCode");
         AuthorizationCode authorizationCode = new AuthorizationCode();
         try {
