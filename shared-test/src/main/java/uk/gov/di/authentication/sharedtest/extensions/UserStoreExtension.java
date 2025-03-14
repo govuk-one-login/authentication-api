@@ -210,7 +210,8 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     }
 
     public void addMfaMethodSupportingMultiple(String email, MfaData mfaData) {
-        dynamoService.addMFAMethodSupportingMultiple(email, mfaData);
+        MFAMethod mfaMethod = mfaData.toDatabaseRecord("time");
+        dynamoService.addMFAMethodSupportingMultiple(email, mfaMethod);
     }
 
     public void updateMFAMethod(

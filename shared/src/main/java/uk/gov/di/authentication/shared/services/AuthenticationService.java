@@ -5,8 +5,8 @@ import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaData;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -73,7 +73,7 @@ public interface AuthenticationService {
             boolean enabled,
             String credentialValue);
 
-    void addMFAMethodSupportingMultiple(String email, MfaData mfaData);
+    void addMFAMethodSupportingMultiple(String email, MFAMethod mfaData);
 
     void setAuthAppAndAccountVerified(String email, String credentialValue);
 

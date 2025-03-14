@@ -9,11 +9,8 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaData;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaData;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -158,32 +155,43 @@ class DynamoServiceIntegrationTest {
             userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         }
 
-        private SmsMfaData defaultPrioritySmsData =
-                new SmsMfaData(
+        private MFAMethod defaultPrioritySmsData =
+                MFAMethod.smsMfaMethod(
+                        MFAMethodType.SMS.getValue(),
+                        true,
+                        true,
                         PHONE_NUMBER,
-                        true,
-                        true,
+                        "time",
                         PriorityIdentifier.DEFAULT,
                         "04615937-eb48-4a1f-9de2-2ff0a3dc3bc4");
-        private SmsMfaData backupPrioritySmsData =
-                new SmsMfaData(
+
+        private MFAMethod backupPrioritySmsData =
+                MFAMethod.smsMfaMethod(
+                        MFAMethodType.SMS.getValue(),
+                        true,
+                        true,
                         PHONE_NUMBER,
-                        true,
-                        true,
+                        "time",
                         PriorityIdentifier.BACKUP,
                         "daa4b59d-4efa-4e97-8b48-e6732c953060");
-        private AuthAppMfaData defaultPriorityAuthAppData =
-                new AuthAppMfaData(
+
+        private MFAMethod defaultPriorityAuthAppData =
+                MFAMethod.authAppMfaMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
                         TEST_MFA_APP_CREDENTIAL,
                         true,
                         true,
+                        "time",
                         PriorityIdentifier.DEFAULT,
                         "7968d195-7db3-45f6-b7d3-a627aad118b7");
-        private AuthAppMfaData backupAuthAppData =
-                new AuthAppMfaData(
+
+        private MFAMethod backupAuthAppData =
+                MFAMethod.authAppMfaMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
                         TEST_MFA_APP_CREDENTIAL,
                         true,
                         true,
+                        "time",
                         PriorityIdentifier.BACKUP,
                         "03a89933-cddd-471d-8fdb-562f14a2404f");
 
@@ -255,7 +263,7 @@ class DynamoServiceIntegrationTest {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
 
             dynamoService.deleteMfaMethodByIdentifier(
-                    TEST_EMAIL, backupPrioritySmsData.mfaIdentifier());
+                    TEST_EMAIL, backupPrioritySmsData.getMfaIdentifier());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
             assertSingleMfaMethodExistsWithData(userCredentials, defaultPrioritySmsData);
@@ -281,7 +289,9 @@ class DynamoServiceIntegrationTest {
         }
 
         private void assertBackupAndDefaultMfaMethodsWithData(
-                UserCredentials userCredentials, MfaData expectedDefault, MfaData expectedBackup) {
+                UserCredentials userCredentials,
+                MFAMethod expectedDefault,
+                MFAMethod expectedBackup) {
             assertThat(userCredentials.getMfaMethods().size(), equalTo(2));
             var backupMethod = findMethodWithPriority("BACKUP", userCredentials.getMfaMethods());
             var defaultMethod = findMethodWithPriority("DEFAULT", userCredentials.getMfaMethods());
@@ -289,34 +299,33 @@ class DynamoServiceIntegrationTest {
             assertRetrievedMethodHasData(defaultMethod, expectedDefault);
         }
 
-        private void assertRetrievedMethodHasData(MFAMethod retrievedMethod, MfaData expectedData) {
-            if (expectedData instanceof SmsMfaData) {
-                var smsData = (SmsMfaData) expectedData;
+        private void assertRetrievedMethodHasData(
+                MFAMethod retrievedMethod, MFAMethod expectedData) {
+            assertThat(
+                    retrievedMethod.isMethodVerified(), equalTo(expectedData.isMethodVerified()));
+            assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.isEnabled()));
+            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.getPriority()));
+            assertThat(
+                    retrievedMethod.getMfaIdentifier(), equalTo(expectedData.getMfaIdentifier()));
+            if (expectedData.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
                 assertThat(
                         retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
-                assertThat(retrievedMethod.isMethodVerified(), equalTo(smsData.verified()));
-                assertThat(retrievedMethod.isEnabled(), equalTo(smsData.enabled()));
-                assertThat(retrievedMethod.getPriority(), equalTo(smsData.priority().toString()));
                 assertThat(retrievedMethod.getCredentialValue(), equalTo(null));
-                assertThat(retrievedMethod.getMfaIdentifier(), equalTo(smsData.mfaIdentifier()));
+                assertThat(
+                        retrievedMethod.getDestination(), equalTo(expectedData.getDestination()));
             } else {
-                var authAppData = (AuthAppMfaData) expectedData;
                 assertThat(
                         retrievedMethod.getMfaMethodType(),
                         equalTo(MFAMethodType.AUTH_APP.getValue()));
-                assertThat(retrievedMethod.isMethodVerified(), equalTo(authAppData.verified()));
-                assertThat(retrievedMethod.isEnabled(), equalTo(authAppData.enabled()));
-                assertThat(retrievedMethod.getCredentialValue(), equalTo(authAppData.credential()));
                 assertThat(
-                        retrievedMethod.getPriority(), equalTo(authAppData.priority().toString()));
+                        retrievedMethod.getCredentialValue(),
+                        equalTo(expectedData.getCredentialValue()));
                 assertThat(retrievedMethod.getDestination(), equalTo(null));
-                assertThat(
-                        retrievedMethod.getMfaIdentifier(), equalTo(authAppData.mfaIdentifier()));
             }
         }
 
         private void assertSingleMfaMethodExistsWithData(
-                UserCredentials userCredentials, MfaData expectedData) {
+                UserCredentials userCredentials, MFAMethod expectedData) {
             assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
             assertRetrievedMethodHasData(userCredentials.getMfaMethods().get(0), expectedData);
         }
