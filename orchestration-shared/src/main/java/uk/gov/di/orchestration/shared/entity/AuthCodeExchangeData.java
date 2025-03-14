@@ -40,10 +40,6 @@ public class AuthCodeExchangeData {
         return this;
     }
 
-    public ClientSession getClientSession() {
-        return clientSession;
-    }
-
     public AuthCodeExchangeData setClientSession(ClientSession clientSession) {
         this.clientSession = clientSession;
         return this;
