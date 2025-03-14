@@ -49,6 +49,7 @@ Similar to [private-api-gateway](../private-api-gateway/), this is a wrapper for
 | <a name="input_logging_endpoint_arns"></a> [logging\_endpoint\_arns](#input\_logging\_endpoint\_arns) | The ARNs of the logging endpoints | `list(string)` | n/a | yes |
 | <a name="input_openapi_spec"></a> [openapi\_spec](#input\_openapi\_spec) | The content of the OpenAPI spec to deploy | `string` | n/a | yes |
 | <a name="input_waf_arns"></a> [waf\_arns](#input\_waf\_arns) | The ARNs of any WAFs to attach to the API Gateway | `list(string)` | n/a | yes |
+| <a name="input_metrics_enabled"></a> [metrics\_enabled](#input\_metrics\_enabled) | Enable detailed CloudWatch metrics for API Gateway | `bool` | `true` | no |
 
 ## Outputs
 
