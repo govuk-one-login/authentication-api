@@ -7,9 +7,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsRetrieveHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.AuthAppMfaData;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaData;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -119,14 +118,23 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         var authAppIdentifier = "14895398-33e5-41f0-b059-811b07df348d";
         var smsIdentifier = "e2d3f441-a17f-44a3-b608-b32c129b48b4";
         var authApp =
-                new AuthAppMfaData(
+                MFAMethod.authAppMfaMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
                         "some-credential",
                         true,
                         true,
+                        "updated-at-time",
                         PriorityIdentifier.DEFAULT,
                         authAppIdentifier);
         var sms =
-                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP, smsIdentifier);
+                MFAMethod.smsMfaMethod(
+                        MFAMethodType.SMS.getValue(),
+                        true,
+                        true,
+                        PHONE_NUMBER,
+                        "updated-at-time",
+                        PriorityIdentifier.BACKUP,
+                        smsIdentifier);
         userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, authApp);
         userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, sms);
 

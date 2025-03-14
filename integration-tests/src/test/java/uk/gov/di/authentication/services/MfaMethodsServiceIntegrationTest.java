@@ -10,14 +10,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaData;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaMethodData;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -136,29 +134,41 @@ class MfaMethodsServiceIntegrationTest {
         private static final String APP_MFA_IDENTIFIER_2 = "898a7e13-c354-430a-a3ca-8cc6c6391057";
         private static final String PHONE_NUMBER_TWO = "987654321";
 
-        private static final AuthAppMfaData defaultPriorityAuthApp =
-                new AuthAppMfaData(
+        private static final MFAMethod defaultPriorityAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL,
                         true,
                         true,
+                        "updated-at",
                         PriorityIdentifier.DEFAULT,
                         APP_MFA_IDENTIFIER_1);
         private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
-        private static final AuthAppMfaData backupPriorityAuthApp =
-                new AuthAppMfaData(
+        private static final MFAMethod backupPriorityAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL_TWO,
                         true,
                         true,
+                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         APP_MFA_IDENTIFIER_2);
-        private static final SmsMfaData defaultPrioritySms =
-                new SmsMfaData(
-                        PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
-        private static final SmsMfaData backupPrioritySms =
-                new SmsMfaData(
+        private static final MFAMethod defaultPrioritySms =
+                MFAMethod.smsMfaMethod(
+                        MFAMethodType.SMS.getValue(),
+                        true,
+                        true,
+                        PHONE_NUMBER,
+                        "updated-at",
+                        PriorityIdentifier.DEFAULT,
+                        SMS_MFA_IDENTIFIER_1);
+        private static final MFAMethod backupPrioritySms =
+                MFAMethod.smsMfaMethod(
+                        MFAMethodType.SMS.getValue(),
+                        true,
+                        true,
                         PHONE_NUMBER_TWO,
-                        true,
-                        true,
+                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         SMS_MFA_IDENTIFIER_2);
 
@@ -193,7 +203,7 @@ class MfaMethodsServiceIntegrationTest {
             assertEquals(result, List.of(expectedData));
         }
 
-        private static Stream<List<MfaData>> mfaMethodsCombinations() {
+        private static Stream<List<MFAMethod>> mfaMethodsCombinations() {
             return Stream.of(
                     List.of(defaultPriorityAuthApp, backupPriorityAuthApp),
                     List.of(defaultPrioritySms, backupPrioritySms),
@@ -203,7 +213,7 @@ class MfaMethodsServiceIntegrationTest {
 
         @ParameterizedTest
         @MethodSource("mfaMethodsCombinations")
-        void shouldReturnMultipleMethodsWhenTheyExist(List<MfaData> mfaMethods) {
+        void shouldReturnMultipleMethodsWhenTheyExist(List<MFAMethod> mfaMethods) {
             mfaMethods.forEach(
                     mfaMethod ->
                             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, mfaMethod));
@@ -287,29 +297,41 @@ class MfaMethodsServiceIntegrationTest {
         private static final String APP_MFA_IDENTIFIER_2 = "898a7e13-c354-430a-a3ca-8cc6c6391057";
         private static final String PHONE_NUMBER_TWO = "987654321";
 
-        private static final AuthAppMfaData defaultPriorityAuthApp =
-                new AuthAppMfaData(
+        private static final MFAMethod defaultPriorityAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL,
                         true,
                         true,
+                        "updated-at",
                         PriorityIdentifier.DEFAULT,
                         APP_MFA_IDENTIFIER_1);
         private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
-        private static final AuthAppMfaData backupPriorityAuthApp =
-                new AuthAppMfaData(
+        private static final MFAMethod backupPriorityAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL_TWO,
                         true,
                         true,
+                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         APP_MFA_IDENTIFIER_2);
-        private static final SmsMfaData defaultPrioritySms =
-                new SmsMfaData(
-                        PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
-        private static final SmsMfaData backupPrioritySms =
-                new SmsMfaData(
+        private static final MFAMethod defaultPrioritySms =
+                MFAMethod.smsMfaMethod(
+                        MFAMethodType.SMS.getValue(),
+                        true,
+                        true,
+                        PHONE_NUMBER,
+                        "updated-at",
+                        PriorityIdentifier.DEFAULT,
+                        SMS_MFA_IDENTIFIER_1);
+        private static final MFAMethod backupPrioritySms =
+                MFAMethod.smsMfaMethod(
+                        MFAMethodType.SMS.getValue(),
+                        true,
+                        true,
                         PHONE_NUMBER_TWO,
-                        true,
-                        true,
+                        "updated-at",
                         PriorityIdentifier.BACKUP,
                         SMS_MFA_IDENTIFIER_2);
         private String publicSubjectId;
@@ -325,7 +347,7 @@ class MfaMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPriorityAuthApp);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
 
-            var identifierToDelete = backupPriorityAuthApp.mfaIdentifier();
+            var identifierToDelete = backupPriorityAuthApp.getMfaIdentifier();
 
             var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
 
@@ -342,7 +364,7 @@ class MfaMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-            var identifierToDelete = backupPrioritySms.mfaIdentifier();
+            var identifierToDelete = backupPrioritySms.getMfaIdentifier();
 
             var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
 
@@ -359,7 +381,7 @@ class MfaMethodsServiceIntegrationTest {
             var mfaMethods = List.of(backupPrioritySms, defaultPriorityAuthApp);
             mfaMethods.forEach(m -> userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, m));
 
-            var identifierToDelete = defaultPriorityAuthApp.mfaIdentifier();
+            var identifierToDelete = defaultPriorityAuthApp.getMfaIdentifier();
 
             var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
 
@@ -429,22 +451,18 @@ class MfaMethodsServiceIntegrationTest {
         }
     }
 
-    private static MfaMethodData mfaMethodDataFrom(MfaData mfaData) {
-        if (mfaData instanceof AuthAppMfaData authAppMfaData) {
-            var detail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, authAppMfaData.credential());
-            return new MfaMethodData(
-                    authAppMfaData.mfaIdentifier(),
-                    authAppMfaData.priority(),
-                    authAppMfaData.verified(),
-                    detail);
+    private static MfaMethodData mfaMethodDataFrom(MFAMethod mfaMethod) {
+        MfaDetail detail;
+        if (mfaMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
+            detail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, mfaMethod.getCredentialValue());
+
         } else {
-            SmsMfaData smsMfaData = (SmsMfaData) mfaData;
-            var detail = new SmsMfaDetail(MFAMethodType.SMS, smsMfaData.endpoint());
-            return new MfaMethodData(
-                    smsMfaData.mfaIdentifier(),
-                    smsMfaData.priority(),
-                    smsMfaData.verified(),
-                    detail);
+            detail = new SmsMfaDetail(MFAMethodType.SMS, mfaMethod.getDestination());
         }
+        return new MfaMethodData(
+                mfaMethod.getMfaIdentifier(),
+                PriorityIdentifier.valueOf(mfaMethod.getPriority()),
+                mfaMethod.isMethodVerified(),
+                detail);
     }
 }
