@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.entity;
 
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
 
 public record UserMfaDetail(
         boolean isMfaRequired,

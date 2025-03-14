@@ -4,13 +4,13 @@ import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler;
-import uk.gov.di.authentication.shared.entity.AuthAppMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.MfaDetail;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaDetail;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
