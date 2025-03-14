@@ -40,7 +40,6 @@ import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLangua
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
@@ -187,8 +186,6 @@ public abstract class BaseFrontendHandler<T>
         if (authSession.isEmpty()) {
             LOG.warn("Auth session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            attachAuthSessionIdToLogs(authSession.get());
         }
 
         UserContext.Builder userContextBuilder = UserContext.builder(session.get());

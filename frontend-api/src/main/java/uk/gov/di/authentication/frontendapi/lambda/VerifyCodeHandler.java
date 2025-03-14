@@ -63,8 +63,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -145,9 +143,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Context context,
             VerifyCodeRequest codeRequest,
             UserContext userContext) {
-
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-
         try {
             LOG.info("Processing request");
 
@@ -155,7 +150,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var sessionId = userContext.getAuthSession().getSessionId();
             AuthSessionItem authSession = userContext.getAuthSession();
 
-            attachAuthSessionIdToLogs(authSession);
             var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
