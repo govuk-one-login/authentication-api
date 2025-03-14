@@ -61,7 +61,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -244,15 +243,6 @@ class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(sessionService)
-                .storeOrUpdateSession(
-                        argThat(
-                                session ->
-                                        session.getCodeRequestCount(
-                                                        NotificationType.MFA_SMS,
-                                                        JourneyType.SIGN_IN)
-                                                == 1),
-                        eq(SESSION_ID));
         verify(authSessionService)
                 .updateSession(
                         argThat(
@@ -350,7 +340,7 @@ class MfaHandlerTest {
         usingValidSession();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         for (int i = 0; i < MAX_CODE_RETRIES; i++) {
-            session.incrementCodeRequestCount(
+            authSession.incrementCodeRequestCount(
                     NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
         }
 
@@ -393,7 +383,7 @@ class MfaHandlerTest {
 
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         for (int i = 0; i < MAX_CODE_RETRIES; i++) {
-            session.incrementCodeRequestCount(MFA_SMS, journeyType);
+            authSession.incrementCodeRequestCount(MFA_SMS, journeyType);
         }
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
@@ -412,15 +402,6 @@ class MfaHandlerTest {
                 journeyType, reauthEnabled, codeRequestType);
 
         checkUserIsBlockedWhenNotReAuthenticating(journeyType, codeRequestType);
-
-        verify(sessionService)
-                .storeOrUpdateSession(
-                        argThat(
-                                sessionForTestUser ->
-                                        sessionForTestUser.getCodeRequestCount(
-                                                        NotificationType.MFA_SMS, journeyType)
-                                                == 0),
-                        eq(SESSION_ID));
 
         verify(authSessionService)
                 .updateSession(

@@ -412,7 +412,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType,
             JourneyType journeyType) {
 
-        var codeRequestCount = session.getCodeRequestCount(notificationType, journeyType);
+        var codeRequestCount = authSession.getCodeRequestCount(notificationType, journeyType);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
 
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
