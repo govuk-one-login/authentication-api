@@ -110,7 +110,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       jsonencode(aws_api_gateway_integration.orch_frontend_nlb_integration),
       jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
       var.orch_openid_configuration_enabled,
-      var.orch_trustmark_enabled,
       var.orch_doc_app_callback_enabled,
       var.orch_token_enabled,
       var.orch_jwks_enabled,
@@ -145,7 +144,6 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.ipv-capacity,
     module.doc-app-callback,
     aws_api_gateway_integration.orch_openid_configuration_integration,
-    aws_api_gateway_integration.orch_trustmark_integration,
     aws_api_gateway_integration.orch_doc_app_callback_integration,
     aws_api_gateway_integration.orch_token_integration,
     aws_api_gateway_integration.orch_jwks_integration,
@@ -259,7 +257,6 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.openid_configuration_discovery,
     module.register,
     module.token,
-    module.trustmarks,
     module.update,
     module.userinfo,
     module.ipv-callback,
@@ -855,41 +852,6 @@ resource "aws_api_gateway_integration" "orch_openid_configuration_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-OpenIdConfigurationFunction:latest/invocations"
-}
-
-resource "aws_api_gateway_resource" "orch_trustmark_resource" {
-  count       = var.orch_trustmark_enabled ? 1 : 0
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
-  path_part   = "trustmark"
-  depends_on = [
-    module.trustmarks
-  ]
-}
-
-resource "aws_api_gateway_method" "orch_trustmark_method" {
-  count       = var.orch_trustmark_enabled ? 1 : 0
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_trustmark_resource[0].id
-  http_method = "GET"
-
-  depends_on = [
-    aws_api_gateway_resource.orch_trustmark_resource
-  ]
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "orch_trustmark_integration" {
-  count       = var.orch_trustmark_enabled ? 1 : 0
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_trustmark_resource[0].id
-  http_method = aws_api_gateway_method.orch_trustmark_method[0].http_method
-  depends_on = [
-    aws_api_gateway_resource.orch_trustmark_resource
-  ]
-  type                    = "AWS_PROXY"
-  integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-TrustmarkFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_doc_app_callback_resource" {
