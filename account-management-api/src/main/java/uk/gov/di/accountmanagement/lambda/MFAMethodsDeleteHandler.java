@@ -10,7 +10,6 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
 
@@ -27,7 +26,6 @@ public class MFAMethodsDeleteHandler
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsDeleteHandler.class);
     private final ConfigurationService configurationService;
-    private final DynamoService dynamoService;
     private final MfaMethodsService mfaMethodsService;
 
     public MFAMethodsDeleteHandler() {
@@ -36,16 +34,12 @@ public class MFAMethodsDeleteHandler
 
     public MFAMethodsDeleteHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.dynamoService = new DynamoService(configurationService);
         this.mfaMethodsService = new DynamoMfaMethodsService(configurationService);
     }
 
     public MFAMethodsDeleteHandler(
-            ConfigurationService configurationService,
-            DynamoService dynamoService,
-            MfaMethodsService mfaMethodsService) {
+            ConfigurationService configurationService, MfaMethodsService mfaMethodsService) {
         this.configurationService = configurationService;
-        this.dynamoService = dynamoService;
         this.mfaMethodsService = mfaMethodsService;
     }
 
@@ -83,16 +77,7 @@ public class MFAMethodsDeleteHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1064);
         }
 
-        var maybeUserProfile =
-                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
-
-        if (maybeUserProfile.isEmpty()) {
-            LOG.error("Unknown public subject ID");
-            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
-        }
-
-        var deleteResult =
-                mfaMethodsService.deleteMfaMethod(maybeUserProfile.get().getEmail(), mfaIdentifier);
+        var deleteResult = mfaMethodsService.deleteMfaMethod(publicSubjectId, mfaIdentifier);
 
         if (deleteResult.isLeft()) {
             var failureReason = deleteResult.getLeft();
@@ -107,6 +92,8 @@ public class MFAMethodsDeleteHandler
                         400, ErrorResponse.ERROR_1067);
                 case MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST -> generateApiGatewayProxyErrorResponse(
                         404, ErrorResponse.ERROR_1065);
+                case NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
+                        404, ErrorResponse.ERROR_1056);
             };
         }
 

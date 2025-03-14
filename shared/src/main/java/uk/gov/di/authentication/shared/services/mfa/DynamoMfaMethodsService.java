@@ -73,14 +73,21 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
     }
 
     public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
-            String email, String mfaIdentifier) {
-        var userProfile = dynamoService.getUserProfileByEmail(email);
+            String publicSubjectId, String mfaIdentifier) {
+        var maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+
+        if (maybeUserProfile.isEmpty()) {
+            return Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID);
+        }
+        var userProfile = maybeUserProfile.get();
         if (!userProfile.getMfaMethodsMigrated()) {
             return Either.left(
                     MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER);
         }
 
-        var mfaMethods = dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
+        var mfaMethods =
+                dynamoService.getUserCredentialsFromEmail(userProfile.getEmail()).getMfaMethods();
 
         var maybeMethodToDelete =
                 mfaMethods.stream()
@@ -95,7 +102,7 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
             return Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
         }
 
-        dynamoService.deleteMfaMethodByIdentifier(email, mfaIdentifier);
+        dynamoService.deleteMfaMethodByIdentifier(userProfile.getEmail(), mfaIdentifier);
         return Either.right(mfaIdentifier);
     }
 

@@ -15,5 +15,5 @@ public interface MfaMethodsService {
             throws InvalidPriorityIdentifierException;
 
     Either<MfaDeleteFailureReason, String> deleteMfaMethod(
-            String email, String mfaMethodIdentifier);
+            String publicSubjectId, String mfaMethodIdentifier);
 }
