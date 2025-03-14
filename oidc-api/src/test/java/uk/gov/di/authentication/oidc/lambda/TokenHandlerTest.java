@@ -871,6 +871,8 @@ public class TokenHandlerTest {
         var clientSession =
                 new ClientSession(authRequestParams, clientSessionCreationTime, vtr, CLIENT_NAME)
                         .setDocAppSubjectId(docAppSubjectId);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSession));
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(
                         Optional.of(
