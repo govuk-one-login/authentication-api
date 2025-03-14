@@ -29,7 +29,6 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     "some-credential",
                     true,
                     true,
-                    "updated-at",
                     PriorityIdentifier.DEFAULT,
                     "a44aa7a9-463a-4e10-93dd-bde8de3215bc");
     private static final MFAMethod BACKUP_PRIORITY_SMS =
@@ -37,7 +36,6 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     true,
                     true,
                     "0123456",
-                    "updated-at",
                     PriorityIdentifier.BACKUP,
                     "20fbea7e-4c4e-4a32-a7b5-000bb4863660");
     private String publicSubjectId;

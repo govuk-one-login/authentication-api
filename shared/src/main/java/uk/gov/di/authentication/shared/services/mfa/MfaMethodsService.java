@@ -11,7 +11,6 @@ import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -150,7 +149,6 @@ public class MfaMethodsService {
                             true,
                             true,
                             smsMfaDetail.phoneNumber(),
-                            NowHelper.toTimestampString(NowHelper.now()),
                             mfaMethod.priorityIdentifier(),
                             uuid));
             return MfaMethodData.smsMethodData(

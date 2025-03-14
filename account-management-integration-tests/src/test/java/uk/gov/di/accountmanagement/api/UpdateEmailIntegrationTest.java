@@ -93,7 +93,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var mfaIdentifier = "03a89933-cddd-471d-8fdb-562f14a2404f";
         var smsMethod =
                 MFAMethod.smsMfaMethod(
-                        true, true, "1234", "updated-at", PriorityIdentifier.BACKUP, mfaIdentifier);
+                        true, true, "1234", PriorityIdentifier.BACKUP, mfaIdentifier);
         userStore.addMfaMethodSupportingMultiple(EXISTING_EMAIL_ADDRESS, smsMethod);
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 

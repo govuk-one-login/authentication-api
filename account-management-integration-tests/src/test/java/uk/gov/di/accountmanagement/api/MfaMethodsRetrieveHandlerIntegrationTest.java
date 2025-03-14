@@ -122,17 +122,11 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         "some-credential",
                         true,
                         true,
-                        "updated-at-time",
                         PriorityIdentifier.DEFAULT,
                         authAppIdentifier);
         var sms =
                 MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        PHONE_NUMBER,
-                        "updated-at-time",
-                        PriorityIdentifier.BACKUP,
-                        smsIdentifier);
+                        true, true, PHONE_NUMBER, PriorityIdentifier.BACKUP, smsIdentifier);
         userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, authApp);
         userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, sms);
 
