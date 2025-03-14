@@ -110,7 +110,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       jsonencode(aws_api_gateway_integration.orch_frontend_nlb_integration),
       jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
       var.orch_openid_configuration_enabled,
-      var.orch_trustmark_enabled,
       var.orch_doc_app_callback_enabled,
       var.orch_token_enabled,
       var.orch_jwks_enabled,

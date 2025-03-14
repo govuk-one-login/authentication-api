@@ -13,7 +13,7 @@ module "trustmarks" {
   source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "trustmark"
-  path_part       = var.orch_trustmark_enabled ? "trustmark-auth" : "trustmark"
+  path_part       = "trustmark" # Always disabled - will be removed in subsequent commit.
   endpoint_method = ["GET"]
   environment     = var.environment
 
