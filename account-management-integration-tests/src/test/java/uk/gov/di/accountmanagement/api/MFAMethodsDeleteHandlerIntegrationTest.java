@@ -4,11 +4,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsDeleteHandler;
-import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.SmsMfaData;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -25,18 +24,18 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final String PASSWORD = "password-1";
-    private static final AuthAppMfaData DEFAULT_PRIORITY_AUTH_APP =
-            new AuthAppMfaData(
+    private static final MFAMethod DEFAULT_PRIORITY_AUTH_APP =
+            MFAMethod.authAppMfaMethod(
                     "some-credential",
                     true,
                     true,
                     PriorityIdentifier.DEFAULT,
                     "a44aa7a9-463a-4e10-93dd-bde8de3215bc");
-    private static final SmsMfaData BACKUP_PRIORITY_SMS =
-            new SmsMfaData(
+    private static final MFAMethod BACKUP_PRIORITY_SMS =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
                     "0123456",
-                    true,
-                    true,
                     PriorityIdentifier.BACKUP,
                     "20fbea7e-4c4e-4a32-a7b5-000bb4863660");
     private String publicSubjectId;
@@ -72,7 +71,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 "publicSubjectId",
                                 publicSubjectId,
                                 "mfaIdentifier",
-                                BACKUP_PRIORITY_SMS.mfaIdentifier()),
+                                BACKUP_PRIORITY_SMS.getMfaIdentifier()),
                         Collections.emptyMap());
 
         assertEquals(204, response.getStatusCode());
@@ -83,7 +82,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         var mfaMethod = mfaMethods.stream().findFirst().get();
 
         assertEquals(MFAMethodType.AUTH_APP.getValue(), mfaMethod.getMfaMethodType());
-        assertEquals(DEFAULT_PRIORITY_AUTH_APP.mfaIdentifier(), mfaMethod.getMfaIdentifier());
+        assertEquals(DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier(), mfaMethod.getMfaIdentifier());
     }
 
     @Test
@@ -142,7 +141,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 "publicSubjectId",
                                 publicSubjectId,
                                 "mfaIdentifier",
-                                DEFAULT_PRIORITY_AUTH_APP.mfaIdentifier()),
+                                DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier()),
                         Collections.emptyMap());
 
         assertEquals(409, response.getStatusCode());
@@ -165,7 +164,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 "publicSubjectId",
                                 publicSubjectId,
                                 "mfaIdentifier",
-                                DEFAULT_PRIORITY_AUTH_APP.mfaIdentifier()),
+                                DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier()),
                         Collections.emptyMap());
 
         assertEquals(400, response.getStatusCode());

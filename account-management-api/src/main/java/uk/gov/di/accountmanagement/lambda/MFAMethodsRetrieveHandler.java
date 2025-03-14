@@ -12,9 +12,8 @@ import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 
 import java.util.Map;
 
@@ -39,7 +38,7 @@ public class MFAMethodsRetrieveHandler
     public MFAMethodsRetrieveHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.dynamoService = new DynamoService(configurationService);
-        this.mfaMethodsService = new DynamoMfaMethodsService(configurationService);
+        this.mfaMethodsService = new MfaMethodsService(configurationService);
     }
 
     public MFAMethodsRetrieveHandler(

@@ -10,8 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.MfaMethodsService;
-import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 
 import java.util.Map;
 
@@ -34,7 +33,7 @@ public class MFAMethodsDeleteHandler
 
     public MFAMethodsDeleteHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.mfaMethodsService = new DynamoMfaMethodsService(configurationService);
+        this.mfaMethodsService = new MfaMethodsService(configurationService);
     }
 
     public MFAMethodsDeleteHandler(

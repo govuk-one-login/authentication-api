@@ -11,12 +11,11 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.MfaData;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
@@ -209,8 +208,8 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.updateMFAMethod(email, mfaMethodType, isVerified, isEnabled, credentialValue);
     }
 
-    public void addMfaMethodSupportingMultiple(String email, MfaData mfaData) {
-        dynamoService.addMFAMethodSupportingMultiple(email, mfaData);
+    public void addMfaMethodSupportingMultiple(String email, MFAMethod mfaMethod) {
+        dynamoService.addMFAMethodSupportingMultiple(email, mfaMethod);
     }
 
     public void updateMFAMethod(

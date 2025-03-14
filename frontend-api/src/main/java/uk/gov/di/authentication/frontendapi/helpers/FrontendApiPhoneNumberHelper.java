@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
 import uk.gov.di.authentication.entity.UserMfaDetail;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 public class FrontendApiPhoneNumberHelper {
     public static final int NUMBER_OF_LAST_DIGITS = 3;

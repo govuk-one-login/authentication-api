@@ -1,9 +1,8 @@
-package uk.gov.di.authentication.entity;
+package uk.gov.di.authentication.shared.entity.mfa;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.authentication.shared.entity.MfaDetail;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.serialization.MfaDetailDeserializer;
 
