@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenErrorResponse;
@@ -56,7 +57,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -73,7 +73,6 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -84,6 +83,7 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -127,7 +127,6 @@ class IPVCallbackHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final AuthenticationUserInfoStorageService authUserInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -149,6 +148,9 @@ class IPVCallbackHandlerTest {
             URI.create("https://example.com/ipv-callback");
     private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
+    private static final String RP_SECTOR_URI = "https://test.com";
+    private static final String RP_SECTOR_HOST = "test.com";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -158,6 +160,7 @@ class IPVCallbackHandlerTest {
     private static final String PERSISTENT_SESSION_ID =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final String TEST_PHONE_NUMBER = "012345678902";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final State RP_STATE = new State();
     private static final URI IPV_URI = URI.create("http://ipv/");
@@ -173,6 +176,7 @@ class IPVCallbackHandlerTest {
     private IPVCallbackHandler handler;
     private static final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+    private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private final URI accessDeniedURI =
             new AuthenticationErrorResponse(
@@ -181,13 +185,19 @@ class IPVCallbackHandlerTest {
                             RP_STATE,
                             null)
                     .toURI();
-    private final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
-    private final UserProfile userProfile = generateUserProfile();
+    private static final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
+    private final UserInfo authUserInfo = generateAuthUserInfo();
 
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    TEST_SUBJECT.getValue(), "test.account.gov.uk", salt);
+                    TEST_SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+    private static final String TEST_RP_PAIRWISE_ID =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_SUBJECT.getValue(),
+                    ClientSubjectHelper.getSectorIdentifierForClient(
+                            clientRegistry, RP_SECTOR_HOST),
+                    salt);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -202,21 +212,23 @@ class IPVCallbackHandlerTest {
             generateAuthRequest(new OIDCClaimsRequest()).toParameters();
     private final ClientSession clientSession =
             new ClientSession(
-                    authRequestParams,
-                    null,
-                    List.of(
-                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
-                    CLIENT_NAME);
+                            authRequestParams,
+                            null,
+                            List.of(
+                                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                            CLIENT_NAME)
+                    .setRpPairwiseId(TEST_RP_PAIRWISE_ID);
     private final OrchClientSessionItem orchClientSession =
             new OrchClientSessionItem(
-                    CLIENT_SESSION_ID,
-                    authRequestParams,
-                    null,
-                    List.of(
-                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
-                    CLIENT_NAME);
+                            CLIENT_SESSION_ID,
+                            authRequestParams,
+                            null,
+                            List.of(
+                                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                            CLIENT_NAME)
+                    .withRpPairwiseId(TEST_RP_PAIRWISE_ID);
     private final Json objectMapper = SerializationService.getInstance();
 
     private static Stream<Arguments> additionalClaims() {
@@ -283,7 +295,6 @@ class IPVCallbackHandlerTest {
                         sessionService,
                         orchSessionService,
                         authUserInfoStorageService,
-                        dynamoService,
                         clientSessionService,
                         orchClientSessionService,
                         dynamoClientService,
@@ -301,7 +312,6 @@ class IPVCallbackHandlerTest {
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(
                         new AccountIntervention(
@@ -318,10 +328,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled()
-            throws UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException, ParseException {
         when(configService.isIdentityEnabled()).thenReturn(false);
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
         var response = handler.handleRequest(request, context);
@@ -332,9 +343,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldMakeAISCallAndReturnAccessDeniedErrorToRPWhenP0()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -361,13 +374,9 @@ class IPVCallbackHandlerTest {
                         .toString();
         assertThat(response, hasStatus(302));
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-        var expectedInternalPairwiseSubjectId =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorURI(), dynamoService)
-                        .getValue();
         verify(accountInterventionService)
                 .getAccountIntervention(
-                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
     }
 
     @ParameterizedTest
@@ -376,8 +385,11 @@ class IPVCallbackHandlerTest {
             ClientRegistry clientRegistry, OIDCClaimsRequest claimsRequest, URI expectedURI)
             throws UnsuccessfulCredentialResponseException,
                     IpvCallbackException,
-                    UserNotFoundException {
+                    UserNotFoundException,
+                    ParseException {
         usingValidSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -394,7 +406,7 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                         any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any(), any()))
+                        any(), any(), any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 REDIRECT_URI, null, null, null, null, null, null));
@@ -403,25 +415,29 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ClientSession(
-                                        testAuthRequestParams,
-                                        null,
-                                        List.of(
-                                                new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                                new VectorOfTrust(
-                                                        CredentialTrustLevel.MEDIUM_LEVEL)),
-                                        CLIENT_NAME)));
+                                                testAuthRequestParams,
+                                                null,
+                                                List.of(
+                                                        new VectorOfTrust(
+                                                                CredentialTrustLevel.LOW_LEVEL),
+                                                        new VectorOfTrust(
+                                                                CredentialTrustLevel.MEDIUM_LEVEL)),
+                                                CLIENT_NAME)
+                                        .setRpPairwiseId(TEST_RP_PAIRWISE_ID)));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         Optional.of(
                                 new OrchClientSessionItem(
-                                        CLIENT_SESSION_ID,
-                                        testAuthRequestParams,
-                                        null,
-                                        List.of(
-                                                new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                                new VectorOfTrust(
-                                                        CredentialTrustLevel.MEDIUM_LEVEL)),
-                                        CLIENT_NAME)));
+                                                CLIENT_SESSION_ID,
+                                                testAuthRequestParams,
+                                                null,
+                                                List.of(
+                                                        new VectorOfTrust(
+                                                                CredentialTrustLevel.LOW_LEVEL),
+                                                        new VectorOfTrust(
+                                                                CredentialTrustLevel.MEDIUM_LEVEL)),
+                                                CLIENT_NAME)
+                                        .withRpPairwiseId(TEST_RP_PAIRWISE_ID)));
 
         var response =
                 makeHandlerRequest(
@@ -438,8 +454,11 @@ class IPVCallbackHandlerTest {
         void shouldCallHelperWithFeatureFlag(boolean isFlagEnabled)
                 throws UnsuccessfulCredentialResponseException,
                         IpvCallbackException,
-                        UserNotFoundException {
+                        UserNotFoundException,
+                        ParseException {
             usingValidSession();
+            usingValidAuthUserInfo();
+
             var claimsSetRequest =
                     new ClaimsSetRequest()
                             .add(ValidClaims.ADDRESS.getValue())
@@ -473,7 +492,7 @@ class IPVCallbackHandlerTest {
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                             any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                            any(), any(), any()))
+                            any(), any(), any(), any()))
                     .thenReturn(
                             new AuthenticationSuccessResponse(
                                     REDIRECT_URI, null, null, null, null, null, null));
@@ -483,27 +502,31 @@ class IPVCallbackHandlerTest {
                     .thenReturn(
                             Optional.of(
                                     new ClientSession(
-                                            testAuthRequestParams,
-                                            null,
-                                            List.of(
-                                                    new VectorOfTrust(
-                                                            CredentialTrustLevel.LOW_LEVEL),
-                                                    new VectorOfTrust(
-                                                            CredentialTrustLevel.MEDIUM_LEVEL)),
-                                            CLIENT_NAME)));
+                                                    testAuthRequestParams,
+                                                    null,
+                                                    List.of(
+                                                            new VectorOfTrust(
+                                                                    CredentialTrustLevel.LOW_LEVEL),
+                                                            new VectorOfTrust(
+                                                                    CredentialTrustLevel
+                                                                            .MEDIUM_LEVEL)),
+                                                    CLIENT_NAME)
+                                            .setRpPairwiseId(TEST_RP_PAIRWISE_ID)));
             when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(
                             Optional.of(
                                     new OrchClientSessionItem(
-                                            CLIENT_SESSION_ID,
-                                            testAuthRequestParams,
-                                            null,
-                                            List.of(
-                                                    new VectorOfTrust(
-                                                            CredentialTrustLevel.LOW_LEVEL),
-                                                    new VectorOfTrust(
-                                                            CredentialTrustLevel.MEDIUM_LEVEL)),
-                                            CLIENT_NAME)));
+                                                    CLIENT_SESSION_ID,
+                                                    testAuthRequestParams,
+                                                    null,
+                                                    List.of(
+                                                            new VectorOfTrust(
+                                                                    CredentialTrustLevel.LOW_LEVEL),
+                                                            new VectorOfTrust(
+                                                                    CredentialTrustLevel
+                                                                            .MEDIUM_LEVEL)),
+                                                    CLIENT_NAME)
+                                            .withRpPairwiseId(TEST_RP_PAIRWISE_ID)));
             var response =
                     makeHandlerRequest(
                             getApiGatewayProxyRequestEvent(
@@ -519,8 +542,11 @@ class IPVCallbackHandlerTest {
     void shouldReturnAuthCodeToRPWhenP0AndReturnCodePresentPermittedAndRequested()
             throws UnsuccessfulCredentialResponseException,
                     IpvCallbackException,
-                    UserNotFoundException {
+                    UserNotFoundException,
+                    ParseException {
         usingValidSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -556,26 +582,27 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ClientSession(
-                                        testAuthRequestParams, null, List.of(), CLIENT_NAME)));
+                                                testAuthRequestParams, null, List.of(), CLIENT_NAME)
+                                        .setRpPairwiseId(TEST_RP_PAIRWISE_ID)));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         Optional.of(
                                 new OrchClientSessionItem(
-                                        CLIENT_SESSION_ID,
-                                        testAuthRequestParams,
-                                        null,
-                                        List.of(),
-                                        CLIENT_NAME)));
+                                                CLIENT_SESSION_ID,
+                                                testAuthRequestParams,
+                                                null,
+                                                List.of(),
+                                                CLIENT_NAME)
+                                        .withRpPairwiseId(TEST_RP_PAIRWISE_ID)));
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                         any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any(), any()))
+                        any(), any(), any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));
-
         var response =
                 makeHandlerRequest(
                         getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry));
@@ -585,9 +612,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldNotInvokeSPOTAndReturnAccessDeniedErrorToRPWhenP0()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -624,9 +653,10 @@ class IPVCallbackHandlerTest {
     @MethodSource("additionalClaims")
     void shouldInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2(
             Map<String, String> additionalClaims)
-            throws Json.JsonException, UnsuccessfulCredentialResponseException {
+            throws Json.JsonException, UnsuccessfulCredentialResponseException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         Map<String, Object> userIdentityAdditionalClaims = new HashMap<>();
 
@@ -656,15 +686,12 @@ class IPVCallbackHandlerTest {
                                 new UserInfo(new JSONObject(claims)), clientRegistry));
 
         assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
-        var expectedRpPairwiseSub =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry, dynamoService, INTERNAL_SECTOR_URI);
         verify(ipvCallbackHelper)
                 .queueSPOTRequest(
                         any(),
                         anyString(),
-                        eq(userProfile),
-                        eq(expectedRpPairwiseSub),
+                        eq(authUserInfo),
+                        eq(new Subject(TEST_RP_PAIRWISE_ID)),
                         any(UserInfo.class),
                         eq(CLIENT_ID.getValue()));
         verify(ipvCallbackHelper)
@@ -680,9 +707,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldNotInvokeSPOTAndShouldRedirectToFrontendErrorPageWhenVTMMismatch()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -734,7 +763,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() {
+    void shouldRedirectToFrontendErrorPageWhenAuthUserInfoNotFound() throws ParseException {
         usingValidSession();
         usingValidClientSession();
         Map<String, String> responseHeaders = new HashMap<>();
@@ -744,12 +773,13 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
 
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.setQueryStringParameters(responseHeaders);
         request.setHeaders(Map.of(COOKIE, buildCookieString()));
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.empty());
 
         var response = handler.handleRequest(request, context);
         assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
@@ -760,9 +790,10 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails()
-            throws UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         var claims =
                 new HashMap<String, Object>(
@@ -793,9 +824,12 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldMakeAISCallBeforeRedirectingToRpWhenAuthResponseContainsError() {
+    void shouldMakeAISCallBeforeRedirectingToRpWhenAuthResponseContainsError()
+            throws ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -807,9 +841,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -817,26 +848,23 @@ class IPVCallbackHandlerTest {
 
         var response = handler.handleRequest(event, context);
 
-        var expectedInternalPairwiseSubjectId =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorURI(), dynamoService)
-                        .getValue();
-
         assertThat(response, hasStatus(302));
         assertEquals(
                 accessDeniedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
         verify(accountInterventionService)
                 .getAccountIntervention(
-                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(dynamoIdentityService);
     }
 
     @Test
-    void shouldRedirectToRpWhenAuthResponseContainsError() {
+    void shouldRedirectToRpWhenAuthResponseContainsError() throws ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -848,9 +876,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -870,8 +895,10 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() {
+    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() throws ParseException {
         usingValidSession();
+        usingValidAuthUserInfo();
+
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -891,9 +918,10 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound()
-            throws UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
 
@@ -908,12 +936,12 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
-        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() throws ParseException {
         var clientRegistry = generateClientRegistryNoClaims();
-        var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var unsuccessfulTokenResponse =
                 new TokenErrorResponse(new ErrorObject("Test error response"));
         Map<String, String> responseHeaders = new HashMap<>();
@@ -923,10 +951,10 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(authUserInfo));
 
         var request = new APIGatewayProxyRequestEvent();
         request.setQueryStringParameters(responseHeaders);
@@ -945,9 +973,10 @@ class IPVCallbackHandlerTest {
     @Test
     void
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
-                    throws NoSessionException {
+                    throws NoSessionException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put("state", STATE.getValue());
@@ -984,9 +1013,10 @@ class IPVCallbackHandlerTest {
     @Test
     void
             shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
-                    throws NoSessionException {
+                    throws NoSessionException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
@@ -1027,9 +1057,11 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldLogoutUserWhenAISReturnsBlockedAccountInAuthStep() {
+    void shouldLogoutUserWhenAISReturnsBlockedAccountInAuthStep() throws ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -1041,8 +1073,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
         var intervention =
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
@@ -1063,12 +1093,13 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldLogoutUserWhenAISReturnsBlockedAccountInTokenStep() throws IpvCallbackException {
-        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+    void shouldLogoutUserWhenAISReturnsBlockedAccountInTokenStep()
+            throws IpvCallbackException, ParseException {
         var clientRegistry = generateClientRegistryNoClaims();
-        var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         when(ipvCallbackHelper.validateUserIdentityResponse(any(), eq(VTR_LIST)))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         Map<String, String> responseHeaders = new HashMap<>();
@@ -1078,9 +1109,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
@@ -1136,14 +1164,28 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(orchClientSession));
     }
 
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber("012345678902")
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .withSubjectID(TEST_SUBJECT.getValue());
+    private void usingValidAuthUserInfo() throws ParseException {
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(authUserInfo));
+    }
+
+    private UserInfo generateAuthUserInfo() {
+        return new UserInfo(
+                new JSONObject(
+                        Map.of(
+                                "sub",
+                                TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                                "client_session_id",
+                                CLIENT_SESSION_ID,
+                                "email",
+                                TEST_EMAIL_ADDRESS,
+                                "phone_number",
+                                TEST_PHONE_NUMBER,
+                                "salt",
+                                BASE_64_ENCODED_SALT,
+                                "local_account_id",
+                                TEST_SUBJECT.getValue())));
     }
 
     private static ClientRegistry generateClientRegistryNoClaims() {
@@ -1151,7 +1193,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(RP_SECTOR_URI)
                 .withSubjectType("pairwise");
     }
 
@@ -1160,7 +1202,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(RP_SECTOR_URI)
                 .withSubjectType("pairwise")
                 .withClaims(List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
@@ -1189,7 +1231,7 @@ class IPVCallbackHandlerTest {
                                 .withSessionId(SESSION_ID)
                                 .withUserId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
                                 .withEmail(TEST_EMAIL_ADDRESS)
-                                .withPhone(userProfile.getPhoneNumber())
+                                .withPhone(TEST_PHONE_NUMBER)
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID));
     }
 
@@ -1205,9 +1247,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
         when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(userIdentityUserInfo);
