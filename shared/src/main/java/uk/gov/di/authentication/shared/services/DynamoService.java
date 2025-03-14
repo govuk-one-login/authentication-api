@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaData;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -451,9 +450,10 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void addMFAMethodSupportingMultiple(String email, MfaData mfaData) {
+    public void addMFAMethodSupportingMultiple(String email, MFAMethod mfaMethod) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
-        var mfaMethod = mfaData.toDatabaseRecord(dateTime);
+        mfaMethod.setUpdated(dateTime);
+
         dynamoUserCredentialsTable.updateItem(
                 dynamoUserCredentialsTable
                         .getItem(

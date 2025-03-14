@@ -4,13 +4,14 @@ import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.MfaMethodData;
-import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.mfaMethodManagement.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -145,10 +146,12 @@ public class MfaMethodsService {
             String uuid = UUID.randomUUID().toString();
             persistentService.addMFAMethodSupportingMultiple(
                     email,
-                    new SmsMfaData(
+                    MFAMethod.smsMfaMethod(
+                            MFAMethodType.SMS.getValue(),
+                            true,
+                            true,
                             smsMfaDetail.phoneNumber(),
-                            true,
-                            true,
+                            NowHelper.toTimestampString(NowHelper.now()),
                             mfaMethod.priorityIdentifier(),
                             uuid));
             return MfaMethodData.smsMethodData(
