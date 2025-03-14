@@ -40,13 +40,6 @@ public class LogLineHelper {
         }
     }
 
-    public static void updateAttachedLogFieldToLogs(LogFieldName logFieldName, String value) {
-        if (ThreadContext.containsKey(logFieldName.getLogFieldName())) {
-            ThreadContext.remove(logFieldName.getLogFieldName());
-        }
-        attachLogFieldToLogs(logFieldName, value);
-    }
-
     public static void attachSessionIdToLogs(String sessionId) {
         attachLogFieldToLogs(SESSION_ID, sessionId);
     }
