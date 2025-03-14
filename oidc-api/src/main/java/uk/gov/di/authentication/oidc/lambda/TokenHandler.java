@@ -236,7 +236,18 @@ public class TokenHandler
         updateAttachedLogFieldToLogs(
                 GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
 
-        ClientSession clientSession = authCodeExchangeData.getClientSession();
+        var clientSessionId = authCodeExchangeData.getClientSessionId();
+        var clientSessionOpt = clientSessionService.getClientSession(clientSessionId);
+        if (clientSessionOpt.isEmpty()) {
+            throw new RuntimeException(
+                    format("Can't find client session with id: %s", clientSessionId));
+        }
+        var clientSession = clientSessionOpt.get();
+        var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
+        if (orchClientSessionOpt.isEmpty()) {
+            LOG.warn("No orch client session is present");
+        }
+        logIfClientSessionsAreNotEqual(clientSession, orchClientSessionOpt.orElse(null));
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
@@ -261,18 +272,12 @@ public class TokenHandler
                         authCodeExchangeData);
 
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
-        var clientSessionId = authCodeExchangeData.getClientSessionId();
-        var orchClientSession = orchClientSessionService.getClientSession(clientSessionId);
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession.orElse(null));
         clientSessionService.updateStoredClientSession(
                 clientSessionId, clientSession.setIdTokenHint(idTokenHint));
-
-        if (orchClientSession.isEmpty()) {
-            LOG.warn("No orch client session is present");
-        } else {
-            orchClientSessionService.updateStoredClientSession(
-                    orchClientSession.get().withIdTokenHint(idTokenHint));
-        }
+        orchClientSessionOpt.ifPresent(
+                orchClientSession ->
+                        orchClientSessionService.updateStoredClientSession(
+                                orchClientSession.withIdTokenHint(idTokenHint)));
 
         var dimensions =
                 new HashMap<>(

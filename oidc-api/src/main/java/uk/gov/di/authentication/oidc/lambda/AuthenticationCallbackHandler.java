@@ -579,7 +579,6 @@ public class AuthenticationCallbackHandler
                                 clientId,
                                 clientSessionId,
                                 userInfo.getEmailAddress(),
-                                clientSession,
                                 orchSession.getAuthTime());
 
                 var authenticationResponse =

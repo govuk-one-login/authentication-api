@@ -214,7 +214,6 @@ public class IPVCallbackHelper {
                         clientId,
                         clientSessionId,
                         userProfile.getEmail(),
-                        clientSession,
                         orchSession.getAuthTime());
         var authenticationResponse =
                 new AuthenticationSuccessResponse(
