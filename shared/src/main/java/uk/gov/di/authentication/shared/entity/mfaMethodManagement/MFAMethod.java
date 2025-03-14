@@ -45,7 +45,6 @@ public class MFAMethod {
     }
 
     public static MFAMethod authAppMfaMethod(
-            String mfaMethodType,
             String credentialValue,
             boolean methodVerified,
             boolean enabled,
@@ -53,7 +52,7 @@ public class MFAMethod {
             PriorityIdentifier priority,
             String mfaIdentifier) {
         return new MFAMethod()
-                .withMfaMethodType(mfaMethodType)
+                .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                 .withCredentialValue(credentialValue)
                 .withMethodVerified(methodVerified)
                 .withEnabled(enabled)
@@ -63,7 +62,6 @@ public class MFAMethod {
     }
 
     public static MFAMethod smsMfaMethod(
-            String mfaMethodType,
             boolean methodVerified,
             boolean enabled,
             String destination,
@@ -71,7 +69,7 @@ public class MFAMethod {
             PriorityIdentifier priority,
             String mfaIdentifier) {
         return new MFAMethod()
-                .withMfaMethodType(mfaMethodType)
+                .withMfaMethodType(MFAMethodType.SMS.getValue())
                 .withMethodVerified(methodVerified)
                 .withEnabled(enabled)
                 .withDestination(destination)

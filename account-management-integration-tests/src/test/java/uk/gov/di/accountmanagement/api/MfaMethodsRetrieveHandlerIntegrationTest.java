@@ -119,7 +119,6 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         var smsIdentifier = "e2d3f441-a17f-44a3-b608-b32c129b48b4";
         var authApp =
                 MFAMethod.authAppMfaMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
                         "some-credential",
                         true,
                         true,
@@ -128,7 +127,6 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         authAppIdentifier);
         var sms =
                 MFAMethod.smsMfaMethod(
-                        MFAMethodType.SMS.getValue(),
                         true,
                         true,
                         PHONE_NUMBER,
