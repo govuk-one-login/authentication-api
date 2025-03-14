@@ -109,11 +109,11 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @MethodSource("emailNotificationTypes")
     void shouldResetCodeRequestCountWhenSuccessfulEmailCodeAndReturn204(
             NotificationType emailNotificationType) throws Json.JsonException {
-        redis.incrementSessionCodeRequestCount(
+        authSessionExtension.incrementSessionCodeRequestCount(
                 sessionId, emailNotificationType, JourneyType.ACCOUNT_RECOVERY);
-        redis.incrementSessionCodeRequestCount(
+        authSessionExtension.incrementSessionCodeRequestCount(
                 sessionId, emailNotificationType, JourneyType.ACCOUNT_RECOVERY);
-        redis.incrementSessionCodeRequestCount(
+        authSessionExtension.incrementSessionCodeRequestCount(
                 sessionId, emailNotificationType, JourneyType.ACCOUNT_RECOVERY);
         setUpTestWithoutSignUp(sessionId, withScope());
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
