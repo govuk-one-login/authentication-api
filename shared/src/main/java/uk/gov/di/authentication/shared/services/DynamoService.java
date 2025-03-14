@@ -724,6 +724,18 @@ public class DynamoService implements AuthenticationService {
         }
     }
 
+    public void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .removeMfaMethodByIdentifierIfPresent(mfaMethodIdentifier)
+                        .withUpdated(dateTime));
+    }
+
     public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
             Map<String, AttributeValue> exclusiveStartKey, List<String> termsAndConditionsVersion) {
 

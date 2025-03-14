@@ -20,7 +20,8 @@ dependencies {
             configurations.dynamodb,
             configurations.lettuce,
             configurations.lambda,
-            configurations.pact_provider
+            configurations.pact_provider,
+            configurations.vavr
 
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray

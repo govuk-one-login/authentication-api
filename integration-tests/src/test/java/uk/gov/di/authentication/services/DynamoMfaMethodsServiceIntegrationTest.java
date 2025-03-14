@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,8 @@ import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.List;
@@ -32,8 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
-import static uk.gov.di.authentication.shared.services.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
 
 class DynamoMfaMethodsServiceIntegrationTest {
 
@@ -161,26 +163,6 @@ class DynamoMfaMethodsServiceIntegrationTest {
                         PriorityIdentifier.BACKUP,
                         SMS_MFA_IDENTIFIER_2);
 
-        private MfaMethodData mfaMethodDataFrom(MfaData mfaData) {
-            if (mfaData instanceof AuthAppMfaData authAppMfaData) {
-                var detail =
-                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, authAppMfaData.credential());
-                return new MfaMethodData(
-                        authAppMfaData.mfaIdentifier(),
-                        authAppMfaData.priority(),
-                        authAppMfaData.verified(),
-                        detail);
-            } else {
-                SmsMfaData smsMfaData = (SmsMfaData) mfaData;
-                var detail = new SmsMfaDetail(MFAMethodType.SMS, smsMfaData.endpoint());
-                return new MfaMethodData(
-                        smsMfaData.mfaIdentifier(),
-                        smsMfaData.priority(),
-                        smsMfaData.verified(),
-                        detail);
-            }
-        }
-
         @BeforeEach
         void setUp() {
             userStoreExtension.signUp(EMAIL, "password-1", new Subject());
@@ -229,7 +211,10 @@ class DynamoMfaMethodsServiceIntegrationTest {
 
             var result = dynamoService.getMfaMethods(EMAIL);
 
-            var expectedData = mfaMethods.stream().map(this::mfaMethodDataFrom).toList();
+            var expectedData =
+                    mfaMethods.stream()
+                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom)
+                            .toList();
             assertEquals(expectedData, result);
         }
 
@@ -290,6 +275,179 @@ class DynamoMfaMethodsServiceIntegrationTest {
                 var result = dynamoService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
                 assertNull(result);
             }
+        }
+    }
+
+    @Nested
+    class DeleteMfaMethod {
+        private static final String EMAIL = "joe.bloggs@example.com";
+
+        private static final String SMS_MFA_IDENTIFIER_1 = "ea83592f-b9bf-436f-b4f4-ee33f610ee05";
+        private static final String SMS_MFA_IDENTIFIER_2 = "3634a5e3-dac8-4804-8d40-181722b48ae1";
+        private static final String APP_MFA_IDENTIFIER_1 = "a87e57e5-6175-4be7-af7d-547a390b36c1";
+        private static final String APP_MFA_IDENTIFIER_2 = "898a7e13-c354-430a-a3ca-8cc6c6391057";
+        private static final String PHONE_NUMBER_TWO = "987654321";
+
+        private static final AuthAppMfaData defaultPriorityAuthApp =
+                new AuthAppMfaData(
+                        AUTH_APP_CREDENTIAL,
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        APP_MFA_IDENTIFIER_1);
+        private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
+        private static final AuthAppMfaData backupPriorityAuthApp =
+                new AuthAppMfaData(
+                        AUTH_APP_CREDENTIAL_TWO,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        APP_MFA_IDENTIFIER_2);
+        private static final SmsMfaData defaultPrioritySms =
+                new SmsMfaData(
+                        PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
+        private static final SmsMfaData backupPrioritySms =
+                new SmsMfaData(
+                        PHONE_NUMBER_TWO,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        SMS_MFA_IDENTIFIER_2);
+        private String publicSubjectId;
+
+        @BeforeEach
+        void setUp() {
+            publicSubjectId = userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+        }
+
+        @Test
+        void shouldDeleteABackupAuthAppMfaMethodForAMigratedUser() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPriorityAuthApp);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+
+            var identifierToDelete = backupPriorityAuthApp.mfaIdentifier();
+
+            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+
+            assertEquals(Either.right(identifierToDelete), result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            assertEquals(List.of(mfaMethodDataFrom(defaultPrioritySms)), remainingMfaMethods);
+        }
+
+        @Test
+        void shouldDeleteABackupSmsMfaMethodForAMigratedUser() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            var identifierToDelete = backupPrioritySms.mfaIdentifier();
+
+            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+
+            assertEquals(Either.right(identifierToDelete), result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            assertEquals(List.of(mfaMethodDataFrom(defaultPriorityAuthApp)), remainingMfaMethods);
+        }
+
+        @Test
+        void shouldNotDeleteADefaultMethodForAMigratedUser() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            var mfaMethods = List.of(backupPrioritySms, defaultPriorityAuthApp);
+            mfaMethods.forEach(m -> userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, m));
+
+            var identifierToDelete = defaultPriorityAuthApp.mfaIdentifier();
+
+            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+
+            assertEquals(Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD), result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            var expectedRemainingMfaMethods =
+                    mfaMethods.stream()
+                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
+
+            assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
+        }
+
+        @Test
+        void shouldNotDeleteAnyMethodsAndReturnAnAppropriateResultWhenMfaMethodDoesNotExist() {
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+            var mfaMethods = List.of(backupPrioritySms, defaultPriorityAuthApp);
+            mfaMethods.forEach(m -> userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, m));
+
+            var identifierToDelete = "5f27adb6-32ae-4397-a223-4b76840ddd01";
+
+            var result = dynamoService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+
+            assertEquals(
+                    Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST),
+                    result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            var expectedRemainingMfaMethods =
+                    mfaMethods.stream()
+                            .map(DynamoMfaMethodsServiceIntegrationTest::mfaMethodDataFrom);
+
+            assertEquals(expectedRemainingMfaMethods.toList(), remainingMfaMethods);
+        }
+
+        @Test
+        void shouldNotDeleteAnyMethodsAndReturnAnAppropriateResultWhenUserIsNotMigrated() {
+            userStoreExtension.addMfaMethod(
+                    EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
+
+            var result = dynamoService.deleteMfaMethod(publicSubjectId, HARDCODED_APP_MFA_ID);
+
+            assertEquals(
+                    Either.left(
+                            MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER),
+                    result);
+
+            var remainingMfaMethods = dynamoService.getMfaMethods(EMAIL);
+
+            var expectedRemainingMfaMethod =
+                    new MfaMethodData(
+                            HARDCODED_APP_MFA_ID,
+                            PriorityIdentifier.DEFAULT,
+                            true,
+                            new AuthAppMfaDetail(MFAMethodType.AUTH_APP, "some-credential"));
+
+            assertEquals(List.of(expectedRemainingMfaMethod), remainingMfaMethods);
+        }
+
+        @Test
+        void shouldReturnAnErrorWhenUserProfileNotFoundForPublicSubjectId() {
+            var result = dynamoService.deleteMfaMethod("some-other-id", HARDCODED_APP_MFA_ID);
+
+            assertEquals(
+                    Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID),
+                    result);
+        }
+    }
+
+    private static MfaMethodData mfaMethodDataFrom(MfaData mfaData) {
+        if (mfaData instanceof AuthAppMfaData authAppMfaData) {
+            var detail = new AuthAppMfaDetail(MFAMethodType.AUTH_APP, authAppMfaData.credential());
+            return new MfaMethodData(
+                    authAppMfaData.mfaIdentifier(),
+                    authAppMfaData.priority(),
+                    authAppMfaData.verified(),
+                    detail);
+        } else {
+            SmsMfaData smsMfaData = (SmsMfaData) mfaData;
+            var detail = new SmsMfaDetail(MFAMethodType.SMS, smsMfaData.endpoint());
+            return new MfaMethodData(
+                    smsMfaData.mfaIdentifier(),
+                    smsMfaData.priority(),
+                    smsMfaData.verified(),
+                    detail);
         }
     }
 }

@@ -19,8 +19,8 @@ import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierExcep
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoMfaMethodsService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Map;

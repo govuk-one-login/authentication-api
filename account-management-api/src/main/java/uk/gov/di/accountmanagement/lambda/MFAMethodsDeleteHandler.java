@@ -10,6 +10,8 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService;
 
 import java.util.Map;
 
@@ -24,6 +26,7 @@ public class MFAMethodsDeleteHandler
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsDeleteHandler.class);
     private final ConfigurationService configurationService;
+    private final MfaMethodsService mfaMethodsService;
 
     public MFAMethodsDeleteHandler() {
         this(ConfigurationService.getInstance());
@@ -31,6 +34,13 @@ public class MFAMethodsDeleteHandler
 
     public MFAMethodsDeleteHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.mfaMethodsService = new DynamoMfaMethodsService(configurationService);
+    }
+
+    public MFAMethodsDeleteHandler(
+            ConfigurationService configurationService, MfaMethodsService mfaMethodsService) {
+        this.configurationService = configurationService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     @Override
@@ -53,6 +63,41 @@ public class MFAMethodsDeleteHandler
                     configurationService.getEnvironment());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
         }
+
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+        var mfaIdentifier = input.getPathParameters().get("mfaIdentifier");
+
+        if (publicSubjectId.isEmpty()) {
+            LOG.error("Request does not include public subject id");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);
+        }
+
+        if (mfaIdentifier.isEmpty()) {
+            LOG.error("Request does not include mfa identifier");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1064);
+        }
+
+        var deleteResult = mfaMethodsService.deleteMfaMethod(publicSubjectId, mfaIdentifier);
+
+        if (deleteResult.isLeft()) {
+            var failureReason = deleteResult.getLeft();
+            LOG.warn(
+                    "Attempted to delete mfa with identifier {} but failed for reason {}",
+                    mfaIdentifier,
+                    failureReason.name());
+            return switch (failureReason) {
+                case CANNOT_DELETE_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
+                        409, ErrorResponse.ERROR_1066);
+                case CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER -> generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.ERROR_1067);
+                case MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST -> generateApiGatewayProxyErrorResponse(
+                        404, ErrorResponse.ERROR_1065);
+                case NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
+                        404, ErrorResponse.ERROR_1056);
+            };
+        }
+
+        LOG.info("Successfully deleted MFA method {}", mfaIdentifier);
 
         return generateEmptySuccessApiGatewayResponse();
     }

@@ -164,6 +164,15 @@ public class UserCredentials {
         }
     }
 
+    public UserCredentials removeMfaMethodByIdentifierIfPresent(String mfaMethodIdentifier) {
+        if (this.mfaMethods == null) {
+            return this;
+        } else {
+            this.mfaMethods.removeIf(t -> t.getMfaIdentifier().equals(mfaMethodIdentifier));
+            return this;
+        }
+    }
+
     @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
     @DynamoDbSecondaryPartitionKey(indexNames = {"TestUserIndex"})
     public int getTestUser() {

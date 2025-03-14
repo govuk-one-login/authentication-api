@@ -1,11 +1,15 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.authentication.shared.services.mfa;
 
+import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.MfaMethodsService;
 
 import java.util.List;
 import java.util.UUID;
@@ -66,6 +70,40 @@ public class DynamoMfaMethodsService implements MfaMethodsService {
                             }
                         })
                 .toList();
+    }
+
+    public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
+            String publicSubjectId, String mfaIdentifier) {
+        var maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+
+        if (maybeUserProfile.isEmpty()) {
+            return Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID);
+        }
+        var userProfile = maybeUserProfile.get();
+        if (!userProfile.getMfaMethodsMigrated()) {
+            return Either.left(
+                    MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER);
+        }
+
+        var mfaMethods =
+                dynamoService.getUserCredentialsFromEmail(userProfile.getEmail()).getMfaMethods();
+
+        var maybeMethodToDelete =
+                mfaMethods.stream()
+                        .filter(mfaMethod -> mfaIdentifier.equals(mfaMethod.getMfaIdentifier()))
+                        .findFirst();
+
+        if (maybeMethodToDelete.isEmpty()) {
+            return Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST);
+        }
+
+        if (!PriorityIdentifier.BACKUP.name().equals(maybeMethodToDelete.get().getPriority())) {
+            return Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
+        }
+
+        dynamoService.deleteMfaMethodByIdentifier(userProfile.getEmail(), mfaIdentifier);
+        return Either.right(mfaIdentifier);
     }
 
     private List<MfaMethodData> getMfaMethodsForNonMigratedUser(
