@@ -73,11 +73,6 @@ public class Session {
         return this;
     }
 
-    public Session incrementPasswordResetCount() {
-        this.passwordResetCount = passwordResetCount + 1;
-        return this;
-    }
-
     public Session resetPasswordResetCount() {
         this.passwordResetCount = 0;
         return this;
