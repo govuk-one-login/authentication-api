@@ -202,7 +202,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             ResetPasswordRequest request,
             UserContext userContext,
             boolean isTestClient) {
-        int passwordResetCounter = userContext.getSession().getPasswordResetCount();
+        int passwordResetCounter = userContext.getAuthSession().getPasswordResetCount();
         var passwordResetCounterPair = pair("passwordResetCounter", passwordResetCounter);
         var passwordResetTypePair =
                 request.isWithinForcedPasswordResetJourney()
@@ -301,7 +301,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
                         RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestCount = userContext.getSession().getPasswordResetCount();
+        var codeRequestCount = userContext.getAuthSession().getPasswordResetCount();
         var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
