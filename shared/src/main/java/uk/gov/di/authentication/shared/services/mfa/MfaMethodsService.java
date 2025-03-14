@@ -147,7 +147,6 @@ public class MfaMethodsService {
             persistentService.addMFAMethodSupportingMultiple(
                     email,
                     MFAMethod.smsMfaMethod(
-                            MFAMethodType.SMS.getValue(),
                             true,
                             true,
                             smsMfaDetail.phoneNumber(),

@@ -26,7 +26,6 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String PASSWORD = "password-1";
     private static final MFAMethod DEFAULT_PRIORITY_AUTH_APP =
             MFAMethod.authAppMfaMethod(
-                    MFAMethodType.AUTH_APP.getValue(),
                     "some-credential",
                     true,
                     true,
@@ -35,7 +34,6 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     "a44aa7a9-463a-4e10-93dd-bde8de3215bc");
     private static final MFAMethod BACKUP_PRIORITY_SMS =
             MFAMethod.smsMfaMethod(
-                    MFAMethodType.SMS.getValue(),
                     true,
                     true,
                     "0123456",

@@ -157,7 +157,6 @@ class DynamoServiceIntegrationTest {
 
         private MFAMethod defaultPrioritySmsData =
                 MFAMethod.smsMfaMethod(
-                        MFAMethodType.SMS.getValue(),
                         true,
                         true,
                         PHONE_NUMBER,
@@ -167,7 +166,6 @@ class DynamoServiceIntegrationTest {
 
         private MFAMethod backupPrioritySmsData =
                 MFAMethod.smsMfaMethod(
-                        MFAMethodType.SMS.getValue(),
                         true,
                         true,
                         PHONE_NUMBER,
@@ -177,7 +175,6 @@ class DynamoServiceIntegrationTest {
 
         private MFAMethod defaultPriorityAuthAppData =
                 MFAMethod.authAppMfaMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
                         TEST_MFA_APP_CREDENTIAL,
                         true,
                         true,
@@ -187,7 +184,6 @@ class DynamoServiceIntegrationTest {
 
         private MFAMethod backupAuthAppData =
                 MFAMethod.authAppMfaMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
                         TEST_MFA_APP_CREDENTIAL,
                         true,
                         true,

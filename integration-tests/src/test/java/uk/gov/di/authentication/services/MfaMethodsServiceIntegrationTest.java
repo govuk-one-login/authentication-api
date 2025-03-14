@@ -136,7 +136,6 @@ class MfaMethodsServiceIntegrationTest {
 
         private static final MFAMethod defaultPriorityAuthApp =
                 MFAMethod.authAppMfaMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL,
                         true,
                         true,
@@ -146,7 +145,6 @@ class MfaMethodsServiceIntegrationTest {
         private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
         private static final MFAMethod backupPriorityAuthApp =
                 MFAMethod.authAppMfaMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL_TWO,
                         true,
                         true,
@@ -155,7 +153,6 @@ class MfaMethodsServiceIntegrationTest {
                         APP_MFA_IDENTIFIER_2);
         private static final MFAMethod defaultPrioritySms =
                 MFAMethod.smsMfaMethod(
-                        MFAMethodType.SMS.getValue(),
                         true,
                         true,
                         PHONE_NUMBER,
@@ -164,7 +161,6 @@ class MfaMethodsServiceIntegrationTest {
                         SMS_MFA_IDENTIFIER_1);
         private static final MFAMethod backupPrioritySms =
                 MFAMethod.smsMfaMethod(
-                        MFAMethodType.SMS.getValue(),
                         true,
                         true,
                         PHONE_NUMBER_TWO,
@@ -299,7 +295,6 @@ class MfaMethodsServiceIntegrationTest {
 
         private static final MFAMethod defaultPriorityAuthApp =
                 MFAMethod.authAppMfaMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL,
                         true,
                         true,
@@ -309,7 +304,6 @@ class MfaMethodsServiceIntegrationTest {
         private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
         private static final MFAMethod backupPriorityAuthApp =
                 MFAMethod.authAppMfaMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
                         AUTH_APP_CREDENTIAL_TWO,
                         true,
                         true,
@@ -318,7 +312,6 @@ class MfaMethodsServiceIntegrationTest {
                         APP_MFA_IDENTIFIER_2);
         private static final MFAMethod defaultPrioritySms =
                 MFAMethod.smsMfaMethod(
-                        MFAMethodType.SMS.getValue(),
                         true,
                         true,
                         PHONE_NUMBER,
@@ -327,7 +320,6 @@ class MfaMethodsServiceIntegrationTest {
                         SMS_MFA_IDENTIFIER_1);
         private static final MFAMethod backupPrioritySms =
                 MFAMethod.smsMfaMethod(
-                        MFAMethodType.SMS.getValue(),
                         true,
                         true,
                         PHONE_NUMBER_TWO,
