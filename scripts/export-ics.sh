@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-set -eu
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+cd "${DIR}" || exit 1
 
 if [ $# -ne 2 ]; then
   echo "Usage: export-ics.sh email environment"
@@ -17,12 +19,6 @@ fi
 
 echo -e "Exporting internalCommonSubjectId for Email = $1 Environment = $2 Sector = ${sector}"
 
-if [[ -z ${AWS_ACCESS_KEY_ID:-} || -z ${AWS_SECRET_ACCESS_KEY:-} ]]; then
-  echo "!! AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in the environment." >&2
-  echo "!! Perhaps you meant: gds aws digital-identity-dev -- ${0}" >&2
-  exit 1
-fi
-
 up="$(
   aws dynamodb get-item \
     --table-name "$2-user-profile" \
@@ -36,7 +32,6 @@ up="$(
 if [ -n "${up}" ]; then
   ics="$(echo -n "${up}" | jq -r '.Item.SubjectID.S')"
   salt="$(echo -n "${up}" | jq -r '.Item.salt.B')"
-
   node -e "const { calculatePairwiseIdentifier } = require('./utils'); console.log(calculatePairwiseIdentifier('${ics}', '${sector}', '${salt}'))"
 else
   echo "Email address $1 does not exist in $2 environment"
