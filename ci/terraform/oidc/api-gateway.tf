@@ -259,7 +259,6 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.openid_configuration_discovery,
     module.register,
     module.token,
-    module.trustmarks,
     module.update,
     module.userinfo,
     module.ipv-callback,
@@ -862,9 +861,6 @@ resource "aws_api_gateway_resource" "orch_trustmark_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "trustmark"
-  depends_on = [
-    module.trustmarks
-  ]
 }
 
 resource "aws_api_gateway_method" "orch_trustmark_method" {
