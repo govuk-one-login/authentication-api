@@ -33,7 +33,7 @@ ext {
         junit: "5.11.4",
         xray: "2.18.2",
         pact: "4.6.17",
-        vavr: "0.10.4"
+        vavr: "0.10.6"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
