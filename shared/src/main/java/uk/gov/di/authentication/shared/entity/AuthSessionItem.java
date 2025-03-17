@@ -24,6 +24,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
     public static final String ATTRIBUTE_EMAIL = "Email";
+    public static final String ATTRIBUTE_PASSWORD_RESET_COUNT = "PasswordResetCount";
     public static final String ATTRIBUTE_TTL = "ttl";
     public static final String ATTRIBUTE_CODE_REQUEST_COUNT_MAP = "CodeRequestCountMap";
 
@@ -50,6 +51,7 @@ public class AuthSessionItem {
     private boolean upliftRequired;
     private String emailAddress;
     private Map<CodeRequestType, Integer> codeRequestCountMap;
+    private int passwordResetCount;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -181,6 +183,25 @@ public class AuthSessionItem {
 
     public AuthSessionItem withEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PASSWORD_RESET_COUNT)
+    public int getPasswordResetCount() {
+        return passwordResetCount;
+    }
+
+    public void setPasswordResetCount(int passwordResetCount) {
+        this.passwordResetCount = passwordResetCount;
+    }
+
+    public AuthSessionItem incrementPasswordResetCount() {
+        this.passwordResetCount = passwordResetCount + 1;
+        return this;
+    }
+
+    public AuthSessionItem resetPasswordResetCount() {
+        this.passwordResetCount = 0;
         return this;
     }
 

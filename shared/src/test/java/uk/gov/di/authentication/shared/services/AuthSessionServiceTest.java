@@ -55,6 +55,7 @@ class AuthSessionServiceTest {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             assertEquals(session.getCodeRequestCount(requestType), 0);
         }
+        assertEquals(0, session.getPasswordResetCount());
     }
 
     @Test
