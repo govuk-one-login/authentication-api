@@ -1841,6 +1841,7 @@ Resources:
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref ClientSessionTableDeleteAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
