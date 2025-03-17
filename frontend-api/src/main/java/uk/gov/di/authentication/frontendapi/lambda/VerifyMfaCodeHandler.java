@@ -338,6 +338,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         } else {
             processSuccessfulCodeSession(
                     session,
+                    userContext.getAuthSession(),
                     sessionId,
                     input,
                     subjectId,
@@ -430,6 +431,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private void processSuccessfulCodeSession(
             Session session,
+            AuthSessionItem authSession,
             String sessionId,
             APIGatewayProxyRequestEvent input,
             String subjectId,
@@ -450,6 +452,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         mfaCodeProcessor.processSuccessfulCodeRequest(
                 IpAddressHelper.extractIpAddress(input),
                 extractPersistentIdFromHeaders(input.getHeaders()));
+
+        if (JourneyType.ACCOUNT_RECOVERY.equals(codeRequest.getJourneyType())) {
+            authSessionService.updateSession(
+                    authSession.withResetMfaState(AuthSessionItem.ResetMfaState.SUCCEEDED));
+        }
     }
 
     private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(

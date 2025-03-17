@@ -77,6 +77,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                 .withSessionId(newSessionId)
                                 .withCurrentCredentialStrength(currentCredentialStrength)
                                 .withResetPasswordState(AuthSessionItem.ResetPasswordState.NONE)
+                                .withResetMfaState(AuthSessionItem.ResetMfaState.NONE)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()

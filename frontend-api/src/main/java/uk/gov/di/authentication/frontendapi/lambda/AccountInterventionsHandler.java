@@ -198,7 +198,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         internalPairwiseId,
                         request.authenticated(),
                         authSession.getIsNewAccount(),
-                        authSession.getResetPasswordState());
+                        authSession.getResetPasswordState(),
+                        authSession.getResetMfaState());
             }
 
             LOG.info("Generating Account Interventions outbound response for frontend");
@@ -217,7 +218,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             String internalPairwiseId,
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
-            AuthSessionItem.ResetPasswordState resetPasswordState) {
+            AuthSessionItem.ResetPasswordState resetPasswordState,
+            AuthSessionItem.ResetMfaState resetMfaState) {
         var vtr = new ArrayList<String>();
 
         try {
@@ -243,7 +245,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         journeyId,
                         authenticated,
                         accountState,
-                        resetPasswordState);
+                        resetPasswordState,
+                        resetMfaState);
 
         String payload;
 

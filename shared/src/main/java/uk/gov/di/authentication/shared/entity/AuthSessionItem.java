@@ -19,6 +19,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
     public static final String ATTRIBUTE_RESET_PASSWORD_STATE = "resetPasswordState";
+    public static final String ATTRIBUTE_RESET_MFA_STATE = "resetMfaState";
     public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "currentCredentialStrength";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
@@ -41,11 +42,18 @@ public class AuthSessionItem {
         SUCCEEDED,
     }
 
+    public enum ResetMfaState {
+        NONE,
+        ATTEMPTED,
+        SUCCEEDED,
+    }
+
     private String sessionId;
     private String verifiedMfaMethodType;
     private long timeToLive;
     private AccountState isNewAccount;
     private ResetPasswordState resetPasswordState = ResetPasswordState.NONE;
+    private ResetMfaState resetMfaState = ResetMfaState.NONE;
     private CredentialTrustLevel currentCredentialStrength;
     private String internalCommonSubjectId;
     private boolean upliftRequired;
@@ -140,6 +148,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withResetPasswordState(ResetPasswordState resetPasswordState) {
         this.resetPasswordState = resetPasswordState;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RESET_MFA_STATE)
+    public ResetMfaState getResetMfaState() {
+        return this.resetMfaState;
+    }
+
+    public void setResetMfaState(ResetMfaState resetMfaState) {
+        this.resetMfaState = resetMfaState;
+    }
+
+    public AuthSessionItem withResetMfaState(ResetMfaState resetMfaState) {
+        this.resetMfaState = resetMfaState;
         return this;
     }
 
@@ -274,6 +296,8 @@ public class AuthSessionItem {
                 + isNewAccount
                 + "', resetPasswordState = '"
                 + resetPasswordState
+                + "', resetMfaState = '"
+                + resetMfaState
                 + "', internalCommonSubjectId = '"
                 + internalCommonSubjectId
                 + "', upliftRequired = '"

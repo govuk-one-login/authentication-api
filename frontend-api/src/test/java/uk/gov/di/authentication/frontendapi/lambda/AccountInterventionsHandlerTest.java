@@ -281,36 +281,67 @@ class AccountInterventionsHandlerTest {
 
     private static Stream<Arguments> ticfParametersSource() {
         return Stream.of(
-                Arguments.of(
-                        true,
-                        AuthSessionItem.AccountState.NEW,
-                        AuthSessionItem.ResetPasswordState.NONE,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"initialRegistration\":\"Y\"}"),
+                // Testing authenticated combinations
                 Arguments.of(
                         true,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
+                Arguments.of(
+                        false,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"),
+
+                // Testing initial registration combinations
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.NEW,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"initialRegistration\":\"Y\"}"),
+                Arguments.of(
+                        false,
+                        AuthSessionItem.AccountState.NEW,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"initialRegistration\":\"Y\"}"),
+
+                // Testing password reset combinations
                 Arguments.of(
                         true,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.SUCCEEDED,
+                        AuthSessionItem.ResetMfaState.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"passwordReset\":\"Y\"}"),
-                Arguments.of(
-                        false,
-                        AuthSessionItem.AccountState.NEW,
-                        AuthSessionItem.ResetPasswordState.NONE,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"initialRegistration\":\"Y\"}"),
-                Arguments.of(
-                        false,
-                        AuthSessionItem.AccountState.EXISTING,
-                        AuthSessionItem.ResetPasswordState.NONE,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.ATTEMPTED,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"passwordReset\":\"Y\"}"));
+                        AuthSessionItem.ResetMfaState.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"passwordReset\":\"Y\"}"),
+
+                // Testing mfa reset combinations
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.SUCCEEDED,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"2fa_reset\":\"Y\"}"),
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.ATTEMPTED,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
+                Arguments.of(
+                        false,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.ATTEMPTED,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"2fa_reset\":\"Y\"}"));
     }
 
     @ParameterizedTest
@@ -319,6 +350,7 @@ class AccountInterventionsHandlerTest {
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
             AuthSessionItem.ResetPasswordState resetPasswordState,
+            AuthSessionItem.ResetMfaState resetMfaState,
             String expectedPayload)
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
@@ -332,7 +364,8 @@ class AccountInterventionsHandlerTest {
         var authSessionWithChanges =
                 authSession
                         .withAccountState(accountState)
-                        .withResetPasswordState(resetPasswordState);
+                        .withResetPasswordState(resetPasswordState)
+                        .withResetMfaState(resetMfaState);
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSessionWithChanges));
 
