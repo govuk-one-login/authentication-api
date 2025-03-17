@@ -1,6 +1,6 @@
 // ATO-1471: We're duplicating the role without the old identity credentials table
 // access policies to enable us to safely remove them
-module "oidc_userinfo_role_1" {
+module "oidc_userinfo_role_2" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-userinfo-role"

@@ -1,6 +1,6 @@
 // ATO-1471: We're duplicating the role without the old identity credentials table
 // access policies to enable us to safely remove them
-module "identity_progress_role_1" {
+module "identity_progress_role_2" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "identity-progress-role"

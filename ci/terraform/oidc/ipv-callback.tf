@@ -1,6 +1,6 @@
 // ATO-1471: We're duplicating the role without the old identity credentials table
 // access policies to enable us to safely remove them
-module "ipv_callback_role" {
+module "ipv_callback_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-callback-role"

@@ -1,6 +1,6 @@
 // ATO-1471: We're duplicating the role without the old identity credentials table
 // access policies to enable us to safely remove them
-module "ipv_processing_identity_role_with_orch_session_table_access" {
+module "ipv_processing_identity_role_with_orch_session_table_access_1" {
   count = var.is_orch_stubbed ? 0 : 1
 
   source      = "../modules/lambda-role"
@@ -31,7 +31,7 @@ module "ipv_processing_identity_role_with_orch_session_table_access" {
 
 // ATO-1471: We're duplicating the role without the old identity credentials table
 // access policies to enable us to safely remove them
-module "ipv_processing_identity_role" {
+module "ipv_processing_identity_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-processing-identity-role"
