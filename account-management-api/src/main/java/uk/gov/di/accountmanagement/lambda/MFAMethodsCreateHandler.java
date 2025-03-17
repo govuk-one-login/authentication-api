@@ -10,7 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
-import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
+import uk.gov.di.authentication.shared.exceptions.InvalidMfaDetailException;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -90,7 +90,7 @@ public class MFAMethodsCreateHandler
 
             return generateApiGatewayProxyResponse(200, mfaMethodData, true);
 
-        } catch (Json.JsonException | InvalidPriorityIdentifierException e) {
+        } catch (Json.JsonException | InvalidMfaDetailException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }

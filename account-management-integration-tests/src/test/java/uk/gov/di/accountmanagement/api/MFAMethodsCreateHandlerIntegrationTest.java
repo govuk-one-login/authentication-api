@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -71,24 +72,68 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
 
-        assertTrue(
+        var retrievedSmsMethod =
                 mfaMethods.stream()
                         .filter(
                                 mfaMethod ->
                                         mfaMethod
                                                 .getMfaMethodType()
                                                 .equals(MFAMethodType.SMS.getValue()))
-                        .filter(
-                                mfaMethod ->
-                                        mfaMethod.getMfaIdentifier().equals(extractedMfaIdentifier))
-                        .filter(mfaMethod -> mfaMethod.getDestination().equals(TEST_PHONE_NUMBER))
+                        .findFirst()
+                        .get();
+
+        assertEquals(extractedMfaIdentifier, retrievedSmsMethod.getMfaIdentifier());
+        assertEquals(PriorityIdentifier.BACKUP.toString(), retrievedSmsMethod.getPriority());
+        assertEquals(TEST_PHONE_NUMBER, retrievedSmsMethod.getDestination());
+        assertTrue(retrievedSmsMethod.isEnabled());
+        assertTrue(retrievedSmsMethod.isMethodVerified());
+    }
+
+    @Test
+    void shouldReturn200AndMfaMethodDataWhenSmsUserAddsAuthAppMfa() {
+        userStore.addMfaMethodSupportingMultiple(
+                TEST_EMAIL,
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString()));
+        var response =
+                makeRequest(
+                        Optional.of(
+                                constructRequestBody(
+                                        PriorityIdentifier.BACKUP,
+                                        new AuthAppMfaDetail(
+                                                MFAMethodType.AUTH_APP, TEST_CREDENTIAL))),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
+        assertEquals(200, response.getStatusCode());
+
+        String extractedMfaIdentifier =
+                JsonParser.parseString(response.getBody())
+                        .getAsJsonObject()
+                        .get("mfaIdentifier")
+                        .getAsString();
+
+        List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+
+        var retrievedAuthAppMethod =
+                mfaMethods.stream()
                         .filter(
                                 mfaMethod ->
                                         mfaMethod
-                                                .getPriority()
-                                                .equals(PriorityIdentifier.BACKUP.toString()))
-                        .filter(MFAMethod::isMethodVerified)
-                        .anyMatch(m -> true));
+                                                .getMfaMethodType()
+                                                .equals(MFAMethodType.AUTH_APP.getValue()))
+                        .findFirst()
+                        .get();
+
+        assertEquals(TEST_CREDENTIAL, retrievedAuthAppMethod.getCredentialValue());
+        assertEquals(extractedMfaIdentifier, retrievedAuthAppMethod.getMfaIdentifier());
+        assertEquals(PriorityIdentifier.BACKUP.toString(), retrievedAuthAppMethod.getPriority());
+        assertTrue(retrievedAuthAppMethod.isEnabled());
+        assertTrue(retrievedAuthAppMethod.isMethodVerified());
     }
 
     @Test

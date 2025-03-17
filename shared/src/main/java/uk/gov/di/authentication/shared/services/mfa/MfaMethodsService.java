@@ -4,12 +4,13 @@ import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
+import uk.gov.di.authentication.shared.exceptions.InvalidMfaDetailException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -135,9 +136,9 @@ public class MfaMethodsService {
     }
 
     public MfaMethodData addBackupMfa(String email, MfaMethodCreateRequest.MfaMethod mfaMethod)
-            throws InvalidPriorityIdentifierException {
+            throws InvalidMfaDetailException {
         if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            throw new InvalidPriorityIdentifierException(
+            throw new InvalidMfaDetailException(
                     "Priority identifier for newly added MFA method should be BACKUP");
         }
 
@@ -153,9 +154,21 @@ public class MfaMethodsService {
                             uuid));
             return MfaMethodData.smsMethodData(
                     uuid, mfaMethod.priorityIdentifier(), true, smsMfaDetail.phoneNumber());
+        } else {
+            String uuid = UUID.randomUUID().toString();
+            persistentService.addMFAMethodSupportingMultiple(
+                    email,
+                    MFAMethod.authAppMfaMethod(
+                            ((AuthAppMfaDetail) mfaMethod.method()).credential(),
+                            true,
+                            true,
+                            mfaMethod.priorityIdentifier(),
+                            uuid));
+            return MfaMethodData.authAppMfaData(
+                    uuid,
+                    mfaMethod.priorityIdentifier(),
+                    true,
+                    ((AuthAppMfaDetail) mfaMethod.method()).credential());
         }
-
-        //      Further implementation to come in subsequent commits
-        return null;
     }
 }

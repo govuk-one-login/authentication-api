@@ -11,11 +11,13 @@ import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
+import uk.gov.di.authentication.shared.exceptions.InvalidMfaDetailException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -33,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -53,6 +56,8 @@ class MFAMethodsCreateHandlerTest {
     private static final String TEST_PUBLIC_SUBJECT = "test-public-subject";
     private static final String TEST_EMAIL = "test@test.com";
     private static final String TEST_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
+    private static final String TEST_AUTH_APP_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
+    private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
     private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
@@ -67,10 +72,11 @@ class MFAMethodsCreateHandlerTest {
         handler =
                 new MFAMethodsCreateHandler(configurationService, mfaMethodsService, dynamoService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
+        reset(mfaMethodsService);
     }
 
     @Test
-    void shouldReturn200AndCreateMfaSmsMfaMethod() throws InvalidPriorityIdentifierException {
+    void shouldReturn200AndCreateMfaSmsMfaMethod() throws InvalidMfaDetailException {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
@@ -85,8 +91,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        MFAMethodType.SMS,
-                        TEST_PHONE_NUMBER,
+                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -122,14 +127,65 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
+    void shouldReturn200AndCreateAuthAppMfa() throws InvalidMfaDetailException {
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+        when(mfaMethodsService.addBackupMfa(any(), any()))
+                .thenReturn(
+                        new MfaMethodData(
+                                TEST_AUTH_APP_ID,
+                                PriorityIdentifier.BACKUP,
+                                true,
+                                new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL)));
+
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                        TEST_PUBLIC_SUBJECT);
+
+        var result = handler.handleRequest(event, context);
+
+        ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
+                ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
+
+        verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
+        var capturedRequest = mfaMethodCaptor.getValue();
+
+        assertEquals(
+                new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                capturedRequest.method());
+        assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
+
+        assertThat(result, hasStatus(200));
+        var expectedResponse =
+                format(
+                        """
+                {
+                  "mfaIdentifier": "%s",
+                  "priorityIdentifier": "BACKUP",
+                  "methodVerified": true,
+                  "method": {
+                    "mfaMethodType": "AUTH_APP",
+                    "credential": "%s"
+                  }
+                }
+                """,
+                        TEST_AUTH_APP_ID, TEST_CREDENTIAL);
+        var expectedResponseParsedToString =
+                JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
+        assertEquals(expectedResponseParsedToString, result.getBody());
+    }
+
+    @Test
     void shouldReturn400IfRequestIsMadeInEnvWhereApiNotEnabled() {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
 
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        MFAMethodType.AUTH_APP,
-                        TEST_PHONE_NUMBER,
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
                         TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -161,9 +217,8 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        MFAMethodType.AUTH_APP,
-                        TEST_PHONE_NUMBER,
-                        "incorrect-subject");
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                        TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(event, context);
 
@@ -176,8 +231,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        MFAMethodType.AUTH_APP,
-                        TEST_PHONE_NUMBER,
+                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT);
         event.setBody("Invalid JSON");
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
@@ -190,22 +244,32 @@ class MFAMethodsCreateHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
-            PriorityIdentifier priorityIdentifier,
-            MFAMethodType mfaMethodType,
-            String phoneNumber,
-            String publicSubject) {
-        var body =
-                format(
-                        """
+            PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String publicSubject) {
+
+        String body =
+                mfaDetail instanceof SmsMfaDetail
+                        ? format(
+                                """
                                 { "mfaMethod": {
                                     "priorityIdentifier": "%s",
                                     "method": {
-                                        "mfaMethodType": "%s",
+                                        "mfaMethodType": "SMS",
                                         "phoneNumber": "%s" }
                                     }
                                 }
                                """,
-                        priorityIdentifier, mfaMethodType, phoneNumber);
+                                priorityIdentifier, ((SmsMfaDetail) mfaDetail).phoneNumber())
+                        : format(
+                                """
+                                { "mfaMethod": {
+                                    "priorityIdentifier": "%s",
+                                    "method": {
+                                        "mfaMethodType": "AUTH_APP",
+                                        "credential": "%s" }
+                                    }
+                                }
+                               """,
+                                priorityIdentifier, ((AuthAppMfaDetail) mfaDetail).credential());
 
         var event = new APIGatewayProxyRequestEvent();
 
