@@ -40,9 +40,9 @@ public class AuthorisationCodeService {
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientId, String clientSessionId, String email, ClientSession clientSession) {
+            String clientId, String clientSessionId, ClientSession clientSession) {
         return generateAndSaveAuthorisationCode(
-                clientId, clientSessionId, email, clientSession, null);
+                clientId, clientSessionId, null, clientSession, null);
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
