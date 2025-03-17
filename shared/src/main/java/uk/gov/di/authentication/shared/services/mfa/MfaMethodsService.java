@@ -10,7 +10,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.InvalidMfaDetailException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -135,11 +134,10 @@ public class MfaMethodsService {
         }
     }
 
-    public MfaMethodData addBackupMfa(String email, MfaMethodCreateRequest.MfaMethod mfaMethod)
-            throws InvalidMfaDetailException {
+    public Either<MfaCreateFailureReason, MfaMethodData> addBackupMfa(
+            String email, MfaMethodCreateRequest.MfaMethod mfaMethod) {
         if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            throw new InvalidMfaDetailException(
-                    "Priority identifier for newly added MFA method should be BACKUP");
+            return Either.left(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER);
         }
 
         if (mfaMethod.method() instanceof SmsMfaDetail smsMfaDetail) {
@@ -152,8 +150,12 @@ public class MfaMethodsService {
                             smsMfaDetail.phoneNumber(),
                             mfaMethod.priorityIdentifier(),
                             uuid));
-            return MfaMethodData.smsMethodData(
-                    uuid, mfaMethod.priorityIdentifier(), true, smsMfaDetail.phoneNumber());
+            return Either.right(
+                    MfaMethodData.smsMethodData(
+                            uuid,
+                            mfaMethod.priorityIdentifier(),
+                            true,
+                            smsMfaDetail.phoneNumber()));
         } else {
             String uuid = UUID.randomUUID().toString();
             persistentService.addMFAMethodSupportingMultiple(
@@ -164,11 +166,12 @@ public class MfaMethodsService {
                             true,
                             mfaMethod.priorityIdentifier(),
                             uuid));
-            return MfaMethodData.authAppMfaData(
-                    uuid,
-                    mfaMethod.priorityIdentifier(),
-                    true,
-                    ((AuthAppMfaDetail) mfaMethod.method()).credential());
+            return Either.right(
+                    MfaMethodData.authAppMfaData(
+                            uuid,
+                            mfaMethod.priorityIdentifier(),
+                            true,
+                            ((AuthAppMfaDetail) mfaMethod.method()).credential()));
         }
     }
 }

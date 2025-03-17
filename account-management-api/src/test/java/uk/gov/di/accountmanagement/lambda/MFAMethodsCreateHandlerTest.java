@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.JsonParser;
+import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -17,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.InvalidMfaDetailException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -76,17 +76,18 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndCreateMfaSmsMfaMethod() throws InvalidMfaDetailException {
+    void shouldReturn200AndCreateMfaSmsMfaMethod() {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
-                        new MfaMethodData(
-                                TEST_SMS_MFA_ID,
-                                PriorityIdentifier.BACKUP,
-                                true,
-                                new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER)));
+                        Either.right(
+                                new MfaMethodData(
+                                        TEST_SMS_MFA_ID,
+                                        PriorityIdentifier.BACKUP,
+                                        true,
+                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))));
 
         var event =
                 generateApiGatewayEvent(
@@ -127,17 +128,19 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndCreateAuthAppMfa() throws InvalidMfaDetailException {
+    void shouldReturn200AndCreateAuthAppMfa() {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
-                        new MfaMethodData(
-                                TEST_AUTH_APP_ID,
-                                PriorityIdentifier.BACKUP,
-                                true,
-                                new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL)));
+                        Either.right(
+                                new MfaMethodData(
+                                        TEST_AUTH_APP_ID,
+                                        PriorityIdentifier.BACKUP,
+                                        true,
+                                        new AuthAppMfaDetail(
+                                                MFAMethodType.AUTH_APP, TEST_CREDENTIAL))));
 
         var event =
                 generateApiGatewayEvent(

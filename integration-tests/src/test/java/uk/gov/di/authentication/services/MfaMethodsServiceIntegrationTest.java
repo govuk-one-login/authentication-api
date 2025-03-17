@@ -17,8 +17,8 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.InvalidMfaDetailException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_APP_MFA_ID;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_SMS_MFA_ID;
@@ -218,7 +217,7 @@ class MfaMethodsServiceIntegrationTest {
         @Nested
         class AddBackupMfaTests {
             @Test
-            void authAppUserShouldSuccessfullyAddSmsMfaInPost() throws InvalidMfaDetailException {
+            void authAppUserShouldSuccessfullyAddSmsMfaInPost() {
                 userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
                 SmsMfaDetail smsMfaDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
 
@@ -226,7 +225,7 @@ class MfaMethodsServiceIntegrationTest {
                         new MfaMethodCreateRequest.MfaMethod(
                                 PriorityIdentifier.BACKUP, smsMfaDetail);
 
-                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, mfaMethod);
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, mfaMethod).get();
 
                 List<MFAMethod> mfaMethods = userStoreExtension.getMfaMethod(TEST_EMAIL);
                 boolean smsMethodExists =
@@ -244,7 +243,7 @@ class MfaMethodsServiceIntegrationTest {
             }
 
             @Test
-            void smsUserShouldSuccessfullyAddAuthAppMfa() throws InvalidMfaDetailException {
+            void smsUserShouldSuccessfullyAddAuthAppMfa() {
                 userStoreExtension.addMfaMethodSupportingMultiple(
                         TEST_EMAIL,
                         MFAMethod.smsMfaMethod(
@@ -261,7 +260,7 @@ class MfaMethodsServiceIntegrationTest {
                         new MfaMethodCreateRequest.MfaMethod(
                                 PriorityIdentifier.BACKUP, smsMfaDetail);
 
-                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, mfaMethod);
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, mfaMethod).get();
 
                 List<MFAMethod> mfaMethods = userStoreExtension.getMfaMethod(TEST_EMAIL);
                 boolean smsMethodExists =
@@ -288,9 +287,9 @@ class MfaMethodsServiceIntegrationTest {
                                 new MfaMethodCreateRequest.MfaMethod(
                                         PriorityIdentifier.DEFAULT, smsMfaDetail));
 
-                assertThrows(
-                        InvalidMfaDetailException.class,
-                        () -> mfaMethodsService.addBackupMfa(TEST_EMAIL, request.mfaMethod()));
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
+
+                assertEquals(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER, result.getLeft());
             }
         }
     }

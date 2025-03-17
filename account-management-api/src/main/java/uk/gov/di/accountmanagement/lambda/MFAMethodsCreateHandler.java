@@ -4,17 +4,18 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
-import uk.gov.di.authentication.shared.exceptions.InvalidMfaDetailException;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -85,12 +86,20 @@ public class MFAMethodsCreateHandler
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
 
-            MfaMethodData mfaMethodData =
+            Either<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
                     mfaMethodsService.addBackupMfa(email, mfaMethodCreateRequest.mfaMethod());
 
-            return generateApiGatewayProxyResponse(200, mfaMethodData, true);
+            if (addBackupMfaResult.isLeft()) {
+                switch (addBackupMfaResult.getLeft()) {
+                    case INVALID_PRIORITY_IDENTIFIER -> {
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+                    }
+                }
+            }
 
-        } catch (Json.JsonException | InvalidMfaDetailException e) {
+            return generateApiGatewayProxyResponse(200, addBackupMfaResult.get(), true);
+
+        } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
