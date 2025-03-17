@@ -3,6 +3,8 @@ package uk.gov.di.accountmanagement.api;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -164,6 +167,27 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Collections.emptyMap());
         assertEquals(404, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+    }
+
+    private static Stream<MFAMethodType> invalidMfaMethodTypes() {
+        return Stream.of(MFAMethodType.EMAIL, MFAMethodType.NONE);
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidMfaMethodTypes")
+    void shouldReturn400AndBadRequestWhenMfaMethodTypeIsInvalid(MFAMethodType mfaMethodType) {
+        var response =
+                makeRequest(
+                        Optional.of(
+                                constructRequestBody(
+                                        PriorityIdentifier.BACKUP,
+                                        new SmsMfaDetail(mfaMethodType, TEST_PHONE_NUMBER))),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                        Collections.emptyMap());
+        assertEquals(400, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
     private static String constructRequestBody(
