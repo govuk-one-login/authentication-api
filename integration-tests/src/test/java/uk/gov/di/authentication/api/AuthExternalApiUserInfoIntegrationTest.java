@@ -335,7 +335,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         .getSession(TEST_SESSION_ID)
                         .get()
                         .withAccountState(AuthSessionItem.AccountState.NEW)
-                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP)
                         .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
                         .withUpliftRequired(true));
     }

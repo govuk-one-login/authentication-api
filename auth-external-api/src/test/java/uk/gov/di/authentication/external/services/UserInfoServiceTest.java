@@ -51,7 +51,7 @@ public class UserInfoServiceTest {
     private static final boolean TEST_EMAIL_VERIFIED = true;
     private static final String TEST_PHONE = "test-phone";
     private static final boolean TEST_PHONE_VERIFIED = true;
-    private static final String TEST_VERIFIED_MFA_METHOD_TYPE = MFAMethodType.EMAIL.getValue();
+    private static final MFAMethodType TEST_VERIFIED_MFA_METHOD_TYPE = MFAMethodType.EMAIL;
     private static final CredentialTrustLevel TEST_CURRENT_CREDENTIAL_STRENGTH =
             CredentialTrustLevel.MEDIUM_LEVEL;
     private static final boolean TEST_UPLIFT_REQUIRED = true;
@@ -97,7 +97,7 @@ public class UserInfoServiceTest {
             String expectedPhoneNumber,
             Boolean expectedPhoneNumberVerified,
             String expectedSalt,
-            String expectedVerifiedMfaMethod,
+            MFAMethodType expectedVerifiedMfaMethod,
             CredentialTrustLevel expectedCurrentCredentialStrength,
             Boolean expectedUpliftRequired) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
