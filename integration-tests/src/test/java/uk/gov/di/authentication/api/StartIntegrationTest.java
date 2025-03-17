@@ -95,7 +95,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
-        redis.addEmailToSession(sessionId, EMAIL);
+        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
+        authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -161,7 +163,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
-        redis.addEmailToSession(sessionId, EMAIL);
+        authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -202,7 +204,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var isAuthenticated = true;
         var sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, userEmail);
+        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+        authSessionExtension.addSession(sessionId);
 
         userStore.signUp(userEmail, "rubbbishPassword");
 
@@ -271,7 +275,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, userEmail);
+        authSessionExtension.addSession(sessionId);
         redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
@@ -303,7 +307,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             txmaAuditQueue.clear();
             sessionId = redis.createSession(false);
             userStore.signUp(EMAIL, "password");
-            redis.addEmailToSession(sessionId, EMAIL);
+            authSessionExtension.addSession(sessionId);
             var state = new State();
             Scope scope = new Scope();
             scope.add(OIDCScopeValue.OPENID);

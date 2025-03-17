@@ -614,11 +614,11 @@ class StartHandlerTest {
     }
 
     private void withNoUserProfilePresent() {
-        when(startService.isUserProfileEmpty(any(Session.class))).thenReturn(true);
+        when(startService.isUserProfileEmpty(any(AuthSessionItem.class))).thenReturn(true);
     }
 
     private void withUserProfilePresent() {
-        when(startService.isUserProfileEmpty(any(Session.class))).thenReturn(false);
+        when(startService.isUserProfileEmpty(any(AuthSessionItem.class))).thenReturn(false);
     }
 
     private Map<String, String> headersWithReauthenticate(String reauthenticate) {

@@ -71,7 +71,7 @@ class StartServiceTest {
     private static final String SESSION_ID = "a-session-id";
     private static final Session SESSION = new Session().setEmailAddress(EMAIL);
     private static final AuthSessionItem AUTH_SESSION =
-            new AuthSessionItem().withSessionId(SESSION_ID);
+            new AuthSessionItem().withEmailAddress(EMAIL).withSessionId(SESSION_ID);
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String AUDIENCE = "oidc-audience";
@@ -158,13 +158,13 @@ class StartServiceTest {
     @Test
     void returnsFalseIfUserProfilePresent() {
         withUserProfile();
-        assertFalse(startService.isUserProfileEmpty(SESSION));
+        assertFalse(startService.isUserProfileEmpty(AUTH_SESSION));
     }
 
     @Test
     void returnsTrueWhenUserProfileEmpty() {
         withNoUserProfile();
-        assertTrue(startService.isUserProfileEmpty(SESSION));
+        assertTrue(startService.isUserProfileEmpty(AUTH_SESSION));
     }
 
     private static Stream<Arguments> userStartInfo() {
