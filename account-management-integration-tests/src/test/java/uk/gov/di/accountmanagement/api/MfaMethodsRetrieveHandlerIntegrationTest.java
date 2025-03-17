@@ -5,11 +5,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsRetrieveHandler;
-import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.SmsMfaData;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -21,8 +20,8 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_APP_MFA_ID;
-import static uk.gov.di.authentication.shared.services.mfa.DynamoMfaMethodsService.HARDCODED_SMS_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_APP_MFA_ID;
+import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_SMS_MFA_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -119,14 +118,15 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         var authAppIdentifier = "14895398-33e5-41f0-b059-811b07df348d";
         var smsIdentifier = "e2d3f441-a17f-44a3-b608-b32c129b48b4";
         var authApp =
-                new AuthAppMfaData(
+                MFAMethod.authAppMfaMethod(
                         "some-credential",
                         true,
                         true,
                         PriorityIdentifier.DEFAULT,
                         authAppIdentifier);
         var sms =
-                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP, smsIdentifier);
+                MFAMethod.smsMfaMethod(
+                        true, true, PHONE_NUMBER, PriorityIdentifier.BACKUP, smsIdentifier);
         userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, authApp);
         userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, sms);
 

@@ -1,9 +1,10 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.authentication.shared.entity.mfa;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 
 import java.util.Objects;
 
@@ -43,38 +44,34 @@ public class MFAMethod {
         this.updated = updated;
     }
 
-    public MFAMethod(
-            String mfaMethodType,
+    public static MFAMethod authAppMfaMethod(
             String credentialValue,
             boolean methodVerified,
             boolean enabled,
-            String updated,
             PriorityIdentifier priority,
             String mfaIdentifier) {
-        this.mfaMethodType = mfaMethodType;
-        this.credentialValue = credentialValue;
-        this.methodVerified = methodVerified;
-        this.enabled = enabled;
-        this.updated = updated;
-        this.priority = priority.name();
-        this.mfaIdentifier = mfaIdentifier;
+        return new MFAMethod()
+                .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                .withCredentialValue(credentialValue)
+                .withMethodVerified(methodVerified)
+                .withEnabled(enabled)
+                .withPriority(priority.name())
+                .withMfaIdentifier(mfaIdentifier);
     }
 
-    public MFAMethod(
-            String mfaMethodType,
+    public static MFAMethod smsMfaMethod(
             boolean methodVerified,
             boolean enabled,
             String destination,
-            String updated,
             PriorityIdentifier priority,
             String mfaIdentifier) {
-        this.mfaMethodType = mfaMethodType;
-        this.methodVerified = methodVerified;
-        this.enabled = enabled;
-        this.destination = destination;
-        this.updated = updated;
-        this.priority = priority.name();
-        this.mfaIdentifier = mfaIdentifier;
+        return new MFAMethod()
+                .withMfaMethodType(MFAMethodType.SMS.getValue())
+                .withMethodVerified(methodVerified)
+                .withEnabled(enabled)
+                .withDestination(destination)
+                .withPriority(priority.name())
+                .withMfaIdentifier(mfaIdentifier);
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHOD_TYPE)

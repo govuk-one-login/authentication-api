@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.entity;
 
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.CodeRequestTypeNotFoundException;
 
 import java.util.HashMap;

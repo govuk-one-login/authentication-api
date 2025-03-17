@@ -10,8 +10,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
+import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 
 import java.util.Map;
 import java.util.stream.Stream;
