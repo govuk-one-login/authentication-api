@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetMfaState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
@@ -16,7 +17,8 @@ public record TICFCRIRequest(
         @Expose @Required String authenticated,
         @Expose String initialRegistration,
         @Expose String passwordReset,
-        @Expose @SerializedName("2fa_reset") String mfaReset) {
+        @Expose @SerializedName("2fa_reset") String mfaReset,
+        @Expose @SerializedName("2fa_method") String[] mfaMethod) {
 
     public static TICFCRIRequest basicTicfCriRequest(
             String internalPairwiseId,
@@ -25,7 +27,8 @@ public record TICFCRIRequest(
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
             ResetPasswordState resetPasswordState,
-            ResetMfaState resetMfaState) {
+            ResetMfaState resetMfaState,
+            MFAMethodType verifiedMfaMethodType) {
         boolean passwordResetSuccess = resetPasswordState.equals(ResetPasswordState.SUCCEEDED);
         boolean reportablePasswordAttempted =
                 (!authenticated && resetPasswordState.equals(ResetPasswordState.ATTEMPTED));
@@ -36,6 +39,12 @@ public record TICFCRIRequest(
                 (!authenticated && resetMfaState.equals(ResetMfaState.ATTEMPTED));
         boolean mfaReset = mfaResetSuccess || reportableMfaAttempted;
 
+        String sanitisedMfaMethodType =
+                verifiedMfaMethodType == MFAMethodType.SMS
+                                || verifiedMfaMethodType == MFAMethodType.AUTH_APP
+                        ? verifiedMfaMethodType.toString()
+                        : null;
+
         return new TICFCRIRequest(
                 internalPairwiseId,
                 vtr,
@@ -43,6 +52,7 @@ public record TICFCRIRequest(
                 authenticated ? "Y" : "N",
                 accountState == AuthSessionItem.AccountState.NEW ? "Y" : null,
                 passwordReset ? "Y" : null,
-                mfaReset ? "Y" : null);
+                mfaReset ? "Y" : null,
+                sanitisedMfaMethodType != null ? new String[] {sanitisedMfaMethodType} : null);
     }
 }

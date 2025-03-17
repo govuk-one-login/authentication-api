@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -199,7 +200,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         request.authenticated(),
                         authSession.getIsNewAccount(),
                         authSession.getResetPasswordState(),
-                        authSession.getResetMfaState());
+                        authSession.getResetMfaState(),
+                        authSession.getVerifiedMfaMethodType());
             }
 
             LOG.info("Generating Account Interventions outbound response for frontend");
@@ -219,7 +221,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
             AuthSessionItem.ResetPasswordState resetPasswordState,
-            AuthSessionItem.ResetMfaState resetMfaState) {
+            AuthSessionItem.ResetMfaState resetMfaState,
+            MFAMethodType verifiedMfaMethodType) {
         var vtr = new ArrayList<String>();
 
         try {
@@ -246,7 +249,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         authenticated,
                         accountState,
                         resetPasswordState,
-                        resetMfaState);
+                        resetMfaState,
+                        verifiedMfaMethodType);
 
         String payload;
 

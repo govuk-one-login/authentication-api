@@ -16,6 +16,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -60,6 +61,7 @@ class TicfCriHandlerTest {
             AuthSessionItem.ResetPasswordState.NONE;
     private static final AuthSessionItem.ResetMfaState NA_RESET_MFA_STATE =
             AuthSessionItem.ResetMfaState.NONE;
+    private static final MFAMethodType NA_USED_MFA_METHOD_TYPE = MFAMethodType.NONE;
     private static final String SERVICE_URI = "http://www.example.com";
     private static final String COMMON_SUBJECTID = "a-subject-id";
     private static final String JOURNEY_ID = "journey-id";
@@ -98,7 +100,8 @@ class TicfCriHandlerTest {
                         userIsAuthenticated,
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
-                        NA_RESET_MFA_STATE);
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"}",
@@ -135,7 +138,8 @@ class TicfCriHandlerTest {
                         USER_IS_AUTHENTICATED,
                         accountState,
                         NA_RESET_PASSWORD_STATE,
-                        NA_RESET_MFA_STATE);
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
@@ -177,7 +181,8 @@ class TicfCriHandlerTest {
                         authenticated,
                         EXISTING_ACCOUNT_STATE,
                         resetPasswordState,
-                        NA_RESET_MFA_STATE);
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
@@ -226,7 +231,8 @@ class TicfCriHandlerTest {
                         authenticated,
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
-                        resetMfaState);
+                        resetMfaState,
+                        NA_USED_MFA_METHOD_TYPE);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"%s}",
@@ -262,6 +268,54 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
+    @MethodSource("usedMfaMethodType")
+    void shouldMakeTheCorrectCallToTheTicfCriForUsedMfaMethodType(
+            MFAMethodType usedMfaMethodType, String expectedMfaMethodType)
+            throws IOException, InterruptedException, ExecutionException {
+        var ticfRequest =
+                basicTicfCriRequest(
+                        COMMON_SUBJECTID,
+                        VECTORS_OF_TRUST,
+                        JOURNEY_ID,
+                        true,
+                        EXISTING_ACCOUNT_STATE,
+                        NA_RESET_PASSWORD_STATE,
+                        NA_RESET_MFA_STATE,
+                        usedMfaMethodType);
+        var expectedRequestBody =
+                format(
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"Y\"%s}",
+                        COMMON_SUBJECTID,
+                        jsonArrayFrom(VECTORS_OF_TRUST),
+                        JOURNEY_ID,
+                        expectedMfaMethodType != null
+                                ? ",\"2fa_method\":[\"" + expectedMfaMethodType + "\"]"
+                                : "");
+
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        handler.handleRequest(ticfRequest, context);
+
+        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
+
+        var actualRequestBody =
+                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
+
+        var expectedUri = URI.create(SERVICE_URI + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
+        assertEquals(expectedRequestBody, actualRequestBody);
+    }
+
+    private static List<Arguments> usedMfaMethodType() {
+        return List.of(
+                Arguments.of(MFAMethodType.NONE, null),
+                Arguments.of(MFAMethodType.EMAIL, null),
+                Arguments.of(MFAMethodType.SMS, "SMS"),
+                Arguments.of(MFAMethodType.AUTH_APP, "AUTH_APP"));
+    }
+
+    @ParameterizedTest
     @MethodSource("statusCodes")
     void sendsMetricsAndLogsBasedOnTheHttpStatusCode(Integer statusCode, Level expectedLogLevel)
             throws IOException, InterruptedException {
@@ -273,7 +327,8 @@ class TicfCriHandlerTest {
                         USER_IS_AUTHENTICATED,
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
-                        NA_RESET_MFA_STATE);
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE);
         when(httpResponse.statusCode()).thenReturn(statusCode);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
@@ -316,7 +371,8 @@ class TicfCriHandlerTest {
                         USER_IS_AUTHENTICATED,
                         EXISTING_ACCOUNT_STATE,
                         NA_RESET_PASSWORD_STATE,
-                        NA_RESET_MFA_STATE),
+                        NA_RESET_MFA_STATE,
+                        NA_USED_MFA_METHOD_TYPE),
                 context);
 
         verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);

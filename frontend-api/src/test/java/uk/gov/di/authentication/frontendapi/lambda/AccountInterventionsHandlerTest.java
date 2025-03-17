@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -287,12 +288,14 @@ class AccountInterventionsHandlerTest {
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\"}"),
 
                 // Testing initial registration combinations
@@ -301,12 +304,14 @@ class AccountInterventionsHandlerTest {
                         AuthSessionItem.AccountState.NEW,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"initialRegistration\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.NEW,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"initialRegistration\":\"Y\"}"),
 
                 // Testing password reset combinations
@@ -315,12 +320,14 @@ class AccountInterventionsHandlerTest {
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.SUCCEEDED,
                         AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"passwordReset\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.ATTEMPTED,
                         AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"passwordReset\":\"Y\"}"),
 
                 // Testing mfa reset combinations
@@ -329,19 +336,52 @@ class AccountInterventionsHandlerTest {
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.SUCCEEDED,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"2fa_reset\":\"Y\"}"),
                 Arguments.of(
                         true,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.ATTEMPTED,
+                        MFAMethodType.NONE,
                         "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
                 Arguments.of(
                         false,
                         AuthSessionItem.AccountState.EXISTING,
                         AuthSessionItem.ResetPasswordState.NONE,
                         AuthSessionItem.ResetMfaState.ATTEMPTED,
-                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"2fa_reset\":\"Y\"}"));
+                        MFAMethodType.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"N\",\"2fa_reset\":\"Y\"}"),
+
+                // Testing mfa method combinations
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.NONE,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.EMAIL,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\"}"),
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.SMS,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"2fa_method\":[\"SMS\"]}"),
+                Arguments.of(
+                        true,
+                        AuthSessionItem.AccountState.EXISTING,
+                        AuthSessionItem.ResetPasswordState.NONE,
+                        AuthSessionItem.ResetMfaState.NONE,
+                        MFAMethodType.AUTH_APP,
+                        "{\"sub\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":\"Y\",\"2fa_method\":[\"AUTH_APP\"]}"));
     }
 
     @ParameterizedTest
@@ -351,6 +391,7 @@ class AccountInterventionsHandlerTest {
             AuthSessionItem.AccountState accountState,
             AuthSessionItem.ResetPasswordState resetPasswordState,
             AuthSessionItem.ResetMfaState resetMfaState,
+            MFAMethodType usedMfaMethodType,
             String expectedPayload)
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
@@ -365,7 +406,8 @@ class AccountInterventionsHandlerTest {
                 authSession
                         .withAccountState(accountState)
                         .withResetPasswordState(resetPasswordState)
-                        .withResetMfaState(resetMfaState);
+                        .withResetMfaState(resetMfaState)
+                        .withVerifiedMfaMethodType(usedMfaMethodType);
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSessionWithChanges));
 
