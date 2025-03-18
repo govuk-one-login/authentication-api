@@ -34,8 +34,30 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_EMAIL = "test@email.com";
     private static final String TEST_PASSWORD = "test-password";
     private static final String TEST_PHONE_NUMBER = "07123123123";
+    private static final String TEST_PHONE_NUMBER_TWO = "07987987987";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static String TEST_PUBLIC_SUBJECT;
+    private static final MFAMethod defaultPrioritySms =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    TEST_PHONE_NUMBER,
+                    PriorityIdentifier.DEFAULT,
+                    UUID.randomUUID().toString());
+    private static final MFAMethod backupPrioritySms =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    TEST_PHONE_NUMBER_TWO,
+                    PriorityIdentifier.BACKUP,
+                    UUID.randomUUID().toString());
+    private static final MFAMethod defaultPriorityAuthApp =
+            MFAMethod.authAppMfaMethod(
+                    TEST_CREDENTIAL,
+                    true,
+                    true,
+                    PriorityIdentifier.DEFAULT,
+                    UUID.randomUUID().toString());
 
     @BeforeEach
     void setUp() {
@@ -55,14 +77,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn200AndMfaMethodDataWhenAuthAppUserAddsSmsMfa() {
-        userStore.addMfaMethodSupportingMultiple(
-                TEST_EMAIL,
-                MFAMethod.authAppMfaMethod(
-                        TEST_CREDENTIAL,
-                        true,
-                        true,
-                        PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
         var response =
                 makeRequest(
                         Optional.of(
@@ -101,14 +116,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn200AndMfaMethodDataWhenSmsUserAddsAuthAppMfa() {
-        userStore.addMfaMethodSupportingMultiple(
-                TEST_EMAIL,
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        TEST_PHONE_NUMBER,
-                        PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         var response =
                 makeRequest(
                         Optional.of(
@@ -199,22 +207,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn400ErrorResponseWhenAddingMfaAfterMfaCountLimitReached() {
-        userStore.addMfaMethodSupportingMultiple(
-                TEST_EMAIL,
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        TEST_PHONE_NUMBER,
-                        PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
-        userStore.addMfaMethodSupportingMultiple(
-                TEST_EMAIL,
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        TEST_PHONE_NUMBER,
-                        PriorityIdentifier.BACKUP,
-                        UUID.randomUUID().toString()));
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
 
         var response =
                 makeRequest(
@@ -233,14 +227,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn400ErrorResponseWhenSmsUserAddsSmsMfaWithSamePhoneNumber() {
-        userStore.addMfaMethodSupportingMultiple(
-                TEST_EMAIL,
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        TEST_PHONE_NUMBER,
-                        PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
 
         var response =
                 makeRequest(
@@ -259,14 +246,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn400ErrorResponseWhenAuthAppAddsSecondAuthApp() {
-        userStore.addMfaMethodSupportingMultiple(
-                TEST_EMAIL,
-                MFAMethod.authAppMfaMethod(
-                        TEST_CREDENTIAL,
-                        true,
-                        true,
-                        PriorityIdentifier.BACKUP,
-                        UUID.randomUUID().toString()));
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
 
         var response =
                 makeRequest(
