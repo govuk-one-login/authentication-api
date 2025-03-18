@@ -1,0 +1,70 @@
+@startuml Authentication
+
+left to right direction
+
+package Authentication {
+    actor "Existing User" as existingUser
+    actor "New User" as newuser
+    actor "User" as user
+
+
+    package "Sign Up" {
+        usecase "Sign Up" as signUp
+        together {
+
+            usecase "Add MFA" as addMFA
+
+
+        }
+        usecase "Add Auth App MFA" as addAuthAppMFA
+        usecase "Add SMS MFA" as addSMSMFA
+        usecase "Add Backup MFA" as addBackupMFA
+
+
+        signUp .-> addMFA : include
+        signUp .-> addBackupMFA : include
+        addMFA <|-- addSMSMFA
+        addMFA <|-- addAuthAppMFA
+        addBackupMFA <|-- addMFA
+    }
+
+
+    newuser ---> signUp
+
+
+    package "Sign In" {
+        usecase "Sign In" as signIn
+        usecase "Reauthenticate User" as reauthenticateUser
+        together {
+            usecase "Complete Sign In" as completeSignIn
+            usecase "Updated T&C" as updatedTermsAndConditions
+            usecase "Enter MFA OTP" as enterMFAOTP
+            usecase "Enter Password" as enterPassword
+            usecase "Enter Email" as enterEmail
+        }
+        usecase "Account Not Found" as accountNotFound
+        usecase "Enter SMS OTP" as enterSMSOTP
+        usecase "Enter Auth App OTP" as enterAuthAppOTP
+
+        signIn .-> enterMFAOTP : include
+        signIn .-> enterPassword : include
+        signIn .-> enterEmail : include
+        signIn .-> updatedTermsAndConditions : include
+        signIn .-> completeSignIn : include
+        enterEmail <|-- accountNotFound
+        enterMFAOTP <|-- enterSMSOTP
+        enterMFAOTP <|-- enterAuthAppOTP
+        signIn <|-- reauthenticateUser
+
+        package "Account Recovery" {
+            usecase "MFA Reset" as mfaReset
+            usecase "Password Reset" as passwordReset
+        }
+        enterPassword <|-- passwordReset  : extend
+        enterMFAOTP <|-- mfaReset : extend
+    }
+    existingUser ---> signIn
+    signInOrCreate -> signIn
+    existingUser -> reauthenticateUser
+}
+@enduml

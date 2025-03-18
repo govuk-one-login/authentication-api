@@ -1,0 +1,44 @@
+@startuml Authentication
+
+left to right direction
+
+package "One Login Home" {
+    actor "Authenticated User" as authenticatedUser
+    package Security {
+        package SMS {
+                usecase "Change Phone Number" as changePhoneNumber
+                usecase "Add SMS MFA\n(POST)" as addSMSMFAHome
+                usecase "Update SMS MFA\n(PUT)" as updateSMSMFAHome
+        }
+        package "Auth App" {
+                    usecase "Change Authenticator App" as changeAuthenticatorApp
+                    usecase "Add Authenticator App\n(POST)" as addAuthenticatorAppHome
+                    usecase "Update Authenticator App\n(PUT)" as updateAuthenticatorAppHome
+                }
+        package "Default and Backup" {
+            usecase "Add Backup Method\n(POST)" as addBackupMethod
+            usecase "Remove Backup\n(DELETE)" as removeBackup
+            usecase "Switch Backup and Default\n(PUT)" as switchBackupAndDefault
+            usecase "Use Different Default\n(PUT)" as useDifferentDefault
+        }
+
+
+        usecase "View MFA Methods\n(GET)" as viewMFAMethods
+
+        changeAuthenticatorApp .-> updateAuthenticatorAppHome : include
+        changePhoneNumber .-> updateSMSMFAHome : include
+        addBackupMethod <|-- addSMSMFAHome
+        addBackupMethod <|-- addAuthenticatorAppHome
+        useDifferentDefault <|-- changeAuthenticatorApp
+        useDifferentDefault <|-- changePhoneNumber
+    }
+    authenticatedUser --> viewMFAMethods
+    authenticatedUser --> changePhoneNumber
+    authenticatedUser --> changeAuthenticatorApp
+    authenticatedUser --> useDifferentDefault
+    authenticatedUser --> addBackupMethod
+    authenticatedUser --> removeBackup
+    authenticatedUser --> switchBackupAndDefault
+}
+
+@enduml

@@ -1,0 +1,36 @@
+---
+title: Method Management API Phase
+---
+
+stateDiagram-v2
+
+    noAccount: No Account
+    accountCreated: Account Created
+    manageAccountSecurity: Manage Account Security
+    dataMigratedPUT: Data Migrated (PUT)
+    dataMigratedPOST: Data Migrated (POST)
+    backupAdded: Backup Added
+    switched: Default and Backup Switched
+    phoneNumberChanged: Phone Number Changed
+    authAppChanged: Auth App Changed
+    backupDeleted: Backup Deleted
+    accountDeleted: Account Deleted
+
+    [*] --> noAccount
+    noAccount --> accountCreated : sign up
+    accountCreated --> manageAccountSecurity
+    manageAccountSecurity --> dataMigratedPUT : change phone number (PUT)
+    manageAccountSecurity --> dataMigratedPUT : change auth app (PUT)
+    manageAccountSecurity --> dataMigratedPOST : add backup (POST)
+    dataMigratedPOST --> backupAdded
+    backupAdded --> switched : switch backup and default (PUT)
+    backupAdded --> phoneNumberChanged : change phone number (PUT)
+    backupAdded --> authAppChanged : change auth app (PUT)
+    dataMigratedPUT --> phoneNumberChanged : change phone number (PUT)
+    dataMigratedPUT --> authAppChanged : change auth app (PUT)
+    switched --> backupDeleted : remove backup (DELETE)
+    phoneNumberChanged --> backupDeleted : remove backup (DELETE)
+    authAppChanged --> backupDeleted : remove backup (DELETE)
+    backupDeleted --> backupAdded : add backup (POST)
+    backupDeleted --> accountDeleted : delete account
+    accountDeleted --> [*]

@@ -1,0 +1,91 @@
+@startuml Authentication
+
+left to right direction
+
+package Authentication {
+    actor "Existing User" as existingUser
+    actor "New User" as newuser
+    actor "User" as user
+
+    package "Legal and Regulatory" {
+        together {
+        usecase "View Accessibility Statement" as viewAccessibilityStatement
+        usecase "Manage Cookies" as manageCookies
+        usecase "View Terms and Conditions" as viewTermsAndConditions
+        usecase "View Privacy Notice" as viewPrivacyNotice
+        }
+    }
+    user -d-> viewAccessibilityStatement
+    user -d-> manageCookies
+    user -d-> viewTermsAndConditions
+    user -d-> viewPrivacyNotice
+
+    package "User Support" {
+        usecase "Create Support Case" as createSupportCase
+    }
+    user -l-> createSupportCase
+
+    package "Sign Up" {
+        usecase "Sign Up" as signUp
+        together {
+            usecase "Confirm Registration" as confirmRegistration
+            usecase "Add MFA" as addMFA
+            usecase "Create Password" as createPassword
+            usecase "Capture Email" as captureEmail
+        }
+        usecase "Add Auth App MFA" as addAuthAppMFA
+        usecase "Add SMS MFA" as addSMSMFA
+
+        signUp .-> confirmRegistration : include
+        signUp .-> captureEmail : include
+        signUp .-> createPassword : include
+        signUp .-> addMFA : include
+        addMFA <|-- addSMSMFA
+        addMFA <|-- addAuthAppMFA
+    }
+
+    package "User Triage" {
+        usecase "Sign In or Create" as signInOrCreate
+    }
+    existingUser --> signInOrCreate
+
+    newuser ---> signUp
+    newuser --> signInOrCreate
+    signInOrCreate -> signUp
+
+    package "Sign In" {
+        usecase "Sign In" as signIn
+        usecase "Reauthenticate User" as reauthenticateUser
+        together {
+            usecase "Complete Sign In" as completeSignIn
+            usecase "Updated T&C" as updatedTermsAndConditions
+            usecase "Enter MFA OTP" as enterMFAOTP
+            usecase "Enter Password" as enterPassword
+            usecase "Enter Email" as enterEmail
+        }
+        usecase "Account Not Found" as accountNotFound
+        usecase "Enter SMS OTP" as enterSMSOTP
+        usecase "Enter Auth App OTP" as enterAuthAppOTP
+
+        signIn .-> enterMFAOTP : include
+        signIn .-> enterPassword : include
+        signIn .-> enterEmail : include
+        signIn .-> updatedTermsAndConditions : include
+        signIn .-> completeSignIn : include
+        enterEmail <|-- accountNotFound
+        enterMFAOTP <|-- enterSMSOTP
+        enterMFAOTP <|-- enterAuthAppOTP
+        signIn <|-- reauthenticateUser
+
+        package "Account Recovery" {
+            usecase "MFA Reset" as mfaReset
+            usecase "Password Reset" as passwordReset
+        }
+        enterPassword <|-- passwordReset  : extend
+        enterMFAOTP <|-- mfaReset : extend
+    }
+    existingUser ---> signIn
+    signInOrCreate -> signIn
+    existingUser -> reauthenticateUser
+}
+@enduml

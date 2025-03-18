@@ -1,0 +1,181 @@
+@startuml Authentication
+
+left to right direction
+
+package "One Login Home" {
+    actor "Authenticated User" as authenticatedUser
+    package Security {
+        package SMS {
+                usecase "Change Phone Number" as changePhoneNumber
+                usecase "Add SMS MFA\n(POST)" as addSMSMFAHome
+                usecase "Update SMS MFA\n(PUT)" as updateSMSMFAHome
+        }
+        package "Auth App" {
+                    usecase "Change Authenticator App" as changeAuthenticatorApp
+                    usecase "Add Authenticator App\n(POST)" as addAuthenticatorAppHome
+                    usecase "Update Authenticator App\n(PUT)" as updateAuthenticatorAppHome
+                }
+        package "Default and Backup" {
+            usecase "Add Backup Method\n(POST)" as addBackupMethod
+            usecase "Remove Backup\n(DELETE)" as removeBackup
+            usecase "Switch Backup and Default\n(PUT)" as switchBackupAndDefault
+            usecase "Use Different Default\n(PUT)" as useDifferentDefault
+        }
+
+
+        usecase "View MFA Methods\n(GET)" as viewMFAMethods
+
+        changeAuthenticatorApp .-> updateAuthenticatorAppHome : include
+        changePhoneNumber .-> updateSMSMFAHome : include
+        addBackupMethod <|-- addSMSMFAHome
+        addBackupMethod <|-- addAuthenticatorAppHome
+        useDifferentDefault <|-- changeAuthenticatorApp
+        useDifferentDefault <|-- changePhoneNumber
+    }
+    authenticatedUser --> viewMFAMethods
+    authenticatedUser --> changePhoneNumber
+    authenticatedUser --> changeAuthenticatorApp
+    authenticatedUser --> useDifferentDefault
+    authenticatedUser --> addBackupMethod
+    authenticatedUser --> removeBackup
+    authenticatedUser --> switchBackupAndDefault
+}
+
+package Authentication {
+    actor "Existing User" as existingUser
+    actor "New User" as newuser
+    actor "User" as user
+
+    package "Legal and Regulatory" {
+        together {
+        usecase "View Accessibility Statement" as viewAccessibilityStatement
+        usecase "Manage Cookies" as manageCookies
+        usecase "View Terms and Conditions" as viewTermsAndConditions
+        usecase "View Privacy Notice" as viewPrivacyNotice
+        }
+    }
+    user -d-> viewAccessibilityStatement
+    user -d-> manageCookies
+    user -d-> viewTermsAndConditions
+    user -d-> viewPrivacyNotice
+
+    package "User Support" {
+        usecase "Create Support Case" as createSupportCase
+    }
+    user -l-> createSupportCase
+
+
+
+    package "Sign Up" {
+        usecase "Sign Up" as signUp
+        together {
+            usecase "Confirm Registration" as confirmRegistration
+            usecase "Add Default MFA" as addDefaultMFA
+            usecase "Create Password" as createPassword
+            usecase "Capture Email" as captureEmail
+        }
+        usecase "Add Auth App MFA" as addAuthAppMFA
+        usecase "Add SMS MFA" as addSMSMFAAuth
+        usecase "Add backup - Sign Up" as promptToAddBackupSignUp
+
+        signUp .-> confirmRegistration : include
+        signUp .-> captureEmail : include
+        signUp .-> createPassword : include
+        signUp .-> addDefaultMFA : include
+        signUp .---> promptToAddBackupSignUp : include
+        addDefaultMFA <|-- addSMSMFAAuth
+        addDefaultMFA <|-- addAuthAppMFA
+    }
+
+    package "User Triage" {
+        usecase "Sign In or Create" as signInOrCreate
+    }
+    existingUser --> signInOrCreate
+
+    newuser ---> signUp
+    newuser --> signInOrCreate
+    signInOrCreate -> signUp
+
+    package "Sign In" {
+        usecase "Sign In" as signIn
+        usecase "Reauthenticate User" as reauthenticateUser
+        together {
+            usecase "Complete Sign In" as completeSignIn
+            usecase "Updated T&C" as updatedTermsAndConditions
+            usecase "Choose Default or \n Backup MFA" as chooseDefaultOrBackupMFA
+            usecase "Enter MFA OTP" as enterMFAOTP
+            usecase "Enter Password" as enterPassword
+            usecase "Enter Email" as enterEmail
+            usecase "Add backup - Sign In" as promptToAddBackupSignIn
+
+        }
+        usecase "Account Not Found" as accountNotFound
+        usecase "Enter SMS OTP" as enterSMSOTP
+        usecase "Enter Auth App OTP" as enterAuthAppOTP
+
+        signIn .-> chooseDefaultOrBackupMFA : include
+        signIn .-> enterMFAOTP : include
+        signIn .-> enterPassword : include
+        signIn .-> enterEmail : include
+        signIn .-> updatedTermsAndConditions : include
+        signIn .--> promptToAddBackupSignIn : include
+        signIn .-> completeSignIn : include
+        enterEmail <|-- accountNotFound
+        enterMFAOTP <|-- enterSMSOTP
+        enterMFAOTP <|-- enterAuthAppOTP
+        signIn <|-- reauthenticateUser
+
+        package "Account Recovery" {
+            usecase "MFA Reset" as mfaReset
+            usecase "Password Reset" as passwordReset
+        }
+        enterPassword <|-- passwordReset  : extend
+        enterMFAOTP <|-- mfaReset : extend
+    }
+    existingUser ---> signIn
+    signInOrCreate -> signIn
+    existingUser -> reauthenticateUser
+
+package "Manage MFA" {
+
+            package "Add Backup MFA" {
+                usecase "Backup Added Confirmation" as addBackupConfirmation
+                usecase "Add Backup MFA - having Auth App" as addBackupHavingAuthApp
+                usecase "Add Backup MFA - having SMS" as addBackupHavingSMS
+                usecase "Prompt having SMS" as addBackupMethodAuthPromptSMS
+                usecase "Prompt having Auth App" as addBackupMethodAuthPromptAuthApp
+                usecase "Add backup" as addBackupMethodAuth
+            }
+
+            addBackupMethodAuth <|-- addBackupHavingSMS
+            addBackupHavingSMS .-> addBackupMethodAuthPromptSMS : include
+            addBackupMethodAuth <|-- addBackupHavingAuthApp
+            addBackupHavingAuthApp .-> addBackupMethodAuthPromptAuthApp : include
+            addBackupMethodAuth .-> addBackupConfirmation : include
+
+            package "Add SMS MFA" {
+                usecase "Check your Phone" as checkYourPhone
+                usecase "Enter Phone Number" as enterPhoneNumber
+                usecase "Add SMS MFA V2" as addSMSMFAV2
+                addSMSMFAV2 .-> enterPhoneNumber : include
+                addSMSMFAV2 .-> checkYourPhone : include
+            }
+
+            package "Add Auth App MFA" {
+                usecase "Add Auth App MFA V2" as addAuthAppMFAV2
+                usecase "Setup Authenticator App" as setupAuthenticatorApp
+                addAuthAppMFAV2 .-> setupAuthenticatorApp : include
+            }
+        }
+
+        addBackupHavingSMS .-> addSMSMFAV2 : include
+        addBackupHavingSMS .-> addAuthAppMFAV2 : include
+        addBackupMethodAuth <|-- promptToAddBackupSignIn
+        addBackupHavingAuthApp .-> addSMSMFAV2 : include
+        addBackupMethodAuth <|-- promptToAddBackupSignUp
+
+
+
+}
+
+@enduml
