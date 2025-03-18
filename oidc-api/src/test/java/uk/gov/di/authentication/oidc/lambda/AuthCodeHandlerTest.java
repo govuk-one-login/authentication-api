@@ -283,7 +283,6 @@ class AuthCodeHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
-                        eq(clientSession),
                         any(Long.class)))
                 .thenReturn(authorizationCode);
         when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
@@ -344,7 +343,6 @@ class AuthCodeHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
-                        eq(clientSession),
                         any(Long.class));
 
         var dimensions =
@@ -399,11 +397,7 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        eq(clientSession),
-                        any(Long.class)))
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -466,11 +460,7 @@ class AuthCodeHandlerTest {
                         pair("nonce", NONCE.getValue()));
         verify(authorisationCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        eq(clientSession),
-                        any(Long.class));
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class));
 
         var expectedDimensions =
                 Map.of(
@@ -726,7 +716,6 @@ class AuthCodeHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
-                        eq(clientSession),
                         any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(

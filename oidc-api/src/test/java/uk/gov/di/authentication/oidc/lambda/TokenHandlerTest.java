@@ -234,30 +234,7 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(
-                                                new ClientSession(
-                                                        authenticationRequest.toParameters(),
-                                                        clientSessionCreationTime,
-                                                        vtr,
-                                                        CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(CLIENT_ID)));
-        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchClientSessionItem(
-                                        CLIENT_SESSION_ID,
-                                        authenticationRequest.toParameters(),
-                                        clientSessionCreationTime,
-                                        vtr,
-                                        CLIENT_NAME)));
+        setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -287,6 +264,14 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        var clientSessionCaptor = ArgumentCaptor.forClass(ClientSession.class);
+        verify(clientSessionService)
+                .updateStoredClientSession(eq(CLIENT_SESSION_ID), clientSessionCaptor.capture());
+        assertEquals(signedJWT.serialize(), clientSessionCaptor.getValue().getIdTokenHint());
+        var orchClientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
+        verify(orchClientSessionService)
+                .updateStoredClientSession(orchClientSessionCaptor.capture());
+        assertEquals(signedJWT.serialize(), orchClientSessionCaptor.getValue().getIdTokenHint());
     }
 
     @Test
@@ -318,29 +303,8 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(
-                                                new ClientSession(
-                                                        authenticationRequest.toParameters(),
-                                                        clientSessionCreationTime,
-                                                        vtr,
-                                                        CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId("a-different-client-id")));
-        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchClientSessionItem(
-                                        CLIENT_SESSION_ID,
-                                        authenticationRequest.toParameters(),
-                                        clientSessionCreationTime,
-                                        vtr,
-                                        CLIENT_NAME)));
+        setupClientSessions(
+                authCode, authenticationRequest.toParameters(), vtr, "a-different-client-id", null);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -400,29 +364,7 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(
-                                                new ClientSession(
-                                                        authenticationRequest.toParameters(),
-                                                        clientSessionCreationTime,
-                                                        vtr,
-                                                        CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(CLIENT_ID)));
-        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchClientSessionItem(
-                                        CLIENT_SESSION_ID,
-                                        authenticationRequest.toParameters(),
-                                        clientSessionCreationTime,
-                                        vtr,
-                                        CLIENT_NAME)));
+        setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -463,7 +405,8 @@ public class TokenHandlerTest {
         KeyPair keyPair = generateRsaKeyPair();
         RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
         OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
+                new OIDCTokenResponse(
+                        new OIDCTokens("test-id-token-string", accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
 
@@ -609,6 +552,58 @@ public class TokenHandlerTest {
     }
 
     @Test
+    void shouldReturn400IfClientSessionIsNotValid()
+            throws JOSEException, TokenAuthInvalidException {
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID,
+                        RP_PAIRWISE_SUBJECT,
+                        "issuer-url",
+                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        AuthenticationRequest authenticationRequest = generateAuthRequest();
+        List<VectorOfTrust> vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
+        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES,
+                        Map.of("nonce", NONCE),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        null,
+                        false,
+                        JWSAlgorithm.ES256,
+                        CLIENT_SESSION_ID,
+                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        AUTH_TIME))
+                .thenReturn(tokenResponse);
+        setupNoClientSessions();
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(
+                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+    }
+
+    @Test
     void shouldReturn400IfClientIdIsNotValid() {
         ErrorObject error =
                 new ErrorObject(
@@ -709,29 +704,7 @@ public class TokenHandlerTest {
         String authCode = new AuthorizationCode().toString();
         List<VectorOfTrust> vtr = List.of(mock(VectorOfTrust.class));
         var authRequestParams = generateAuthRequest().toParameters();
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(
-                                                new ClientSession(
-                                                        authRequestParams,
-                                                        clientSessionCreationTime,
-                                                        vtr,
-                                                        CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(CLIENT_ID)));
-        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchClientSessionItem(
-                                        CLIENT_SESSION_ID,
-                                        authRequestParams,
-                                        clientSessionCreationTime,
-                                        vtr,
-                                        CLIENT_NAME)));
+        setupClientSessions(authCode, authRequestParams, vtr);
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
                         privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID, true);
@@ -776,31 +749,12 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-        ClientSession clientSession =
-                new ClientSession(
-                        authenticationRequest.toParameters(),
-                        clientSessionCreationTime,
-                        vtr,
-                        CLIENT_NAME);
-        clientSession.setDocAppSubjectId(DOC_APP_USER_PUBLIC_SUBJECT);
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(clientSession)
-                                        .setClientId(DOC_APP_CLIENT_ID.getValue())));
-        var orchClientSessionItem =
-                new OrchClientSessionItem(
-                        CLIENT_SESSION_ID,
-                        authenticationRequest.toParameters(),
-                        clientSessionCreationTime,
-                        vtr,
-                        CLIENT_NAME);
-        orchClientSessionItem.setDocAppSubjectId(DOC_APP_USER_PUBLIC_SUBJECT.getValue());
-        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(orchClientSessionItem));
+        setupClientSessions(
+                authCode,
+                authenticationRequest.toParameters(),
+                vtr,
+                DOC_APP_CLIENT_ID.getValue(),
+                DOC_APP_USER_PUBLIC_SUBJECT);
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         DOC_APP_CLIENT_ID.getValue(),
@@ -875,20 +829,7 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(
-                                                new ClientSession(
-                                                        authenticationRequest.toParameters(),
-                                                        LocalDateTime.now(),
-                                                        vtr,
-                                                        CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(CLIENT_ID)));
+        setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
@@ -948,20 +889,7 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setClientSession(
-                                                new ClientSession(
-                                                        authenticationRequest.toParameters(),
-                                                        LocalDateTime.now(),
-                                                        vtr,
-                                                        CLIENT_NAME))
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(CLIENT_ID)));
+        setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
@@ -988,6 +916,57 @@ public class TokenHandlerTest {
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
         assertClaimsRequestIfPresent(oidcClaimsRequest, true);
+    }
+
+    private void setupClientSessions(
+            String authCode, Map<String, List<String>> authRequestParams, List<VectorOfTrust> vtr) {
+        setupClientSessions(authCode, authRequestParams, vtr, CLIENT_ID, null);
+    }
+
+    private void setupClientSessions(
+            String authCode,
+            Map<String, List<String>> authRequestParams,
+            List<VectorOfTrust> vtr,
+            String clientId,
+            Subject docAppSubjectId) {
+        var clientSession =
+                new ClientSession(authRequestParams, clientSessionCreationTime, vtr, CLIENT_NAME)
+                        .setDocAppSubjectId(docAppSubjectId);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSession));
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(clientId)));
+        var orchClientSession =
+                new OrchClientSessionItem(
+                        CLIENT_SESSION_ID,
+                        authRequestParams,
+                        clientSessionCreationTime,
+                        vtr,
+                        CLIENT_NAME);
+        Optional.ofNullable(docAppSubjectId)
+                .ifPresent(subject -> orchClientSession.setDocAppSubjectId(subject.getValue()));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(orchClientSession));
+    }
+
+    private void setupNoClientSessions() {
+        when(authorisationCodeService.getExchangeDataForCode(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setAuthTime(AUTH_TIME)
+                                        .setClientId(CLIENT_ID)));
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(Optional.empty());
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.empty());
     }
 
     private UserProfile generateUserProfile() {
