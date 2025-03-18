@@ -91,6 +91,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
@@ -512,11 +513,18 @@ public class AuthorisationHandler
 
     private VectorOfTrust extractVoTFromIdTokenHint(SignedJWT idTokenHint)
             throws java.text.ParseException {
+        return VectorOfTrust.parseFromAuthRequestAttribute(
+                        extractVoTStringListFromIdTokenHint(idTokenHint))
+                .get(0);
+    }
+
+    private List<String> extractVoTStringListFromIdTokenHint(SignedJWT idTokenHint)
+            throws java.text.ParseException {
         var votClaim = idTokenHint.getJWTClaimsSet().getClaim("vot");
         if (votClaim == null) {
-            return new VectorOfTrust(CredentialTrustLevel.getDefault());
+            return List.of(CredentialTrustLevel.getDefault().getValue());
         } else if (votClaim instanceof String vot) {
-            return VectorOfTrust.parseFromAuthRequestAttribute(List.of(vot)).get(0);
+            return List.of(vot);
         }
         throw new java.text.ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
@@ -890,6 +898,9 @@ public class AuthorisationHandler
         var state = new State();
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
+        List<String> vtrStringList =
+                Optional.ofNullable(authenticationRequest.getCustomParameter(VTR_PARAM))
+                        .orElse(List.of(CredentialTrustLevel.getDefault().getValue()));
         String reauthSub = null;
         String reauthSid = null;
         if (reauthRequested) {
@@ -897,6 +908,9 @@ public class AuthorisationHandler
                 SignedJWT reauthIdToken = getReauthIdToken(authenticationRequest);
                 reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
                 reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
+                if (isNull(authenticationRequest.getCustomParameter(VTR_PARAM))) {
+                    vtrStringList = extractVoTStringListFromIdTokenHint(reauthIdToken);
+                }
             } catch (RuntimeException e) {
                 return generateErrorResponse(
                         authenticationRequest.getRedirectionURI(),
@@ -911,6 +925,14 @@ public class AuthorisationHandler
             }
         }
 
+        var cookieConsentOpt =
+                Optional.ofNullable(authenticationRequest.getCustomParameter("cookie_consent"))
+                        .map(List::stream)
+                        .flatMap(Stream::findFirst);
+        var gaOpt =
+                Optional.ofNullable(authenticationRequest.getCustomParameter("_ga"))
+                        .map(List::stream)
+                        .flatMap(Stream::findFirst);
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
@@ -938,9 +960,14 @@ public class AuthorisationHandler
                         .claim("authenticated", orchSession.getAuthenticated())
                         .claim(
                                 "current_credential_strength",
-                                orchSession.getCurrentCredentialStrength());
+                                orchSession.getCurrentCredentialStrength())
+                        .claim("vtr_list", String.join(" ", vtrStringList))
+                        .claim("scope", authenticationRequest.getScope().toString());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
+        gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
+        cookieConsentOpt.ifPresent(
+                cookieConsent -> claimsBuilder.claim("cookie_consent", cookieConsent));
 
         var claimsSetRequest =
                 constructAdditionalAuthenticationClaims(client, authenticationRequest);
@@ -955,7 +982,6 @@ public class AuthorisationHandler
                         .endpointURI(URI.create(redirectURI))
                         .requestObject(encryptedJWT)
                         .build();
-
         redirectURI = authorizationRequest.toURI().toString();
 
         return generateApiGatewayProxyResponse(

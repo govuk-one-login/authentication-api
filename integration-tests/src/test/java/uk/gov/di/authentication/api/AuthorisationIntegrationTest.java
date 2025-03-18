@@ -71,6 +71,7 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
+import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -1685,6 +1686,83 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
     }
 
+    @Test
+    void shouldForwardRequestQueryParamsAsClaimsToAuthFrontendApi() {
+        setupForAuthJourney();
+        var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "");
+        Map<String, String> queryParams = new HashMap<>(baseParams);
+        queryParams.put("_ga", "12345");
+        queryParams.put("cookie_consent", "approve");
+        queryParams.put("vtr", jsonArrayOf("Cl.Cm", "Cl"));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        queryParams,
+                        Optional.of("GET"));
+        assertThat(response, hasStatus(302));
+        assertResponseJarHasClaimsWithValues(
+                response,
+                Map.of(
+                        "vtr_list",
+                        jsonArrayOf("Cl.Cm", "Cl"),
+                        "_ga",
+                        "12345",
+                        "cookie_consent",
+                        "approve",
+                        "client_id",
+                        configuration.getOrchestrationClientId(),
+                        "scope",
+                        "openid",
+                        "redirect_uri",
+                        configuration.getOrchestrationRedirectURI()));
+        assertResponseJarHasClaims(response, List.of("state"));
+    }
+
+    @Test
+    void shouldForwardRequestObjectParamsAsClaimsToAuthFrontendApi() throws JOSEException {
+        setupForAuthJourney();
+        Map<String, String> extraParams = new HashMap<>();
+        extraParams.put("_ga", "12345");
+        extraParams.put("cookie_consent", "approve");
+        extraParams.put("vtr", jsonArrayOf("Cl.Cm", "Cl"));
+        var requestObject =
+                createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, extraParams);
+        Map<String, String> requestParams =
+                Map.of(
+                        "client_id",
+                        CLIENT_ID,
+                        "response_type",
+                        "code",
+                        "request",
+                        requestObject.serialize(),
+                        "scope",
+                        "openid");
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        requestParams,
+                        Optional.of("GET"));
+        assertThat(response, hasStatus(302));
+        assertResponseJarHasClaimsWithValues(
+                response,
+                Map.of(
+                        "vtr_list",
+                        jsonArrayOf("Cl.Cm", "Cl"),
+                        "_ga",
+                        "12345",
+                        "cookie_consent",
+                        "approve",
+                        "client_id",
+                        configuration.getOrchestrationClientId(),
+                        "scope",
+                        "openid",
+                        "redirect_uri",
+                        configuration.getOrchestrationRedirectURI()));
+        assertResponseJarHasClaims(response, List.of("state"));
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
         return constructQueryStringParameters(
@@ -1913,6 +1991,19 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             CodeChallenge codeChallenge,
             CodeChallengeMethod codeChallengeMethod)
             throws JOSEException {
+        return createSignedJWT(
+                uiLocales, claims, scopes, maxAge, codeChallenge, codeChallengeMethod, Map.of());
+    }
+
+    private SignedJWT createSignedJWT(
+            String uiLocales,
+            String claims,
+            List<String> scopes,
+            Integer maxAge,
+            CodeChallenge codeChallenge,
+            CodeChallengeMethod codeChallengeMethod,
+            Map<String, String> extraClaims)
+            throws JOSEException {
         var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
                         .audience("http://localhost/authorize")
@@ -1950,6 +2041,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         if (codeChallengeMethod != null) {
             jwtClaimsSetBuilder.claim("code_challenge_method", codeChallengeMethod.getValue());
         }
+        extraClaims.forEach(jwtClaimsSetBuilder::claim);
 
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
@@ -2012,5 +2104,38 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(sessionCookie.isPresent());
         var sessionId = sessionCookie.get().getValue().split("\\.")[0];
         assertTrue(orchSessionExtension.getSession(sessionId).isPresent());
+    }
+
+    private void assertResponseJarHasClaimsWithValues(
+            APIGatewayProxyResponseEvent response, Map<String, Object> expectedClaims) {
+        try {
+            var authRequest = extractAuthRequestFromResponse(response);
+            var signedJwt = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
+            var claims = signedJwt.getJWTClaimsSet();
+            expectedClaims.forEach(
+                    (key, value) ->
+                            assertEquals(
+                                    value,
+                                    claims.getClaim(key),
+                                    format("Failed assertion on claim \"%s\"", key)));
+        } catch (JOSEException | ParseException | java.text.ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void assertResponseJarHasClaims(
+            APIGatewayProxyResponseEvent response, List<String> claimKeys) {
+        try {
+            var authRequest = extractAuthRequestFromResponse(response);
+            var signedJwt = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
+            var claims = signedJwt.getJWTClaimsSet();
+            claimKeys.forEach(
+                    key ->
+                            assertNotNull(
+                                    claims.getClaim(key),
+                                    format("Claim does not exist in JAR: \"%s\"", key)));
+        } catch (JOSEException | ParseException | java.text.ParseException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
