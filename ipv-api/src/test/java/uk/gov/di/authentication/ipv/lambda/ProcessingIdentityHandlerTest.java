@@ -267,7 +267,7 @@ class ProcessingIdentityHandlerTest {
 
         verify(logoutService)
                 .handleAccountInterventionLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of(), null),
+                        new DestroySessionsRequest(SESSION_ID, List.of()),
                         null,
                         event,
                         CLIENT_ID,
