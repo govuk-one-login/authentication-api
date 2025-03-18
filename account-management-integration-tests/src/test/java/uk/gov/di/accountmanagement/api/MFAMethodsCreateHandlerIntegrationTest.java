@@ -190,6 +190,40 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
+    @Test
+    void shouldReturn409ErrorResponseWhenAddingMfaAfterMfaCountLimitReached() {
+        userStore.addMfaMethodSupportingMultiple(
+                TEST_EMAIL,
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString()));
+        userStore.addMfaMethodSupportingMultiple(
+                TEST_EMAIL,
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.BACKUP,
+                        UUID.randomUUID().toString()));
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                constructRequestBody(
+                                        PriorityIdentifier.BACKUP,
+                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                        Collections.emptyMap());
+
+        assertEquals(409, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1068));
+    }
+
     private static String constructRequestBody(
             PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail) {
         return format(

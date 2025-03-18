@@ -94,6 +94,9 @@ public class MFAMethodsCreateHandler
                     case INVALID_PRIORITY_IDENTIFIER -> {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
                     }
+                    case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> {
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1068);
+                    }
                 }
             }
 

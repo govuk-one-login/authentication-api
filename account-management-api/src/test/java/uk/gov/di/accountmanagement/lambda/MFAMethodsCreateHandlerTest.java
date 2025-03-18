@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -244,6 +245,26 @@ class MFAMethodsCreateHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+    }
+
+    @Test
+    void shouldReturn409WhenMfaMethodServiceReturnsBackupAndDefaultExistError() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
+                        TEST_PUBLIC_SUBJECT);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.addBackupMfa(any(), any()))
+                .thenReturn(
+                        Either.left(
+                                MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(409));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1068));
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(

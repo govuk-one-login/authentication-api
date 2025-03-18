@@ -291,6 +291,24 @@ class MfaMethodsServiceIntegrationTest {
 
                 assertEquals(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER, result.getLeft());
             }
+
+            @Test
+            void shouldReturnAtMaximumMfaErrorWhenAddingBackupWithTwoExistingMfaMethods() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+                MfaMethodCreateRequest request =
+                        new MfaMethodCreateRequest(
+                                new MfaMethodCreateRequest.MfaMethod(
+                                        PriorityIdentifier.BACKUP,
+                                        new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER)));
+
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
+
+                assertEquals(
+                        MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST,
+                        result.getLeft());
+            }
         }
     }
 

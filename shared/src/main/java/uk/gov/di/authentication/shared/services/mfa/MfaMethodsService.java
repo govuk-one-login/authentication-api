@@ -140,6 +140,13 @@ public class MfaMethodsService {
             return Either.left(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER);
         }
 
+        UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
+        List<MfaMethodData> mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
+
+        if (mfaMethods.size() >= 2) {
+            return Either.left(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
+        }
+
         if (mfaMethod.method() instanceof SmsMfaDetail smsMfaDetail) {
             String uuid = UUID.randomUUID().toString();
             persistentService.addMFAMethodSupportingMultiple(

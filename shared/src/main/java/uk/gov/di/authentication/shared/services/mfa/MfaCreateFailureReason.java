@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services.mfa;
 
 public enum MfaCreateFailureReason {
-    INVALID_PRIORITY_IDENTIFIER
+    INVALID_PRIORITY_IDENTIFIER,
+    BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST
 }
