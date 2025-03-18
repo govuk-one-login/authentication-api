@@ -32,7 +32,10 @@ public class BackChannelLogoutService {
     }
 
     public void sendLogoutMessage(
-            ClientRegistry clientRegistry, String emailAddress, String internalSectorUri) {
+            ClientRegistry clientRegistry,
+            String emailAddress,
+            String internalSectorUri,
+            String rpPairwiseId) {
 
         if (isBlank(clientRegistry.getClientID())
                 || isBlank(clientRegistry.getBackChannelLogoutUri())) {

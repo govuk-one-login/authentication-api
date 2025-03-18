@@ -183,7 +183,7 @@ class LogoutServiceTest {
         rpPairwiseId = Optional.of(idToken.getJWTClaimsSet().getSubject());
 
         session = new Session().setEmailAddress(EMAIL);
-        setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID);
+        setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID, rpPairwiseId.get());
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         destroySessionsRequest =
                 new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
@@ -222,7 +222,10 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -257,7 +260,10 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -292,7 +298,10 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -328,7 +337,10 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -377,7 +389,10 @@ class LogoutServiceTest {
                         pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
@@ -413,7 +428,10 @@ class LogoutServiceTest {
                         pair("logoutReason", "intervention"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
@@ -450,7 +468,10 @@ class LogoutServiceTest {
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
@@ -537,13 +558,22 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id-2")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id-2")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq("rp-pairwise-id-client-2"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id-3")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id-3")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq("rp-pairwise-id-client-3"));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -583,7 +613,10 @@ class LogoutServiceTest {
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
         verify(auditService)
                 .submitAuditEvent(
@@ -609,8 +642,8 @@ class LogoutServiceTest {
         var authTime = Instant.parse("2025-01-23T15:00:00Z");
         var previousOrchSession =
                 new OrchSessionItem(SESSION_ID).withAuthTime(authTime.getEpochSecond());
-        setUpClientSession(clientSessionId1, clientId1);
-        setUpClientSession(clientSessionId2, clientId2);
+        setUpClientSession(clientSessionId1, clientId1, "rp-pairwise-id-client-1");
+        setUpClientSession(clientSessionId2, clientId2, "rp-pairwise-id-client-2");
 
         var logoutTime = authTime.plus(3600, ChronoUnit.SECONDS);
         var clock = fixed(logoutTime, systemDefault());
@@ -626,10 +659,16 @@ class LogoutServiceTest {
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId(clientId1)), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId(clientId1)),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq("rp-pairwise-id-client-1"));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId(clientId2)), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId(clientId2)),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI),
+                        eq("rp-pairwise-id-client-2"));
         var expectedExtensions = new ArrayList<AuditService.MetadataPair>();
         expectedExtensions.add(pair("logoutReason", MAX_AGE_EXPIRY.getValue()));
         expectedExtensions.add(pair("sessionAge", 3600));
@@ -657,8 +696,8 @@ class LogoutServiceTest {
     }
 
     private void setupAdditionalClientSessions() {
-        setUpClientSession("client-session-id-2", "client-id-2");
-        setUpClientSession("client-session-id-3", "client-id-3");
+        setUpClientSession("client-session-id-2", "client-id-2", "rp-pairwise-id-client-2");
+        setUpClientSession("client-session-id-3", "client-id-3", "rp-pairwise-id-client-3");
         setupClientSessionToken(signedIDToken);
         destroySessionsRequest =
                 new DestroySessionsRequest(
@@ -689,6 +728,7 @@ class LogoutServiceTest {
                         List.of(VectorOfTrust.getDefaults()),
                         "client_name");
         clientSession.setIdTokenHint(idToken.serialize());
+        clientSession.setRpPairwiseId(rpPairwiseId.get());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
         var orchClientSession =
@@ -699,30 +739,33 @@ class LogoutServiceTest {
                         List.of(VectorOfTrust.getDefaults()),
                         "client_name");
         orchClientSession.setIdTokenHint(idToken.serialize());
+        orchClientSession.setRpPairwiseId(rpPairwiseId.get());
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSession));
     }
 
-    private void setUpClientSession(String clientSessionId, String clientId) {
+    private void setUpClientSession(String clientSessionId, String clientId, String rpPairwiseId) {
         session.getClientSessions().add(clientSessionId);
         var creationDate = LocalDateTime.now();
         when(clientSessionService.getClientSession(clientSessionId))
                 .thenReturn(
                         Optional.of(
                                 new ClientSession(
-                                        Map.of("client_id", List.of(clientId)),
-                                        creationDate,
-                                        List.of(VectorOfTrust.getDefaults()),
-                                        "client_name")));
+                                                Map.of("client_id", List.of(clientId)),
+                                                creationDate,
+                                                List.of(VectorOfTrust.getDefaults()),
+                                                "client_name")
+                                        .setRpPairwiseId(rpPairwiseId)));
         when(orchClientSessionService.getClientSession(clientSessionId))
                 .thenReturn(
                         Optional.of(
                                 new OrchClientSessionItem(
-                                        clientSessionId,
-                                        Map.of("client_id", List.of(clientId)),
-                                        creationDate,
-                                        List.of(VectorOfTrust.getDefaults()),
-                                        "client_name")));
+                                                clientSessionId,
+                                                Map.of("client_id", List.of(clientId)),
+                                                creationDate,
+                                                List.of(VectorOfTrust.getDefaults()),
+                                                "client_name")
+                                        .withRpPairwiseId(rpPairwiseId)));
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }
