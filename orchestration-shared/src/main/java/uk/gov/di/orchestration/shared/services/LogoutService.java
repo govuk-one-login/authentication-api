@@ -131,9 +131,6 @@ public class LogoutService {
                                             clientRegistry ->
                                                     backChannelLogoutService.sendLogoutMessage(
                                                             clientRegistry,
-                                                            request.getEmailAddress(),
-                                                            configurationService
-                                                                    .getInternalSectorURI(),
                                                             orchClientSessionItem
                                                                     .getCorrectPairwiseIdGivenSubjectType(
                                                                             clientRegistry
