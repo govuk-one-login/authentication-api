@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -124,6 +125,12 @@ class OrchClientSessionServiceTest {
                 new OrchClientSessionItem(CLIENT_SESSION_ID)
                         .withClientName(CLIENT_NAME)
                         .withTimeToLive(VALID_TTL);
+        when(table.getItem(
+                        GetItemEnhancedRequest.builder()
+                                .consistentRead(false)
+                                .key(CLIENT_SESSION_ID_PARTITION_KEY)
+                                .build()))
+                .thenReturn(existingSession);
         when(table.getItem(CLIENT_SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
         return existingSession;
     }
@@ -145,7 +152,7 @@ class OrchClientSessionServiceTest {
     private void withFailedGet() {
         doThrow(DynamoDbException.builder().message("Failed to get from table").build())
                 .when(table)
-                .getItem(any(Key.class));
+                .getItem(any(GetItemEnhancedRequest.class));
     }
 
     private void withFailedUpdate() {
