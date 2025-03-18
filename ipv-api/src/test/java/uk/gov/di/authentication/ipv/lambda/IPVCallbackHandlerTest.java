@@ -1055,7 +1055,7 @@ class IPVCallbackHandlerTest {
 
         verify(logoutService)
                 .handleAccountInterventionLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of(), TEST_EMAIL_ADDRESS),
+                        new DestroySessionsRequest(SESSION_ID, List.of()),
                         TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
                         event,
                         CLIENT_ID.getValue(),
@@ -1097,7 +1097,7 @@ class IPVCallbackHandlerTest {
 
         verify(logoutService)
                 .handleAccountInterventionLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of(), TEST_EMAIL_ADDRESS),
+                        new DestroySessionsRequest(SESSION_ID, List.of()),
                         TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
                         request,
                         CLIENT_ID.getValue(),
