@@ -275,7 +275,7 @@ public class IPVCallbackHelper {
             LogIds logIds,
             String sectorIdentifier,
             UserProfile userProfile,
-            Subject pairwiseSubject,
+            Subject rpPairwiseSubject,
             UserInfo userIdentityUserInfo,
             String clientId)
             throws JsonException {
@@ -301,7 +301,7 @@ public class IPVCallbackHelper {
                         userProfile.getSubjectID(),
                         dynamoService.getOrGenerateSalt(userProfile),
                         sectorIdentifier,
-                        pairwiseSubject.getValue(),
+                        rpPairwiseSubject.getValue(),
                         logIds,
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
