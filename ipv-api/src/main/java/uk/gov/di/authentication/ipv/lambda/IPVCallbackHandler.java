@@ -212,6 +212,7 @@ public class IPVCallbackHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         LOG.info("Request received to IPVCallbackHandler");
+        LOG.error("Test IPV Callback error");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             if (!configurationService.isIdentityEnabled()) {

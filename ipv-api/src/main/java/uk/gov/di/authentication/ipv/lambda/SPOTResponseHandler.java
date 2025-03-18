@@ -53,6 +53,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
     @Override
     public Object handleRequest(SQSEvent event, Context context) {
+        LOG.error("Test SPOT Response error");
         for (SQSMessage msg : event.getRecords()) {
             try {
                 ThreadContext.clearMap();
