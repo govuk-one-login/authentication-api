@@ -218,7 +218,8 @@ class MfaMethodsServiceIntegrationTest {
         class AddBackupMfaTests {
             @Test
             void authAppUserShouldSuccessfullyAddSmsMfaInPost() {
-                userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
+                userStoreExtension.addMfaMethodSupportingMultiple(
+                        TEST_EMAIL, defaultPriorityAuthApp);
                 SmsMfaDetail smsMfaDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
 
                 MfaMethodCreateRequest.MfaMethod mfaMethod =
@@ -244,37 +245,30 @@ class MfaMethodsServiceIntegrationTest {
 
             @Test
             void smsUserShouldSuccessfullyAddAuthAppMfa() {
-                userStoreExtension.addMfaMethodSupportingMultiple(
-                        TEST_EMAIL,
-                        MFAMethod.smsMfaMethod(
-                                true,
-                                true,
-                                TEST_PHONE_NUMBER,
-                                PriorityIdentifier.DEFAULT,
-                                UUID.randomUUID().toString()));
+                userStoreExtension.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
 
-                userStoreExtension.addAuthAppMethod(TEST_EMAIL, true, true, AUTH_APP_CREDENTIAL);
-                SmsMfaDetail smsMfaDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
+                AuthAppMfaDetail authAppMfaDetail =
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
 
                 MfaMethodCreateRequest.MfaMethod mfaMethod =
                         new MfaMethodCreateRequest.MfaMethod(
-                                PriorityIdentifier.BACKUP, smsMfaDetail);
+                                PriorityIdentifier.BACKUP, authAppMfaDetail);
 
                 var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, mfaMethod).get();
 
                 List<MFAMethod> mfaMethods = userStoreExtension.getMfaMethod(TEST_EMAIL);
-                boolean smsMethodExists =
+                boolean authAppMethodExists =
                         mfaMethods.stream()
                                 .anyMatch(
                                         method ->
                                                 method.getMfaMethodType()
-                                                        .equals(MFAMethodType.SMS.getValue()));
+                                                        .equals(MFAMethodType.AUTH_APP.getValue()));
 
-                assertTrue(smsMethodExists);
+                assertTrue(authAppMethodExists);
                 assertDoesNotThrow(() -> UUID.fromString(result.mfaIdentifier()));
                 assertEquals(PriorityIdentifier.BACKUP, result.priorityIdentifier());
                 assertTrue(result.methodVerified());
-                assertEquals(smsMfaDetail, result.method());
+                assertEquals(authAppMfaDetail, result.method());
             }
 
             @Test

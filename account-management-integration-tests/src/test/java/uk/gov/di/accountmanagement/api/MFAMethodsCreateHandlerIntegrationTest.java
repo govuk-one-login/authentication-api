@@ -55,7 +55,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn200AndMfaMethodDataWhenAuthAppUserAddsSmsMfa() {
-        userStore.addAuthAppMethod(TEST_EMAIL, true, true, TEST_CREDENTIAL);
+        userStore.addMfaMethodSupportingMultiple(
+                TEST_EMAIL,
+                MFAMethod.authAppMfaMethod(
+                        TEST_CREDENTIAL,
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString()));
         var response =
                 makeRequest(
                         Optional.of(
