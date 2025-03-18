@@ -116,7 +116,6 @@ class LogoutServiceTest {
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
     private static final String CLIENT_ID = "client-id";
     private static final Subject SUBJECT = new Subject();
-    private static final String EMAIL = "joe.bloggs@test.com";
     private static Session session;
 
     private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
@@ -184,8 +183,7 @@ class LogoutServiceTest {
         session = new Session();
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID, rpPairwiseId.get());
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
-        destroySessionsRequest =
-                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
+        destroySessionsRequest = new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID));
     }
 
     @AfterEach
@@ -353,7 +351,7 @@ class LogoutServiceTest {
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                         SUBJECT.getValue(),
                         event,
                         CLIENT_ID,
@@ -388,7 +386,7 @@ class LogoutServiceTest {
 
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                         SUBJECT.getValue(),
                         event,
                         CLIENT_ID,
@@ -459,7 +457,7 @@ class LogoutServiceTest {
                 new AccountIntervention(new AccountInterventionState(false, false, false, false));
 
         var expectedDestroySessionsRequest =
-                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
+                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID));
         var expectedInternalCommonSubjectId = SUBJECT.getValue();
         RuntimeException exception =
                 assertThrows(
@@ -561,7 +559,7 @@ class LogoutServiceTest {
     void successfullyLogsOutAndGeneratesRedirectResponseForeReauthenticationFailure() {
         var response =
                 logoutService.handleReauthenticationFailureLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL),
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                         SUBJECT.getValue(),
                         event,
                         CLIENT_ID,
@@ -593,8 +591,7 @@ class LogoutServiceTest {
         var clientId1 = CLIENT_ID + "1";
         var clientId2 = CLIENT_ID + "2";
         var destroySessionsRequestForClients =
-                new DestroySessionsRequest(
-                        SESSION_ID, List.of(clientSessionId1, clientSessionId2), EMAIL);
+                new DestroySessionsRequest(SESSION_ID, List.of(clientSessionId1, clientSessionId2));
 
         var authTime = Instant.parse("2025-01-23T15:00:00Z");
         var previousOrchSession =
@@ -650,8 +647,7 @@ class LogoutServiceTest {
         destroySessionsRequest =
                 new DestroySessionsRequest(
                         SESSION_ID,
-                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"),
-                        EMAIL);
+                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"));
     }
 
     private void setupClientSessionToken(JWT idToken) {
