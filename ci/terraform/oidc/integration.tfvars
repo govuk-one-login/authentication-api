@@ -41,7 +41,6 @@ orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:0582
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:058264132019:key/fdf1686f-2d4d-4c7b-b3be-324b6ebba370"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:058264132019:key/808a8c1e-82d8-487e-abb8-e13d6564b426"
 
-orch_trustmark_enabled               = true
 orch_openid_configuration_enabled    = true
 orch_jwks_enabled                    = true
 orch_authorisation_enabled           = true
