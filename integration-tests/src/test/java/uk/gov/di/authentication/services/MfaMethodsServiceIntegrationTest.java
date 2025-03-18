@@ -318,6 +318,22 @@ class MfaMethodsServiceIntegrationTest {
 
                 assertEquals(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS, result.getLeft());
             }
+
+            @Test
+            void shouldReturnAuthAppAlreadyExistsErrorWhenAuthAppMfaUserAddsSecondAuthAppMfa() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+                MfaMethodCreateRequest request =
+                        new MfaMethodCreateRequest(
+                                new MfaMethodCreateRequest.MfaMethod(
+                                        PriorityIdentifier.BACKUP,
+                                        new AuthAppMfaDetail(
+                                                MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL)));
+
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
+
+                assertEquals(MfaCreateFailureReason.AUTH_APP_EXISTS, result.getLeft());
+            }
         }
     }
 

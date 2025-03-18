@@ -285,6 +285,24 @@ class MFAMethodsCreateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1069));
     }
 
+    @Test
+    void shouldReturn400WhenMfaMethodServiceReturnsAuthAppAlreadyExistsError() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                        TEST_PUBLIC_SUBJECT);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.addBackupMfa(any(), any()))
+                .thenReturn(Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
+    }
+
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
             PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String publicSubject) {
 

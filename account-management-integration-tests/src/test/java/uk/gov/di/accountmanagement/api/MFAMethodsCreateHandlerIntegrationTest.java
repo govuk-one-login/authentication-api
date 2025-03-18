@@ -257,6 +257,34 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1069));
     }
 
+    @Test
+    void shouldReturn400ErrorResponseWhenAuthAppAddsSecondAuthApp() {
+        userStore.addMfaMethodSupportingMultiple(
+                TEST_EMAIL,
+                MFAMethod.authAppMfaMethod(
+                        TEST_CREDENTIAL,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        UUID.randomUUID().toString()));
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                constructRequestBody(
+                                        PriorityIdentifier.BACKUP,
+                                        new AuthAppMfaDetail(
+                                                MFAMethodType.AUTH_APP,
+                                                "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                        Collections.emptyMap());
+
+        assertEquals(400, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1070));
+    }
+
     private static String constructRequestBody(
             PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail) {
         return format(

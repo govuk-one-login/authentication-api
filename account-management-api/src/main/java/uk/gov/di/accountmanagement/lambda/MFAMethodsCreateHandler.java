@@ -100,6 +100,9 @@ public class MFAMethodsCreateHandler
                     case PHONE_NUMBER_ALREADY_EXISTS -> {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1069);
                     }
+                    case AUTH_APP_EXISTS -> {
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1070);
+                    }
                 }
             }
 

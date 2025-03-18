@@ -176,6 +176,16 @@ public class MfaMethodsService {
                             true,
                             smsMfaDetail.phoneNumber()));
         } else {
+            boolean authAppExists =
+                    mfaMethods.stream()
+                            .map(MfaMethodData::method)
+                            .filter(AuthAppMfaDetail.class::isInstance)
+                            .anyMatch(mfa -> true);
+
+            if (authAppExists) {
+                return Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS);
+            }
+
             String uuid = UUID.randomUUID().toString();
             persistentService.addMFAMethodSupportingMultiple(
                     email,
