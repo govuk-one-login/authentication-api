@@ -68,6 +68,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class TokenHandler
@@ -244,7 +245,9 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         var clientSession = clientSessionOpt.get();
-        var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
+        var orchClientSessionOpt =
+                getOrchClientSessionWithRetryIfNotEqual(
+                        clientSession, clientSessionId, orchClientSessionService);
         if (orchClientSessionOpt.isEmpty()) {
             LOG.warn("No orch client session found for auth code client session id");
         }
