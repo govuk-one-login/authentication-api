@@ -728,6 +728,7 @@ class LogoutServiceTest {
                         List.of(VectorOfTrust.getDefaults()),
                         "client_name");
         clientSession.setIdTokenHint(idToken.serialize());
+        clientSession.setRpPairwiseId(rpPairwiseId.get());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
         var orchClientSession =
@@ -738,6 +739,7 @@ class LogoutServiceTest {
                         List.of(VectorOfTrust.getDefaults()),
                         "client_name");
         orchClientSession.setIdTokenHint(idToken.serialize());
+        orchClientSession.setRpPairwiseId(rpPairwiseId.get());
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSession));
     }
@@ -749,19 +751,21 @@ class LogoutServiceTest {
                 .thenReturn(
                         Optional.of(
                                 new ClientSession(
-                                        Map.of("client_id", List.of(clientId)),
-                                        creationDate,
-                                        List.of(VectorOfTrust.getDefaults()),
-                                        "client_name")));
+                                                Map.of("client_id", List.of(clientId)),
+                                                creationDate,
+                                                List.of(VectorOfTrust.getDefaults()),
+                                                "client_name")
+                                        .setRpPairwiseId(rpPairwiseId.get())));
         when(orchClientSessionService.getClientSession(clientSessionId))
                 .thenReturn(
                         Optional.of(
                                 new OrchClientSessionItem(
-                                        clientSessionId,
-                                        Map.of("client_id", List.of(clientId)),
-                                        creationDate,
-                                        List.of(VectorOfTrust.getDefaults()),
-                                        "client_name")));
+                                                clientSessionId,
+                                                Map.of("client_id", List.of(clientId)),
+                                                creationDate,
+                                                List.of(VectorOfTrust.getDefaults()),
+                                                "client_name")
+                                        .withRpPairwiseId(rpPairwiseId.get())));
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }
