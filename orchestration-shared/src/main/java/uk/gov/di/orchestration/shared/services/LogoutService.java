@@ -135,10 +135,7 @@ public class LogoutService {
                         .ifPresent(
                                 clientRegistry ->
                                         backChannelLogoutService.sendLogoutMessage(
-                                                clientRegistry,
-                                                request.getEmailAddress(),
-                                                configurationService.getInternalSectorURI(),
-                                                rpPairwiseId));
+                                                clientRegistry, rpPairwiseId));
             }
 
             LOG.info("Deleting Client Session");
