@@ -401,7 +401,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             sessionService.storeOrUpdateSession(
                     session.setVerifiedMfaMethodType(MFAMethodType.SMS), sessionId);
             authSessionService.updateSession(
-                    authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
+                    authSession.withVerifiedMfaMethodType(MFAMethodType.SMS));
             clearAccountRecoveryBlockIfPresent(authSession, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     authSession.getIsNewAccount(),

@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import uk.gov.di.authentication.shared.converters.CodeRequestCountMapConverter;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,7 +50,7 @@ public class AuthSessionItem {
     }
 
     private String sessionId;
-    private String verifiedMfaMethodType;
+    private MFAMethodType verifiedMfaMethodType;
     private long timeToLive;
     private AccountState isNewAccount;
     private ResetPasswordState resetPasswordState = ResetPasswordState.NONE;
@@ -82,15 +83,15 @@ public class AuthSessionItem {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE)
-    public String getVerifiedMfaMethodType() {
+    public MFAMethodType getVerifiedMfaMethodType() {
         return verifiedMfaMethodType;
     }
 
-    public void setVerifiedMfaMethodType(String verifiedMfaMethodType) {
+    public void setVerifiedMfaMethodType(MFAMethodType verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
     }
 
-    public AuthSessionItem withVerifiedMfaMethodType(String verifiedMfaMethodType) {
+    public AuthSessionItem withVerifiedMfaMethodType(MFAMethodType verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
         return this;
     }

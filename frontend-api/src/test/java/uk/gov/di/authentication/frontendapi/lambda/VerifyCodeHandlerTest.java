@@ -645,9 +645,9 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
 
         assertThat(result, hasStatus(204));
-        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
+        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(authSessionService)
-                .updateSession(authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
+                .updateSession(authSession.withVerifiedMfaMethodType(MFAMethodType.SMS));
     }
 
     @Test

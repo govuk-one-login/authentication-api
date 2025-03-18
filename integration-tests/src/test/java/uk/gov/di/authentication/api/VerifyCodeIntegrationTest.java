@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -372,7 +373,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
-                equalTo("SMS"));
+                equalTo(MFAMethodType.SMS));
     }
 
     @ParameterizedTest
@@ -404,7 +405,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
-                equalTo("SMS"));
+                equalTo(MFAMethodType.SMS));
     }
 
     @Test
@@ -431,7 +432,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
-                equalTo("SMS"));
+                equalTo(MFAMethodType.SMS));
     }
 
     @ParameterizedTest
