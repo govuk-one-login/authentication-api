@@ -148,6 +148,18 @@ public class MfaMethodsService {
         }
 
         if (mfaMethod.method() instanceof SmsMfaDetail smsMfaDetail) {
+
+            boolean phoneNumberExists =
+                    mfaMethods.stream()
+                            .map(MfaMethodData::method)
+                            .filter(SmsMfaDetail.class::isInstance)
+                            .map(SmsMfaDetail.class::cast)
+                            .anyMatch(mfa -> mfa.phoneNumber().equals(smsMfaDetail.phoneNumber()));
+
+            if (phoneNumberExists) {
+                return Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS);
+            }
+
             String uuid = UUID.randomUUID().toString();
             persistentService.addMFAMethodSupportingMultiple(
                     email,

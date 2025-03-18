@@ -309,6 +309,21 @@ class MfaMethodsServiceIntegrationTest {
                         MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST,
                         result.getLeft());
             }
+
+            @Test
+            void shouldReturnPhoneNumberAlreadyExistsErrorWhenSmsMfaUserAddsBackupWithSameNumber() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+
+                MfaMethodCreateRequest request =
+                        new MfaMethodCreateRequest(
+                                new MfaMethodCreateRequest.MfaMethod(
+                                        PriorityIdentifier.BACKUP,
+                                        new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER)));
+
+                var result = mfaMethodsService.addBackupMfa(TEST_EMAIL, request.mfaMethod());
+
+                assertEquals(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS, result.getLeft());
+            }
         }
     }
 

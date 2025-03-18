@@ -191,7 +191,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
-    void shouldReturn409ErrorResponseWhenAddingMfaAfterMfaCountLimitReached() {
+    void shouldReturn400ErrorResponseWhenAddingMfaAfterMfaCountLimitReached() {
         userStore.addMfaMethodSupportingMultiple(
                 TEST_EMAIL,
                 MFAMethod.smsMfaMethod(
@@ -220,8 +220,34 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
                         Collections.emptyMap());
 
-        assertEquals(409, response.getStatusCode());
+        assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1068));
+    }
+
+    @Test
+    void shouldReturn400ErrorResponseWhenSmsUserAddsSmsMfaWithSamePhoneNumber() {
+        userStore.addMfaMethodSupportingMultiple(
+                TEST_EMAIL,
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString()));
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                constructRequestBody(
+                                        PriorityIdentifier.BACKUP,
+                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                        Collections.emptyMap());
+
+        assertEquals(400, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1069));
     }
 
     private static String constructRequestBody(

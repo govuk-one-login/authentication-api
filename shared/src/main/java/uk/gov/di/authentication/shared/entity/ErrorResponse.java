@@ -79,7 +79,8 @@ public enum ErrorResponse {
     ERROR_1065(1065, "Mfa method not found"),
     ERROR_1066(1066, "Cannot delete default priority mfa method"),
     ERROR_1067(1067, "Cannot delete mfa method for non-migrated user"),
-    ERROR_1068(1068, "MFA method count limit reached");
+    ERROR_1068(1068, "MFA method count limit reached"),
+    ERROR_1069(1069, "SMS MFA with same number already exists");
 
     private int code;
 

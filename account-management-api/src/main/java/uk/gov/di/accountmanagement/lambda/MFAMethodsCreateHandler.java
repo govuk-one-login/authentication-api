@@ -97,6 +97,9 @@ public class MFAMethodsCreateHandler
                     case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1068);
                     }
+                    case PHONE_NUMBER_ALREADY_EXISTS -> {
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1069);
+                    }
                 }
             }
 

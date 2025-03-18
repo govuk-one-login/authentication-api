@@ -248,7 +248,7 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
-    void shouldReturn409WhenMfaMethodServiceReturnsBackupAndDefaultExistError() {
+    void shouldReturn400WhenMfaMethodServiceReturnsBackupAndDefaultExistError() {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
@@ -263,8 +263,26 @@ class MFAMethodsCreateHandlerTest {
 
         var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(409));
+        assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1068));
+    }
+
+    @Test
+    void shouldReturn400WhenMfaMethodServiceReturnsSmsMfaAlreadyExistsError() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
+                        TEST_PUBLIC_SUBJECT);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.addBackupMfa(any(), any()))
+                .thenReturn(Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1069));
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
