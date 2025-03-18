@@ -299,18 +299,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             APIGatewayProxyRequestEvent input,
             AuditContext auditContext)
             throws JsonException, ClientNotFoundException {
-        var session = userContext.getSession();
-        var sessionId = userContext.getAuthSession().getSessionId();
+        var authSession = userContext.getAuthSession();
+        var sessionId = authSession.getSessionId();
 
         String code =
                 requestNewCode != null && requestNewCode
-                        ? generateAndSaveNewCode(session.getEmailAddress(), notificationType)
+                        ? generateAndSaveNewCode(authSession.getEmailAddress(), notificationType)
                         : codeStorageService
-                                .getOtpCode(session.getEmailAddress(), notificationType)
+                                .getOtpCode(authSession.getEmailAddress(), notificationType)
                                 .orElseGet(
                                         () ->
                                                 generateAndSaveNewCode(
-                                                        session.getEmailAddress(),
+                                                        authSession.getEmailAddress(),
                                                         notificationType));
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
