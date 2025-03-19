@@ -732,3 +732,87 @@ StorageTokenJwkFunctionErrorAnomalyAlarm:
           Period: 60
           Stat: Average
 #endregion
+
+#region IpvJwks Function Anomaly Alarms
+IpvJwksFunctionErrorAnomalyDetector:
+  Type: AWS::CloudWatch::AnomalyDetector
+  Properties:
+    MetricName: Errors
+    Namespace: AWS/Lambda
+    Stat: Average
+    Dimensions:
+      - Name: FunctionName
+        Value:
+          Fn::Sub: ${Environment}-IpvJwksFunction
+
+IpvJwksFunctionErrorAnomalyAlarm:
+  Type: AWS::CloudWatch::Alarm
+  Properties:
+    AlarmName:
+      Fn::Sub: ${Environment}-IpvJwksFunction-error-anomaly-alarm
+    AlarmDescription:
+      Fn::Sub: "Anomalous Error rate in ${Environment} IpvJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+    ActionsEnabled: false
+    ComparisonOperator: GreaterThanUpperThreshold
+    EvaluationPeriods: 3
+    ThresholdMetricId: ad1
+    TreatMissingData: notBreaching
+    Metrics:
+      - Id: ad1
+        ReturnData: True
+        Expression: ANOMALY_DETECTION_BAND(m1, 2)
+      - Id: m1
+        ReturnData: True
+        MetricStat:
+          Metric:
+            Namespace: AWS/Lambda
+            MetricName: Errors
+            Dimensions:
+              - Name: FunctionName
+                Value:
+                  Fn::Sub: ${Environment}-IpvJwksFunction
+          Period: 60
+          Stat: Average
+#endregion
+
+#region GlobalLogout Function Anomaly Alarms
+GlobalLogoutFunctionErrorAnomalyDetector:
+  Type: AWS::CloudWatch::AnomalyDetector
+  Properties:
+    MetricName: Errors
+    Namespace: AWS/Lambda
+    Stat: Average
+    Dimensions:
+      - Name: FunctionName
+        Value:
+          Fn::Sub: ${Environment}-GlobalLogoutFunction
+
+GlobalLogoutFunctionErrorAnomalyAlarm:
+  Type: AWS::CloudWatch::Alarm
+  Properties:
+    AlarmName:
+      Fn::Sub: ${Environment}-GlobalLogoutFunction-error-anomaly-alarm
+    AlarmDescription:
+      Fn::Sub: "Anomalous Error rate in ${Environment} GlobalLogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+    ActionsEnabled: false
+    ComparisonOperator: GreaterThanUpperThreshold
+    EvaluationPeriods: 3
+    ThresholdMetricId: ad1
+    TreatMissingData: notBreaching
+    Metrics:
+      - Id: ad1
+        ReturnData: True
+        Expression: ANOMALY_DETECTION_BAND(m1, 2)
+      - Id: m1
+        ReturnData: True
+        MetricStat:
+          Metric:
+            Namespace: AWS/Lambda
+            MetricName: Errors
+            Dimensions:
+              - Name: FunctionName
+                Value:
+                  Fn::Sub: ${Environment}-GlobalLogoutFunction
+          Period: 60
+          Stat: Average
+#endregion
