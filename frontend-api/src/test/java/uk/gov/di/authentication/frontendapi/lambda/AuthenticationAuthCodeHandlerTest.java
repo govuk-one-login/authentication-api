@@ -310,6 +310,9 @@ class AuthenticationAuthCodeHandlerTest {
                     .storeOrUpdateSession(
                             argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAudit())),
                             eq(SESSION_ID));
+            verify(authSessionService, atLeastOnce())
+                    .updateSession(
+                            argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAuditMap())));
         }
     }
 

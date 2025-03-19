@@ -793,6 +793,12 @@ class VerifyCodeHandlerTest {
                                             s.getPreservedReauthCountsForAudit()
                                                     .equals(existingCounts)),
                             eq(SESSION_ID));
+            verify(authSessionService, atLeastOnce())
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            s.getPreservedReauthCountsForAuditMap()
+                                                    .equals(existingCounts)));
         } else {
             verify(sessionService, never())
                     .storeOrUpdateSession(
@@ -802,6 +808,13 @@ class VerifyCodeHandlerTest {
                                                     s.getPreservedReauthCountsForAudit(),
                                                     existingCounts)),
                             eq(SESSION_ID));
+            verify(authSessionService, never())
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            Objects.equals(
+                                                    s.getPreservedReauthCountsForAuditMap(),
+                                                    existingCounts)));
         }
 
         assertThat(result, hasStatus(204));

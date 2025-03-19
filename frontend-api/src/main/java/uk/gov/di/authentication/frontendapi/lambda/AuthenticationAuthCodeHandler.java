@@ -164,6 +164,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 sessionService.storeOrUpdateSession(
                         userContext.getSession().setPreservedReauthCountsForAudit(null),
                         userContext.getAuthSession().getSessionId());
+                authSessionService.updateSession(
+                        userContext.getAuthSession().withPreservedReauthCountsForAuditMap(null));
             }
 
             return generateApiGatewayProxyResponse(
