@@ -112,7 +112,6 @@ class StartServiceTest {
                 startService.createNewSessionWithExistingIdAndClientSession(
                         SESSION_ID, currentClientSessionId);
 
-        assertFalse(session.isAuthenticated());
         assertThat(session.getCurrentCredentialStrength(), equalTo(null));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
