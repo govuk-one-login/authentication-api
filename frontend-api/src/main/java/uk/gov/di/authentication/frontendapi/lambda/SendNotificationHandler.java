@@ -11,6 +11,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -204,7 +205,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     isCodeRequestAttemptValid(
                             request.getEmail(),
                             userContext.getSession(),
-                            userContext.getAuthSession().getSessionId(),
+                            userContext.getAuthSession(),
                             request.getNotificationType(),
                             request.getJourneyType());
 
@@ -217,13 +218,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             }
 
             incrementCountOfNotificationsSent(
-                    request, userContext.getSession(), userContext.getAuthSession().getSessionId());
+                    request, userContext.getSession(), userContext.getAuthSession());
 
             Optional<ErrorResponse> thisRequestExceedsMaxAllowed =
                     isCodeRequestAttemptValid(
                             request.getEmail(),
                             userContext.getSession(),
-                            userContext.getAuthSession().getSessionId(),
+                            userContext.getAuthSession(),
                             request.getNotificationType(),
                             request.getJourneyType());
 
@@ -282,12 +283,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     }
 
     private void incrementCountOfNotificationsSent(
-            SendNotificationRequest request, Session session, String sessionId) {
+            SendNotificationRequest request, Session session, AuthSessionItem authSessionItem) {
         LOG.info("Incrementing code request count");
         sessionService.storeOrUpdateSession(
                 session.incrementCodeRequestCount(
                         request.getNotificationType(), request.getJourneyType()),
-                sessionId);
+                authSessionItem.getSessionId());
+        authSessionService.updateSession(
+                authSessionItem.incrementCodeRequestCount(
+                        request.getNotificationType(), request.getJourneyType()));
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
@@ -404,7 +408,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private Optional<ErrorResponse> isCodeRequestAttemptValid(
             String email,
             Session session,
-            String sessionId,
+            AuthSessionItem authSession,
             NotificationType notificationType,
             JourneyType journeyType) {
 
@@ -424,7 +428,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
             LOG.info("Resetting code request count");
             sessionService.storeOrUpdateSession(
-                    session.resetCodeRequestCount(notificationType, journeyType), sessionId);
+                    session.resetCodeRequestCount(notificationType, journeyType),
+                    authSession.getSessionId());
+
+            authSessionService.updateSession(
+                    authSession.resetCodeRequestCount(notificationType, journeyType));
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
