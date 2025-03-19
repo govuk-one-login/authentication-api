@@ -89,12 +89,6 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
         assertEquals(200, response.getStatusCode());
 
-        String extractedMfaIdentifier =
-                JsonParser.parseString(response.getBody())
-                        .getAsJsonObject()
-                        .get("mfaIdentifier")
-                        .getAsString();
-
         List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
 
         var retrievedSmsMethod =
@@ -107,11 +101,21 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         .findFirst()
                         .get();
 
-        assertEquals(extractedMfaIdentifier, retrievedSmsMethod.getMfaIdentifier());
         assertEquals(PriorityIdentifier.BACKUP.toString(), retrievedSmsMethod.getPriority());
         assertEquals(TEST_PHONE_NUMBER, retrievedSmsMethod.getDestination());
         assertTrue(retrievedSmsMethod.isEnabled());
         assertTrue(retrievedSmsMethod.isMethodVerified());
+
+        var extractedMfaIdentifier = retrievedSmsMethod.getMfaIdentifier();
+        var expectedJson =
+                constructExpectedResponse(
+                        extractedMfaIdentifier,
+                        PriorityIdentifier.BACKUP,
+                        true,
+                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER));
+        var expectedResponse = JsonParser.parseString(expectedJson).getAsJsonObject().toString();
+
+        assertEquals(expectedResponse, response.getBody());
     }
 
     @Test
@@ -129,12 +133,6 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
         assertEquals(200, response.getStatusCode());
 
-        String extractedMfaIdentifier =
-                JsonParser.parseString(response.getBody())
-                        .getAsJsonObject()
-                        .get("mfaIdentifier")
-                        .getAsString();
-
         List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
 
         var retrievedAuthAppMethod =
@@ -148,10 +146,21 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         .get();
 
         assertEquals(TEST_CREDENTIAL, retrievedAuthAppMethod.getCredentialValue());
-        assertEquals(extractedMfaIdentifier, retrievedAuthAppMethod.getMfaIdentifier());
         assertEquals(PriorityIdentifier.BACKUP.toString(), retrievedAuthAppMethod.getPriority());
         assertTrue(retrievedAuthAppMethod.isEnabled());
         assertTrue(retrievedAuthAppMethod.isMethodVerified());
+
+        var extractedMfaIdentifier = retrievedAuthAppMethod.getMfaIdentifier();
+        var expectedJson =
+                constructExpectedResponse(
+                        extractedMfaIdentifier,
+                        PriorityIdentifier.BACKUP,
+                        true,
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL));
+
+        var expectedResponse = JsonParser.parseString(expectedJson).getAsJsonObject().toString();
+
+        assertEquals(expectedResponse, response.getBody());
     }
 
     @Test
