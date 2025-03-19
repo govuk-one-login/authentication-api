@@ -60,6 +60,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class DocAppCallbackHandler
@@ -220,8 +221,9 @@ public class DocAppCallbackHandler
                             .orElseThrow(
                                     () -> new DocAppCallbackException("ClientSession not found"));
             var orchClientSession =
-                    orchClientSessionService.getClientSession(clientSessionId).orElse(null);
-
+                    getOrchClientSessionWithRetryIfNotEqual(
+                                    clientSession, clientSessionId, orchClientSessionService)
+                            .orElse(null);
             logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
 
             if (Objects.isNull(clientSession.getDocAppSubjectId()))

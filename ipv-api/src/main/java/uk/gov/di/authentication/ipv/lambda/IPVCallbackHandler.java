@@ -80,6 +80,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class IPVCallbackHandler
@@ -263,8 +264,9 @@ public class IPVCallbackHandler
                                             new IPVCallbackNoSessionException(
                                                     "ClientSession not found"));
             var orchClientSession =
-                    orchClientSessionService.getClientSession(clientSessionId).orElse(null);
-
+                    getOrchClientSessionWithRetryIfNotEqual(
+                                    clientSession, clientSessionId, orchClientSessionService)
+                            .orElse(null);
             logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
 
             var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());

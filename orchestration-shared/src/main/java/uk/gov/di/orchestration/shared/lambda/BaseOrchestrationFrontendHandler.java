@@ -27,6 +27,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeadersOpt;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public abstract class BaseOrchestrationFrontendHandler
@@ -104,12 +105,18 @@ public abstract class BaseOrchestrationFrontendHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
 
-        var clientSession = clientSessionIdOpt.flatMap(clientSessionService::getClientSession);
+        var clientSessionOpt = clientSessionIdOpt.flatMap(clientSessionService::getClientSession);
+        var clientSession = clientSessionOpt.orElse(null);
         var orchClientSession =
-                clientSessionIdOpt.flatMap(orchClientSessionService::getClientSession);
-
-        logIfClientSessionsAreNotEqual(clientSession.orElse(null), orchClientSession.orElse(null));
-
+                clientSessionIdOpt
+                        .flatMap(
+                                clientSessionId ->
+                                        getOrchClientSessionWithRetryIfNotEqual(
+                                                clientSession,
+                                                clientSessionId,
+                                                orchClientSessionService))
+                        .orElse(null);
+        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
         attachSessionIdToLogs(sessionId);
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID,
@@ -119,11 +126,11 @@ public abstract class BaseOrchestrationFrontendHandler
                 OrchestrationUserSession.builder(sessionOpt.get())
                         .withSessionId(sessionId)
                         .withClientSessionId(clientSessionIdOpt.orElse(null))
-                        .withClientSession(clientSession.orElse(null))
+                        .withClientSession(clientSession)
                         .withOrchSession(orchSessionOpt.get());
 
         var clientID =
-                clientSession
+                clientSessionOpt
                         .map(ClientSession::getAuthRequestParams)
                         .map(t -> t.get(CLIENT_ID))
                         .flatMap(v -> v.stream().findFirst());

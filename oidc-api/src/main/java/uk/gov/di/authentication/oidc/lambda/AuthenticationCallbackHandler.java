@@ -98,6 +98,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class AuthenticationCallbackHandler
@@ -294,15 +295,13 @@ public class AuthenticationCallbackHandler
                                             new AuthenticationCallbackException(
                                                     "ClientSession not found"));
             var orchClientSession =
-                    orchClientSessionService
-                            .getClientSession(clientSessionId)
+                    getOrchClientSessionWithRetryIfNotEqual(
+                                    clientSession, clientSessionId, orchClientSessionService)
                             .orElseThrow(
                                     () ->
                                             new AuthenticationCallbackException(
                                                     "OrchClientSession not found"));
-
             logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
-
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
