@@ -190,7 +190,7 @@ class StartHandlerTest {
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws ParseException, Json.JsonException {
         var isAuthenticated = false;
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
@@ -233,7 +233,7 @@ class StartHandlerTest {
             throws ParseException, Json.JsonException {
         var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
 
         // This should not be called. Setup here is to ensure that the feature flag is determining
         // this test's behaviour
@@ -258,7 +258,7 @@ class StartHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userProfile.getSubjectID()).thenReturn(null);
 
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
@@ -275,7 +275,7 @@ class StartHandlerTest {
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided()
             throws ParseException, Json.JsonException {
         var isAuthenticated = false;
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
@@ -308,7 +308,7 @@ class StartHandlerTest {
     void shouldCreateNewSessionAndConsiderUserNotAuthenticatedWhenUserProfileNotPresent()
             throws ParseException, Json.JsonException {
         withNoUserProfilePresent();
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
@@ -337,7 +337,7 @@ class StartHandlerTest {
     void retainsExistingSessionAndConsidersUserAuthenticatedWhenUserProfilePresent()
             throws ParseException, Json.JsonException {
         withUserProfilePresent();
-        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, false);
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
@@ -370,7 +370,7 @@ class StartHandlerTest {
         usingValidSession();
         usingValidClientSession();
         var userStartInfo =
-                new UserStartInfo(false, false, isAuthenticated, null, null, false, null, false);
+                new UserStartInfo(false, false, isAuthenticated, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
 
         var event =
@@ -432,7 +432,7 @@ class StartHandlerTest {
             int expectedOtpAttemptCount,
             String expectedFailureReason)
             throws ParseException, Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, true);
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
@@ -590,7 +590,7 @@ class StartHandlerTest {
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
         return new UserStartInfo(
-                false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null, false);
+                false, false, true, cookieConsent, gaCrossDomainTrackingId, null, false);
     }
 
     private void usingStartServiceThatReturns(

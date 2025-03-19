@@ -210,7 +210,6 @@ class StartServiceTest {
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo(cookieConsent));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(gaTrackingId));
-        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
         assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(false));
     }
