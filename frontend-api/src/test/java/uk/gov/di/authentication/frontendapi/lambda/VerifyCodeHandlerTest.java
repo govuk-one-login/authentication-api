@@ -640,7 +640,6 @@ class VerifyCodeHandlerTest {
         when(accountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(false);
         withReauthTurnedOn();
-        session.setNewAccount(Session.AccountState.EXISTING);
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
 

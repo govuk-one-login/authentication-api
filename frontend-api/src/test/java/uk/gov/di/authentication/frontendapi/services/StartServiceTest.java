@@ -105,7 +105,6 @@ class StartServiceTest {
     void shouldOverwriteSessionWithNewSessionUsingExistingSessionAndClientSessionIds() {
         var currentClientSessionId = "some-client-session-id";
         SESSION.addClientSession("previous-session-client-session-id");
-        SESSION.setNewAccount(Session.AccountState.EXISTING);
         SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
         SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
 

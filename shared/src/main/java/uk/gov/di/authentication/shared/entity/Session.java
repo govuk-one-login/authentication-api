@@ -140,11 +140,6 @@ public class Session {
         return this;
     }
 
-    public Session setNewAccount(AccountState isNewAccount) {
-        this.isNewAccount = isNewAccount;
-        return this;
-    }
-
     public boolean isAuthenticated() {
         return authenticated;
     }
