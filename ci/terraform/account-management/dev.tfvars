@@ -19,3 +19,6 @@ lambda_min_concurrency = 1
 # Feature flags
 mfa_method_management_api_enabled = true
 fms_enabled                       = true
+
+#Vpc endpoint IDs
+home_vpc_endpoint_id = "vpce-087ac48f23f28a39b"
