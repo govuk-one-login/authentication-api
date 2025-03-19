@@ -863,6 +863,9 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
+      DeploymentPreference:
+        Alarms:
+          - !Ref FetchJwksErrorAnomalyAlarm
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
       SnapStart:
@@ -968,6 +971,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref OpenIdConfigurationErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1129,6 +1135,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TrustmarkFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref TrustmarkFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1426,6 +1435,9 @@ Resources:
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref DocAppCallbackErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1668,6 +1680,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TokenFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref TokenFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1886,6 +1901,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref LogoutFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref LogoutFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2316,6 +2334,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref AuthenticationCallbackFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2700,6 +2721,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref JwksFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref JwksFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2862,6 +2886,9 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.IpvJwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref IpvJwksFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref IpvJwksFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2990,6 +3017,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthorisationFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref AuthorisationFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3293,6 +3323,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UserInfoFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref UserInfoFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3495,6 +3528,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthCodeFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref AuthCodeFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3686,6 +3722,9 @@ Resources:
       Handler: uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UpdateClientConfigFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref UpdateClientConfigFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3853,6 +3892,9 @@ Resources:
       Handler: uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref ClientRegistrationFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref ClientRegistrationFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -4021,6 +4063,9 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref IpvCallbackFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -4376,6 +4421,9 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref SpotResponseFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref SpotResponseFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -4607,6 +4655,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref StorageTokenJwkFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - !Ref StorageTokenJwkFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
