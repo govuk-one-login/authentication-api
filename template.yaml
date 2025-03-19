@@ -822,7 +822,7 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
       DeploymentPreference:
         Alarms:
-          - !Ref FetchJwksErrorAnomalyAlarm
+          - Ref: FetchJwksErrorAnomalyAlarm
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
       SnapStart:
@@ -922,7 +922,7 @@ Resources:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref OpenIdConfigurationErrorAnomalyAlarm
+          - Ref: OpenIdConfigurationErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1086,7 +1086,7 @@ Resources:
         LogGroup: !Ref TrustmarkFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref TrustmarkFunctionErrorAnomalyAlarm
+          - Ref: TrustmarkFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1384,7 +1384,7 @@ Resources:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref DocAppCallbackErrorAnomalyAlarm
+          - Ref: DocAppCallbackErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1555,7 +1555,7 @@ Resources:
         LogGroup: !Ref TokenFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref TokenFunctionErrorAnomalyAlarm
+          - Ref: TokenFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1767,7 +1767,7 @@ Resources:
         LogGroup: !Ref LogoutFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref LogoutFunctionErrorAnomalyAlarm
+          - Ref: LogoutFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1978,7 +1978,7 @@ Resources:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref AuthenticationCallbackFunctionErrorAnomalyAlarm
+          - Ref: AuthenticationCallbackFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2366,7 +2366,7 @@ Resources:
         LogGroup: !Ref JwksFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref JwksFunctionErrorAnomalyAlarm
+          - Ref: JwksFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2531,7 +2531,7 @@ Resources:
         LogGroup: !Ref IpvJwksFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref IpvJwksFunctionErrorAnomalyAlarm
+          - Ref: IpvJwksFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2667,7 +2667,7 @@ Resources:
         LogGroup: !Ref AuthorisationFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref AuthorisationFunctionErrorAnomalyAlarm
+          - Ref: AuthorisationFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2986,7 +2986,7 @@ Resources:
         LogGroup: !Ref UserInfoFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref UserInfoFunctionErrorAnomalyAlarm
+          - Ref: UserInfoFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3187,7 +3187,7 @@ Resources:
         LogGroup: !Ref AuthCodeFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref AuthCodeFunctionErrorAnomalyAlarm
+          - Ref: AuthCodeFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3376,7 +3376,7 @@ Resources:
         LogGroup: !Ref UpdateClientConfigFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref UpdateClientConfigFunctionErrorAnomalyAlarm
+          - Ref: UpdateClientConfigFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3540,7 +3540,7 @@ Resources:
         LogGroup: !Ref ClientRegistrationFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref ClientRegistrationFunctionErrorAnomalyAlarm
+          - Ref: ClientRegistrationFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3705,7 +3705,7 @@ Resources:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref IpvCallbackFunctionErrorAnomalyAlarm
+          - Ref: IpvCallbackFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -4063,7 +4063,7 @@ Resources:
         LogGroup: !Ref SpotResponseFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref SpotResponseFunctionErrorAnomalyAlarm
+          - Ref: SpotResponseFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -4266,7 +4266,7 @@ Resources:
         LogGroup: !Ref StorageTokenJwkFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - !Ref StorageTokenJwkFunctionErrorAnomalyAlarm
+          - Ref: StorageTokenJwkFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
