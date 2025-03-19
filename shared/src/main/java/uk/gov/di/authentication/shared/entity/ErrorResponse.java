@@ -81,7 +81,8 @@ public enum ErrorResponse {
     ERROR_1067(1067, "Cannot delete mfa method for non-migrated user"),
     ERROR_1068(1068, "MFA method count limit reached"),
     ERROR_1069(1069, "SMS MFA with same number already exists"),
-    ERROR_1070(1070, "AUTH APP MFA already exists");
+    ERROR_1070(1070, "AUTH APP MFA already exists"),
+    ERROR_1071(1071, "Invalid principal in request");
 
     private int code;
 
