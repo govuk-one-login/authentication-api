@@ -21,6 +21,7 @@ import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -182,7 +183,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .nonce(new Nonce())
                         .state(state)
                         .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString());
+                        .customParameter("redirect_uri", REDIRECT_URI.toString())
+                        .customParameter("vtr", "[\"Cl.Cm\"]");
         var authRequest = builder.build();
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
@@ -201,6 +203,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
         assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
+        var actualAuthSession = authSessionExtension.getSession(sessionId).orElseThrow();
+        assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
+        assertThat(actualAuthSession.getVtrList(), equalTo(List.of(VectorOfTrust.getDefaults())));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND, AUTH_REAUTH_REQUESTED));
     }

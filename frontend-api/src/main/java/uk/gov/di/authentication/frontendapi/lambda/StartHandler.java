@@ -179,6 +179,9 @@ public class StartHandler
                             Optional.ofNullable(startRequest.previousSessionId()),
                             sessionId,
                             startRequest.currentCredentialStrength());
+            authSession.setClientId(startRequest.clientId());
+            authSession.setVtrList(
+                    List.of(VectorOfTrust.parseVtrStringList(startRequest.vtrList())));
 
             var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
 

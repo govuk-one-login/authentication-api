@@ -69,7 +69,8 @@ public class VectorOfTrust {
             LOG.warn("Error when parsing vtr attribute", e);
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
-        VectorOfTrust vectorOfTrust = parseVtrSet(vtrJsonArray);
+        List<String> vtrStringList = vtrJsonArray.stream().map(String::valueOf).toList();
+        VectorOfTrust vectorOfTrust = parseVtrStringList(vtrStringList);
         LOG.info("VTR has been processed at vectorOfTrust: {}", vectorOfTrust.toString());
 
         return vectorOfTrust;
