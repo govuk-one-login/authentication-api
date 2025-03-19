@@ -5,8 +5,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -81,10 +83,15 @@ class AuthSessionServiceIntegrationTest {
         var session = withStoredSession(SESSION_ID);
 
         session.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+        session.setVtrList(List.of(VectorOfTrust.getDefaults()));
+        session.setClientId("test-client-id");
         authSessionExtension.updateSession(session);
         var updatedSession = authSessionExtension.getSession(SESSION_ID).get();
+
         assertThat(
                 updatedSession.getIsNewAccount(), equalTo(AuthSessionItem.AccountState.EXISTING));
+        assertThat(updatedSession.getVtrList(), equalTo(List.of(VectorOfTrust.getDefaults())));
+        assertThat(updatedSession.getClientId(), equalTo("test-client-id"));
     }
 
     @Test

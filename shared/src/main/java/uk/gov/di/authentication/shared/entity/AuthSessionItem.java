@@ -7,9 +7,11 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import uk.gov.di.authentication.shared.converters.CodeRequestCountMapConverter;
+import uk.gov.di.authentication.shared.converters.VtrListConverter;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @DynamoDbBean
@@ -29,6 +31,8 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_PASSWORD_RESET_COUNT = "PasswordResetCount";
     public static final String ATTRIBUTE_TTL = "ttl";
     public static final String ATTRIBUTE_CODE_REQUEST_COUNT_MAP = "CodeRequestCountMap";
+    public static final String ATTRIBUTE_VTR_LIST = "VtrList";
+    public static final String ATTRIBUTE_CLIENT_ID = "ClientId";
 
     public enum AccountState {
         NEW,
@@ -61,6 +65,8 @@ public class AuthSessionItem {
     private String emailAddress;
     private Map<CodeRequestType, Integer> codeRequestCountMap;
     private int passwordResetCount;
+    private List<VectorOfTrust> vtrList;
+    private String clientId;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -280,6 +286,35 @@ public class AuthSessionItem {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
         }
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_VTR_LIST)
+    @DynamoDbConvertedBy(VtrListConverter.class)
+    public List<VectorOfTrust> getVtrList() {
+        return vtrList;
+    }
+
+    public void setVtrList(List<VectorOfTrust> vtrList) {
+        this.vtrList = vtrList;
+    }
+
+    public AuthSessionItem withVtrList(List<VectorOfTrust> vtrList) {
+        this.vtrList = vtrList;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_ID)
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    public AuthSessionItem withClientId(String clientId) {
+        this.clientId = clientId;
+        return this;
     }
 
     /**
