@@ -140,11 +140,6 @@ public class Session {
         return this;
     }
 
-    public Session setAuthenticated(boolean authenticated) {
-        this.authenticated = authenticated;
-        return this;
-    }
-
     public MFAMethodType getVerifiedMfaMethodType() {
         return verifiedMfaMethodType;
     }
