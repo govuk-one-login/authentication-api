@@ -137,6 +137,7 @@ class ResetPasswordRequestHandlerTest {
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
+                    .withEmailAddress(CommonTestVariables.EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
@@ -198,7 +199,7 @@ class ResetPasswordRequestHandlerTest {
         public static APIGatewayProxyRequestEvent validEvent;
 
         private boolean isSessionWithEmailSent(Session session) {
-            return session.getEmailAddress().equals(CommonTestVariables.EMAIL);
+            return authSession.getEmailAddress().equals(CommonTestVariables.EMAIL);
         }
 
         @BeforeEach
