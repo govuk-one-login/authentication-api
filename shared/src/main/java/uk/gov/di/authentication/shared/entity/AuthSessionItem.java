@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import uk.gov.di.authentication.shared.converters.CodeRequestCountMapConverter;
+import uk.gov.di.authentication.shared.converters.PreservedReauthCountsForAuditMapConverter;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.util.HashMap;
@@ -29,6 +30,8 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_PASSWORD_RESET_COUNT = "PasswordResetCount";
     public static final String ATTRIBUTE_TTL = "ttl";
     public static final String ATTRIBUTE_CODE_REQUEST_COUNT_MAP = "CodeRequestCountMap";
+    public static final String ATTRIBUTE_PRESERVED_REAUTH_COUNTS_FOR_AUDIT_MAP =
+            "PreservedReauthCountsForAuditMap";
 
     public enum AccountState {
         NEW,
@@ -61,6 +64,7 @@ public class AuthSessionItem {
     private String emailAddress;
     private Map<CodeRequestType, Integer> codeRequestCountMap;
     private int passwordResetCount;
+    private Map<CountType, Integer> preservedReauthCountsForAuditMap;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -280,6 +284,23 @@ public class AuthSessionItem {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
         }
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PRESERVED_REAUTH_COUNTS_FOR_AUDIT_MAP)
+    @DynamoDbConvertedBy(PreservedReauthCountsForAuditMapConverter.class)
+    public Map<CountType, Integer> getPreservedReauthCountsForAuditMap() {
+        return this.preservedReauthCountsForAuditMap;
+    }
+
+    public void setPreservedReauthCountsForAuditMap(
+            Map<CountType, Integer> preservedReauthCountsForAuditMap) {
+        this.preservedReauthCountsForAuditMap = preservedReauthCountsForAuditMap;
+    }
+
+    public AuthSessionItem withPreservedReauthCountsForAuditMap(
+            Map<CountType, Integer> preservedReauthCountsForAuditMap) {
+        this.preservedReauthCountsForAuditMap = preservedReauthCountsForAuditMap;
+        return this;
     }
 
     /**
