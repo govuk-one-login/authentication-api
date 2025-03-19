@@ -4,12 +4,12 @@ import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.InvalidPriorityIdentifierException;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -134,14 +134,32 @@ public class MfaMethodsService {
         }
     }
 
-    public MfaMethodData addBackupMfa(String email, MfaMethodCreateRequest.MfaMethod mfaMethod)
-            throws InvalidPriorityIdentifierException {
+    public Either<MfaCreateFailureReason, MfaMethodData> addBackupMfa(
+            String email, MfaMethodCreateRequest.MfaMethod mfaMethod) {
         if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            throw new InvalidPriorityIdentifierException(
-                    "Priority identifier for newly added MFA method should be BACKUP");
+            return Either.left(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER);
+        }
+
+        UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
+        List<MfaMethodData> mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
+
+        if (mfaMethods.size() >= 2) {
+            return Either.left(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
         }
 
         if (mfaMethod.method() instanceof SmsMfaDetail smsMfaDetail) {
+
+            boolean phoneNumberExists =
+                    mfaMethods.stream()
+                            .map(MfaMethodData::method)
+                            .filter(SmsMfaDetail.class::isInstance)
+                            .map(SmsMfaDetail.class::cast)
+                            .anyMatch(mfa -> mfa.phoneNumber().equals(smsMfaDetail.phoneNumber()));
+
+            if (phoneNumberExists) {
+                return Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS);
+            }
+
             String uuid = UUID.randomUUID().toString();
             persistentService.addMFAMethodSupportingMultiple(
                     email,
@@ -151,11 +169,38 @@ public class MfaMethodsService {
                             smsMfaDetail.phoneNumber(),
                             mfaMethod.priorityIdentifier(),
                             uuid));
-            return MfaMethodData.smsMethodData(
-                    uuid, mfaMethod.priorityIdentifier(), true, smsMfaDetail.phoneNumber());
-        }
+            return Either.right(
+                    MfaMethodData.smsMethodData(
+                            uuid,
+                            mfaMethod.priorityIdentifier(),
+                            true,
+                            smsMfaDetail.phoneNumber()));
+        } else {
+            boolean authAppExists =
+                    mfaMethods.stream()
+                            .map(MfaMethodData::method)
+                            .filter(AuthAppMfaDetail.class::isInstance)
+                            .anyMatch(mfa -> true);
 
-        //      Further implementation to come in subsequent commits
-        return null;
+            if (authAppExists) {
+                return Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS);
+            }
+
+            String uuid = UUID.randomUUID().toString();
+            persistentService.addMFAMethodSupportingMultiple(
+                    email,
+                    MFAMethod.authAppMfaMethod(
+                            ((AuthAppMfaDetail) mfaMethod.method()).credential(),
+                            true,
+                            true,
+                            mfaMethod.priorityIdentifier(),
+                            uuid));
+            return Either.right(
+                    MfaMethodData.authAppMfaData(
+                            uuid,
+                            mfaMethod.priorityIdentifier(),
+                            true,
+                            ((AuthAppMfaDetail) mfaMethod.method()).credential()));
+        }
     }
 }
