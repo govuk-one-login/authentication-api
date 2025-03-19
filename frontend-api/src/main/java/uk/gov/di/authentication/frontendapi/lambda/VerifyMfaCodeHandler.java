@@ -443,7 +443,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                 && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    codeRequest.getJourneyType(), subjectId, session, sessionId, maybeRpPairwiseId);
+                    codeRequest.getJourneyType(),
+                    subjectId,
+                    session,
+                    authSession,
+                    sessionId,
+                    maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -484,6 +489,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             String subjectId,
             Session session,
+            AuthSessionItem authSession,
             String sessionId,
             Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
@@ -500,6 +506,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                     subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
             sessionService.storeOrUpdateSession(updatedSession, sessionId);
+            var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
+            authSessionService.updateSession(updatedAuthSession);
         }
     }
 

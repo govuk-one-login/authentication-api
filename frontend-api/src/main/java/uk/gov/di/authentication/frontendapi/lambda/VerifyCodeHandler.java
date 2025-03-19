@@ -414,7 +414,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    journeyType, subjectId, session, sessionId, maybeRpPairwiseId);
+                    journeyType, subjectId, session, authSession, sessionId, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -433,6 +433,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             String subjectId,
             Session session,
+            AuthSessionItem authSession,
             String sessionId,
             Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
@@ -449,6 +450,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                     subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
             sessionService.storeOrUpdateSession(updatedSession, sessionId);
+            var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
+            authSessionService.updateSession(updatedAuthSession);
         }
     }
 
