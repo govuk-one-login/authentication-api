@@ -24,7 +24,7 @@ class PrincipalValidationHelperTest {
     @Test
     void shouldReturnTrueWhenNoPrincipalIdIsPresent() {
         assertTrue(
-                PrincipalValidationHelper.principleIsInvalid(
+                PrincipalValidationHelper.principalIsInvalid(
                         new UserProfile(),
                         INTERNAL_SECTOR_URI,
                         authenticationService,
@@ -43,7 +43,7 @@ class PrincipalValidationHelperTest {
         authorizerParams.put("principalId", internalPairwiseIdentifier);
 
         assertFalse(
-                PrincipalValidationHelper.principleIsInvalid(
+                PrincipalValidationHelper.principalIsInvalid(
                         userProfile, INTERNAL_SECTOR_URI, authenticationService, authorizerParams));
     }
 
@@ -61,7 +61,7 @@ class PrincipalValidationHelperTest {
         authorizerParams.put("principalId", internalPairwiseIdentifier);
 
         assertTrue(
-                PrincipalValidationHelper.principleIsInvalid(
+                PrincipalValidationHelper.principalIsInvalid(
                         userProfile, INTERNAL_SECTOR_URI, authenticationService, authorizerParams));
     }
 }

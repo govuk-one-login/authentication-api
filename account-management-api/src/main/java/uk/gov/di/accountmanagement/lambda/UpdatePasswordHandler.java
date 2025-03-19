@@ -131,7 +131,7 @@ public class UpdatePasswordHandler
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
 
-            if (PrincipalValidationHelper.principleIsInvalid(
+            if (PrincipalValidationHelper.principalIsInvalid(
                     userProfile,
                     configurationService.getInternalSectorUri(),
                     dynamoService,

@@ -15,7 +15,7 @@ public class PrincipalValidationHelper {
 
     private PrincipalValidationHelper() {}
 
-    public static boolean principleIsInvalid(
+    public static boolean principalIsInvalid(
             UserProfile userProfile,
             String internalSectorUri,
             AuthenticationService authenticationService,
