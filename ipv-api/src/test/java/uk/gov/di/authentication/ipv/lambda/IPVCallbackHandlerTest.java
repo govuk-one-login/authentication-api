@@ -284,7 +284,6 @@ class IPVCallbackHandlerTest {
                         orchSessionService,
                         authUserInfoStorageService,
                         dynamoService,
-                        clientSessionService,
                         orchClientSessionService,
                         dynamoClientService,
                         auditService,
@@ -393,8 +392,19 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any(), any()))
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        anyString(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 REDIRECT_URI, null, null, null, null, null, null));
@@ -472,8 +482,19 @@ class IPVCallbackHandlerTest {
             when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                            any(), any(), any()))
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            anyString(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any()))
                     .thenReturn(
                             new AuthenticationSuccessResponse(
                                     REDIRECT_URI, null, null, null, null, null, null));
@@ -570,8 +591,19 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any(), any()))
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        anyString(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));

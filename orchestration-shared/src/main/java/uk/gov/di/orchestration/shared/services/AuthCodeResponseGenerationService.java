@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -36,20 +35,6 @@ public class AuthCodeResponseGenerationService {
 
     public AuthCodeResponseGenerationService() {
         this(ConfigurationService.getInstance());
-    }
-
-    public Map<String, String> getDimensions(
-            OrchSessionItem orchSession,
-            ClientSession clientSession,
-            String clientSessionId,
-            boolean isTestJourney,
-            boolean docAppJourney) {
-        return getDimensions(
-                orchSession,
-                clientSession.getClientName(),
-                clientSessionId,
-                isTestJourney,
-                docAppJourney);
     }
 
     public Map<String, String> getDimensions(
