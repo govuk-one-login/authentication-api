@@ -5606,6 +5606,43 @@ Resources:
         - Key: Name
           Value: OrchAuthCodeTable
 
+  OrchAuthCodeTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchAuthCodeTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt OrchAuthCodeTable.Arn
+          - Sid: AllowOrchAuthCodeTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt OrchAuthCodeTableEncryptionKey.Arn
+
+  OrchAuthCodeTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchAuthCodeTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt OrchAuthCodeTable.Arn
+          - Sid: AllowOrchAuthCodeTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt OrchAuthCodeTableEncryptionKey.Arn
+
   #endregion
 
 Outputs:
