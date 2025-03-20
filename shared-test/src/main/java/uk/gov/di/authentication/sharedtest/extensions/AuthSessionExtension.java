@@ -10,6 +10,8 @@ import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
@@ -103,5 +105,13 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
     public Optional<AuthSessionItem> getSessionFromRequestHeaders(
             Map<String, String> requestHeaders) {
         return authSessionService.getSessionFromRequestHeaders(requestHeaders);
+    }
+
+    public void incrementSessionCodeRequestCount(
+            String sessionId, NotificationType notificationType, JourneyType journeyType) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .incrementCodeRequestCount(notificationType, journeyType));
     }
 }

@@ -57,14 +57,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        var session = redis.getSession(SESSION_ID);
         var authSession = authSessionExtension.getSession(SESSION_ID).orElseThrow();
-        assertThat(
-                session.getCodeRequestCount(
-                        NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                        JourneyType.ACCOUNT_RECOVERY),
-                equalTo(1));
-
         assertThat(
                 authSession.getCodeRequestCount(
                         NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
