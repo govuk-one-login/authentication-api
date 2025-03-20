@@ -22,9 +22,9 @@ import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -36,7 +36,6 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -47,6 +46,7 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -68,7 +68,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSes
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -81,7 +80,6 @@ public class AuthCodeHandler
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -95,7 +93,6 @@ public class AuthCodeHandler
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -107,7 +104,6 @@ public class AuthCodeHandler
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -122,7 +118,6 @@ public class AuthCodeHandler
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
-        clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
@@ -140,7 +135,6 @@ public class AuthCodeHandler
         authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
-        clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
@@ -202,14 +196,14 @@ public class AuthCodeHandler
         Optional<String> subjectIdOptional;
         boolean isDocAppJourney;
         AuthenticationRequest authenticationRequest = null;
-        ClientSession clientSession;
+        OrchClientSessionItem orchClientSession;
         ClientID clientID;
         AuthorizationCode authCode;
         AuthenticationSuccessResponse authenticationResponse;
         try {
-            clientSession = getClientSession(input);
+            orchClientSession = getClientSession(input);
             authenticationRequest =
-                    AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+                    AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
 
             clientID = authenticationRequest.getClientID();
             attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
@@ -218,12 +212,12 @@ public class AuthCodeHandler
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             addAnnotation(
                     "client_id",
-                    String.valueOf(clientSession.getAuthRequestParams().get("client_id")));
+                    String.valueOf(orchClientSession.getAuthRequestParams().get("client_id")));
 
             var redirectUri = authenticationRequest.getRedirectionURI();
             var state = authenticationRequest.getState();
 
-            isDocAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+            isDocAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);
 
             if (!isDocAppJourney) {
                 var authUserInfo =
@@ -247,7 +241,7 @@ public class AuthCodeHandler
                             clientID,
                             redirectUri,
                             emailOptional,
-                            clientSession,
+                            orchClientSession.getVtrList(),
                             clientSessionId,
                             session,
                             orchSession);
@@ -279,7 +273,7 @@ public class AuthCodeHandler
             var dimensions =
                     authCodeResponseService.getDimensions(
                             orchSession,
-                            clientSession,
+                            orchClientSession.getClientName(),
                             clientID.getValue(),
                             isTestJourney,
                             isDocAppJourney);
@@ -288,11 +282,11 @@ public class AuthCodeHandler
             String internalCommonSubjectId;
             if (isDocAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
-                internalCommonSubjectId = clientSession.getDocAppSubjectId().getValue();
+                internalCommonSubjectId = orchClientSession.getDocAppSubjectId();
             } else {
-                authCodeResponseService.processVectorOfTrust(clientSession, dimensions);
+                authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
-                rpPairwiseId = clientSession.getRpPairwiseId();
+                rpPairwiseId = orchClientSession.getRpPairwiseId();
             }
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
@@ -324,7 +318,7 @@ public class AuthCodeHandler
             cloudwatchMetricsService.incrementSignInByClient(
                     orchSession.getIsNewAccount(),
                     clientID.getValue(),
-                    clientSession.getClientName(),
+                    orchClientSession.getClientName(),
                     isTestJourney);
             authCodeResponseService.saveSession(
                     isDocAppJourney,
@@ -376,22 +370,17 @@ public class AuthCodeHandler
         }
     }
 
-    private ClientSession getClientSession(APIGatewayProxyRequestEvent input)
+    private OrchClientSessionItem getClientSession(APIGatewayProxyRequestEvent input)
             throws ProcessAuthRequestException {
-        var clientSession =
-                clientSessionService
-                        .getClientSessionFromRequestHeaders(input.getHeaders())
-                        .orElse(null);
         var orchClientSession =
                 orchClientSessionService
                         .getClientSessionFromRequestHeaders(input.getHeaders())
                         .orElse(null);
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
-        if (Objects.isNull(clientSession)) {
+        if (Objects.isNull(orchClientSession)) {
             LOG.info("ClientSession not found");
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1018);
         }
-        return clientSession;
+        return orchClientSession;
     }
 
     private APIGatewayProxyResponseEvent generateResponse(
@@ -447,7 +436,7 @@ public class AuthCodeHandler
             ClientID clientID,
             URI redirectUri,
             Optional<String> emailOptional,
-            ClientSession clientSession,
+            List<VectorOfTrust> vtrList,
             String clientSessionId,
             Session session,
             OrchSessionItem orchSession)
@@ -456,7 +445,7 @@ public class AuthCodeHandler
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
         }
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
         if (isNull(session.getCurrentCredentialStrength())
                 || lowestRequestedCredentialTrustLevel.compareTo(
                                 session.getCurrentCredentialStrength())

@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -43,6 +44,20 @@ public class AuthCodeResponseGenerationService {
             String clientSessionId,
             boolean isTestJourney,
             boolean docAppJourney) {
+        return getDimensions(
+                orchSession,
+                clientSession.getClientName(),
+                clientSessionId,
+                isTestJourney,
+                docAppJourney);
+    }
+
+    public Map<String, String> getDimensions(
+            OrchSessionItem orchSession,
+            String clientName,
+            String clientSessionId,
+            boolean isTestJourney,
+            boolean docAppJourney) {
         Map<String, String> dimensions =
                 new HashMap<>(
                         Map.of(
@@ -57,7 +72,7 @@ public class AuthCodeResponseGenerationService {
                                 "IsDocApp",
                                 Boolean.toString(docAppJourney),
                                 "ClientName",
-                                clientSession.getClientName()));
+                                clientName));
 
         if (Objects.nonNull(orchSession.getVerifiedMfaMethodType())) {
             dimensions.put("MfaMethod", orchSession.getVerifiedMfaMethodType());
@@ -68,14 +83,15 @@ public class AuthCodeResponseGenerationService {
         return dimensions;
     }
 
-    public void processVectorOfTrust(ClientSession clientSession, Map<String, String> dimensions) {
+    public void processVectorOfTrust(
+            OrchClientSessionItem orchClientSession, Map<String, String> dimensions) {
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
         var mfaNotRequired =
                 lowestRequestedCredentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL);
         dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
         dimensions.put(
-                "RequestedLevelOfConfidence", clientSession.getVtrLocsAsCommaSeparatedString());
+                "RequestedLevelOfConfidence", orchClientSession.getVtrLocsAsCommaSeparatedString());
     }
 
     public String getSubjectId(Session session) throws UserNotFoundException {

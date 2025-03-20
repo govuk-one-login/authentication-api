@@ -8,6 +8,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.RequestObjectException;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
@@ -46,6 +47,15 @@ public class DocAppUserHelper {
         boolean isDocCheckingUser =
                 clientSession.getDocAppSubjectId() != null
                         && hasDocCheckingScope(clientSession.getAuthRequestParams());
+        LOG.info("User is Doc Checking App user: {}", isDocCheckingUser);
+        return isDocCheckingUser;
+    }
+
+    public static boolean isDocCheckingAppUserWithSubjectId(
+            OrchClientSessionItem orchClientSession) {
+        boolean isDocCheckingUser =
+                orchClientSession.getDocAppSubjectId() != null
+                        && hasDocCheckingScope(orchClientSession.getAuthRequestParams());
         LOG.info("User is Doc Checking App user: {}", isDocCheckingUser);
         return isDocCheckingUser;
     }

@@ -2,16 +2,10 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,11 +29,8 @@ class AuthCodeResponseGenerationServiceTest {
     private final SessionService sessionService = mock(SessionService.class);
     private OrchSessionItem orchSession;
     private Session session;
-    private ClientSession clientSession;
 
     private AuthCodeResponseGenerationService authCodeResponseGenerationService;
-    private static final CredentialTrustLevel lowestCredentialTrustLevel =
-            CredentialTrustLevel.LOW_LEVEL;
 
     @BeforeEach
     void setup() {
@@ -51,14 +42,6 @@ class AuthCodeResponseGenerationServiceTest {
         session = new Session();
         authCodeResponseGenerationService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
-        clientSession =
-                new ClientSession(
-                        new HashMap<>(),
-                        LocalDateTime.MIN,
-                        List.of(
-                                VectorOfTrust.of(
-                                        lowestCredentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                        CLIENT_NAME);
     }
 
     @Test
@@ -83,7 +66,7 @@ class AuthCodeResponseGenerationServiceTest {
 
         var actualValues =
                 authCodeResponseGenerationService.getDimensions(
-                        orchSession, clientSession, CLIENT_SESSION_ID, false, false);
+                        orchSession, CLIENT_NAME, CLIENT_SESSION_ID, false, false);
         assertEquals(expectedValues, actualValues);
     }
 
