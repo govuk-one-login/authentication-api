@@ -105,7 +105,6 @@ class StartServiceTest {
     void shouldOverwriteSessionWithNewSessionUsingExistingSessionAndClientSessionIds() {
         var currentClientSessionId = "some-client-session-id";
         SESSION.addClientSession("previous-session-client-session-id");
-        SESSION.setNewAccount(Session.AccountState.EXISTING);
         SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
         SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
 
@@ -115,7 +114,6 @@ class StartServiceTest {
 
         assertFalse(session.isAuthenticated());
         assertThat(session.getCurrentCredentialStrength(), equalTo(null));
-        assertThat(session.isNewAccount(), equalTo(Session.AccountState.UNKNOWN));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
         assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
