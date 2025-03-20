@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -27,12 +28,16 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
     private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final String PASSWORD = "password-1";
     private static final String PHONE_NUMBER = "+447700900000";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
+    private static String testInternalSubject;
+    private static String publicSubjectId;
 
     @RegisterExtension
     private static UserStoreExtension userStoreExtension = new UserStoreExtension();
 
     @BeforeEach
     void setUp() {
+        publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
         ConfigurationService mfaMethodEnabledConfigurationService =
                 new ConfigurationService() {
                     @Override
@@ -41,11 +46,16 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                     }
                 };
         handler = new MFAMethodsRetrieveHandler(mfaMethodEnabledConfigurationService);
+        byte[] salt = userStore.addSalt(EMAIL);
+        testInternalSubject =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        userStore.getUserProfileFromEmail(EMAIL).get().getSubjectID(),
+                        INTERNAL_SECTOR_HOST,
+                        salt);
     }
 
     @Test
     void shouldReturn200WithSmsMethodWhenUserExists() {
-        var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
         userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
 
         var response =
@@ -54,7 +64,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         var mfaIdentifier =
                 userStoreExtension.getUserProfileFromEmail(EMAIL).get().getMfaIdentifier();
@@ -80,7 +90,6 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithSmsAndExistingMfaIdWhenUserExists() {
-        var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
         userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
         var mfaIdentifier = "some-identifier";
         userStoreExtension.setPhoneNumberMfaIdentifer(EMAIL, mfaIdentifier);
@@ -91,7 +100,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         assertEquals(200, response.getStatusCode());
         var expectedResponse =
@@ -114,7 +123,6 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithAuthAppMethodWithGeneratedMfaIdWhenUserExists() {
-        var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
         userStoreExtension.addMfaMethod(
                 EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
 
@@ -124,7 +132,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         var identifier = userStoreExtension.getMfaMethod(EMAIL).get(0).getMfaIdentifier();
 
@@ -149,7 +157,6 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithAuthAppMethodAndExistingMfaIdWhenUserExists() {
-        var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
         var identifier = "some-identifier";
         userStoreExtension.addAuthAppMethodWithIdentifier(
                 EMAIL, true, true, "some-credential", identifier);
@@ -160,7 +167,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         var storedIdentifier = userStoreExtension.getMfaMethod(EMAIL).get(0).getMfaIdentifier();
         assertEquals(identifier, storedIdentifier);
@@ -186,7 +193,6 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithMultipleMethodsWhenMigratedUserExists() {
-        var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
         userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
 
         var authAppIdentifier = "14895398-33e5-41f0-b059-811b07df348d";
@@ -210,7 +216,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         assertEquals(200, response.getStatusCode());
         var expectedResponse =
@@ -242,16 +248,30 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn404WhenUserDoesNotExist() {
-        var publicSubjectId = "userDoesNotExist";
+        var invalidPublicSubjectId = "userDoesNotExist";
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", invalidPublicSubjectId),
+                        Map.of("principalId", testInternalSubject));
+
+        assertEquals(404, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+    }
+
+    @Test
+    void shouldReturn401WhenPrincipalIsInvalid() {
         var response =
                 makeRequest(
                         Optional.empty(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", "invalid-principal"));
 
-        assertEquals(404, response.getStatusCode());
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+        assertEquals(401, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
     }
 }
