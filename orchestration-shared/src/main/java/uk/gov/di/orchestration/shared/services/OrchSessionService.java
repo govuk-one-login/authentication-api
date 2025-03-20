@@ -65,6 +65,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
                 oldItem = getSession(previousSessionId.get());
             }
             if (oldItem.isPresent()) {
+                oldItem.get().resetProcessingIdentityAttempts();
                 newItem =
                         oldItem.get()
                                 .withSessionId(newSessionId)
