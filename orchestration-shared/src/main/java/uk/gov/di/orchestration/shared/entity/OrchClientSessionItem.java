@@ -184,4 +184,21 @@ public class OrchClientSessionItem {
         this.timeToLive = timeToLive;
         return this;
     }
+
+    public String getVtrLocsAsCommaSeparatedString() {
+        List<VectorOfTrust> orderedVtrList = VectorOfTrust.orderVtrList(this.vtrList);
+        StringBuilder strBuilder = new StringBuilder();
+        for (VectorOfTrust vtr : orderedVtrList) {
+            String loc =
+                    vtr.containsLevelOfConfidence()
+                            ? vtr.getLevelOfConfidence().getValue()
+                            : LevelOfConfidence.NONE.getValue();
+            strBuilder.append(loc).append(",");
+        }
+        if (!strBuilder.isEmpty()) {
+            strBuilder.setLength(strBuilder.length() - 1);
+            return strBuilder.toString();
+        }
+        return "";
+    }
 }
