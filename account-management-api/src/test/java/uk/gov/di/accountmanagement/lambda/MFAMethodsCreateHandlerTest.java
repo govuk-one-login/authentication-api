@@ -86,13 +86,13 @@ class MFAMethodsCreateHandlerTest {
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
         reset(mfaMethodsService);
     }
 
     @Test
     void shouldReturn200AndCreateMfaSmsMfaMethod() {
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Either.right(
@@ -143,8 +143,6 @@ class MFAMethodsCreateHandlerTest {
 
     @Test
     void shouldReturn200AndCreateAuthAppMfa() {
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Either.right(
@@ -254,8 +252,6 @@ class MFAMethodsCreateHandlerTest {
                         TEST_PUBLIC_SUBJECT,
                         internalSubject);
         event.setBody("Invalid JSON");
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
 
         var result = handler.handleRequest(event, context);
 
@@ -271,8 +267,6 @@ class MFAMethodsCreateHandlerTest {
                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT,
                         internalSubject);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Either.left(
@@ -292,8 +286,6 @@ class MFAMethodsCreateHandlerTest {
                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT,
                         internalSubject);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
 
@@ -311,8 +303,6 @@ class MFAMethodsCreateHandlerTest {
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
                         TEST_PUBLIC_SUBJECT,
                         internalSubject);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS));
 
@@ -330,9 +320,6 @@ class MFAMethodsCreateHandlerTest {
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
                         TEST_PUBLIC_SUBJECT,
                         "invalid");
-
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
 
         var result = handler.handleRequest(event, context);
 
