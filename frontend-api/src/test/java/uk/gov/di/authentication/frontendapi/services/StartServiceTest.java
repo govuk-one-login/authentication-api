@@ -85,7 +85,6 @@ class StartServiceTest {
                     ClientType.WEB,
                     null,
                     true,
-                    false,
                     Optional.empty(),
                     Optional.empty(),
                     false);
@@ -112,7 +111,6 @@ class StartServiceTest {
                 startService.createNewSessionWithExistingIdAndClientSession(
                         SESSION_ID, currentClientSessionId);
 
-        assertFalse(session.isAuthenticated());
         assertThat(session.getCurrentCredentialStrength(), equalTo(null));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
@@ -186,7 +184,6 @@ class StartServiceTest {
                         ClientType.WEB,
                         null,
                         rpSupportsIdentity,
-                        isAuthenticated,
                         Optional.of(
                                 new UserProfile()
                                         .withSubjectID(new Subject().getValue())
@@ -236,7 +233,6 @@ class StartServiceTest {
                         ClientType.WEB,
                         null,
                         rpSupportsIdentity,
-                        false,
                         Optional.empty(),
                         Optional.empty(),
                         false);
@@ -426,7 +422,6 @@ class StartServiceTest {
                         ClientType.WEB,
                         null,
                         true,
-                        false,
                         Optional.of(userProfile),
                         Optional.of(userCredentials),
                         false);
@@ -462,7 +457,6 @@ class StartServiceTest {
                         cookieConsentShared,
                         clientType,
                         signedJWT,
-                        false,
                         false,
                         Optional.empty(),
                         Optional.empty(),
@@ -584,7 +578,6 @@ class StartServiceTest {
             ClientType clientType,
             SignedJWT requestObject,
             boolean identityVerificationSupport,
-            boolean isAuthenticated,
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
             boolean oneLoginService) {
@@ -630,7 +623,7 @@ class StartServiceTest {
                         .withClientType(clientType.getValue())
                         .withIdentityVerificationSupported(identityVerificationSupport)
                         .withOneLoginService(oneLoginService);
-        return UserContext.builder(SESSION.setAuthenticated(isAuthenticated))
+        return UserContext.builder(SESSION)
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)

@@ -50,12 +50,12 @@ public class RedisExtension
     }
 
     public String createSession(String sessionId) throws Json.JsonException {
-        return createSession(sessionId, false, Optional.empty());
+        return createSession(sessionId, Optional.empty());
     }
 
-    private String createSession(String sessionId, boolean isAuthenticated, Optional<String> email)
+    private String createSession(String sessionId, Optional<String> email)
             throws Json.JsonException {
-        Session session = new Session().setAuthenticated(isAuthenticated);
+        Session session = new Session();
         email.ifPresent(session::setEmailAddress);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         return sessionId;
@@ -72,21 +72,17 @@ public class RedisExtension
         return createSession(IdGenerator.generate());
     }
 
-    public String createSession(boolean isAuthenticated) throws Json.JsonException {
-        return createSession(IdGenerator.generate(), isAuthenticated, Optional.empty());
-    }
-
     public String createUnauthenticatedSessionWithEmail(String email) throws Json.JsonException {
-        return createSession(IdGenerator.generate(), false, Optional.of(email));
+        return createSession(IdGenerator.generate(), Optional.of(email));
     }
 
     public void createUnauthenticatedSessionWithIdAndEmail(String sessionId, String email)
             throws Json.JsonException {
-        createSession(sessionId, false, Optional.of(email));
+        createSession(sessionId, Optional.of(email));
     }
 
     public String createAuthenticatedSessionWithEmail(String email) throws Json.JsonException {
-        return createSession(IdGenerator.generate(), true, Optional.of(email));
+        return createSession(IdGenerator.generate(), Optional.of(email));
     }
 
     public void addStateToRedis(State state, String sessionId) throws Json.JsonException {

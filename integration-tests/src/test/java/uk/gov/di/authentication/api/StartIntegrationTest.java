@@ -285,7 +285,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(200));
-        assertThat(redis.getSession(sessionId).isAuthenticated(), equalTo(false));
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
@@ -304,7 +303,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void setup() throws Json.JsonException {
             handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
             txmaAuditQueue.clear();
-            sessionId = redis.createSession(false);
+            sessionId = redis.createSession();
             userStore.signUp(EMAIL, "password");
             authSessionExtension.addSession(sessionId);
             var state = new State();
