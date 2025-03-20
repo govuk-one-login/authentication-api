@@ -46,6 +46,13 @@ class OrchSessionServiceTest {
     }
 
     @Test
+    void newSessionHasDefaultValues() {
+        var session = new OrchSessionItem(SESSION_ID);
+        assertThat(session.getProcessingIdentityAttempts(), equalTo(0));
+        assertThat(session.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.UNKNOWN));
+    }
+
+    @Test
     void getSessionReturnsSessionWithValidTtl() {
         withValidSession();
         var session = orchSessionService.getSession(SESSION_ID);

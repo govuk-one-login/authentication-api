@@ -16,6 +16,8 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_AUTHENTICATED = "Authenticated";
     public static final String ATTRIBUTE_AUTH_TIME = "AuthTime";
     public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "CurrentCredentialStrength";
+    public static final String ATTRIBUTE_PROCESSING_IDENTITY_ATTEMPTS =
+            "ProcessingIdentityAttempts";
 
     public enum AccountState {
         NEW,
@@ -34,12 +36,14 @@ public class OrchSessionItem {
     private String internalCommonSubjectId;
     private Long authTime;
     private CredentialTrustLevel currentCredentialStrength;
+    private int processingIdentityAttempts;
 
     public OrchSessionItem() {}
 
     public OrchSessionItem(String sessionId) {
         this.sessionId = sessionId;
         this.isNewAccount = AccountState.UNKNOWN;
+        this.processingIdentityAttempts = 0;
     }
 
     public OrchSessionItem(OrchSessionItem orchSessionItem) {
@@ -53,6 +57,7 @@ public class OrchSessionItem {
         this.internalCommonSubjectId = orchSessionItem.internalCommonSubjectId;
         this.authTime = orchSessionItem.authTime;
         this.currentCredentialStrength = orchSessionItem.currentCredentialStrength;
+        this.processingIdentityAttempts = orchSessionItem.processingIdentityAttempts;
     }
 
     @DynamoDbPartitionKey
@@ -195,5 +200,23 @@ public class OrchSessionItem {
             CredentialTrustLevel currentCredentialStrength) {
         this.currentCredentialStrength = currentCredentialStrength;
         return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PROCESSING_IDENTITY_ATTEMPTS)
+    public int getProcessingIdentityAttempts() {
+        return processingIdentityAttempts;
+    }
+
+    public void setProcessingIdentityAttempts(int processingIdentityAttempts) {
+        this.processingIdentityAttempts = processingIdentityAttempts;
+    }
+
+    public void resetProcessingIdentityAttempts() {
+        this.processingIdentityAttempts = 0;
+    }
+
+    public int incrementProcessingIdentityAttempts() {
+        this.processingIdentityAttempts += 1;
+        return processingIdentityAttempts;
     }
 }
