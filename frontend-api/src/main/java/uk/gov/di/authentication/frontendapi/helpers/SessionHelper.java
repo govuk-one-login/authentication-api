@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.helpers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -17,17 +16,17 @@ public class SessionHelper {
 
     public static void updateSessionWithSubject(
             UserContext userContext,
-            AuthSessionItem authSession,
             SessionService sessionService,
             AuthSessionService authSessionService,
             AuthenticationService authenticationService,
             ConfigurationService configurationService) {
         LOG.info("Calculating internal common subject identifier");
-        var session = userContext.getSession();
+        var authSession = userContext.getAuthSession();
         UserProfile userProfile =
                 userContext.getUserProfile().isPresent()
                         ? userContext.getUserProfile().get()
-                        : authenticationService.getUserProfileByEmail(session.getEmailAddress());
+                        : authenticationService.getUserProfileByEmail(
+                                authSession.getEmailAddress());
         var internalCommonSubjectId =
                 authSession.getInternalCommonSubjectId() != null
                         ? authSession.getInternalCommonSubjectId()
