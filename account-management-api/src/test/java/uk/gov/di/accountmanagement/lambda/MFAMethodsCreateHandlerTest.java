@@ -106,7 +106,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
 
         var result = handler.handleRequest(event, context);
@@ -157,7 +156,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
 
         var result = handler.handleRequest(event, context);
@@ -201,7 +199,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
 
         var result = handler.handleRequest(event, context);
@@ -234,7 +231,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
 
         var result = handler.handleRequest(event, context);
@@ -249,7 +245,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
         event.setBody("Invalid JSON");
 
@@ -265,7 +260,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
@@ -284,7 +278,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
@@ -301,7 +294,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT,
                         internalSubject);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS));
@@ -318,7 +310,6 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT,
                         "invalid");
 
         var result = handler.handleRequest(event, context);
@@ -328,10 +319,7 @@ class MFAMethodsCreateHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
-            PriorityIdentifier priorityIdentifier,
-            MfaDetail mfaDetail,
-            String publicSubject,
-            String principal) {
+            PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String principal) {
 
         String body =
                 mfaDetail instanceof SmsMfaDetail
@@ -360,7 +348,7 @@ class MFAMethodsCreateHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
 
-        event.setPathParameters(Map.of("publicSubjectId", publicSubject));
+        event.setPathParameters(Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
         event.setBody(body);
 
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
