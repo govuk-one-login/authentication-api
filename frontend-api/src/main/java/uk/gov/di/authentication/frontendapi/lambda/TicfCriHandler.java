@@ -87,6 +87,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
     private HttpResponse<String> sendRequest(TICFCRIRequest ticfcriRequest)
             throws IOException, InterruptedException {
         var body = serialisationService.writeValueAsStringNoNulls(ticfcriRequest);
+        LOG.info("Serialized request to TICF CRI: {}", body);
         var timeoutInMilliseconds =
                 Duration.ofMillis(configurationService.getTicfCriServiceCallTimeout());
         var request =
