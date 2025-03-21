@@ -7,12 +7,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -20,7 +18,6 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class TestClientHelperTest {
@@ -38,47 +35,6 @@ class TestClientHelperTest {
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(TestClientHelper.class);
-
-    @Test
-    void shouldReturnTrueIfTestClientWithAllowedEmailAddress() throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-
-        var userContext = buildUserContext(true, Collections.singletonList(TEST_EMAIL_ADDRESS));
-
-        assertTrue(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
-
-    @Test
-    void shouldReturnFalseIfTestClientsAreDisabled() throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(false);
-
-        var userContext = buildUserContext(true, Collections.singletonList(TEST_EMAIL_ADDRESS));
-
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
-
-    @Test
-    void shouldReturnFalseIfClientIsNotATestClient() throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-
-        var userContext = buildUserContext(false, Collections.singletonList(TEST_EMAIL_ADDRESS));
-
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
-
-    @Test
-    void shouldReturnFalseIfClientDoesNotContainEmailAddressInAllowList()
-            throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-
-        var userContext = buildUserContext(true, Collections.singletonList("test@wrong-email.com"));
-
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
 
     @ParameterizedTest
     @ValueSource(
