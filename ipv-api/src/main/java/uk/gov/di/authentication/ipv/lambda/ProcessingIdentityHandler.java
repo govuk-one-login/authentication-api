@@ -137,6 +137,9 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             URI.create(configurationService.getInternalSectorURI()),
                             authenticationService.getOrGenerateSalt(userProfile));
             int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
+            // ATO-1514: Introducing this unused var, we will swap usages over to it in a future PR
+            int orchSessionProcessingIdentityAttempts =
+                    userContext.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
                     processingAttempts);
@@ -148,6 +151,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     && userContext.getSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = ProcessingIdentityStatus.NO_ENTRY;
                 userContext.getSession().resetProcessingIdentityAttempts();
+                userContext.getOrchSession().resetProcessingIdentityAttempts();
             } else if (identityCredentials.isEmpty()) {
                 processingStatus = ProcessingIdentityStatus.ERROR;
             } else if (Objects.nonNull(identityCredentials.get().getCoreIdentityJWT())) {
@@ -177,6 +181,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
+            orchSessionService.updateSession(userContext.getOrchSession());
             sessionService.storeOrUpdateSession(
                     userContext.getSession(), userContext.getSessionId());
             LOG.info(
