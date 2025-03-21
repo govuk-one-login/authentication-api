@@ -63,7 +63,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     public static final String PREVIOUS_SESSION_ID = "4waJ14KA9IyxKzY7bIGIA3hUDos";
     public static final String REQUEST_BODY =
-            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\", \"authenticated\": %s}";
+            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\", "
+                    + "\"authenticated\": %s, "
+                    + "\"state\": \"%s\","
+                    + "\"client_id\": \"%s\","
+                    + "\"redirect_uri\": \"%s\","
+                    + "\"vtr_list\": %s, "
+                    + "\"scope\": \"%s\""
+                    + "}";
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -82,7 +89,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return Stream.of(
                 Arguments.of(Map.of(), false, false),
                 Arguments.of(Map.of(), false, true),
-                Arguments.of(Map.of("vtr", "[\"P0.Cl.Cm\"]"), false, false),
+                Arguments.of(Map.of("vtr", "[\"Cl.Cm\", \"P0.Cl.Cm\"]"), false, false),
                 Arguments.of(Map.of("vtr", "[\"P2.Cl.Cm\"]"), true, false));
     }
 
@@ -105,6 +112,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
+                        .customParameter("client_id", CLIENT_ID)
+                        .customParameter("redirect_uri", REDIRECT_URI.toString())
+                        .customParameter("state", state.getValue())
                         .state(state);
         customAuthParameters.forEach(builder::customParameter);
         var authRequest = builder.build();
@@ -114,7 +124,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated)),
+                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -170,7 +180,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
-                        .state(state);
+                        .state(state)
+                        .customParameter("client_id", CLIENT_ID)
+                        .customParameter("redirect_uri", REDIRECT_URI.toString());
         var authRequest = builder.build();
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
@@ -180,7 +192,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
 
-        var response = makeRequest(Optional.of(makeRequestBody(true)), headers, Map.of());
+        var response =
+                makeRequest(Optional.of(makeRequestBody(true, authRequest)), headers, Map.of());
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
@@ -223,6 +236,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .state(state)
+                        .customParameter("client_id", CLIENT_ID)
+                        .customParameter("redirect_uri", REDIRECT_URI.toString())
                         .customParameter("vtr", "[\"Cl.Cm\"]");
         var authRequest = builder.build();
 
@@ -232,7 +247,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated)),
+                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -269,6 +284,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .state(STATE)
+                        .customParameter("client_id", CLIENT_ID)
+                        .customParameter("redirect_uri", REDIRECT_URI.toString())
                         .customParameter("vtr", "[\"Cl.Cm\"]")
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
@@ -280,7 +297,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated)),
+                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
 
@@ -298,6 +315,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Nested
     class AuthSession {
         String sessionId;
+        State state;
+        Scope scope;
 
         @BeforeEach
         void setup() throws Json.JsonException {
@@ -306,8 +325,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             sessionId = redis.createSession();
             userStore.signUp(EMAIL, "password");
             authSessionExtension.addSession(sessionId);
-            var state = new State();
-            Scope scope = new Scope();
+            state = new State();
+            scope = new Scope();
             scope.add(OIDCScopeValue.OPENID);
             var builder =
                     new AuthenticationRequest.Builder(
@@ -322,7 +341,18 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldAddSessionToDynamoWhenNoPreviousSessionIdIsProvidedInRequestBody() {
-            makeRequest(Optional.of("{}"), standardHeadersWithSessionId(sessionId), Map.of());
+            makeRequest(
+                    Optional.of(
+                            format(
+                                    "{"
+                                            + "\"state\": \"%s\","
+                                            + "\"redirect_uri\": \"%s\","
+                                            + "\"scope\": \"%s\","
+                                            + "\"client_id\": \"%s\""
+                                            + "}",
+                                    state.getValue(), REDIRECT_URI, scope.toString(), CLIENT_ID)),
+                    standardHeadersWithSessionId(sessionId),
+                    Map.of());
 
             assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         }
@@ -335,7 +365,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     equalTo(true));
 
             makeRequest(
-                    Optional.of(makeRequestBody(false)),
+                    Optional.of(
+                            makeRequestBody(
+                                    false,
+                                    Map.of(
+                                            "state", state.getValue(),
+                                            "redirect_uri", REDIRECT_URI.toString(),
+                                            "scope", scope.toString(),
+                                            "client_id", CLIENT_ID))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -348,7 +385,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldAddSessionToDynamoWhenPreviousSessionIsProvidedInRequestBodyButIsNotInDynamo() {
             makeRequest(
-                    Optional.of(makeRequestBody(false)),
+                    Optional.of(
+                            makeRequestBody(
+                                    false,
+                                    Map.of(
+                                            "state", state.getValue(),
+                                            "redirect_uri", REDIRECT_URI.toString(),
+                                            "scope", scope.toString(),
+                                            "client_id", CLIENT_ID))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -359,8 +403,32 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
     }
 
-    private String makeRequestBody(boolean isAuthenticated) {
-        return String.format(REQUEST_BODY, isAuthenticated);
+    private String makeRequestBody(boolean isAuthenticated, AuthenticationRequest authRequest) {
+        return String.format(
+                REQUEST_BODY,
+                isAuthenticated,
+                authRequest.getState().getValue(),
+                Optional.ofNullable(authRequest.getCustomParameter("client_id"))
+                        .map(l -> l.get(0))
+                        .orElse(null),
+                Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
+                        .map(l -> l.get(0))
+                        .orElse(null),
+                Optional.ofNullable(authRequest.getCustomParameter("vtr"))
+                        .map(l -> l.get(0))
+                        .orElse(null),
+                authRequest.getScope().toString());
+    }
+
+    private String makeRequestBody(boolean isAuthenticated, Map<String, String> customAuthParams) {
+        return String.format(
+                REQUEST_BODY,
+                isAuthenticated,
+                customAuthParams.get("state"),
+                customAuthParams.get("client_id"),
+                customAuthParams.get("redirect_uri"),
+                customAuthParams.get("vtr"),
+                customAuthParams.get("scope"));
     }
 
     private void registerWebClient(KeyPair keyPair) {
