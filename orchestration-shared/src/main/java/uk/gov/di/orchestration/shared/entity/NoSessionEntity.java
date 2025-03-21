@@ -6,13 +6,15 @@ public class NoSessionEntity {
 
     private final String clientSessionId;
     private final ErrorObject errorObject;
-    private final ClientSession clientSession;
+    private final OrchClientSessionItem orchClientSession;
 
     public NoSessionEntity(
-            String clientSessionId, ErrorObject errorObject, ClientSession clientSession) {
+            String clientSessionId,
+            ErrorObject errorObject,
+            OrchClientSessionItem orchClientSession) {
         this.clientSessionId = clientSessionId;
         this.errorObject = errorObject;
-        this.clientSession = clientSession;
+        this.orchClientSession = orchClientSession;
     }
 
     public String getClientSessionId() {
@@ -23,7 +25,7 @@ public class NoSessionEntity {
         return errorObject;
     }
 
-    public ClientSession getClientSession() {
-        return clientSession;
+    public OrchClientSessionItem getClientSession() {
+        return orchClientSession;
     }
 }
