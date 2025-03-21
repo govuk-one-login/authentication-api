@@ -243,6 +243,7 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> authoriseRequestHandler(input, context));
@@ -268,7 +269,6 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, AuditService.UNKNOWN, user);
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
-        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Received authentication request");
 
         AuthenticationRequest authRequest;

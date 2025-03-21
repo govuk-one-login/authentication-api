@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
@@ -31,6 +32,8 @@ import java.util.NoSuchElementException;
 import static com.nimbusds.langtag.LangTagUtils.parseLangTagList;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -59,6 +62,8 @@ public class WellknownHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> wellknownRequestHandler(input, context));
