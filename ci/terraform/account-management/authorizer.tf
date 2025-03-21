@@ -72,6 +72,31 @@ resource "aws_lambda_alias" "authorizer_alias" {
   function_version = aws_lambda_function.authorizer.version
 }
 
+resource "aws_cloudwatch_log_group" "authorizer_lambda_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  retention_in_days = var.cloudwatch_log_retention
+
+  depends_on = [
+    aws_lambda_function.authorizer
+  ]
+}
+moved {
+  from = aws_cloudwatch_log_group.lambda_log_group
+  to   = aws_cloudwatch_log_group.authorizer_lambda_log_group
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "authorizer-log-subscription-${count.index}"
+  log_group_name  = aws_cloudwatch_log_group.authorizer_lambda_log_group.name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
   count = local.authorizer_provisioned_concurrency == 0 ? 0 : 1
@@ -121,7 +146,7 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
 resource "aws_cloudwatch_log_metric_filter" "lambda_authorizer_error_metric_filter" {
   name           = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = aws_cloudwatch_log_group.lambda_log_group.name
+  log_group_name = aws_cloudwatch_log_group.authorizer_lambda_log_group.name
 
   metric_transformation {
     name      = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-error-count", ".", "")

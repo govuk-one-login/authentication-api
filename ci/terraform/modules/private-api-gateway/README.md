@@ -47,5 +47,6 @@ it's immediately obvious that this provisions a **_private_** gateway (as oppose
 | <a name="output_api_gateway_execution_arn"></a> [api\_gateway\_execution\_arn](#output\_api\_gateway\_execution\_arn) | n/a |
 | <a name="output_api_gateway_id"></a> [api\_gateway\_id](#output\_api\_gateway\_id) | n/a |
 | <a name="output_api_gateway_name"></a> [api\_gateway\_name](#output\_api\_gateway\_name) | n/a |
+| <a name="output_api_gateway_stage_name"></a> [api\_gateway\_stage\_name](#output\_api\_gateway\_stage\_name) | n/a |
 <!-- END_TF_DOCS -->
 <!-- prettier-ignore-end -->
