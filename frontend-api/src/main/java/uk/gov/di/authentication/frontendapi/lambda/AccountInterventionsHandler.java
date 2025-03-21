@@ -8,7 +8,7 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.entity.TICFCRIRequest;
+import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
@@ -242,7 +242,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         String journeyId = userContext.getClientSessionId();
 
         var ticfRequest =
-                TICFCRIRequest.basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         internalPairwiseId,
                         vtr,
                         journeyId,

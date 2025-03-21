@@ -4,7 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
-import uk.gov.di.authentication.entity.TICFCRIRequest;
+import uk.gov.di.authentication.entity.ExternalTICFCRIRequest;
+import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -20,7 +21,7 @@ import java.util.Map;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
-public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
+public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Void> {
 
     private final HttpClient httpClient;
     private final ConfigurationService configurationService;
@@ -48,7 +49,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
             LogManager.getLogger(TicfCriHandler.class);
 
     @Override
-    public Void handleRequest(TICFCRIRequest input, Context context) {
+    public Void handleRequest(InternalTICFCRIRequest input, Context context) {
         LOG.debug("received request to TICF CRI Handler");
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
@@ -84,9 +85,10 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                 metric, Map.of("Environment", configurationService.getEnvironment()));
     }
 
-    private HttpResponse<String> sendRequest(TICFCRIRequest ticfcriRequest)
+    private HttpResponse<String> sendRequest(InternalTICFCRIRequest internalTICFCRIRequest)
             throws IOException, InterruptedException {
-        var body = serialisationService.writeValueAsStringNoNulls(ticfcriRequest);
+        var externalRequest = ExternalTICFCRIRequest.fromInternalRequest(internalTICFCRIRequest);
+        var body = serialisationService.writeValueAsStringNoNulls(externalRequest);
         LOG.info("Serialized request to TICF CRI: {}", body);
         var timeoutInMilliseconds =
                 Duration.ofMillis(configurationService.getTicfCriServiceCallTimeout());

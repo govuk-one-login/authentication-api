@@ -15,7 +15,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem.AccountState;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetMfaState;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -41,7 +44,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.entity.TICFCRIRequest.basicTicfCriRequest;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withLevelAndMessageContaining;
 
 class TicfCriHandlerTest {
@@ -55,12 +57,9 @@ class TicfCriHandlerTest {
 
     private TicfCriHandler handler;
 
-    private static final AuthSessionItem.AccountState EXISTING_ACCOUNT_STATE =
-            AuthSessionItem.AccountState.EXISTING;
-    private static final AuthSessionItem.ResetPasswordState NA_RESET_PASSWORD_STATE =
-            AuthSessionItem.ResetPasswordState.NONE;
-    private static final AuthSessionItem.ResetMfaState NA_RESET_MFA_STATE =
-            AuthSessionItem.ResetMfaState.NONE;
+    private static final AccountState EXISTING_ACCOUNT_STATE = AccountState.EXISTING;
+    private static final ResetPasswordState NA_RESET_PASSWORD_STATE = ResetPasswordState.NONE;
+    private static final ResetMfaState NA_RESET_MFA_STATE = ResetMfaState.NONE;
     private static final MFAMethodType NA_USED_MFA_METHOD_TYPE = MFAMethodType.NONE;
     private static final String SERVICE_URI = "http://www.example.com";
     private static final String COMMON_SUBJECTID = "a-subject-id";
@@ -93,7 +92,7 @@ class TicfCriHandlerTest {
     void shouldMakeTheCorrectCallToTheTicfCriForAuthenticated(boolean userIsAuthenticated)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
-                basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,
@@ -126,12 +125,11 @@ class TicfCriHandlerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(AuthSessionItem.AccountState.class)
-    void shouldMakeTheCorrectCallToTheTicfCriForInitialRegistration(
-            AuthSessionItem.AccountState accountState)
+    @EnumSource(AccountState.class)
+    void shouldMakeTheCorrectCallToTheTicfCriForInitialRegistration(AccountState accountState)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
-                basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,
@@ -147,9 +145,7 @@ class TicfCriHandlerTest {
                         jsonArrayFrom(VECTORS_OF_TRUST),
                         JOURNEY_ID,
                         "Y",
-                        accountState == AuthSessionItem.AccountState.NEW
-                                ? ",\"initial_registration\":\"Y\""
-                                : "");
+                        accountState == AccountState.NEW ? ",\"initial_registration\":\"Y\"" : "");
 
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -170,11 +166,11 @@ class TicfCriHandlerTest {
     @MethodSource("resetPassword")
     void shouldMakeTheCorrectCallToTheTicfCriForResetPassword(
             boolean authenticated,
-            AuthSessionItem.ResetPasswordState resetPasswordState,
+            ResetPasswordState resetPasswordState,
             boolean expectPasswordReset)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
-                basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,
@@ -209,22 +205,20 @@ class TicfCriHandlerTest {
 
     private static List<Arguments> resetPassword() {
         return List.of(
-                Arguments.of(false, AuthSessionItem.ResetPasswordState.NONE, false),
-                Arguments.of(true, AuthSessionItem.ResetPasswordState.NONE, false),
-                Arguments.of(false, AuthSessionItem.ResetPasswordState.ATTEMPTED, true),
-                Arguments.of(true, AuthSessionItem.ResetPasswordState.ATTEMPTED, false),
-                Arguments.of(true, AuthSessionItem.ResetPasswordState.SUCCEEDED, true));
+                Arguments.of(false, ResetPasswordState.NONE, false),
+                Arguments.of(true, ResetPasswordState.NONE, false),
+                Arguments.of(false, ResetPasswordState.ATTEMPTED, true),
+                Arguments.of(true, ResetPasswordState.ATTEMPTED, false),
+                Arguments.of(true, ResetPasswordState.SUCCEEDED, true));
     }
 
     @ParameterizedTest
     @MethodSource("resetMfa")
     void shouldMakeTheCorrectCallToTheTicfCriForResetMfa(
-            boolean authenticated,
-            AuthSessionItem.ResetMfaState resetMfaState,
-            boolean expectMfaReset)
+            boolean authenticated, ResetMfaState resetMfaState, boolean expectMfaReset)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
-                basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,
@@ -259,12 +253,12 @@ class TicfCriHandlerTest {
 
     private static List<Arguments> resetMfa() {
         return List.of(
-                Arguments.of(false, AuthSessionItem.ResetMfaState.NONE, false),
-                Arguments.of(true, AuthSessionItem.ResetMfaState.NONE, false),
-                Arguments.of(false, AuthSessionItem.ResetMfaState.ATTEMPTED, true),
-                Arguments.of(true, AuthSessionItem.ResetMfaState.ATTEMPTED, false),
-                Arguments.of(false, AuthSessionItem.ResetMfaState.SUCCEEDED, true),
-                Arguments.of(true, AuthSessionItem.ResetMfaState.SUCCEEDED, true));
+                Arguments.of(false, ResetMfaState.NONE, false),
+                Arguments.of(true, ResetMfaState.NONE, false),
+                Arguments.of(false, ResetMfaState.ATTEMPTED, true),
+                Arguments.of(true, ResetMfaState.ATTEMPTED, false),
+                Arguments.of(false, ResetMfaState.SUCCEEDED, true),
+                Arguments.of(true, ResetMfaState.SUCCEEDED, true));
     }
 
     @ParameterizedTest
@@ -273,7 +267,7 @@ class TicfCriHandlerTest {
             MFAMethodType usedMfaMethodType, String expectedMfaMethodType)
             throws IOException, InterruptedException, ExecutionException {
         var ticfRequest =
-                basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,
@@ -320,7 +314,7 @@ class TicfCriHandlerTest {
     void sendsMetricsAndLogsBasedOnTheHttpStatusCode(Integer statusCode, Level expectedLogLevel)
             throws IOException, InterruptedException {
         var ticfRequest =
-                basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,
@@ -364,7 +358,7 @@ class TicfCriHandlerTest {
         when(httpClient.send(any(), any())).thenThrow(e);
 
         handler.handleRequest(
-                basicTicfCriRequest(
+                new InternalTICFCRIRequest(
                         COMMON_SUBJECTID,
                         VECTORS_OF_TRUST,
                         JOURNEY_ID,

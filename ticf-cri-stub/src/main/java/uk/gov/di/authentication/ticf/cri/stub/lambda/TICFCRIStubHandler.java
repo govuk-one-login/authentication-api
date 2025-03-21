@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import uk.gov.di.authentication.entity.TICFCRIRequest;
+import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.ticf.cri.stub.lambda.entity.TICFCRIStubResponse;
@@ -22,7 +22,7 @@ public class TICFCRIStubHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         try {
-            var request = objectMapper.readValue(input.getBody(), TICFCRIRequest.class);
+            var request = objectMapper.readValue(input.getBody(), InternalTICFCRIRequest.class);
         } catch (Json.JsonException e) {
             throw new RuntimeException(e);
         }
