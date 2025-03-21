@@ -19,21 +19,26 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
+import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class NoSessionOrchestrationService {
 
     private static final Logger LOG = LogManager.getLogger(NoSessionOrchestrationService.class);
     private final RedisConnectionService redisConnectionService;
     private final ClientSessionService clientSessionService;
+    private final OrchClientSessionService orchClientSessionService;
     private final ConfigurationService configurationService;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public NoSessionOrchestrationService(
             RedisConnectionService redisConnectionService,
             ClientSessionService clientSessionService,
+            OrchClientSessionService orchClientSessionService,
             ConfigurationService configurationService) {
         this.redisConnectionService = redisConnectionService;
         this.clientSessionService = clientSessionService;
+        this.orchClientSessionService = orchClientSessionService;
         this.configurationService = configurationService;
     }
 
@@ -41,12 +46,17 @@ public class NoSessionOrchestrationService {
         this(
                 new RedisConnectionService(configurationService),
                 new ClientSessionService(configurationService),
+                new OrchClientSessionService(configurationService),
                 configurationService);
     }
 
     public NoSessionOrchestrationService(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        this(redis, new ClientSessionService(configurationService, redis), configurationService);
+        this(
+                redis,
+                new ClientSessionService(configurationService, redis),
+                new OrchClientSessionService(configurationService),
+                configurationService);
     }
 
     public NoSessionEntity generateNoSessionOrchestrationEntity(
@@ -70,6 +80,13 @@ public class NoSessionOrchestrationService {
                                     () ->
                                             new NoSessionException(
                                                     "No client session found with given client sessionId"));
+            var orchClientSessionOpt =
+                    getOrchClientSessionWithRetryIfNotEqual(
+                            clientSession, clientSessionId, orchClientSessionService);
+            logIfClientSessionsAreNotEqual(clientSession, orchClientSessionOpt.orElse(null));
+            if (orchClientSessionOpt.isEmpty()) {
+                LOG.warn("No orch client session found with given client session id");
+            }
 
             LOG.info("ClientSession found using clientSessionId");
 

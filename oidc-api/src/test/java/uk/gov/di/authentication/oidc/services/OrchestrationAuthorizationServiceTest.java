@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
@@ -91,6 +92,8 @@ class OrchestrationAuthorizationServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
     private PrivateKey privateKey;
 
     @RegisterExtension
@@ -105,7 +108,8 @@ class OrchestrationAuthorizationServiceTest {
                         dynamoClientService,
                         ipvCapacityService,
                         kmsConnectionService,
-                        redisConnectionService);
+                        redisConnectionService,
+                        noSessionOrchestrationService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
@@ -295,6 +299,8 @@ class OrchestrationAuthorizationServiceTest {
 
         verify(redisConnectionService)
                 .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);
+        verify(noSessionOrchestrationService)
+                .storeClientSessionIdAgainstState(clientSessionId, state);
     }
 
     @ParameterizedTest
