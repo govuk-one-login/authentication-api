@@ -7,7 +7,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,17 +19,9 @@ public class AuthCodeResponseGenerationService {
     private static final Logger LOG = LogManager.getLogger(AuthCodeResponseGenerationService.class);
 
     private final ConfigurationService configurationService;
-    private final DynamoService dynamoService;
-
-    public AuthCodeResponseGenerationService(
-            ConfigurationService configurationService, DynamoService dynamoService) {
-        this.configurationService = configurationService;
-        this.dynamoService = dynamoService;
-    }
 
     public AuthCodeResponseGenerationService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        dynamoService = new DynamoService(configurationService);
     }
 
     public AuthCodeResponseGenerationService() {
@@ -77,19 +68,6 @@ public class AuthCodeResponseGenerationService {
         dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
         dimensions.put(
                 "RequestedLevelOfConfidence", orchClientSession.getVtrLocsAsCommaSeparatedString());
-    }
-
-    public String getSubjectId(Session session) throws UserNotFoundException {
-        var userProfile =
-                dynamoService
-                        .getUserProfileByEmailMaybe(session.getEmailAddress())
-                        .orElseThrow(
-                                () ->
-                                        new UserNotFoundException(
-                                                "Unable to find user with given email address"));
-        return Objects.isNull(session.getEmailAddress())
-                ? AuditService.UNKNOWN
-                : userProfile.getSubjectID();
     }
 
     public void saveSession(
