@@ -6,8 +6,8 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
 import java.util.Map;
@@ -19,25 +19,20 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class NoSessionOrchestrationService {
 
     private static final Logger LOG = LogManager.getLogger(NoSessionOrchestrationService.class);
     private final RedisConnectionService redisConnectionService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final ConfigurationService configurationService;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public NoSessionOrchestrationService(
             RedisConnectionService redisConnectionService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             ConfigurationService configurationService) {
         this.redisConnectionService = redisConnectionService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.configurationService = configurationService;
     }
@@ -45,18 +40,13 @@ public class NoSessionOrchestrationService {
     public NoSessionOrchestrationService(ConfigurationService configurationService) {
         this(
                 new RedisConnectionService(configurationService),
-                new ClientSessionService(configurationService),
                 new OrchClientSessionService(configurationService),
                 configurationService);
     }
 
     public NoSessionOrchestrationService(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        this(
-                redis,
-                new ClientSessionService(configurationService, redis),
-                new OrchClientSessionService(configurationService),
-                configurationService);
+        this(redis, new OrchClientSessionService(configurationService), configurationService);
     }
 
     public NoSessionEntity generateNoSessionOrchestrationEntity(
@@ -73,26 +63,19 @@ public class NoSessionOrchestrationService {
             LOG.info("ClientSessionID found using state");
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var clientSession =
-                    clientSessionService
+            var orchClientSession =
+                    orchClientSessionService
                             .getClientSession(clientSessionId)
                             .orElseThrow(
                                     () ->
                                             new NoSessionException(
                                                     "No client session found with given client sessionId"));
-            var orchClientSessionOpt =
-                    getOrchClientSessionWithRetryIfNotEqual(
-                            clientSession, clientSessionId, orchClientSessionService);
-            logIfClientSessionsAreNotEqual(clientSession, orchClientSessionOpt.orElse(null));
-            if (orchClientSessionOpt.isEmpty()) {
-                LOG.warn("No orch client session found with given client session id");
-            }
 
             LOG.info("ClientSession found using clientSessionId");
 
             try {
-                attachLogFieldToLogs(CLIENT_NAME, clientSession.getClientName());
-                attachLogFieldToLogs(CLIENT_ID, clientIdFromClientSession(clientSession));
+                attachLogFieldToLogs(CLIENT_NAME, orchClientSession.getClientName());
+                attachLogFieldToLogs(CLIENT_ID, clientIdFromClientSession(orchClientSession));
             } catch (Exception e) {
                 LOG.warn("Failed to attach client details to logs");
             }
@@ -103,7 +86,7 @@ public class NoSessionOrchestrationService {
                             "Access denied for security reasons, a new authentication request may be successful");
             LOG.info(
                     "ErrorObject created for session cookie not present. Generating NoSessionEntity in preparation for response to RP");
-            return new NoSessionEntity(clientSessionId, errorObject, clientSession);
+            return new NoSessionEntity(clientSessionId, errorObject, orchClientSession);
         } else {
             LOG.warn(
                     "Session Cookie not present and access_denied or state param missing from error response");
@@ -113,7 +96,7 @@ public class NoSessionOrchestrationService {
     }
 
     @NotNull
-    private static String clientIdFromClientSession(ClientSession clientSession) {
+    private static String clientIdFromClientSession(OrchClientSessionItem clientSession) {
         return clientSession.getAuthRequestParams().get("client_id").stream()
                 .findFirst()
                 .orElse("unknown");

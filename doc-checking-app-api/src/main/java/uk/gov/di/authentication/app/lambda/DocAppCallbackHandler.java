@@ -198,10 +198,7 @@ public class DocAppCallbackHandler
                         TxmaAuditUser.user()
                                 .withGovukSigninJourneyId(noSessionEntity.getClientSessionId())
                                 .withUserId(
-                                        noSessionEntity
-                                                .getClientSession()
-                                                .getDocAppSubjectId()
-                                                .getValue()));
+                                        noSessionEntity.getClientSession().getDocAppSubjectId()));
             }
             var sessionId = sessionCookiesIds.getSessionId();
             var clientSessionId = sessionCookiesIds.getClientSessionId();
