@@ -142,8 +142,7 @@ class LogoutHandlerTest {
         var expectedDestroySessionsRequest =
                 new DestroySessionsRequest(
                         SESSION_ID,
-                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"),
-                        EMAIL);
+                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"));
         TxmaAuditUser expectedAuditUser =
                 TxmaAuditUser.user()
                         .withIpAddress(SOURCE_IP)
@@ -217,8 +216,7 @@ class LogoutHandlerTest {
                                 CLIENT_SESSION_ID,
                                 "client-session-id-2",
                                 "client-session-id-3",
-                                "expired-client-session-id"),
-                        EMAIL);
+                                "expired-client-session-id"));
         TxmaAuditUser expectedAuditUser =
                 TxmaAuditUser.user()
                         .withIpAddress(SOURCE_IP)

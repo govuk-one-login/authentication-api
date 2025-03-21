@@ -470,11 +470,7 @@ class AuthenticationCallbackHandlerTest {
 
         verify(logoutService, times(1))
                 .handleReauthenticationFailureLogout(
-                        eq(
-                                new DestroySessionsRequest(
-                                        SESSION_ID,
-                                        List.of(CLIENT_SESSION_ID),
-                                        TEST_EMAIL_ADDRESS)),
+                        eq(new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID))),
                         eq(null),
                         eq(event),
                         eq(CLIENT_ID.toString()),
@@ -839,8 +835,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                new DestroySessionsRequest(
-                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
@@ -858,8 +853,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                new DestroySessionsRequest(
-                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
@@ -877,8 +871,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                new DestroySessionsRequest(
-                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
@@ -917,8 +910,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                new DestroySessionsRequest(
-                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.getValue(),
@@ -975,8 +967,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                new DestroySessionsRequest(
-                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.getValue(),
@@ -1028,8 +1019,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                new DestroySessionsRequest(
-                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
@@ -1079,8 +1069,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                new DestroySessionsRequest(
-                                        SESSION_ID, List.of(CLIENT_SESSION_ID), TEST_EMAIL_ADDRESS),
+                                new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
                                 TEST_INTERNAL_COMMON_SUBJECT_ID,
                                 event,
                                 CLIENT_ID.toString(),
@@ -1252,9 +1241,7 @@ class AuthenticationCallbackHandlerTest {
                     .handleMaxAgeLogout(
                             eq(
                                     new DestroySessionsRequest(
-                                            PREVIOUS_SESSION_ID,
-                                            PREVIOUS_CLIENT_SESSIONS,
-                                            TEST_EMAIL_ADDRESS)),
+                                            PREVIOUS_SESSION_ID, PREVIOUS_CLIENT_SESSIONS)),
                             eq(previousOrchSession),
                             any(TxmaAuditUser.class));
         }

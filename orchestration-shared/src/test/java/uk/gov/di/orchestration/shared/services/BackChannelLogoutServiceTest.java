@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 
 class BackChannelLogoutServiceTest {
 
@@ -23,15 +24,22 @@ class BackChannelLogoutServiceTest {
     private final BackChannelLogoutService service =
             new BackChannelLogoutService(sqs, authenticationService);
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String RP_SECTOR_HOST = "example.sign-in.service.gov.uk";
+    private static final String SUBJECT_ID = "subject";
+    private static String rpPairwiseId;
 
     @Test
     void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() {
-        var user = new UserProfile().withPublicSubjectID("public").withSubjectID("subject");
+        var user = new UserProfile().withPublicSubjectID("public").withSubjectID(SUBJECT_ID);
 
         Mockito.when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
                 .thenReturn(Optional.of(user));
         Mockito.when(authenticationService.getOrGenerateSalt(user))
                 .thenReturn("salt".getBytes(StandardCharsets.UTF_8));
+
+        rpPairwiseId =
+                calculatePairwiseIdentifier(
+                        SUBJECT_ID, RP_SECTOR_HOST, authenticationService.getOrGenerateSalt(user));
 
         service.sendLogoutMessage(
                 new ClientRegistry()
@@ -39,8 +47,7 @@ class BackChannelLogoutServiceTest {
                         .withSubjectType("pairwise")
                         .withSectorIdentifierUri("https://example.sign-in.service.gov.uk")
                         .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
-                "test@test.com",
-                INTERNAL_SECTOR_URI);
+                rpPairwiseId);
 
         var captor = ArgumentCaptor.forClass(BackChannelLogoutMessage.class);
 
@@ -64,8 +71,7 @@ class BackChannelLogoutServiceTest {
         Stream.of(noLogoutUri, noClientId, neitherField)
                 .forEach(
                         clientRegistry ->
-                                service.sendLogoutMessage(
-                                        clientRegistry, null, INTERNAL_SECTOR_URI));
+                                service.sendLogoutMessage(clientRegistry, "dummy-rpPairwiseId"));
 
         Mockito.verify(sqs, Mockito.never()).send(ArgumentMatchers.anyString());
     }
@@ -79,8 +85,7 @@ class BackChannelLogoutServiceTest {
                 new ClientRegistry()
                         .withClientID("client-id")
                         .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
-                "test@test.com",
-                INTERNAL_SECTOR_URI);
+                "dummy-rpPairwiseId");
 
         Mockito.verify(sqs, Mockito.never()).send(ArgumentMatchers.anyString());
     }
