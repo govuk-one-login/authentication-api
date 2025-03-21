@@ -7,7 +7,6 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -76,19 +75,6 @@ public class AuthCodeResponseGenerationService {
         dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
         dimensions.put(
                 "RequestedLevelOfConfidence", clientSession.getVtrLocsAsCommaSeparatedString());
-    }
-
-    public String getSubjectId(Session session) throws UserNotFoundException {
-        var userProfile =
-                dynamoService
-                        .getUserProfileByEmailMaybe(session.getEmailAddress())
-                        .orElseThrow(
-                                () ->
-                                        new UserNotFoundException(
-                                                "Unable to find user with given email address"));
-        return Objects.isNull(session.getEmailAddress())
-                ? AuditService.UNKNOWN
-                : userProfile.getSubjectID();
     }
 
     public void saveSession(
