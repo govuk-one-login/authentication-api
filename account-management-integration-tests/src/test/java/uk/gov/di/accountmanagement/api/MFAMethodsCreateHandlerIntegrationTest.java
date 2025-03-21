@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
@@ -36,7 +37,9 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_PHONE_NUMBER = "07123123123";
     private static final String TEST_PHONE_NUMBER_TWO = "07987987987";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static String TEST_PUBLIC_SUBJECT;
+    private static String TEST_INTERNAL_SUBJECT;
     private static final MFAMethod defaultPrioritySms =
             MFAMethod.smsMfaMethod(
                     true,
@@ -73,6 +76,12 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
         TEST_PUBLIC_SUBJECT =
                 userStore.getUserProfileFromEmail(TEST_EMAIL).get().getPublicSubjectID();
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        TEST_INTERNAL_SUBJECT =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        userStore.getUserProfileFromEmail(TEST_EMAIL).get().getSubjectID(),
+                        INTERNAL_SECTOR_HOST,
+                        salt);
     }
 
     @Test
@@ -86,7 +95,9 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                         new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                        Map.of("principalId", TEST_INTERNAL_SUBJECT));
+
         assertEquals(200, response.getStatusCode());
 
         List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
@@ -130,7 +141,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                                 MFAMethodType.AUTH_APP, TEST_CREDENTIAL))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                        Map.of("principalId", TEST_INTERNAL_SUBJECT));
         assertEquals(200, response.getStatusCode());
 
         List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
@@ -188,7 +200,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", "incorrect-public-subject-id"),
-                        Collections.emptyMap());
+                        Map.of("principalId", TEST_INTERNAL_SUBJECT));
         assertEquals(404, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
     }
@@ -209,7 +221,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
-                        Collections.emptyMap());
+                        Map.of("principalId", TEST_INTERNAL_SUBJECT));
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
     }
@@ -228,7 +240,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
-                        Collections.emptyMap());
+                        Map.of("principalId", TEST_INTERNAL_SUBJECT));
 
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1068));
@@ -247,7 +259,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
-                        Collections.emptyMap());
+                        Map.of("principalId", TEST_INTERNAL_SUBJECT));
 
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1069));
@@ -268,10 +280,29 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
-                        Collections.emptyMap());
+                        Map.of("principalId", TEST_INTERNAL_SUBJECT));
 
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1070));
+    }
+
+    @Test
+    void shouldReturn404WhenPrincipalIsInvalid() {
+        var response =
+                makeRequest(
+                        Optional.of(
+                                constructRequestBody(
+                                        PriorityIdentifier.BACKUP,
+                                        new AuthAppMfaDetail(
+                                                MFAMethodType.AUTH_APP,
+                                                "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                        Map.of("principalId", "invalid"));
+
+        assertEquals(404, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1071));
     }
 
     private static String constructRequestBody(
