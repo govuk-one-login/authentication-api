@@ -138,9 +138,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userProfile.getSubjectID(),
                             URI.create(configurationService.getInternalSectorURI()),
                             authenticationService.getOrGenerateSalt(userProfile));
-            int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
-            // ATO-1514: Introducing this unused var, we will swap usages over to it in a future PR
-            int orchSessionProcessingIdentityAttempts =
+            // ATO-1514: Introducing this unused var, we will remove it in a future PR
+            int sharedSessionProcessingIdentityAttempts =
+                    userContext.getSession().incrementProcessingIdentityAttempts();
+            int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
             // ATO-1514: Temporary logging to check the values are in sync.
             logProcessingIdentityAttempts(userContext.getSession(), userContext.getOrchSession());
@@ -152,7 +153,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     dynamoIdentityService.getIdentityCredentials(userContext.getClientSessionId());
             var processingStatus = ProcessingIdentityStatus.PROCESSING;
             if (identityCredentials.isEmpty()
-                    && userContext.getSession().getProcessingIdentityAttempts() == 1) {
+                    && userContext.getOrchSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = ProcessingIdentityStatus.NO_ENTRY;
                 userContext.getSession().resetProcessingIdentityAttempts();
                 userContext.getOrchSession().resetProcessingIdentityAttempts();
