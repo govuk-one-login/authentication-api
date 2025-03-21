@@ -54,7 +54,6 @@ import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -120,7 +119,6 @@ class AuthCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -188,8 +186,7 @@ class AuthCodeHandlerTest {
                         orchClientSessionService,
                         auditService,
                         cloudwatchMetricsService,
-                        configurationService,
-                        dynamoService);
+                        configurationService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);

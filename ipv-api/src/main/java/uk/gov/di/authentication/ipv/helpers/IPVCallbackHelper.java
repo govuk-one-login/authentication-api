@@ -35,7 +35,6 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -63,7 +62,6 @@ public class IPVCallbackHelper {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoClientService dynamoClientService;
     private final DynamoIdentityService dynamoIdentityService;
-    private final DynamoService dynamoService;
     private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
     private final OidcAPI oidcAPI;
@@ -75,7 +73,6 @@ public class IPVCallbackHelper {
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sessionService = new SessionService(configurationService);
         this.sqsClient =
@@ -83,8 +80,7 @@ public class IPVCallbackHelper {
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
                         configurationService.getSqsEndpointURI());
-        this.authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -98,7 +94,6 @@ public class IPVCallbackHelper {
                         configurationService, redis, SerializationService.getInstance());
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sessionService = new SessionService(configurationService, redis);
         this.sqsClient =
@@ -106,8 +101,7 @@ public class IPVCallbackHelper {
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
                         configurationService.getSqsEndpointURI());
-        this.authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -119,7 +113,6 @@ public class IPVCallbackHelper {
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoClientService dynamoClientService,
             DynamoIdentityService dynamoIdentityService,
-            DynamoService dynamoService,
             SerializationService objectMapper,
             SessionService sessionService,
             AwsSqsClient sqsClient,
@@ -131,7 +124,6 @@ public class IPVCallbackHelper {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.dynamoClientService = dynamoClientService;
         this.dynamoIdentityService = dynamoIdentityService;
-        this.dynamoService = dynamoService;
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.sqsClient = sqsClient;
