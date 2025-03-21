@@ -126,7 +126,7 @@ public class AuthoriseAccessTokenHandler
             return new AuthPolicy(
                     subject, getAllowAllPolicy(region, awsAccountId, restApiId, stage), context);
         } catch (ParseException | java.text.ParseException e) {
-            LOG.warn("Unable to parse Access Token");
+            LOG.warn("Unable to parse Access Token {}", e.getMessage());
             throw new RuntimeException("Unauthorized");
         }
     }
