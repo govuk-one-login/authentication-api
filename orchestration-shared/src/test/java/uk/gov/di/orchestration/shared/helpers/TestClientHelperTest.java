@@ -1,32 +1,21 @@
 package uk.gov.di.orchestration.shared.helpers;
 
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.state.UserContext;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.everyItem;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class TestClientHelperTest {
 
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final List<String> ALLOWLIST =
             List.of(
                     "testclient.user1@digital.cabinet-office.gov.uk",
@@ -38,47 +27,6 @@ class TestClientHelperTest {
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(TestClientHelper.class);
-
-    @Test
-    void shouldReturnTrueIfTestClientWithAllowedEmailAddress() throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-
-        var userContext = buildUserContext(true, Collections.singletonList(TEST_EMAIL_ADDRESS));
-
-        assertTrue(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
-
-    @Test
-    void shouldReturnFalseIfTestClientsAreDisabled() throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(false);
-
-        var userContext = buildUserContext(true, Collections.singletonList(TEST_EMAIL_ADDRESS));
-
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
-
-    @Test
-    void shouldReturnFalseIfClientIsNotATestClient() throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-
-        var userContext = buildUserContext(false, Collections.singletonList(TEST_EMAIL_ADDRESS));
-
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
-
-    @Test
-    void shouldReturnFalseIfClientDoesNotContainEmailAddressInAllowList()
-            throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-
-        var userContext = buildUserContext(true, Collections.singletonList("test@wrong-email.com"));
-
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
 
     @ParameterizedTest
     @ValueSource(
@@ -126,19 +74,5 @@ class TestClientHelperTest {
     void emailShouldNotMatchRegexAllowlistWhenEmailIsNull() {
         assertFalse(TestClientHelper.emailMatchesAllowlist(null, List.of("^$", "[", "*")));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
-    }
-
-    private UserContext buildUserContext(boolean isTestClient, List<String> allowedEmails) {
-        var clientRegistry =
-                new ClientRegistry()
-                        .withClientID(new ClientID().getValue())
-                        .withClientName("some-client")
-                        .withTestClient(isTestClient)
-                        .withTestClientEmailAllowlist(allowedEmails);
-        var sessionId = IdGenerator.generate();
-        return UserContext.builder(new Session().setEmailAddress(TEST_EMAIL_ADDRESS))
-                .withSessionId(sessionId)
-                .withClient(clientRegistry)
-                .build();
     }
 }
