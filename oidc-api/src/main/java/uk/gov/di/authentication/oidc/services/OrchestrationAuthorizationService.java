@@ -70,14 +70,14 @@ public class OrchestrationAuthorizationService {
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService,
             KmsConnectionService kmsConnectionService,
-            RedisConnectionService redisConnectionService) {
+            RedisConnectionService redisConnectionService,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
         this.ipvCapacityService = ipvCapacityService;
         this.kmsConnectionService = kmsConnectionService;
         this.redisConnectionService = redisConnectionService;
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redisConnectionService);
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     public OrchestrationAuthorizationService(ConfigurationService configurationService) {
@@ -86,7 +86,8 @@ public class OrchestrationAuthorizationService {
                 new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService),
                 new KmsConnectionService(configurationService),
-                new RedisConnectionService(configurationService));
+                new RedisConnectionService(configurationService),
+                new NoSessionOrchestrationService(configurationService));
     }
 
     public OrchestrationAuthorizationService(
@@ -96,7 +97,8 @@ public class OrchestrationAuthorizationService {
                 new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService),
                 new KmsConnectionService(configurationService),
-                redis);
+                redis,
+                new NoSessionOrchestrationService(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
