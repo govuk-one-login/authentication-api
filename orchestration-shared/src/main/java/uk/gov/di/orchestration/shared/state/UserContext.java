@@ -1,7 +1,6 @@
 package uk.gov.di.orchestration.shared.state;
 
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -18,7 +17,6 @@ public class UserContext {
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
-    private final ClientSession clientSession;
     private final OrchClientSessionItem orchClientSession;
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
@@ -31,7 +29,6 @@ public class UserContext {
             Optional<UserCredentials> userCredentials,
             boolean userAuthenticated,
             Optional<ClientRegistry> client,
-            ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
             SupportedLanguage userLanguage,
             String clientSessionId,
@@ -42,7 +39,6 @@ public class UserContext {
         this.userCredentials = userCredentials;
         this.userAuthenticated = userAuthenticated;
         this.client = client;
-        this.clientSession = clientSession;
         this.orchClientSession = orchClientSession;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
@@ -81,10 +77,6 @@ public class UserContext {
         return getClient().map(ClientRegistry::getClientName).orElse("");
     }
 
-    public ClientSession getClientSession() {
-        return clientSession;
-    }
-
     public OrchClientSessionItem getOrchClientSession() {
         return orchClientSession;
     }
@@ -112,7 +104,6 @@ public class UserContext {
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
-        private ClientSession clientSession = null;
         private OrchClientSessionItem orchClientSession;
         private SupportedLanguage userLanguage;
         private String clientSessionId;
@@ -155,11 +146,6 @@ public class UserContext {
             return this;
         }
 
-        public Builder withClientSession(ClientSession clientSession) {
-            this.clientSession = clientSession;
-            return this;
-        }
-
         public Builder withOrchClientSession(OrchClientSessionItem orchClientSession) {
             this.orchClientSession = orchClientSession;
             return this;
@@ -188,7 +174,6 @@ public class UserContext {
                     userCredentials,
                     userAuthenticated,
                     client,
-                    clientSession,
                     orchClientSession,
                     userLanguage,
                     clientSessionId,
