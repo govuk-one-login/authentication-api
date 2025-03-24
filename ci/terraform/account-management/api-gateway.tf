@@ -180,7 +180,7 @@ resource "aws_api_gateway_stage" "stage" {
     var.fms_enabled ?
     {
       "FMSRegionalPolicy" = "false"
-      "CustomPolicy"      = "accountmanagement"
+      "CustomPolicy"      = var.am_api_fms_tag_value
     } : {}
   )
 }

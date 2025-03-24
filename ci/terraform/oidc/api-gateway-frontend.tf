@@ -223,7 +223,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     var.fms_enabled ?
     {
       "FMSRegionalPolicy" = "false"
-      "CustomPolicy"      = "authenticationfrontend"
+      "CustomPolicy"      = var.frontend_api_fms_tag_value
     } : {}
   )
 }

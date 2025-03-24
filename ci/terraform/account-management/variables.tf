@@ -220,3 +220,9 @@ variable "home_vpc_endpoint_id" {
   type        = string
   default     = ""
 }
+
+variable "am_api_fms_tag_value" {
+  description = "The value of the FMS tag to be applied to the account management API Gateway"
+  type        = string
+  default     = "accountmanagement"
+}

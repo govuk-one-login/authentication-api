@@ -76,7 +76,7 @@ module "account-management-method_management_gateway" {
     var.fms_enabled ?
     {
       "FMSRegionalPolicy" = "false"
-      "CustomPolicy"      = "accountmanagement"
+      "CustomPolicy"      = var.am_api_fms_tag_value
     } : {}
   )
 
