@@ -1,7 +1,7 @@
 package uk.gov.di.orchestration.shared.state;
 
 import org.jetbrains.annotations.Nullable;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 
@@ -9,7 +9,7 @@ public class OrchestrationUserSession {
     private final Session session;
     private final String sessionId;
     @Nullable private final String clientId;
-    @Nullable private final ClientSession clientSession;
+    @Nullable private final OrchClientSessionItem orchClientSession;
     private final String clientSessionId;
     private final OrchSessionItem orchSessionItem;
 
@@ -17,13 +17,13 @@ public class OrchestrationUserSession {
             Session session,
             String sessionId,
             @Nullable String clientId,
-            @Nullable ClientSession clientSession,
+            @Nullable OrchClientSessionItem orchClientSession,
             String clientSessionId,
             OrchSessionItem orchSession) {
         this.session = session;
         this.sessionId = sessionId;
         this.clientId = clientId;
-        this.clientSession = clientSession;
+        this.orchClientSession = orchClientSession;
         this.clientSessionId = clientSessionId;
         this.orchSessionItem = orchSession;
     }
@@ -40,8 +40,8 @@ public class OrchestrationUserSession {
         return clientId;
     }
 
-    public @Nullable ClientSession getClientSession() {
-        return clientSession;
+    public @Nullable OrchClientSessionItem getOrchClientSession() {
+        return orchClientSession;
     }
 
     public String getClientSessionId() {
@@ -57,10 +57,10 @@ public class OrchestrationUserSession {
     }
 
     public static class Builder {
-        private Session session;
+        private final Session session;
         private String sessionId;
         private String clientId;
-        private ClientSession clientSession;
+        private OrchClientSessionItem orchClientSession;
         private String clientSessionId;
         private OrchSessionItem orchSession;
 
@@ -78,8 +78,8 @@ public class OrchestrationUserSession {
             return this;
         }
 
-        public Builder withClientSession(ClientSession clientSession) {
-            this.clientSession = clientSession;
+        public Builder withOrchClientSession(OrchClientSessionItem orchClientSession) {
+            this.orchClientSession = orchClientSession;
             return this;
         }
 
@@ -95,7 +95,7 @@ public class OrchestrationUserSession {
 
         public OrchestrationUserSession build() {
             return new OrchestrationUserSession(
-                    session, sessionId, clientId, clientSession, clientSessionId, orchSession);
+                    session, sessionId, clientId, orchClientSession, clientSessionId, orchSession);
         }
     }
 }

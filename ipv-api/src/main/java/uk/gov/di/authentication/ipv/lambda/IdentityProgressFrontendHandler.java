@@ -17,7 +17,6 @@ import uk.gov.di.orchestration.shared.lambda.BaseOrchestrationFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
@@ -63,15 +62,9 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             CloudwatchMetricsService cloudwatchMetricsService,
             SessionService sessionService,
             AuthenticationUserInfoStorageService userInfoStorageService,
-            ClientSessionService clientSessionService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
-        super(
-                configurationService,
-                sessionService,
-                clientSessionService,
-                orchSessionService,
-                orchClientSessionService);
+        super(configurationService, sessionService, orchSessionService, orchClientSessionService);
         this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -96,13 +89,13 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
 
             AuthenticationRequest authenticationRequest;
             try {
-                if (Objects.isNull(userSession.getClientSession())) {
+                if (Objects.isNull(userSession.getOrchClientSession())) {
                     LOG.info("ClientSession not found");
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
                 }
                 authenticationRequest =
                         AuthenticationRequest.parse(
-                                userSession.getClientSession().getAuthRequestParams());
+                                userSession.getOrchClientSession().getAuthRequestParams());
             } catch (ParseException e) {
                 LOG.warn("Authentication request could not be parsed", e);
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
@@ -184,7 +177,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                     200,
                     new IdentityProgressResponse(
                             processingStatus,
-                            userSession.getClientSession().getClientName(),
+                            userSession.getOrchClientSession().getClientName(),
                             authenticationRequest.getRedirectionURI(),
                             authenticationRequest.getState()));
         } catch (Json.JsonException e) {
