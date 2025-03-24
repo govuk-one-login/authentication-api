@@ -89,7 +89,6 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
             throws IOException, InterruptedException {
         var externalRequest = ExternalTICFCRIRequest.fromInternalRequest(internalTICFCRIRequest);
         var body = serialisationService.writeValueAsStringNoNulls(externalRequest);
-        LOG.info("Serialized request to TICF CRI: {}", body);
         var timeoutInMilliseconds =
                 Duration.ofMillis(configurationService.getTicfCriServiceCallTimeout());
         var request =
