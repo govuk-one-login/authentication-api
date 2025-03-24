@@ -595,7 +595,10 @@ public class AuthorisationHandler
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
-                        state, clientSession.getDocAppSubjectId(), client, clientSessionId);
+                        state,
+                        clientSession.getDocAppSubjectId().getValue(),
+                        client,
+                        clientSessionId);
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
