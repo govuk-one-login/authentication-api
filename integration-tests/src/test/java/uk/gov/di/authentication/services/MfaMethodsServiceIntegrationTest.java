@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -14,13 +15,14 @@ import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.List;
@@ -218,8 +220,9 @@ class MfaMethodsServiceIntegrationTest {
                     MfaMethodsServiceIntegrationTest.EMAIL, defaultPriorityAuthApp);
             SmsMfaDetail smsMfaDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
 
-            MfaMethodCreateRequest.MfaMethod mfaMethod =
-                    new MfaMethodCreateRequest.MfaMethod(PriorityIdentifier.BACKUP, smsMfaDetail);
+            MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod =
+                    new MfaMethodCreateOrUpdateRequest.MfaMethod(
+                            PriorityIdentifier.BACKUP, smsMfaDetail);
 
             var result =
                     mfaMethodsService
@@ -250,8 +253,8 @@ class MfaMethodsServiceIntegrationTest {
             AuthAppMfaDetail authAppMfaDetail =
                     new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
 
-            MfaMethodCreateRequest.MfaMethod mfaMethod =
-                    new MfaMethodCreateRequest.MfaMethod(
+            MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod =
+                    new MfaMethodCreateOrUpdateRequest.MfaMethod(
                             PriorityIdentifier.BACKUP, authAppMfaDetail);
 
             var result =
@@ -281,9 +284,9 @@ class MfaMethodsServiceIntegrationTest {
                     MfaMethodsServiceIntegrationTest.EMAIL, true, true, AUTH_APP_CREDENTIAL);
             SmsMfaDetail smsMfaDetail = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
 
-            MfaMethodCreateRequest request =
-                    new MfaMethodCreateRequest(
-                            new MfaMethodCreateRequest.MfaMethod(
+            MfaMethodCreateOrUpdateRequest request =
+                    new MfaMethodCreateOrUpdateRequest(
+                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
                                     PriorityIdentifier.DEFAULT, smsMfaDetail));
 
             var result =
@@ -298,9 +301,9 @@ class MfaMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
-            MfaMethodCreateRequest request =
-                    new MfaMethodCreateRequest(
-                            new MfaMethodCreateRequest.MfaMethod(
+            MfaMethodCreateOrUpdateRequest request =
+                    new MfaMethodCreateOrUpdateRequest(
+                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER)));
 
@@ -317,9 +320,9 @@ class MfaMethodsServiceIntegrationTest {
         void shouldReturnPhoneNumberAlreadyExistsErrorWhenSmsMfaUserAddsBackupWithSameNumber() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
 
-            MfaMethodCreateRequest request =
-                    new MfaMethodCreateRequest(
-                            new MfaMethodCreateRequest.MfaMethod(
+            MfaMethodCreateOrUpdateRequest request =
+                    new MfaMethodCreateOrUpdateRequest(
+                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER)));
 
@@ -334,9 +337,9 @@ class MfaMethodsServiceIntegrationTest {
         void shouldReturnAuthAppAlreadyExistsErrorWhenAuthAppMfaUserAddsSecondAuthAppMfa() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-            MfaMethodCreateRequest request =
-                    new MfaMethodCreateRequest(
-                            new MfaMethodCreateRequest.MfaMethod(
+            MfaMethodCreateOrUpdateRequest request =
+                    new MfaMethodCreateOrUpdateRequest(
+                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new AuthAppMfaDetail(
                                             MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL)));
@@ -346,6 +349,163 @@ class MfaMethodsServiceIntegrationTest {
                             MfaMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
 
             assertEquals(MfaCreateFailureReason.AUTH_APP_EXISTS, result.getLeft());
+        }
+    }
+
+    @Nested
+    class UpdateMfaMethod {
+
+        private static final AuthAppMfaDetail authAppDetail =
+                new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL);
+        private static final SmsMfaDetail smsMfaDetail =
+                new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER);
+
+        @BeforeEach
+        void setUp() {
+            userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+        }
+
+        @Test
+        void returnsAnErrorWhenTheMfaIdentifierIsNotFound() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            var request =
+                    MfaMethodCreateOrUpdateRequest.from(PriorityIdentifier.BACKUP, authAppDetail);
+
+            var result = mfaMethodsService.updateMfaMethod(EMAIL, "some-other-identifier", request);
+
+            assertEquals(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER, result.getLeft());
+
+            var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+            assertEquals(List.of(mfaMethodDataFrom(defaultPriorityAuthApp)), remainingMfaMethods);
+        }
+
+        @Nested
+        class WhenUpdatingADefaultMethod {
+            @Test
+            void returnsSuccessWhenAttemptingToUpdateAnAuthAppCredential() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+                var detailWithUpdatedCredential =
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL_TWO);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT, detailWithUpdatedCredential);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, defaultPriorityAuthApp.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaMethodData.authAppMfaData(
+                                defaultPriorityAuthApp.getMfaIdentifier(),
+                                PriorityIdentifier.DEFAULT,
+                                true,
+                                AUTH_APP_CREDENTIAL_TWO),
+                        result.get());
+
+                // TODO: actually do the database operation, will be implemented in subsequent
+                // commit
+            }
+
+            @Test
+            void returnsSuccessWhenAttemptingToUpdateAnSmsNumber() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+
+                var detailWithUpdatedNumber = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER_TWO);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, defaultPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaMethodData.smsMethodData(
+                                defaultPrioritySms.getMfaIdentifier(),
+                                PriorityIdentifier.DEFAULT,
+                                true,
+                                PHONE_NUMBER_TWO),
+                        result.get());
+
+                // TODO: actually do the database operation, will be implemented in subsequent
+                // commit
+            }
+
+            @Test
+            void returnsAnErrorWhenAttemptingToChangePriorityOfDefaultMethod() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP, authAppDetail);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, defaultPriorityAuthApp.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD,
+                        result.getLeft());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                assertEquals(
+                        List.of(mfaMethodDataFrom(defaultPriorityAuthApp)), remainingMfaMethods);
+            }
+
+            private static Stream<Arguments> existingMethodsAndRequestedUpdates() {
+                return Stream.of(
+                        Arguments.of(defaultPriorityAuthApp, smsMfaDetail),
+                        Arguments.of(defaultPrioritySms, authAppDetail));
+            }
+
+            @ParameterizedTest
+            @MethodSource("existingMethodsAndRequestedUpdates")
+            void returnsAFailureWhenAttemptingToChangeTypeOfExistingDefaultMethod(
+                    MFAMethod existingMethod, MfaDetail requestedUpdate) {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT, requestedUpdate);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, existingMethod.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD, result.getLeft());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
+            }
+
+            private static Stream<Arguments> existingMethodsAndNoChangeUpdates() {
+                return Stream.of(
+                        Arguments.of(defaultPriorityAuthApp, authAppDetail),
+                        Arguments.of(defaultPrioritySms, smsMfaDetail));
+            }
+
+            @ParameterizedTest
+            @MethodSource("existingMethodsAndNoChangeUpdates")
+            void returnsAFailureWhenNoChangeDetected(
+                    MFAMethod existingMethod, MfaDetail requestedUpdate) {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT, requestedUpdate);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, existingMethod.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
+                        result.getLeft());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
+            }
         }
     }
 
