@@ -595,10 +595,7 @@ public class AuthorisationHandler
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
-                        state,
-                        clientSession.getDocAppSubjectId().getValue(),
-                        client,
-                        clientSessionId);
+                        state, orchClientSession.getDocAppSubjectId(), client, clientSessionId);
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
@@ -615,7 +612,7 @@ public class AuthorisationHandler
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                 client.getClientID(),
                 user.withSessionId(newSessionId)
-                        .withUserId(clientSession.getDocAppSubjectId().getValue()));
+                        .withUserId(orchClientSession.getDocAppSubjectId()));
 
         URI authorisationRequestUri = authorisationRequest.toURI();
         LOG.info(

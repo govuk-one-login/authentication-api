@@ -2272,7 +2272,7 @@ class AuthorisationHandlerTest {
             when(configService.getDocAppAuthorisationURI())
                     .thenReturn(URI.create(DOC_APP_REDIRECT_URI));
             encryptedJwt = createEncryptedJWT();
-            when(docAppAuthorisationService.constructRequestJWT(any(), any(), any(), any()))
+            when(docAppAuthorisationService.constructRequestJWT(any(), anyString(), any(), any()))
                     .thenReturn(encryptedJwt);
         }
 
