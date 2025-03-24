@@ -23,7 +23,7 @@ public class DocAppUserHelper {
     private DocAppUserHelper() {}
 
     public static boolean isDocCheckingAppUser(UserContext context) {
-        var authRequestParams = context.getClientSession().getAuthRequestParams();
+        var authRequestParams = context.getOrchClientSession().getAuthRequestParams();
         return isDocCheckingAppUser(authRequestParams, context.getClient());
     }
 

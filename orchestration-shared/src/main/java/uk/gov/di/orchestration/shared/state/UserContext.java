@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.state;
 
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserCredentials;
@@ -18,6 +19,7 @@ public class UserContext {
     private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
     private final ClientSession clientSession;
+    private final OrchClientSessionItem orchClientSession;
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
     private final OrchSessionItem orchSession;
@@ -30,6 +32,7 @@ public class UserContext {
             boolean userAuthenticated,
             Optional<ClientRegistry> client,
             ClientSession clientSession,
+            OrchClientSessionItem orchClientSession,
             SupportedLanguage userLanguage,
             String clientSessionId,
             OrchSessionItem orchSession) {
@@ -40,6 +43,7 @@ public class UserContext {
         this.userAuthenticated = userAuthenticated;
         this.client = client;
         this.clientSession = clientSession;
+        this.orchClientSession = orchClientSession;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
         this.orchSession = orchSession;
@@ -81,6 +85,10 @@ public class UserContext {
         return clientSession;
     }
 
+    public OrchClientSessionItem getOrchClientSession() {
+        return orchClientSession;
+    }
+
     public SupportedLanguage getUserLanguage() {
         return userLanguage;
     }
@@ -98,13 +106,14 @@ public class UserContext {
     }
 
     public static class Builder {
-        private Session session;
+        private final Session session;
         private String sessionId;
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
         private ClientSession clientSession = null;
+        private OrchClientSessionItem orchClientSession;
         private SupportedLanguage userLanguage;
         private String clientSessionId;
         private OrchSessionItem orchSession;
@@ -151,6 +160,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withOrchClientSession(OrchClientSessionItem orchClientSession) {
+            this.orchClientSession = orchClientSession;
+            return this;
+        }
+
         public Builder withUserLanguage(SupportedLanguage userLanguage) {
             this.userLanguage = userLanguage;
             return this;
@@ -175,6 +189,7 @@ public class UserContext {
                     userAuthenticated,
                     client,
                     clientSession,
+                    orchClientSession,
                     userLanguage,
                     clientSessionId,
                     orchSession);
