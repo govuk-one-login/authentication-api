@@ -17,7 +17,6 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -31,7 +30,6 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -97,7 +95,6 @@ class ProcessingIdentityHandlerTest {
     private static final String ENVIRONMENT = "test-environment";
 
     private final Context context = mock(Context.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AccountInterventionService accountInterventionService =
@@ -139,7 +136,6 @@ class ProcessingIdentityHandlerTest {
                         dynamoIdentityService,
                         accountInterventionService,
                         sessionService,
-                        clientSessionService,
                         dynamoClientService,
                         dynamoService,
                         configurationService,
@@ -182,8 +178,6 @@ class ProcessingIdentityHandlerTest {
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getOrchClientSession()));
         var result = handler.handleRequest(event, context);
@@ -216,8 +210,6 @@ class ProcessingIdentityHandlerTest {
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getOrchClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
@@ -250,8 +242,6 @@ class ProcessingIdentityHandlerTest {
                 new AccountIntervention(new AccountInterventionState(false, true, false, false));
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getOrchClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
@@ -299,8 +289,6 @@ class ProcessingIdentityHandlerTest {
                         .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getOrchClientSession()));
         var result = handler.handleRequest(event, context);
@@ -329,8 +317,6 @@ class ProcessingIdentityHandlerTest {
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getOrchClientSession()));
 
@@ -358,8 +344,6 @@ class ProcessingIdentityHandlerTest {
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getOrchClientSession()));
         var result = handler.handleRequest(event, context);
@@ -380,21 +364,6 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.NO_ENTRY.toString()));
-    }
-
-    private ClientSession getClientSession() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                responseType,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .build();
-
-        return new ClientSession(authRequest.toParameters(), null, List.of(), CLIENT_NAME);
     }
 
     private OrchClientSessionItem getOrchClientSession() {
