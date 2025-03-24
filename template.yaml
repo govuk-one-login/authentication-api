@@ -1637,6 +1637,7 @@ Resources:
         - !Ref RpPublicKeyCacheTableWriteAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
+        - !Ref OrchAuthCodeTableReadAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
