@@ -15,25 +15,25 @@ jobs:
   run-code-analysis:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository code
+      - name: 📦 Check Out Repository Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 17
+      - name: 🏗️ Set Up JDK 17
         uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 #v4.7.0
         with:
           java-version: "17"
           distribution: "corretto"
 
-      - name: Set up Gradle
+      - name: 🏗️ Set Up Gradle
         uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
 
-      - name: Run Tests
+      - name: 🧪 Run Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew --no-daemon --parallel test codeCoverageReport sonar -x spotlessApply -x spotlessCheck --info
+        run: ./gradlew --no-daemon test codeCoverageReport sonar -x spotlessApply -x spotlessCheck --info
