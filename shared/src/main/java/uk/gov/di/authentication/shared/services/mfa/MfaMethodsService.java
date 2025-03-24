@@ -220,32 +220,51 @@ public class MfaMethodsService {
                         method ->
                                 switch (PriorityIdentifier.valueOf(method.getPriority())) {
                                     case DEFAULT -> handleDefaultMethodUpdate(
-                                            method, request, email, mfaIdentifier);
-                                    case BACKUP -> null; // will be implemented in subsequent commit
+                                            method,
+                                            request.mfaMethod(),
+                                            email,
+                                            mfaIdentifier,
+                                            mfaMethods);
+                                    case BACKUP -> null; // will be implemented in subsequent PR
                                 })
                 .orElse(Either.left(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
     }
 
     private Either<MfaUpdateFailureReason, MfaMethodData> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
-            MfaMethodCreateOrUpdateRequest request,
+            MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
             String email,
-            String mfaIdentifier) {
-        var updatedMfaMethodRequested = request.mfaMethod();
-        var requestedPriority = updatedMfaMethodRequested.priorityIdentifier();
+            String mfaIdentifier,
+            List<MFAMethod> allMethodsForUser) {
+        var requestedPriority = updatedMethod.priorityIdentifier();
         if (requestedPriority == BACKUP) {
             return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD);
         }
 
         if (updateRequestChangesMethodType(
-                defaultMethod.getMfaMethodType(), updatedMfaMethodRequested.method())) {
+                defaultMethod.getMfaMethodType(), updatedMethod.method())) {
             return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
         }
 
-        if (updatedMfaMethodRequested.method() instanceof SmsMfaDetail updatedSmsDetail) {
-            if (updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination())) {
+        if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
+            var isExistingDefaultPhoneNumber =
+                    updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination());
+            var isExistingBackupPhoneNumber =
+                    allMethodsForUser.stream()
+                            .filter(
+                                    mfaMethod ->
+                                            !mfaMethod.getMfaIdentifier().equals(mfaIdentifier))
+                            .anyMatch(
+                                    mfaMethod ->
+                                            mfaMethod
+                                                    .getDestination()
+                                                    .equals(updatedSmsDetail.phoneNumber()));
+            if (isExistingDefaultPhoneNumber) {
                 return Either.left(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+            } else if (isExistingBackupPhoneNumber) {
+                return Either.left(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER);
             } else {
                 var result =
                         persistentService.updateMigratedMethodPhoneNumber(
@@ -257,7 +276,7 @@ public class MfaMethodsService {
                         });
             }
         } else {
-            var authAppDetail = (AuthAppMfaDetail) updatedMfaMethodRequested.method();
+            var authAppDetail = (AuthAppMfaDetail) updatedMethod.method();
             if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
                 return Either.left(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
@@ -269,7 +288,7 @@ public class MfaMethodsService {
                                 defaultMethod.getMfaIdentifier(),
                                 requestedPriority,
                                 defaultMethod.isMethodVerified(),
-                                request.mfaMethod().method()));
+                                updatedMethod.method()));
             }
         }
     }

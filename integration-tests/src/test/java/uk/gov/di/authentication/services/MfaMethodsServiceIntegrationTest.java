@@ -411,8 +411,7 @@ class MfaMethodsServiceIntegrationTest {
 
             @Test
             void returnsSuccessWhenAttemptingToUpdateAnSmsNumber() {
-                var aThirdPhoneNumber =
-                        "111222333"; // TODO what about when this is the same as a backup sms number
+                var aThirdPhoneNumber = "111222333";
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
@@ -439,6 +438,37 @@ class MfaMethodsServiceIntegrationTest {
                         mfaMethodsService.getMfaMethods(EMAIL).stream().sorted().toList();
                 var expectedMethods =
                         List.of(mfaMethodDataFrom(backupPrioritySms), expectedMfaData).stream()
+                                .sorted()
+                                .toList();
+                assertEquals(expectedMethods, methodsInDatabase);
+            }
+
+            @Test
+            void returnsFailureWhenAttemptingToUpdateAnSmsNumberToTheBackupNumber() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+                var detailWithUpdatedNumber =
+                        new SmsMfaDetail(MFAMethodType.SMS, backupPrioritySms.getDestination());
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, defaultPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER,
+                        result.getLeft());
+
+                var methodsInDatabase =
+                        mfaMethodsService.getMfaMethods(EMAIL).stream().sorted().toList();
+                var expectedMethods =
+                        List.of(
+                                        mfaMethodDataFrom(backupPrioritySms),
+                                        mfaMethodDataFrom(defaultPrioritySms))
+                                .stream()
                                 .sorted()
                                 .toList();
                 assertEquals(expectedMethods, methodsInDatabase);
