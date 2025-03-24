@@ -11,6 +11,8 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
+import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -21,9 +23,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -271,6 +275,86 @@ class DynamoServiceIntegrationTest {
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
             assertBackupAndDefaultMfaMethodsWithData(
                     userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        @Test
+        void shouldUpdateAPhoneNumber() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var updatedPhoneNumber = "111222333";
+
+            var result =
+                    dynamoService.updateMigratedMethodPhoneNumber(
+                            TEST_EMAIL,
+                            updatedPhoneNumber,
+                            defaultPrioritySmsData.getMfaIdentifier());
+
+            var expectedUpdatedDefaultSmsMethod =
+                    MFAMethod.smsMfaMethod(
+                            defaultPrioritySmsData.isMethodVerified(),
+                            defaultPrioritySmsData.isEnabled(),
+                            updatedPhoneNumber,
+                            PriorityIdentifier.valueOf(defaultPrioritySmsData.getPriority()),
+                            defaultPrioritySmsData.getMfaIdentifier());
+            assertEquals(
+                    new MfaMethodData(
+                            defaultPrioritySmsData.getMfaIdentifier(),
+                            PriorityIdentifier.DEFAULT,
+                            true,
+                            new SmsMfaDetail(MFAMethodType.SMS, updatedPhoneNumber)),
+                    result.get());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, expectedUpdatedDefaultSmsMethod, backupPrioritySmsData);
+        }
+
+        @Test
+        void shouldReturnAnErrorAndDoNoUpdatesIfMfaMethodByIdentifierDoesNotExist() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var updatedPhoneNumber = "111222333";
+
+            var result =
+                    dynamoService.updateMigratedMethodPhoneNumber(
+                            TEST_EMAIL, updatedPhoneNumber, "some-other-identifier");
+
+            assertEquals(
+                    "Mfa method with identifier some-other-identifier does not exist",
+                    result.getLeft());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        @Test
+        void shouldReturnAnErrorAndDoNoUpdatesWhenCallingUpdatePhoneNumberIfMfaMethodIsNotSms() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var updatedPhoneNumber = "111222333";
+
+            var result =
+                    dynamoService.updateMigratedMethodPhoneNumber(
+                            TEST_EMAIL,
+                            updatedPhoneNumber,
+                            defaultPriorityAuthAppData.getMfaIdentifier());
+
+            assertEquals(
+                    format(
+                            "Attempted to update phone number for non sms method with identifier %s",
+                            defaultPriorityAuthAppData.getMfaIdentifier()),
+                    result.getLeft());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPriorityAuthAppData, backupPrioritySmsData);
         }
 
         private MFAMethod findMethodWithPriority(

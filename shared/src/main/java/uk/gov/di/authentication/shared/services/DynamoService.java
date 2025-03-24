@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -16,12 +17,14 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -734,6 +737,45 @@ public class DynamoService implements AuthenticationService {
                                         .build())
                         .removeMfaMethodByIdentifierIfPresent(mfaMethodIdentifier)
                         .withUpdated(dateTime));
+    }
+
+    @Override
+    public Either<String, MfaMethodData> updateMigratedMethodPhoneNumber(
+            String email, String updatedPhoneNumber, String mfaMethodIdentifier) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        var maybeExistingMethod =
+                userCredentials.getMfaMethods().stream()
+                        .filter(
+                                mfaMethod ->
+                                        mfaMethod.getMfaIdentifier().equals(mfaMethodIdentifier))
+                        .findFirst();
+
+        if (maybeExistingMethod.isEmpty()) {
+            return Either.left(
+                    format("Mfa method with identifier %s does not exist", mfaMethodIdentifier));
+        }
+        var existingMethod = maybeExistingMethod.get();
+        if (!existingMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
+            return Either.left(
+                    format(
+                            "Attempted to update phone number for non sms method with identifier %s",
+                            mfaMethodIdentifier));
+        }
+        dynamoUserCredentialsTable.updateItem(
+                userCredentials
+                        .withUpdated(dateTime)
+                        .withUpdatedMfaMethod(
+                                mfaMethodIdentifier,
+                                existingMethod.withDestination(updatedPhoneNumber)));
+        return Either.right(
+                MfaMethodData.smsMethodData(
+                        mfaMethodIdentifier,
+                        PriorityIdentifier.valueOf(existingMethod.getPriority()),
+                        existingMethod.isMethodVerified(),
+                        updatedPhoneNumber));
     }
 
     public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(

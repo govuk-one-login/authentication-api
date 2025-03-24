@@ -1,12 +1,14 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import io.vavr.control.Either;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -82,4 +84,7 @@ public interface AuthenticationService {
     void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated);
 
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
+
+    Either<String, MfaMethodData> updateMigratedMethodPhoneNumber(
+            String email, String updatedPhoneNumber, String mfaMethodIdentifier);
 }

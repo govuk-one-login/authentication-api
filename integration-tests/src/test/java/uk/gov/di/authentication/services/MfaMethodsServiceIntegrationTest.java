@@ -384,7 +384,7 @@ class MfaMethodsServiceIntegrationTest {
         @Nested
         class WhenUpdatingADefaultMethod {
             @Test
-            void returnsSuccessWhenAttemptingToUpdateAnAuthAppCredential() {
+            void returnsSuccessAndUpdatesMethodWhenAttemptingToUpdateAnAuthAppCredential() {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
                 var detailWithUpdatedCredential =
@@ -397,23 +397,27 @@ class MfaMethodsServiceIntegrationTest {
                         mfaMethodsService.updateMfaMethod(
                                 EMAIL, defaultPriorityAuthApp.getMfaIdentifier(), request);
 
-                assertEquals(
+                var expectedMfaData =
                         MfaMethodData.authAppMfaData(
                                 defaultPriorityAuthApp.getMfaIdentifier(),
                                 PriorityIdentifier.DEFAULT,
                                 true,
-                                AUTH_APP_CREDENTIAL_TWO),
-                        result.get());
+                                AUTH_APP_CREDENTIAL_TWO);
 
-                // TODO: actually do the database operation, will be implemented in subsequent
-                // commit
+                assertEquals(expectedMfaData, result.get());
+
+                // TODO actual database update
             }
 
             @Test
             void returnsSuccessWhenAttemptingToUpdateAnSmsNumber() {
+                var aThirdPhoneNumber =
+                        "111222333"; // TODO what about when this is the same as a backup sms number
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
-                var detailWithUpdatedNumber = new SmsMfaDetail(MFAMethodType.SMS, PHONE_NUMBER_TWO);
+                var detailWithUpdatedNumber =
+                        new SmsMfaDetail(MFAMethodType.SMS, aThirdPhoneNumber);
                 var request =
                         MfaMethodCreateOrUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
@@ -422,16 +426,22 @@ class MfaMethodsServiceIntegrationTest {
                         mfaMethodsService.updateMfaMethod(
                                 EMAIL, defaultPrioritySms.getMfaIdentifier(), request);
 
-                assertEquals(
+                var expectedMfaData =
                         MfaMethodData.smsMethodData(
                                 defaultPrioritySms.getMfaIdentifier(),
                                 PriorityIdentifier.DEFAULT,
                                 true,
-                                PHONE_NUMBER_TWO),
-                        result.get());
+                                aThirdPhoneNumber);
 
-                // TODO: actually do the database operation, will be implemented in subsequent
-                // commit
+                assertEquals(expectedMfaData, result.get());
+
+                var methodsInDatabase =
+                        mfaMethodsService.getMfaMethods(EMAIL).stream().sorted().toList();
+                var expectedMethods =
+                        List.of(mfaMethodDataFrom(backupPrioritySms), expectedMfaData).stream()
+                                .sorted()
+                                .toList();
+                assertEquals(expectedMethods, methodsInDatabase);
             }
 
             @Test

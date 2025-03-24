@@ -17,7 +17,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
@@ -220,14 +219,18 @@ public class MfaMethodsService {
                 .map(
                         method ->
                                 switch (PriorityIdentifier.valueOf(method.getPriority())) {
-                                    case DEFAULT -> handleDefaultMethodUpdate(method, request);
+                                    case DEFAULT -> handleDefaultMethodUpdate(
+                                            method, request, email, mfaIdentifier);
                                     case BACKUP -> null; // will be implemented in subsequent commit
                                 })
                 .orElse(Either.left(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
     }
 
     private Either<MfaUpdateFailureReason, MfaMethodData> handleDefaultMethodUpdate(
-            MFAMethod defaultMethod, MfaMethodCreateOrUpdateRequest request) {
+            MFAMethod defaultMethod,
+            MfaMethodCreateOrUpdateRequest request,
+            String email,
+            String mfaIdentifier) {
         var updatedMfaMethodRequested = request.mfaMethod();
         var requestedPriority = updatedMfaMethodRequested.priorityIdentifier();
         if (requestedPriority == BACKUP) {
@@ -239,28 +242,36 @@ public class MfaMethodsService {
             return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
         }
 
-        var noUpdateDetected =
-                (updatedMfaMethodRequested.method() instanceof SmsMfaDetail
-                                && Objects.equals(
-                                        ((SmsMfaDetail) updatedMfaMethodRequested.method())
-                                                .phoneNumber(),
-                                        defaultMethod.getDestination()))
-                        || (updatedMfaMethodRequested.method() instanceof AuthAppMfaDetail
-                                && Objects.equals(
-                                        ((AuthAppMfaDetail) updatedMfaMethodRequested.method())
-                                                .credential(),
-                                        defaultMethod.getCredentialValue()));
+        if (updatedMfaMethodRequested.method() instanceof SmsMfaDetail updatedSmsDetail) {
+            if (updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination())) {
+                return Either.left(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+            } else {
+                var result =
+                        persistentService.updateMigratedMethodPhoneNumber(
+                                email, updatedSmsDetail.phoneNumber(), mfaIdentifier);
+                return result.mapLeft(
+                        errorString -> {
+                            LOG.error(errorString);
+                            return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                        });
+            }
+        } else {
+            var authAppDetail = (AuthAppMfaDetail) updatedMfaMethodRequested.method();
+            if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
+                return Either.left(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+            } else {
+                // TODO actually do the database operation - to come in subsequent commit
 
-        if (noUpdateDetected) {
-            return Either.left(MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+                return Either.right(
+                        new MfaMethodData(
+                                defaultMethod.getMfaIdentifier(),
+                                requestedPriority,
+                                defaultMethod.isMethodVerified(),
+                                request.mfaMethod().method()));
+            }
         }
-        // TODO actually do the database operation - to come in subsequent commit
-        return Either.right(
-                new MfaMethodData(
-                        defaultMethod.getMfaIdentifier(),
-                        requestedPriority,
-                        defaultMethod.isMethodVerified(),
-                        request.mfaMethod().method()));
     }
 
     private boolean updateRequestChangesMethodType(
