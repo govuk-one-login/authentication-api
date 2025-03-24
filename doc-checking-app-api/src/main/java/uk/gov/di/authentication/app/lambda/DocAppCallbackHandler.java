@@ -30,7 +30,6 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -60,8 +59,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class DocAppCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -70,7 +67,6 @@ public class DocAppCallbackHandler
     private final ConfigurationService configurationService;
     private final DocAppAuthorisationService authorisationService;
     private final DocAppCriService tokenService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
@@ -90,7 +86,6 @@ public class DocAppCallbackHandler
             ConfigurationService configurationService,
             DocAppAuthorisationService responseService,
             DocAppCriService tokenService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
@@ -103,7 +98,6 @@ public class DocAppCallbackHandler
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
@@ -127,7 +121,6 @@ public class DocAppCallbackHandler
                         new JwksService(configurationService, kmsConnectionService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
@@ -152,7 +145,6 @@ public class DocAppCallbackHandler
                         new JwksService(configurationService, kmsConnectionService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
@@ -212,18 +204,13 @@ public class DocAppCallbackHandler
             attachSessionIdToLogs(sessionId);
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var clientSession =
-                    clientSessionService
+            var orchClientSession =
+                    orchClientSessionService
                             .getClientSession(clientSessionId)
                             .orElseThrow(
                                     () -> new DocAppCallbackException("ClientSession not found"));
-            var orchClientSession =
-                    getOrchClientSessionWithRetryIfNotEqual(
-                                    clientSession, clientSessionId, orchClientSessionService)
-                            .orElse(null);
-            logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
 
-            if (Objects.isNull(clientSession.getDocAppSubjectId()))
+            if (Objects.isNull(orchClientSession.getDocAppSubjectId()))
                 throw new DocAppCallbackException("No DocAppSubjectId present in ClientSession");
 
             var persistentId =
@@ -231,7 +218,7 @@ public class DocAppCallbackHandler
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
 
             var authenticationRequest =
-                    AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+                    AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
 
             var clientId = authenticationRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -244,7 +231,7 @@ public class DocAppCallbackHandler
                     TxmaAuditUser.user()
                             .withGovukSigninJourneyId(clientSessionId)
                             .withSessionId(sessionId)
-                            .withUserId(clientSession.getDocAppSubjectId().getValue());
+                            .withUserId(orchClientSession.getDocAppSubjectId());
 
             if (errorObject.isPresent()) {
                 return generateAuthenticationErrorResponse(
@@ -288,14 +275,14 @@ public class DocAppCallbackHandler
                                 .toAuthorizationHeader());
                 var credential =
                         tokenService.sendCriDataRequest(
-                                request, clientSession.getDocAppSubjectId().getValue());
+                                request, orchClientSession.getDocAppSubjectId());
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                         clientId,
                         user);
                 LOG.info("Adding DocAppCredential to dynamo");
                 dynamoDocAppService.addDocAppCredential(
-                        clientSession.getDocAppSubjectId().getValue(), credential);
+                        orchClientSession.getDocAppSubjectId(), credential);
 
                 LOG.info("Redirecting to frontend");
                 var dimensions =
