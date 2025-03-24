@@ -11,47 +11,45 @@ import uk.gov.di.authentication.shared.validation.Required;
 import java.util.Collections;
 import java.util.List;
 
-public record TICFCRIRequest(
+public record ExternalTICFCRIRequest(
         @Expose String sub,
         @Expose @Required List<String> vtr,
-        @Expose @Required String govukSigninJourneyId,
+        @Expose @SerializedName("govuk_signin_journey_id") @Required String govukSigninJourneyId,
         @Expose @Required String authenticated,
-        @Expose String initialRegistration,
-        @Expose String passwordReset,
+        @Expose @SerializedName("initial_registration") String initialRegistration,
+        @Expose @SerializedName("password_reset") String passwordReset,
         @Expose @SerializedName("2fa_reset") String mfaReset,
         @Expose @SerializedName("2fa_method") List<String> mfaMethod) {
 
-    public static TICFCRIRequest basicTicfCriRequest(
-            String internalPairwiseId,
-            List<String> vtr,
-            String journeyId,
-            boolean authenticated,
-            AuthSessionItem.AccountState accountState,
-            ResetPasswordState resetPasswordState,
-            ResetMfaState resetMfaState,
-            MFAMethodType verifiedMfaMethodType) {
-        boolean passwordResetSuccess = resetPasswordState.equals(ResetPasswordState.SUCCEEDED);
+    public static ExternalTICFCRIRequest fromInternalRequest(
+            InternalTICFCRIRequest internalRequest) {
+        boolean passwordResetSuccess =
+                internalRequest.resetPasswordState().equals(ResetPasswordState.SUCCEEDED);
         boolean reportablePasswordAttempted =
-                (!authenticated && resetPasswordState.equals(ResetPasswordState.ATTEMPTED));
+                (!internalRequest.authenticated()
+                        && internalRequest
+                                .resetPasswordState()
+                                .equals(ResetPasswordState.ATTEMPTED));
         boolean passwordReset = passwordResetSuccess || reportablePasswordAttempted;
 
-        boolean mfaResetSuccess = resetMfaState.equals(ResetMfaState.SUCCEEDED);
+        boolean mfaResetSuccess = internalRequest.resetMfaState().equals(ResetMfaState.SUCCEEDED);
         boolean reportableMfaAttempted =
-                (!authenticated && resetMfaState.equals(ResetMfaState.ATTEMPTED));
+                (!internalRequest.authenticated()
+                        && internalRequest.resetMfaState().equals(ResetMfaState.ATTEMPTED));
         boolean mfaReset = mfaResetSuccess || reportableMfaAttempted;
 
         String sanitisedMfaMethodType =
-                verifiedMfaMethodType == MFAMethodType.SMS
-                                || verifiedMfaMethodType == MFAMethodType.AUTH_APP
-                        ? verifiedMfaMethodType.toString()
+                internalRequest.mfaMethodType() == MFAMethodType.SMS
+                                || internalRequest.mfaMethodType() == MFAMethodType.AUTH_APP
+                        ? internalRequest.mfaMethodType().toString()
                         : null;
 
-        return new TICFCRIRequest(
-                internalPairwiseId,
-                vtr,
-                journeyId,
-                authenticated ? "Y" : "N",
-                accountState == AuthSessionItem.AccountState.NEW ? "Y" : null,
+        return new ExternalTICFCRIRequest(
+                internalRequest.internalCommonSubjectIdentifier(),
+                internalRequest.vtr(),
+                internalRequest.govukSigninJourneyId(),
+                internalRequest.authenticated() ? "Y" : "N",
+                internalRequest.accountState() == AuthSessionItem.AccountState.NEW ? "Y" : null,
                 passwordReset ? "Y" : null,
                 mfaReset ? "Y" : null,
                 sanitisedMfaMethodType != null
@@ -62,7 +60,7 @@ public record TICFCRIRequest(
     @Override
     public String toString() {
         return "TICFCRIRequest{"
-                + "sub='"
+                + "internalCommonSubjectIdentifier='"
                 + sub
                 + "', vtr='"
                 + vtr
@@ -77,7 +75,7 @@ public record TICFCRIRequest(
                 + "', mfaReset='"
                 + mfaReset
                 + "', mfaMethod='"
-                + mfaMethod.toString()
+                + mfaMethod
                 + "'}";
     }
 }
