@@ -5,6 +5,8 @@ ipv_api_lambda_zip_file              = "./artifacts/ipv-api.zip"
 doc_checking_app_api_lambda_zip_file = "./artifacts/doc-checking-app-api.zip"
 shared_state_bucket                  = "di-auth-staging-tfstate"
 
+# FMS Flag
+fms_enabled = true
 
 # App-specific
 internal_sector_uri  = "https://identity.staging.account.gov.uk"
