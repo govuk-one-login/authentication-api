@@ -1,6 +1,9 @@
 lambda_zip_file     = "./artifacts/account-management-api.zip"
 common_state_bucket = "di-auth-staging-tfstate"
 
+# FMS Flag
+fms_enabled = true
+
 # URIs
 internal_sector_uri = "https://identity.staging.account.gov.uk"
 
