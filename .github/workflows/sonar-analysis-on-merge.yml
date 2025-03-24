@@ -1,8 +1,8 @@
 name: Sonar Analysis on Merge
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
     paths:
       # Ensure these are synchronized with the paths in the check-changed-files job
       - "**/src/**"
