@@ -1492,6 +1492,7 @@ Resources:
         - !Ref DocAppSigningKmsAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
+        - !Ref OrchAuthCodeTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1636,6 +1637,7 @@ Resources:
         - !Ref RpPublicKeyCacheTableWriteAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
+        - !Ref OrchAuthCodeTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2175,6 +2177,7 @@ Resources:
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
+        - !Ref OrchAuthCodeTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3223,6 +3226,7 @@ Resources:
         - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
+        - !Ref OrchAuthCodeTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3880,6 +3884,7 @@ Resources:
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref ClientSessionTableDeleteAccessPolicy
+        - !Ref OrchAuthCodeTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
