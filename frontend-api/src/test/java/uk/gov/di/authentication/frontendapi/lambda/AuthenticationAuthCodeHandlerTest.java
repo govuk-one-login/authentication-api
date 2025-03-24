@@ -276,6 +276,10 @@ class AuthenticationAuthCodeHandlerTest {
                     Map.ofEntries(
                             Map.entry(CountType.ENTER_PASSWORD, existingPasswordCount),
                             Map.entry(CountType.ENTER_EMAIL, existingEmailCount)));
+            authSession.setPreservedReauthCountsForAuditMap(
+                    Map.ofEntries(
+                            Map.entry(CountType.ENTER_PASSWORD, existingPasswordCount),
+                            Map.entry(CountType.ENTER_EMAIL, existingEmailCount)));
 
             var body =
                     format(
@@ -335,6 +339,7 @@ class AuthenticationAuthCodeHandlerTest {
                     .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
             // This is already the case but just to make it explicit here
             session.setPreservedReauthCountsForAudit(null);
+            authSession.setPreservedReauthCountsForAuditMap(null);
 
             var body =
                     format(
