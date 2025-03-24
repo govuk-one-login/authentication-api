@@ -44,15 +44,12 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
     exclude 'uk/gov/di/authentication/frontendapi/contract/**'
 }
 
 var pactDir = "$rootDir/frontend-api/src/test/pact"
 
 task pactConsumerTests (type: Test, group: "verification") {
-    useJUnitPlatform()
     include 'uk/gov/di/authentication/frontendapi/contract/**'
     systemProperties['pact.rootDir'] = pactDir
 }
@@ -82,11 +79,4 @@ task buildZip(type: Zip) {
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled true
-    }
-    dependsOn "test"
 }

@@ -13,7 +13,6 @@ plugins {
     id "com.diffplug.spotless" version "7.0.2"
     id "com.avast.gradle.docker-compose" version "0.17.12"
     id "org.sonarqube" version "6.0.1.5171"
-    id "jacoco-report-aggregation"
     id 'com.github.spotbugs' version '6.1.7'
 }
 
@@ -410,44 +409,61 @@ task utilsTerraform (type: Terraform) {
     dependsOn "oidcTerraform"
 }
 
-String jacocoBuildReportPath = "reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
-
-sonar {
-    properties {
-        property "sonar.projectKey", "govuk-one-login_authentication-api"
-        property "sonar.organization", "govuk-one-login"
-        property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.coverage.exclusions", "**/shared-test/**,**/orchestration-shared-test/**,**/orchestration-shared-test/**"
-        property "sonar.coverage.jacoco.xmlReportPaths", "$project.buildDir/$jacocoBuildReportPath"
-    }
-}
-
 subprojects {
+    apply plugin: 'org.sonarqube'
     sonar {
         properties {
-            property 'sonar.coverage.jacoco.xmlReportPaths', "$projectDir.parentFile.path/build/$jacocoBuildReportPath"
+            property 'sonar.coverage.jacoco.xmlReportPaths', "${rootProject.layout.buildDirectory.asFile.get()}/reports/jacoco/codeCoverageReport/codeCoverageReport.xml"
         }
     }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+        environment "TRACING_ENABLED", "false"
+    }
 }
 
-reporting {
-    reports {
-        testCodeCoverageReport(JacocoCoverageReport) {
-            testType = TestSuiteType.UNIT_TEST
+apply from: "${project.rootDir}/sonar.gradle"
+
+tasks.register("codeCoverageReport", JacocoReport) {
+    // If a subproject applies the 'jacoco' plugin, add the result it to the report
+    subprojects { subproject ->
+        subproject.plugins.withType(JacocoPlugin).configureEach {
+            dependsOn subproject.tasks.matching({ it.name == 'compileTestJava' })
+            subproject.tasks.matching({ t -> t.extensions.findByType(JacocoTaskExtension) }).configureEach { testTask ->
+                //the jacoco extension may be disabled for some projects
+                if (testTask.extensions.getByType(JacocoTaskExtension).isEnabled()) {
+                    sourceSets subproject.sourceSets.main
+                    executionData(testTask)
+                } else {
+                    logger.warn('Jacoco extension is disabled for test task \'{}\' in project \'{}\'. this test task will be excluded from jacoco report.',testTask.getName(),subproject.getName())
+                }
+            }
+
+            subproject.tasks.matching({ t -> t.extensions.findByType(JacocoTaskExtension) }).forEach {
+                rootProject.tasks.codeCoverageReport.dependsOn(it)
+            }
         }
     }
-}
 
-dependencies {
-    jacocoAggregation subprojects
-}
+    dependsOn tasks.startScripts
 
-jacocoTestReport {
-    reports {
-        xml.enabled true
+    subprojects.each { subproject ->
+        subproject.tasks.withType(CreateStartScripts).each { startScriptsTask ->
+            dependsOn startScriptsTask
+        }
     }
-    dependsOn "test"
+
+    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+
+    reports {
+        xml.required = true
+        html.required = true
+        html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+        csv.required = true
+    }
 }
+
 
 task searchForDependency {
     group = 'Custom'

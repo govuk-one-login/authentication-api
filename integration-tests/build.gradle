@@ -43,7 +43,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
     exclude 'uk/gov/di/authentication/contract/**'
 
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
@@ -66,7 +65,6 @@ test {
     environment "TERMS_CONDITIONS_VERSION", "1.0"
     environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "IDENTITY_ENABLED", "false"
-    environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
     environment "BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "1.0,1.1,1.2,1.3,1.4"
     environment "SEND_STORAGE_TOKEN_TO_IPV_ENABLED", "true"
@@ -97,7 +95,6 @@ test {
 pactPublish.enabled = false
 
 task pactProviderTests (type: Test, group: "verification") {
-    useJUnitPlatform()
     include 'uk/gov/di/authentication/contract/**'
 
     systemProperties['pact.provider.branch'] = "${System.env.GIT_BRANCH}"
@@ -108,7 +105,6 @@ task pactProviderTests (type: Test, group: "verification") {
     environment "AWS_REGION", "eu-west-2"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "REDIS_KEY", "session"
-    environment "TRACING_ENABLED", "false"
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "ENVIRONMENT", "local"
@@ -116,10 +112,4 @@ task pactProviderTests (type: Test, group: "verification") {
 
     dependsOn ":composeUp"
     finalizedBy ":composeDown"
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled true
-    }
 }

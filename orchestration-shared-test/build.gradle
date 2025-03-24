@@ -28,11 +28,6 @@ dependencies {
     implementation project(":oidc-api")
 }
 
-test {
-    useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
-}
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

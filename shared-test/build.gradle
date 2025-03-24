@@ -29,11 +29,6 @@ dependencies {
     implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 }
 
-test {
-    useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
-}
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

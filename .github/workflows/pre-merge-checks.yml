@@ -66,7 +66,7 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Run Build
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew --no-daemon assemble classes testClasses
 
   style-checks:
     runs-on: ubuntu-latest
@@ -139,7 +139,7 @@ jobs:
         if: needs.check-changed-files.outputs.java_changed == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew --parallel test -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x spotlessApply -x spotlessCheck
 
       - name: Cache Unit Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -173,37 +173,6 @@ jobs:
     needs:
       - build
       - check-changed-files
-    services:
-      localstack:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:3.0.0' || '' }}
-        env:
-          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events, logs"
-          GATEWAY_LISTEN: 0.0.0.0:45678
-          LOCALSTACK_HOST: localhost:45678
-          TEST_AWS_ACCOUNT_ID: 123456789012
-        options: >-
-          --add-host "notify.internal:host-gateway"
-          --add-host "subscriber.internal:host-gateway"
-        ports:
-          - 45678:45678
-      redis:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'redis:6.0.5-alpine' || '' }}
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-      dynamodb:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:1.22.0' || '' }}
-        options: >-
-          --health-cmd "curl http://localhost:8000"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 8000:8000
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -230,10 +199,21 @@ jobs:
             !*/build/reports
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
+
+      - name: 🐳 Start dependencies
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        run: docker compose up -d
+
       - name: Run Integration Tests
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
-          ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp -x composeDown
+
+      - name: 🧹 Tear down dependencies
+        if: always() && needs.check-changed-files.outputs.java_changed == 'true'
+        run: |
+          docker compose logs
+          docker compose down
 
       - name: Cache Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -256,39 +236,6 @@ jobs:
     needs:
       - build
       - check-changed-files
-    services:
-      localstack:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'localstack/localstack:3.0.0' || '' }}
-        env:
-          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events"
-          DEFAULT_REGION: eu-west-2
-          GATEWAY_LISTEN: 0.0.0.0:45678
-          LOCALSTACK_HOST: localhost:45678
-          TEST_AWS_ACCOUNT_ID: 123456789012
-          KMS_PROVIDER: local-kms
-        options: >-
-          --add-host "notify.internal:host-gateway"
-          --add-host "subscriber.internal:host-gateway"
-        ports:
-          - 45678:45678
-      redis:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'redis:6.0.5-alpine' || '' }}
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-      dynamodb:
-        image: ${{ (needs.check-changed-files.outputs.java_changed == 'true') && 'amazon/dynamodb-local:1.22.0' || '' }}
-        options: >-
-          --health-cmd "curl http://localhost:8000"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 8000:8000
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -316,10 +263,14 @@ jobs:
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
 
+      - name: 🐳 Start dependencies
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        run: docker compose up -d
+
       - name: Run Account Management Integration Tests
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
-          ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck  -x composeUp -x composeDown
       - name: Upload Account Management Integration Test Reports
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         if: failure() && needs.check-changed-files.outputs.java_changed == 'true'
@@ -330,7 +281,13 @@ jobs:
       - name: Run Delivery Receipts Integration Tests
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
-          ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck  -x composeUp -x composeDown
+
+      - name: 🧹 Tear down dependencies
+        if: always() && needs.check-changed-files.outputs.java_changed == 'true'
+        run: |
+          docker compose logs
+          docker compose down
 
       - name: Cache Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -425,4 +382,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew testCodeCoverageReport sonar -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: |
+          ./gradlew --no-daemon codeCoverageReport sonar --info \
+            -x test -x account-management-integration-tests:test -x testClasses -x compileTestJava
