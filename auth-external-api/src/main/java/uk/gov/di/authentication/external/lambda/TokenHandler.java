@@ -190,7 +190,8 @@ public class TokenHandler
                                             .orElse(AuditService.UNKNOWN))
                             .withSubjectId(
                                     Optional.ofNullable(internalPairwiseId)
-                                            .orElse(AuditService.UNKNOWN));
+                                            .orElse(AuditService.UNKNOWN))
+                            .withClientSessionId(authCodeStore.getJourneyID());
 
             auditService.submitAuditEvent(AUTH_TOKEN_SENT_TO_ORCHESTRATION, auditContext);
 
