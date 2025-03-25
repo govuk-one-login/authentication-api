@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.entity;
 
 import com.google.gson.annotations.Expose;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.orchestration.shared.utils.VtrListUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -89,19 +90,6 @@ public class ClientSession {
     }
 
     public String getVtrLocsAsCommaSeparatedString() {
-        List<VectorOfTrust> orderedVtrList = VectorOfTrust.orderVtrList(this.vtrList);
-        StringBuilder strBuilder = new StringBuilder();
-        for (VectorOfTrust vtr : orderedVtrList) {
-            String loc =
-                    vtr.containsLevelOfConfidence()
-                            ? vtr.getLevelOfConfidence().getValue()
-                            : LevelOfConfidence.NONE.getValue();
-            strBuilder.append(loc).append(",");
-        }
-        if (!strBuilder.isEmpty()) {
-            strBuilder.setLength(strBuilder.length() - 1);
-            return strBuilder.toString();
-        }
-        return "";
+        return VtrListUtils.getVtrLocsAsCommaSeparatedString(vtrList);
     }
 }
