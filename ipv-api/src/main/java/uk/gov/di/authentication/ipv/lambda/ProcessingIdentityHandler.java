@@ -154,7 +154,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             if (identityCredentials.isEmpty()
                     && userContext.getOrchSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = ProcessingIdentityStatus.NO_ENTRY;
-                userContext.getSession().resetProcessingIdentityAttempts();
                 userContext.getOrchSession().resetProcessingIdentityAttempts();
             } else if (identityCredentials.isEmpty()) {
                 processingStatus = ProcessingIdentityStatus.ERROR;
