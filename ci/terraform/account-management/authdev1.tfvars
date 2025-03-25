@@ -1,6 +1,7 @@
 common_state_bucket               = "di-auth-development-tfstate"
 vpc_environment                   = "dev"
 mfa_method_management_api_enabled = true
+test_clients_enabled              = true
 
 # FMS Flag
 fms_enabled = true
