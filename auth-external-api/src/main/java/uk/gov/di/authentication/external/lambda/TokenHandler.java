@@ -183,6 +183,8 @@ public class TokenHandler
                                     URI.create(configurationService.getInternalSectorUri()),
                                     SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
 
+            LOG.info(authCodeStore.getJourneyId());
+
             var auditContext =
                     AuditContext.emptyAuditContext()
                             .withClientId(
