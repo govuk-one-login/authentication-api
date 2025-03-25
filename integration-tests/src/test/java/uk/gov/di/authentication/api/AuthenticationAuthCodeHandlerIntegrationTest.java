@@ -30,6 +30,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final String TEST_STATE = "xyz";
     private static final String TEST_AUTHORIZATION_CODE = "SplxlOBeZQQYbYS6WxSbIA";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
+    private static final String TEST_JOURNEY_ID = "client-session-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
@@ -55,7 +56,8 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                 List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                 false,
                 TEST_SECTOR_IDENTIFIER,
-                false);
+                false,
+                TEST_JOURNEY_ID);
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
 

@@ -17,6 +17,7 @@ public class AuthCodeStore {
     private static final String ATTRIBUTE_SECTOR_IDENTIFIER = "SectorIdentifier";
     private static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
     private static final String ATTRIBUTE_PASSWORD_RESET_TIME = "PasswordResetTime";
+    private static final String JOURNEY_ID = "JourneyID";
 
     private String subjectID;
     private String authCode;
@@ -26,6 +27,7 @@ public class AuthCodeStore {
     private String sectorIdentifier;
     private boolean isNewAccount;
     private Long passwordResetTime;
+    private String journeyID;
 
     public AuthCodeStore() {}
 
@@ -139,6 +141,20 @@ public class AuthCodeStore {
 
     public AuthCodeStore withPasswordResetTime(Long passwordResetTime) {
         this.passwordResetTime = passwordResetTime;
+        return this;
+    }
+
+    @DynamoDbAttribute(JOURNEY_ID)
+    public String getJourneyId() {
+        return journeyID;
+    }
+
+    public void setJourneyID(String journeyID) {
+        this.journeyID = journeyID;
+    }
+
+    public AuthCodeStore withJourneyID(String journeyID) {
+        this.journeyID = journeyID;
         return this;
     }
 }
