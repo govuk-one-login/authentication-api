@@ -143,11 +143,6 @@ public class Session {
         return this;
     }
 
-    public int incrementProcessingIdentityAttempts() {
-        this.processingIdentityAttempts += 1;
-        return processingIdentityAttempts;
-    }
-
     public MFAMethodType getVerifiedMfaMethodType() {
         return verifiedMfaMethodType;
     }
