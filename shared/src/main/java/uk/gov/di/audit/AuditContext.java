@@ -14,7 +14,8 @@ public record AuditContext(
         String ipAddress,
         String phoneNumber,
         String persistentSessionId,
-        Optional<String> txmaAuditEncoded) {
+        Optional<String> txmaAuditEncoded,
+        Optional<String> journeyId) {
 
     public static AuditContext auditContextFromUserContext(
             UserContext userContext,
@@ -32,7 +33,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                Optional.ofNullable(userContext.getTxmaAuditEncoded()),
+                Optional.empty());
     }
 
     public static AuditContext emptyAuditContext() {
@@ -45,6 +47,7 @@ public record AuditContext(
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
+                Optional.empty(),
                 Optional.empty());
     }
 
@@ -58,7 +61,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withUserId(String subjectId) {
@@ -71,7 +75,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withTxmaAuditEncoded(Optional<String> txmaAuditEncoded) {
@@ -84,7 +89,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withSubjectId(String subjectId) {
@@ -97,7 +103,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withEmail(String email) {
@@ -110,7 +117,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withIpAddress(String ipAddress) {
@@ -123,7 +131,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withClientId(String clientId) {
@@ -136,7 +145,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withClientSessionId(String clientSessionId) {
@@ -149,7 +159,8 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
     }
 
     public AuditContext withSessionId(String sessionId) {
@@ -162,6 +173,21 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded);
+                txmaAuditEncoded,
+                journeyId);
+    }
+
+    public AuditContext withJourneyId(String journeyId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded,
+                Optional.ofNullable(journeyId));
     }
 }

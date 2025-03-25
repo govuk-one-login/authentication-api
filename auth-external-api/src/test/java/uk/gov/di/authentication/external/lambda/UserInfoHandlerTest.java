@@ -133,6 +133,7 @@ class UserInfoHandlerTest {
                                 "",
                                 "0123456789",
                                 "",
+                                Optional.empty(),
                                 Optional.empty()));
     }
 
@@ -175,6 +176,7 @@ class UserInfoHandlerTest {
                                 "",
                                 "0123456789",
                                 "",
+                                Optional.empty(),
                                 Optional.empty()));
     }
 

@@ -244,6 +244,7 @@ class TokenHandlerTest {
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
+                                Optional.empty(),
                                 Optional.empty()));
     }
 }

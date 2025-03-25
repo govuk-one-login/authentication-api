@@ -247,7 +247,8 @@ public class StartHandler
                             IpAddressHelper.extractIpAddress(input),
                             phoneNumber,
                             extractPersistentIdFromHeaders(input.getHeaders()),
-                            txmaAuditHeader);
+                            txmaAuditHeader,
+                            Optional.empty());
 
             if (reauthenticate) {
                 emitReauthRequestedObservability(startRequest, auditContext);

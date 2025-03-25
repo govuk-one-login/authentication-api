@@ -113,7 +113,8 @@ class AuthenticationAuthCodeHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    Optional.empty());
 
     @BeforeEach
     void setUp() throws Json.JsonException {
