@@ -83,6 +83,40 @@ public class Session {
         return this;
     }
 
+    public int getCodeRequestCount(NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return getCodeRequestCount(requestType);
+    }
+
+    public int getCodeRequestCount(CodeRequestType requestType) {
+        if (requestType == null) {
+            throw new IllegalArgumentException("CodeRequestType cannot be null");
+        }
+        LOG.info("CodeRequest count map: {}", codeRequestCountMap);
+        return codeRequestCountMap.getOrDefault(requestType, 0);
+    }
+
+    public Session incrementCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        int currentCount = getCodeRequestCount(requestType);
+        LOG.info("CodeRequest count: {} is: {}", requestType, currentCount);
+        codeRequestCountMap.put(requestType, currentCount + 1);
+        LOG.info("CodeRequest count: {} incremented to: {}", requestType, currentCount + 1);
+        return this;
+    }
+
+    public Session resetCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        codeRequestCountMap.put(requestType, 0);
+        LOG.info("CodeRequest count reset: {}", codeRequestCountMap);
+        return this;
+    }
+
     public Session setPreservedReauthCountsForAudit(
             Map<CountType, Integer> reauthCountsBeforeDeletionFromCountStore) {
         this.preservedReauthCountsForAudit = reauthCountsBeforeDeletionFromCountStore;
