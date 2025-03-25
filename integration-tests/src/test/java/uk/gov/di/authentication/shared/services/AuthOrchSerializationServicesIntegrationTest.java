@@ -101,21 +101,6 @@ class AuthOrchSerializationServicesIntegrationTest {
     }
 
     @Test
-    void authCanReadUnsharedFieldAfterOrchUpdatesSession() {
-        var sessionId = "some-existing-session-id";
-        var authSession = new Session();
-        authSession.incrementPasswordResetCount();
-        authSession.incrementPasswordResetCount();
-        authSession.incrementPasswordResetCount();
-        authSessionService.storeOrUpdateSession(authSession, sessionId);
-        var orchSession = orchSessionService.getSession(sessionId).get();
-        orchSession.addClientSession(CLIENT_SESSION_ID);
-        orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
-        authSession = authSessionService.getSession(sessionId).get();
-        assertThat(authSession.getPasswordResetCount(), is(equalTo(3)));
-    }
-
-    @Test
     void authCanReadSessionAfterSessionIdIsUpdated() {
         var oldSessionId = SESSION_ID;
         var newSessionId = "new-session-id";

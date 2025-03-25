@@ -484,8 +484,7 @@ class ResetPasswordRequestHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
             verifyNoInteractions(awsSqsClient);
             verify(sessionService, atLeastOnce())
-                    .storeOrUpdateSession(
-                            argThat(s -> s.getPasswordResetCount() == 0), eq(SESSION_ID));
+                    .storeOrUpdateSession(any(Session.class), eq(SESSION_ID));
             verify(authSessionService, atLeastOnce())
                     .updateSession(argThat(as -> as.getPasswordResetCount() == 0));
         }
