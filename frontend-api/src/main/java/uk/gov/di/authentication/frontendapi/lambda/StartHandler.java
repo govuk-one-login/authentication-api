@@ -381,6 +381,7 @@ public class StartHandler
                         .orElse(null);
         var startRequestVtrList =
                 Optional.ofNullable(startRequest.vtrList())
+                        .map(vtrStringList -> List.of(vtrStringList.split(" ")))
                         .map(
                                 vtrStringList ->
                                         List.of(VectorOfTrust.parseVtrStringList(vtrStringList)))

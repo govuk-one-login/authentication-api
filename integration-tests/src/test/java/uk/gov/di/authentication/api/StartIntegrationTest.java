@@ -49,6 +49,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_START_INFO_FOUND;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -68,7 +69,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     + "\"state\": \"%s\","
                     + "\"client_id\": \"%s\","
                     + "\"redirect_uri\": \"%s\","
-                    + "\"vtr_list\": %s, "
+                    + "\"vtr_list\": \"%s\", "
                     + "\"scope\": \"%s\""
                     + "}";
 
@@ -87,18 +88,16 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static Stream<Arguments> successfulRequests() {
         return Stream.of(
-                Arguments.of(Map.of(), false, false),
-                Arguments.of(Map.of(), false, true),
-                Arguments.of(Map.of("vtr", "[\"Cl.Cm\", \"P0.Cl.Cm\"]"), false, false),
-                Arguments.of(Map.of("vtr", "[\"P2.Cl.Cm\"]"), true, false));
+                Arguments.of("Cl.Cm", false, false),
+                Arguments.of("Cl.Cm", false, true),
+                Arguments.of("Cl.Cm P0.Cl.Cm", false, false),
+                Arguments.of("P2.Cl.Cm", true, false));
     }
 
     @ParameterizedTest
     @MethodSource("successfulRequests")
     void shouldReturn200AndStartResponse(
-            Map<String, String> customAuthParameters,
-            boolean identityRequired,
-            boolean isAuthenticated)
+            String vtrStringList, boolean identityRequired, boolean isAuthenticated)
             throws Json.JsonException {
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
@@ -115,8 +114,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .customParameter("client_id", CLIENT_ID)
                         .customParameter("redirect_uri", REDIRECT_URI.toString())
                         .customParameter("state", state.getValue())
+                        .customParameter("vtr", jsonArrayOf(vtrStringList.split(" ")))
                         .state(state);
-        customAuthParameters.forEach(builder::customParameter);
         var authRequest = builder.build();
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
@@ -124,7 +123,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
+                        Optional.of(makeRequestBody(isAuthenticated, authRequest, vtrStringList)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -238,7 +237,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .state(state)
                         .customParameter("client_id", CLIENT_ID)
                         .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("vtr", "[\"Cl.Cm\"]");
+                        .customParameter("vtr", jsonArrayOf("Cl.Cm"));
         var authRequest = builder.build();
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
@@ -286,7 +285,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .state(STATE)
                         .customParameter("client_id", CLIENT_ID)
                         .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("vtr", "[\"Cl.Cm\"]")
+                        .customParameter("vtr", jsonArrayOf("Cl.Cm"))
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
@@ -372,7 +371,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             "state", state.getValue(),
                                             "redirect_uri", REDIRECT_URI.toString(),
                                             "scope", scope.toString(),
-                                            "client_id", CLIENT_ID))),
+                                            "client_id", CLIENT_ID,
+                                            "vtr_list", "Cl.Cm"))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -392,7 +392,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             "state", state.getValue(),
                                             "redirect_uri", REDIRECT_URI.toString(),
                                             "scope", scope.toString(),
-                                            "client_id", CLIENT_ID))),
+                                            "client_id", CLIENT_ID,
+                                            "vtr_list", jsonArrayOf("Cl.Cm")))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -404,6 +405,11 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private String makeRequestBody(boolean isAuthenticated, AuthenticationRequest authRequest) {
+        return makeRequestBody(isAuthenticated, authRequest, "Cl.Cm");
+    }
+
+    private String makeRequestBody(
+            boolean isAuthenticated, AuthenticationRequest authRequest, String vtrStringList) {
         return String.format(
                 REQUEST_BODY,
                 isAuthenticated,
@@ -414,9 +420,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
                         .map(l -> l.get(0))
                         .orElse(null),
-                Optional.ofNullable(authRequest.getCustomParameter("vtr"))
-                        .map(l -> l.get(0))
-                        .orElse(null),
+                vtrStringList,
                 authRequest.getScope().toString());
     }
 
@@ -427,7 +431,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 customAuthParams.get("state"),
                 customAuthParams.get("client_id"),
                 customAuthParams.get("redirect_uri"),
-                customAuthParams.get("vtr"),
+                customAuthParams.get("vtr_list"),
                 customAuthParams.get("scope"));
     }
 
