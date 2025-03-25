@@ -371,7 +371,6 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.NO_ENTRY))));
-        assertThat(session.getProcessingIdentityAttempts(), equalTo(0));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(0));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
