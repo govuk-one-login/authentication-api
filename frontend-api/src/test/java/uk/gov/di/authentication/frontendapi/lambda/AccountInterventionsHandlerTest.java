@@ -127,6 +127,7 @@ class AccountInterventionsHandlerTest {
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
+                    .withEmailAddress(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =

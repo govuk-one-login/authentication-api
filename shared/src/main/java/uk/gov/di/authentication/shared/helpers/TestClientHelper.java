@@ -33,7 +33,7 @@ public class TestClientHelper {
         var isTestClientWithAllowedEmail =
                 (clientRegistry.isTestClient()
                         && emailMatchesAllowlist(
-                                userContext.getSession().getEmailAddress(),
+                                userContext.getAuthSession().getEmailAddress(),
                                 clientRegistry.getTestClientEmailAllowlist()));
 
         LOG.info(

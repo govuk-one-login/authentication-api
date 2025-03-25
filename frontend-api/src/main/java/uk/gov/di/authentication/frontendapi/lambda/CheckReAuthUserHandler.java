@@ -117,7 +117,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             CheckReauthUserRequest request,
             UserContext userContext) {
 
-        var emailUserIsSignedInWith = userContext.getSession().getEmailAddress();
+        var emailUserIsSignedInWith = userContext.getAuthSession().getEmailAddress();
 
         var auditContext =
                 auditContextFromUserContext(

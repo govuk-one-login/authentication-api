@@ -136,7 +136,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 auditContextFromUserContext(
                         userContext,
                         authSession.getInternalCommonSubjectId(),
-                        session.getEmailAddress(),
+                        authSession.getEmailAddress(),
                         ipAddress,
                         auditablePhoneNumber,
                         persistentSessionId);

@@ -45,7 +45,6 @@ class MfaCodeProcessorFactoryTest {
 
     @Test
     void whenMfaMethodGeneratesAuthAppCodeProcessor() {
-
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory.getMfaCodeProcessor(
                         MFAMethodType.AUTH_APP,
