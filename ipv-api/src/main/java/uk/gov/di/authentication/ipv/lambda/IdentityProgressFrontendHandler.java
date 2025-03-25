@@ -126,19 +126,20 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
 
             var pairwiseSubjectId = (String) userInfo.getClaim("rp_pairwise_id");
 
-            int processingAttempts = userSession.getSession().incrementProcessingIdentityAttempts();
-            // ATO-1514: Introducing this unused var, we will swap usages over to it in a future PR
-            int orchSessionProcessingIdentityAttempts =
+            // ATO-1514: Introducing this unused var, we will remove it in a future PR
+            int sharedSessionProcessingIdentityAttempts =
+                    userSession.getSession().incrementProcessingIdentityAttempts();
+            int processingIdentityAttempts =
                     userSession.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
-                    processingAttempts);
+                    processingIdentityAttempts);
             var identityCredentials =
                     dynamoIdentityService.getIdentityCredentials(userSession.getClientSessionId());
 
             var processingStatus = IdentityProgressStatus.PROCESSING;
             if (identityCredentials.isEmpty()
-                    && userSession.getSession().getProcessingIdentityAttempts() == 1) {
+                    && userSession.getOrchSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = IdentityProgressStatus.NO_ENTRY;
                 userSession.getSession().resetProcessingIdentityAttempts();
                 userSession.getOrchSession().resetProcessingIdentityAttempts();
