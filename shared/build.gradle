@@ -6,38 +6,33 @@ plugins {
 group = "uk.gov.di"
 version = "unspecified"
 
-configurations {
-    implementation.extendsFrom(
-            lambda,
-            nimbus,
-            bouncycastle,
-            govuk_notify,
-            dynamodb,
-            jetbrains_annotations,
-            kms,
-            lettuce,
-            libphonenumber,
-            hamcrest,
-            sns,
-            s3,
-            sqs,
-            ssm,
-            xray,
-            cloudwatch,
-            gson,
-            apache,
-            vavr
-            )
-    testImplementation.extendsFrom(
-            tests,
-            lambda_tests
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
-    implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
+    testImplementation(libs.lambda.tests)
+    testRuntimeOnly(libs.junit.engine)
+
+    implementation(libs.aws.embedded.metrics)
+    implementation(libs.aws.cloudwatchlogs)
+    implementation(libs.bouncycastle)
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.bundles.apache)
+    implementation(libs.bundles.aws.lambda)
+    implementation(libs.govuk.notify)
+    implementation(libs.bundles.dynamodb)
+    implementation(libs.jetbrains.annotations)
+    implementation(libs.aws.kms)
+    implementation(libs.bundles.lettuce)
+    implementation(libs.libphonenumber)
+    implementation(libs.hamcrest)
+    implementation(libs.aws.sns)
+    implementation(libs.aws.s3)
+    implementation(libs.aws.sqs)
+    implementation(libs.aws.ssm)
+    implementation(libs.bundles.aws.xray)
+    implementation(libs.gson)
+    implementation(libs.vavr)
+
     testImplementation project(":shared-test")
+    testImplementation(libs.bundles.testing)
 }
 
 test {

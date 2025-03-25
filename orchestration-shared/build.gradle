@@ -6,37 +6,31 @@ plugins {
 group = "uk.gov.di"
 version = "unspecified"
 
-configurations {
-    implementation.extendsFrom(
-            lambda,
-            nimbus,
-            bouncycastle,
-            govuk_notify,
-            dynamodb,
-            jetbrains_annotations,
-            kms,
-            lettuce,
-            libphonenumber,
-            hamcrest,
-            sns,
-            s3,
-            sqs,
-            ssm,
-            xray,
-            cloudwatch,
-            gson,
-            apache
-            )
-    testImplementation.extendsFrom(
-            tests,
-            lambda_tests
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
-    implementation "org.apache.httpcomponents.core5:httpcore5:5.3.3"
+    testImplementation(libs.lambda.tests)
+    testRuntimeOnly(libs.junit.engine)
+
+    implementation(libs.bundles.aws.lambda)
+    implementation(libs.govuk.notify)
+    implementation(libs.bundles.dynamodb)
+    implementation(libs.jetbrains.annotations)
+    implementation(libs.aws.kms)
+    implementation(libs.bundles.lettuce)
+    implementation(libs.libphonenumber)
+    implementation(libs.hamcrest)
+    implementation(libs.aws.sns)
+    implementation(libs.aws.s3)
+    implementation(libs.aws.sqs)
+    implementation(libs.aws.ssm)
+    implementation(libs.bundles.aws.xray)
+    implementation(libs.gson)
+    implementation(libs.httpcore)
     testImplementation project(":orchestration-shared-test")
+    testImplementation(libs.bundles.testing)
+    implementation(libs.bundles.apache)
+    implementation(libs.bouncycastle)
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.aws.embedded.metrics)
 }
 
 test {

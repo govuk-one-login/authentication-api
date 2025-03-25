@@ -1,26 +1,16 @@
 import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
 
-buildscript {
-    repositories {
-        maven {
-            url = 'https://gds.jfrog.io/artifactory/di-allowed-repos'
-        }
-    }
-}
-
 plugins {
-    id "com.diffplug.spotless" version "7.0.2"
-    id "com.avast.gradle.docker-compose" version "0.17.12"
-    id "org.sonarqube" version "6.0.1.5171"
-    id "jacoco"
+    alias(libs.plugins.spotless)
+    alias(libs.plugins.docker.compose)
+    alias(libs.plugins.sonarqube)
+    alias(libs.plugins.spotbugs)
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.1.7'
+    id "java"
+    id "application"
+    id "idea"
 }
-
-apply plugin: "java"
-apply plugin: "application"
-apply plugin: "idea"
 
 ext {
     dependencyVersions = [
@@ -29,8 +19,6 @@ ext {
         aws_lambda_events_version: "3.15.0",
         gson: "2.12.1",
         jetbrains_annotations: "26.0.2",
-        nimbusds_oauth_version: "10.13.2",
-        nimbusds_jwt_version: "10.0.2",
         junit: "5.11.4",
         xray: "2.18.2",
         pact: "4.6.17",
@@ -74,45 +62,12 @@ subprojects {
         }
     }
 
-    apply plugin: "com.github.spotbugs"
-    apply plugin: "java"
-
     spotbugs {
         ignoreFailures = false
         showStackTraces = true
         effort = Effort.valueOf('MAX')
         reportLevel = Confidence.valueOf('HIGH')
         excludeFilter = file("$rootProject.projectDir/spotbugsExclude.xml")
-    }
-
-    configurations {
-        apache
-        bouncycastle
-        cloudwatch
-        dynamodb
-        govuk_notify
-        gson
-        hamcrest
-        jetbrains_annotations
-        kms
-        lambda
-        lambda_tests
-        lettuce
-        libphonenumber
-        logging_runtime
-        nimbus
-        secretsmanager
-        s3
-        sns
-        sqs
-        ssm
-        tests
-        tests.extendsFrom(hamcrest)
-        test_runtime
-        xray
-        pact_consumer
-        pact_provider
-        vavr
     }
 
     // Check dependencies using:
@@ -156,85 +111,6 @@ subprojects {
                 }
             }
         }
-
-        apache "commons-codec:commons-codec:1.18.0",
-                "org.apache.httpcomponents:httpclient:4.5.14",
-                "org.apache.commons:commons-collections4:4.1",
-                "commons-net:commons-net:3.11.1",
-                "commons-io:commons-io:2.18.0",
-                "org.apache.commons:commons-lang3:3.17.0"
-
-        bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.80"
-
-        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
-
-        dynamodb "software.amazon.awssdk:dynamodb:${dependencyVersions.aws_sdk_v2_version}",
-                "software.amazon.awssdk:dynamodb-enhanced:${dependencyVersions.aws_sdk_v2_version}"
-
-        lambda "software.amazon.awssdk:lambda:${dependencyVersions.aws_sdk_v2_version}"
-
-        govuk_notify "uk.gov.service.notify:notifications-java-client:5.2.1-RELEASE"
-
-        gson "com.google.code.gson:gson:${dependencyVersions.gson}"
-
-        hamcrest "org.hamcrest:hamcrest:3.0"
-
-        jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
-
-        kms "software.amazon.awssdk:kms:${dependencyVersions.aws_sdk_v2_version}"
-
-        lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
-                "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-                "com.amazonaws:aws-lambda-java-log4j2:1.6.0"
-
-        lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
-
-        lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.5.5.RELEASE"
-
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.55"
-
-        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
-                "org.slf4j:slf4j-nop:2.0.17"
-
-        nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
-                "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
-
-        secretsmanager "software.amazon.awssdk:secretsmanager:${dependencyVersions.aws_sdk_v2_version}"
-
-        sns "software.amazon.awssdk:sns:${dependencyVersions.aws_sdk_v2_version}"
-
-        sqs "software.amazon.awssdk:sqs:${dependencyVersions.aws_sdk_v2_version}"
-
-        ssm "software.amazon.awssdk:ssm:${dependencyVersions.aws_sdk_v2_version}"
-
-        s3 "software.amazon.awssdk:s3:${dependencyVersions.aws_sdk_v2_version}"
-
-        tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
-                "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:5.16.1",
-                "org.awaitility:awaitility:4.2.2",
-                "com.approvaltests:approvaltests:24.18.0",
-                "org.reflections:reflections:0.10.2"
-
-        test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
-
-        xray platform("com.amazonaws:aws-xray-recorder-sdk-bom:${dependencyVersions.xray}"),
-                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-instrumentor:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
-
-        spotbugs "com.github.spotbugs:spotbugs:4.9.3"
-
-        spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
-
-        pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
-
-        pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
-
-        vavr "io.vavr:vavr:${dependencyVersions.vavr}"
     }
 }
 

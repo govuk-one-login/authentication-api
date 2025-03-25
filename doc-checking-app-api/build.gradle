@@ -1,41 +1,35 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias(libs.plugins.pact)
 }
 
 group = "uk.gov.di.authentication.doccheckingapp"
 version = "unspecified"
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            dynamodb,
-            sns,
-            kms
-            )
-    implementation.extendsFrom(
-            gson,
-            nimbus,
-            bouncycastle
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            apache,
-            lambda_tests,
-            lambda,
-            sqs,
-            kms,
-            dynamodb,
-            pact_consumer
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.aws.kms)
+    testImplementation(libs.bundles.dynamodb)
+    testImplementation(libs.pact.consumer)
+
+    testRuntimeOnly(libs.junit.engine)
+    runtimeOnly(libs.bundles.runtime.logging)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.bundles.dynamodb)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.aws.kms)
+
     implementation project(":orchestration-shared")
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.gson)
     testImplementation project(":orchestration-shared-test")
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.apache)
+    implementation(libs.bouncycastle)
 }
 
 test {

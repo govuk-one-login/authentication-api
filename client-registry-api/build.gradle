@@ -6,33 +6,28 @@ plugins {
 group = "uk.gov.di.clientregistry"
 version = "unspecified"
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            ssm,
-            sns,
-            dynamodb
-            )
-    implementation.extendsFrom(
-            nimbus,
-            gson
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            lambda_tests,
-            lambda,
-            sqs,
-            dynamodb
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.bundles.dynamodb)
+
+    testRuntimeOnly(libs.junit.engine)
+
+    runtimeOnly(libs.bundles.runtime.logging)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.bundles.dynamodb)
+
     implementation 'commons-validator:commons-validator:1.8.0',
             project(":orchestration-shared")
 
     testImplementation project(":orchestration-shared-test")
+    testImplementation(libs.bundles.testing)
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.gson)
 }
 
 test {

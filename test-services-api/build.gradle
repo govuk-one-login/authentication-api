@@ -6,35 +6,29 @@ plugins {
 group = "uk.gov.di.authentication.testservices"
 version = "unspecified"
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            sqs,
-            ssm,
-            sns,
-            kms,
-            dynamodb
-            )
-    implementation.extendsFrom(
-            gson,
-            nimbus
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            apache,
-            lambda_tests,
-            lambda,
-            sqs,
-            kms,
-            dynamodb
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
 
 dependencies {
+    runtimeOnly(libs.bundles.runtime.logging)
+    testRuntimeOnly(libs.junit.engine)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.sqs)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.aws.kms)
+    compileOnly(libs.bundles.dynamodb)
+
     implementation project(":shared")
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.gson)
+
     testImplementation project(":shared-test")
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.apache)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.aws.kms)
+    testImplementation(libs.bundles.dynamodb)
 }
 
 test {

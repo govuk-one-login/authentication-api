@@ -1,0 +1,125 @@
+[versions]
+# From dependencyVersions
+aws-sdk-v2 = "2.31.0"
+aws-lambda-core = "1.2.3"
+aws-lambda-events = "3.15.0"
+gson = "2.12.1"
+jetbrains-annotations = "26.0.2"
+nimbusds-oauth = "10.13.2"
+nimbusds-jwt = "10.0.2"
+junit = "5.11.4"
+xray = "2.18.2"
+pact = "4.6.17"
+vavr = "0.10.6"
+
+# Other dependency versions
+commons-codec = "1.18.0"
+httpclient = "4.5.14"
+commons-collections4 = "4.1"
+commons-net = "3.11.1"
+commons-io = "2.18.0"
+commons-lang3 = "3.17.0"
+bouncycastle = "1.80"
+aws-embedded-metrics = "4.2.0"
+govuk-notify = "5.2.1-RELEASE"
+aws-lambda-log4j2 = "1.6.0"
+aws-lambda-tests = "1.1.1"
+commons-pool2 = "2.12.1"
+lettuce = "6.5.5.RELEASE"
+libphonenumber = "8.13.55"
+slf4j = "2.0.17"
+mockito = "5.16.1"
+awaitility = "4.2.2"
+approvaltests = "24.18.0"
+reflections = "0.10.2"
+jetty-server = "12.0.18"
+wiremock = "3.12.1"
+webcompere = "2.1.7"
+httpcore = "5.3.3"
+
+# Plugin versions
+spotless = "7.0.2"
+docker-compose = "0.17.12"
+sonarqube = "6.0.1.5171"
+spotbugs = "6.1.7"
+
+[libraries]
+# AWS SDK
+aws-dynamodb = { group = "software.amazon.awssdk", name = "dynamodb", version.ref = "aws-sdk-v2" }
+aws-dynamodb-enhanced = { group = "software.amazon.awssdk", name = "dynamodb-enhanced", version.ref = "aws-sdk-v2" }
+aws-lambda = { group = "software.amazon.awssdk", name = "lambda", version.ref = "aws-sdk-v2" }
+aws-kms = { group = "software.amazon.awssdk", name = "kms", version.ref = "aws-sdk-v2" }
+aws-sns = { group = "software.amazon.awssdk", name = "sns", version.ref = "aws-sdk-v2" }
+aws-sqs = { group = "software.amazon.awssdk", name = "sqs", version.ref = "aws-sdk-v2" }
+aws-ssm = { group = "software.amazon.awssdk", name = "ssm", version.ref = "aws-sdk-v2" }
+aws-s3 = { group = "software.amazon.awssdk", name = "s3", version.ref = "aws-sdk-v2" }
+aws-cloudwatchlogs = { group = "software.amazon.awssdk", name = "cloudwatchlogs", version.ref = "aws-sdk-v2" }
+
+aws-embedded-metrics = { group = "software.amazon.cloudwatchlogs", name = "aws-embedded-metrics", version.ref = "aws-embedded-metrics" }
+
+aws-xray-recorder-sdk-core = { group = "com.amazonaws", name = "aws-xray-recorder-sdk-core", version.ref = "xray" }
+aws-xray-recorder-sdk-aws-sdk-instrumentor = { group = "com.amazonaws", name = "aws-xray-recorder-sdk-aws-sdk-instrumentor", version.ref = "xray" }
+aws-xray-recorder-sdk-aws-sdk-core = { group = "com.amazonaws", name = "aws-xray-recorder-sdk-aws-sdk-core", version.ref = "xray" }
+aws-xray-recorder-sdk-aws-sdk-v2 = { group = "com.amazonaws", name = "aws-xray-recorder-sdk-aws-sdk-v2", version.ref = "xray" }
+aws-xray-recorder-sdk-aws-sdk-v2-instrumentor = { group = "com.amazonaws", name = "aws-xray-recorder-sdk-aws-sdk-v2-instrumentor", version.ref = "xray" }
+
+# Lambda
+lambda-core = { group = "com.amazonaws", name = "aws-lambda-java-core", version.ref = "aws-lambda-core" }
+lambda-events = { group = "com.amazonaws", name = "aws-lambda-java-events", version.ref = "aws-lambda-events" }
+lambda-log4j2 = { group = "com.amazonaws", name = "aws-lambda-java-log4j2", version.ref = "aws-lambda-log4j2" }
+lambda-tests = { group = "com.amazonaws", name = "aws-lambda-java-tests", version.ref = "aws-lambda-tests" }
+
+# Apache Commons
+commons-codec = { group = "commons-codec", name = "commons-codec", version.ref = "commons-codec" }
+commons-httpclient = { group = "org.apache.httpcomponents", name = "httpclient", version.ref = "httpclient" }
+commons-collections4 = { group = "org.apache.commons", name = "commons-collections4", version.ref = "commons-collections4" }
+commons-net = { group = "commons-net", name = "commons-net", version.ref = "commons-net" }
+commons-io = { group = "commons-io", name = "commons-io", version.ref = "commons-io" }
+commons-lang3 = { group = "org.apache.commons", name = "commons-lang3", version.ref = "commons-lang3" }
+commons-pool2 = { group = "org.apache.commons", name = "commons-pool2", version.ref = "commons-pool2" }
+
+# Testing
+junit-api = { group = "org.junit.jupiter", name = "junit-jupiter-api", version.ref = "junit" }
+junit-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit" }
+junit-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit" }
+mockito = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+hamcrest = { group = "org.hamcrest", name = "hamcrest", version = "3.0" }
+awaitility = { group = "org.awaitility", name = "awaitility", version.ref = "awaitility" }
+approvaltests = { group = "com.approvaltests", name = "approvaltests", version.ref = "approvaltests" }
+reflections = { group = "org.reflections", name = "reflections", version.ref = "reflections" }
+lettuce-core = { group = "io.lettuce", name = "lettuce-core", version.ref = "lettuce" }
+wiremock-jetty = { group = "org.wiremock", name = "wiremock-jetty12", version.ref = "wiremock" }
+system-stubs-jupiter = { group = "uk.org.webcompere", name = "system-stubs-jupiter", version.ref = "webcompere" }
+httpcore = { group = "org.apache.httpcomponents.core5", name = "httpcore5", version.ref = "httpcore" }
+
+bouncycastle = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
+nimbusds-oauth = { group = "com.nimbusds", name = "oauth2-oidc-sdk", version.ref = "nimbusds-oauth" }
+nimbusds-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusds-jwt" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+jetty-server = { group = "org.eclipse.jetty", name = "jetty-server", version.ref = "jetty-server" }
+slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }
+vavr = { group = "io.vavr", name = "vavr", version.ref = "vavr" }
+libphonenumber = { group = "com.googlecode.libphonenumber", name = "libphonenumber", version.ref = "libphonenumber" }
+jetbrains-annotations = { group = "org.jetbrains", name = "annotations", version.ref = "jetbrains-annotations" }
+
+pact-consumer = { group = "au.com.dius.pact.consumer", name = "junit5", version.ref = "pact" }
+pact-provider = { group = "au.com.dius.pact.provider", name = "junit5", version.ref = "pact" }
+
+govuk-notify = { group = "uk.gov.service.notify", name = "notifications-java-client", version.ref = "govuk-notify" }
+
+[bundles]
+apache = ["commons-codec", "commons-httpclient", "commons-collections4", "commons-net", "commons-io", "commons-lang3"]
+testing = ["junit-api", "junit-params", "mockito", "awaitility", "approvaltests", "reflections", "hamcrest"]
+aws-xray = ["aws-xray-recorder-sdk-core", "aws-xray-recorder-sdk-aws-sdk-instrumentor", "aws-xray-recorder-sdk-aws-sdk-core", "aws-xray-recorder-sdk-aws-sdk-v2", "aws-xray-recorder-sdk-aws-sdk-v2-instrumentor"]
+aws-lambda = ["aws-lambda", "lambda-core", "lambda-events", "lambda-log4j2"]
+nimbusds = ["nimbusds-oauth", "nimbusds-jwt"]
+dynamodb = ["aws-dynamodb", "aws-dynamodb-enhanced"]
+runtime-logging = ["lambda-log4j2", "slf4j-nop"]
+lettuce = ["commons-pool2", "lettuce-core"]
+
+[plugins]
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+docker-compose = { id = "com.avast.gradle.docker-compose", version.ref = "docker-compose" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs" }
+pact = { id = "au.com.dius.pact", version.ref = "pact" }

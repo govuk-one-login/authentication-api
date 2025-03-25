@@ -6,37 +6,30 @@ plugins {
 group = "uk.gov.di.authentication.accountmanagement"
 version = "unspecified"
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            sqs,
-            ssm,
-            sns,
-            s3,
-            dynamodb
-            )
-    implementation.extendsFrom(
-            nimbus,
-            govuk_notify,
-            gson,
-            vavr
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            lambda_tests,
-            lambda,
-            sqs,
-            dynamodb
-            )
-    testRuntimeOnly.extendsFrom(
-            test_runtime
-            )
-}
-
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.bundles.dynamodb)
+
+    testRuntimeOnly(libs.junit.engine)
+    runtimeOnly(libs.bundles.runtime.logging)
+
+    implementation(libs.govuk.notify)
+    implementation(libs.gson)
+    implementation(libs.vavr)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.sqs)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.aws.s3)
+    compileOnly(libs.bundles.dynamodb)
+
     implementation project(":shared")
+    implementation(libs.bundles.nimbusds)
     testImplementation project(":shared-test")
+    testImplementation(libs.bundles.testing)
 }
 
 test {

@@ -6,29 +6,24 @@ plugins {
 group = 'uk.gov.di.authentication.utils'
 version = 'unspecified'
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            s3,
-            dynamodb
-            )
-    implementation.extendsFrom(
-            govuk_notify,
-            nimbus,
-            xray
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            s3,
-            lambda,
-            dynamodb
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    testImplementation(libs.aws.s3)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.bundles.dynamodb)
+
+    runtimeOnly(libs.bundles.runtime.logging)
+    testRuntimeOnly(libs.junit.engine)
+
+    implementation(libs.govuk.notify)
+    implementation(libs.bundles.aws.xray)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.s3)
+    compileOnly(libs.bundles.dynamodb)
+
     implementation project(":shared")
+    implementation(libs.bundles.nimbusds)
+    testImplementation(libs.bundles.testing)
 }
 
 test {

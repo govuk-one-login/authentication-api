@@ -1,32 +1,22 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias(libs.plugins.pact)
 }
 
 group = "uk.gov.di"
 version = "unspecified"
 
-configurations {
-    testImplementation.extendsFrom(
-            tests,
-            apache,
-            gson,
-            nimbus,
-            bouncycastle,
-            sqs,
-            kms,
-            s3,
-            cloudwatch,
-            dynamodb,
-            lettuce,
-            lambda,
-            pact_provider,
-            vavr
-            )
-}
-
 dependencies {
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.aws.kms)
+    testImplementation(libs.aws.s3)
+    testImplementation(libs.bundles.dynamodb)
+    testImplementation(libs.bundles.lettuce)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.pact.provider)
+    testImplementation(libs.vavr)
+
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray
     implementation project(":shared-test"), noXray
@@ -40,10 +30,17 @@ dependencies {
     implementation project(":doc-checking-app-api"), noXray
     implementation project(":utils"), noXray
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
-    testImplementation("uk.org.webcompere:system-stubs-jupiter:2.1.7")
-    testImplementation("org.awaitility:awaitility:4.2.2")
-    testImplementation('org.wiremock:wiremock-jetty12:3.12.1')
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.apache)
+    testImplementation(libs.bouncycastle)
+    testImplementation(libs.gson)
+    testImplementation(libs.bundles.nimbusds)
+    testImplementation(libs.aws.embedded.metrics)
+
+    testRuntimeOnly(libs.junit.engine)
+    testImplementation(libs.system.stubs.jupiter)
+    testImplementation(libs.awaitility)
+    testImplementation(libs.wiremock.jetty)
 }
 
 test {

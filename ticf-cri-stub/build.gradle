@@ -6,18 +6,14 @@ plugins {
 group = 'uk.gov.di.authentication.ticf-cri-stub'
 version = 'unspecified'
 
-configurations {
-    compileOnly.extendsFrom(lambda)
-    implementation.extendsFrom(gson)
-    testImplementation.extendsFrom(
-            tests,
-            lambda
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    compileOnly(libs.bundles.aws.lambda)
+    testRuntimeOnly(libs.junit.engine)
+
+    implementation(libs.gson)
     implementation project(":shared")
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.aws.lambda)
 }
 
 test {

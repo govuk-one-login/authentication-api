@@ -6,21 +6,17 @@ plugins {
 group = "uk.gov.di"
 version = "unspecified"
 
-configurations {
-    testImplementation.extendsFrom(
-            nimbus,
-            tests,
-            lambda,
-            lettuce
-            )
-}
-
 dependencies {
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.bundles.lettuce)
+
     implementation project(":shared"), noXray
     testImplementation project(":delivery-receipts-api"), noXray
     testImplementation project(":shared-test"), noXray
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.nimbusds)
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+    testRuntimeOnly(libs.junit.engine)
 }
 
 test {

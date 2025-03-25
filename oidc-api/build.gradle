@@ -1,50 +1,47 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias(libs.plugins.pact)
 }
 
 group = "uk.gov.di.authentication.oidc"
 version = "unspecified"
 
-configurations {
-    compileOnly.extendsFrom(
-            kms,
-            lambda,
-            sqs,
-            sns,
-            dynamodb
-            )
-    implementation.extendsFrom(
-            govuk_notify,
-            gson,
-            nimbus,
-            bouncycastle,
-            cloudwatch,
-            apache,
-            jetbrains_annotations
-            )
-    testImplementation.extendsFrom(
-            tests,
-            lambda_tests,
-            lambda,
-            sqs,
-            kms,
-            dynamodb,
-            pact_consumer
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.aws.kms)
+    testImplementation(libs.bundles.dynamodb)
+    testImplementation(libs.pact.consumer)
+
+    testRuntimeOnly(libs.junit.engine)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.kms)
+    compileOnly(libs.aws.sqs)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.bundles.dynamodb)
+
+    implementation(libs.govuk.notify)
+    implementation(libs.jetbrains.annotations)
+
     implementation project(":orchestration-shared"),
             project(":client-registry-api"),
             project(":doc-checking-app-api")
+
+    implementation(libs.aws.embedded.metrics)
+    implementation(libs.bundles.apache)
+    implementation(libs.bouncycastle)
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.gson)
 
     implementation project(path: ':ipv-api')
 
     testImplementation project(path: ':ipv-api'),
     project(":orchestration-shared-test")
+
+    testImplementation(libs.bundles.testing)
 }
 
 test {

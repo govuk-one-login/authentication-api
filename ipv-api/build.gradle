@@ -1,42 +1,36 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias(libs.plugins.pact)
 }
 
 group = "uk.gov.di.authentication.ipvapi"
 version = "unspecified"
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            sqs,
-            ssm,
-            sns,
-            kms,
-            dynamodb
-            )
-    implementation.extendsFrom(
-            gson,
-            nimbus
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            apache,
-            lambda_tests,
-            lambda,
-            sqs,
-            kms,
-            dynamodb,
-            pact_consumer
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.aws.kms)
+    testImplementation(libs.bundles.dynamodb)
+    testImplementation(libs.pact.consumer)
+
+    runtimeOnly(libs.bundles.runtime.logging)
+    testRuntimeOnly(libs.junit.engine)
+
+    implementation(libs.gson)
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.sqs)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.aws.kms)
+    compileOnly(libs.bundles.dynamodb)
+
     implementation project(":orchestration-shared")
+    implementation(libs.bundles.nimbusds)
     testImplementation project(":orchestration-shared-test")
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.apache)
 }
 
 test {

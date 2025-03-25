@@ -6,23 +6,18 @@ plugins {
 group = 'uk.gov.di.authentication.interventions-api-stub'
 version = 'unspecified'
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            dynamodb
-            )
-    implementation.extendsFrom(
-            gson
-            )
-    testImplementation.extendsFrom(
-            tests,
-            lambda
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
 
 dependencies {
+    testRuntimeOnly(libs.junit.engine)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.bundles.dynamodb)
+
     implementation project(":shared")
+    implementation(libs.gson)
+
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.aws.lambda)
 }
 
 test {

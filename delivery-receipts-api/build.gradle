@@ -6,27 +6,23 @@ plugins {
 group = "uk.gov.di.authentication.deliveryreceiptsapi"
 version = "unspecified"
 
-configurations {
-    implementation.extendsFrom(
-            govuk_notify,
-            lambda,
-            gson,
-            libphonenumber,
-            cloudwatch
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            lambda_tests,
-            lambda,
-            dynamodb
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.bundles.dynamodb)
+
+    runtimeOnly(libs.bundles.runtime.logging)
+    testRuntimeOnly(libs.junit.engine)
+
+    implementation(libs.govuk.notify)
+    implementation(libs.bundles.aws.lambda)
+    implementation(libs.gson)
+    implementation(libs.libphonenumber)
+
     implementation project(":shared")
     testImplementation project(":shared-test")
+    testImplementation(libs.bundles.testing)
+    implementation(libs.aws.embedded.metrics)
 }
 
 test {

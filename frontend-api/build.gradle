@@ -1,50 +1,45 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias(libs.plugins.pact)
 }
 
 group = "uk.gov.di.authentication.frontendapi"
 version = "unspecified"
 
-configurations {
-    compileOnly.extendsFrom(
-            lambda,
-            sqs,
-            ssm,
-            sns,
-            s3,
-            dynamodb,
-            kms
-            )
-    implementation.extendsFrom(
-            govuk_notify,
-            apache,
-            gson,
-            nimbus,
-            cloudwatch,
-            bouncycastle,
-            kms,
-            jetbrains_annotations
-            )
-    runtimeOnly.extendsFrom(logging_runtime)
-    testImplementation.extendsFrom(
-            tests,
-            lambda_tests,
-            lambda,
-            sqs,
-            s3,
-            kms,
-            dynamodb,
-            pact_consumer
-            )
-    testRuntimeOnly.extendsFrom(test_runtime)
-}
-
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.aws.s3)
+    testImplementation(libs.aws.kms)
+    testImplementation(libs.bundles.dynamodb)
+    testImplementation(libs.pact.consumer)
+
+    runtimeOnly(libs.bundles.runtime.logging)
+    testRuntimeOnly(libs.junit.engine)
+
+    implementation(libs.govuk.notify)
+    implementation(libs.gson)
+    implementation(libs.aws.kms)
+    implementation(libs.jetbrains.annotations)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.sqs)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.aws.s3)
+    compileOnly(libs.bundles.dynamodb)
+    compileOnly(libs.aws.kms)
+
+    implementation(libs.aws.embedded.metrics)
+    implementation(libs.bundles.nimbusds)
     implementation project(path: ':shared')
-    testImplementation project(":shared-test"),
-            'org.wiremock:wiremock-jetty12:3.12.1'
+    testImplementation project(":shared-test")
+    testImplementation(libs.wiremock.jetty)
+    testImplementation(libs.bundles.testing)
+    implementation(libs.bundles.apache)
+    implementation(libs.bouncycastle)
 }
 
 test {

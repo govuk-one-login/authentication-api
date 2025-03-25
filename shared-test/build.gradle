@@ -5,33 +5,30 @@ plugins {
 group = "uk.gov.di.authentication.sharedtest"
 version = "unspecified"
 
-configurations {
-    implementation.extendsFrom(
-            tests,
-            lambda,
-            apache,
-            nimbus,
-            lettuce,
-            dynamodb,
-            kms,
-            sns,
-            s3,
-            sqs,
-            ssm,
-            cloudwatch
-            )
-}
-
 dependencies {
-    implementation "org.eclipse.jetty:jetty-server:12.0.18",
-            "com.google.code.gson:gson:2.12.1"
+    implementation(libs.bundles.testing)
+    implementation(libs.jetty.server)
+    implementation(libs.gson)
+
+    implementation(libs.bundles.apache)
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.bundles.aws.lambda)
+    implementation(libs.aws.cloudwatchlogs)
+    implementation(libs.aws.embedded.metrics)
+    implementation(libs.bundles.dynamodb)
+    implementation(libs.bundles.lettuce)
+    implementation(libs.aws.kms)
+    implementation(libs.aws.sns)
+    implementation(libs.aws.s3)
+    implementation(libs.aws.sqs)
+    implementation(libs.aws.ssm)
 
     implementation project(":shared")
     implementation project(":frontend-api")
     implementation project(":doc-checking-app-api")
     implementation project(":oidc-api")
     implementation project(":interventions-api-stub")
-    implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
+    testImplementation(libs.bundles.testing)
 }
 
 test {
