@@ -465,6 +465,13 @@ tasks.register("codeCoverageReport", JacocoReport) {
     }
 }
 
+// Disable caching for pactConsumerTests
+subprojects { subproject ->
+    subproject.tasks.matching({ it.name == 'pactConsumerTests' }).configureEach {
+        outputs.cacheIf { false }
+    }
+}
+
 
 task searchForDependency {
     group = 'Custom'
