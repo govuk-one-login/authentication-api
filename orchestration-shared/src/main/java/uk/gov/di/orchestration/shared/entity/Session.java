@@ -143,10 +143,6 @@ public class Session {
         return this;
     }
 
-    public void resetProcessingIdentityAttempts() {
-        this.processingIdentityAttempts = 0;
-    }
-
     public int incrementProcessingIdentityAttempts() {
         this.processingIdentityAttempts += 1;
         return processingIdentityAttempts;
