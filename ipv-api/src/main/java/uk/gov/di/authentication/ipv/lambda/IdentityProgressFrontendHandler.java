@@ -148,7 +148,6 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             if (identityCredentials.isEmpty()
                     && userSession.getOrchSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = IdentityProgressStatus.NO_ENTRY;
-                userSession.getSession().resetProcessingIdentityAttempts();
                 userSession.getOrchSession().resetProcessingIdentityAttempts();
             } else if (identityCredentials.isEmpty()) {
                 processingStatus = IdentityProgressStatus.ERROR;
