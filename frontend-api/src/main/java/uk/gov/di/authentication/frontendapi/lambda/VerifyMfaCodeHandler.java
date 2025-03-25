@@ -279,6 +279,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var session = userContext.getSession();
         var authSession = userContext.getAuthSession();
         var sessionId = authSession.getSessionId();
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        authSession.getInternalCommonSubjectId(),
+                        authSession.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()));
+
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
                         .getMfaCodeProcessor(
@@ -328,7 +337,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_AUTH_APP_CODE);
             }
+            auditFailure(codeRequest, errorResponse, authSession, auditContext);
         } else {
+            auditSuccess(codeRequest, authSession, auditContext);
             processSuccessfulCodeSession(
                     session,
                     userContext.getAuthSession(),
@@ -339,25 +350,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     mfaCodeProcessor,
                     maybeRpPairwiseId);
         }
-
-        var auditableEvent =
-                errorResponseMaybe
-                        .map(this::errorResponseAsFrontendAuditableEvent)
-                        .orElse(AUTH_CODE_VERIFIED);
-
-        var auditContext =
-                auditContextFromUserContext(
-                        userContext,
-                        authSession.getInternalCommonSubjectId(),
-                        authSession.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()));
-
-        var metadataPairs =
-                metadataPairsForEvent(auditableEvent, authSession.getEmailAddress(), codeRequest);
-
-        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
         sessionService.storeOrUpdateSession(session, sessionId);
 
@@ -380,6 +372,27 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         codeRequest.getJourneyType(),
                                         authSession,
                                         session));
+    }
+
+    private void auditSuccess(
+            VerifyMfaCodeRequest codeRequest,
+            AuthSessionItem authSession,
+            AuditContext auditContext) {
+        var metadataPairs =
+                metadataPairsForEvent(
+                        AUTH_CODE_VERIFIED, authSession.getEmailAddress(), codeRequest);
+        auditService.submitAuditEvent(AUTH_CODE_VERIFIED, auditContext, metadataPairs);
+    }
+
+    private void auditFailure(
+            VerifyMfaCodeRequest codeRequest,
+            ErrorResponse errorResponse,
+            AuthSessionItem authSession,
+            AuditContext auditContext) {
+        var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
+        var metadataPairs =
+                metadataPairsForEvent(auditableEvent, authSession.getEmailAddress(), codeRequest);
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
     }
 
     private APIGatewayProxyResponseEvent handleSuccess(

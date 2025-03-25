@@ -28,6 +28,11 @@ public class AuditAssertionsHelper {
 
     public static void assertTxmaAuditEventsSubmittedWithMatchingNames(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
+        assertTxmaAuditEventsSubmittedWithMatchingNames(queue, events, false);
+    }
+
+    public static void assertTxmaAuditEventsSubmittedWithMatchingNames(
+            SqsQueueExtension queue, Collection<AuditableEvent> events, boolean ordered) {
         var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
         if (expectedTxmaEvents.isEmpty()) {
@@ -61,9 +66,13 @@ public class AuditAssertionsHelper {
 
         // Check all expected events have been sent
         // Check no unexpected events were sent
-        assertTrue(
-                expectedTxmaEvents.containsAll(namesOfSentEvents)
-                        && namesOfSentEvents.containsAll(expectedTxmaEvents));
+        if (ordered) {
+            assertTrue(expectedTxmaEvents.equals(namesOfSentEvents));
+        } else {
+            assertTrue(
+                    expectedTxmaEvents.containsAll(namesOfSentEvents)
+                            && namesOfSentEvents.containsAll(expectedTxmaEvents));
+        }
     }
 
     public static void assertTxmaAuditEventsReceived(
