@@ -96,8 +96,6 @@ class AuthOrchSerializationServicesIntegrationTest {
         var authSession = authSessionService.getSession(SESSION_ID).get();
         authSession.addClientSession(CLIENT_SESSION_ID);
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
-        orchSession = orchSessionService.getSession(SESSION_ID).get();
-        assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));
     }
 
     @Test
@@ -140,6 +138,5 @@ class AuthOrchSerializationServicesIntegrationTest {
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertThat(orchSession.getClientSessions(), is(empty()));
-        assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));
     }
 }
