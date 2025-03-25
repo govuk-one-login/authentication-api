@@ -325,7 +325,6 @@ class ProcessingIdentityHandlerTest {
     @Test
     void shouldReturnERRORStatusWhenNoEntryIsFoundInDynamoAfterSecondAttempt()
             throws Json.JsonException {
-        session.incrementProcessingIdentityAttempts();
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());

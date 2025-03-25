@@ -228,7 +228,9 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         orchClientSessionExtension.storeClientSession(orchClientSession);
         redis.addStateToRedis(STATE, SESSION_ID);
         if (incrementProcessIdentityAttempts) {
-            redis.incrementInitialProcessingIdentityAttemptsInSession(SESSION_ID);
+            var orchSession = orchSessionExtension.getSession(SESSION_ID).orElseThrow();
+            orchSession.incrementProcessingIdentityAttempts();
+            orchSessionExtension.updateSession(orchSession);
         }
     }
 

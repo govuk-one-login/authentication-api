@@ -133,9 +133,6 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
 
             var pairwiseSubjectId = (String) userInfo.getClaim("rp_pairwise_id");
 
-            // ATO-1514: Introducing this unused var, we will remove it in a future PR
-            int sharedSessionProcessingIdentityAttempts =
-                    userSession.getSession().incrementProcessingIdentityAttempts();
             int processingIdentityAttempts =
                     userSession.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
@@ -148,7 +145,6 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             if (identityCredentials.isEmpty()
                     && userSession.getOrchSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = IdentityProgressStatus.NO_ENTRY;
-                userSession.getSession().resetProcessingIdentityAttempts();
                 userSession.getOrchSession().resetProcessingIdentityAttempts();
             } else if (identityCredentials.isEmpty()) {
                 processingStatus = IdentityProgressStatus.ERROR;
