@@ -139,9 +139,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userProfile.getSubjectID(),
                             URI.create(configurationService.getInternalSectorURI()),
                             authenticationService.getOrGenerateSalt(userProfile));
-            // ATO-1514: Introducing this unused var, we will remove it in a future PR
-            int sharedSessionProcessingIdentityAttempts =
-                    userContext.getSession().incrementProcessingIdentityAttempts();
             int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
