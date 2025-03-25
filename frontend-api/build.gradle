@@ -4,43 +4,47 @@ plugins {
     id "au.com.dius.pact" version "4.6.17"
 }
 
-group "uk.gov.di.authentication.frontendapi"
-version "unspecified"
+group = "uk.gov.di.authentication.frontendapi"
+version = "unspecified"
+
+configurations {
+    compileOnly.extendsFrom(
+            lambda,
+            sqs,
+            ssm,
+            sns,
+            s3,
+            dynamodb,
+            kms
+            )
+    implementation.extendsFrom(
+            govuk_notify,
+            apache,
+            gson,
+            nimbus,
+            cloudwatch,
+            bouncycastle,
+            kms,
+            jetbrains_annotations
+            )
+    runtimeOnly.extendsFrom(logging_runtime)
+    testImplementation.extendsFrom(
+            tests,
+            lambda_tests,
+            lambda,
+            sqs,
+            s3,
+            kms,
+            dynamodb,
+            pact_consumer
+            )
+    testRuntimeOnly.extendsFrom(test_runtime)
+}
 
 dependencies {
-
     implementation project(path: ':shared')
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.s3,
-            configurations.dynamodb,
-            configurations.kms
-
-    implementation configurations.govuk_notify,
-            configurations.apache,
-            configurations.gson,
-            configurations.nimbus,
-            configurations.cloudwatch,
-            configurations.bouncycastle,
-            configurations.kms,
-            configurations.jetbrains_annotations
-
-    runtimeOnly configurations.logging_runtime
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(":shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.s3,
-            configurations.kms,
-            configurations.dynamodb,
-            configurations.pact_consumer,
+    testImplementation project(":shared-test"),
             'org.wiremock:wiremock-jetty12:3.12.1'
-
-    testRuntimeOnly configurations.test_runtime
 }
 
 test {
@@ -86,7 +90,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

@@ -3,27 +3,30 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.deliveryreceiptsapi"
-version "unspecified"
+group = "uk.gov.di.authentication.deliveryreceiptsapi"
+version = "unspecified"
+
+configurations {
+    implementation.extendsFrom(
+            govuk_notify,
+            lambda,
+            gson,
+            libphonenumber,
+            cloudwatch
+            )
+    runtimeOnly.extendsFrom(logging_runtime)
+    testImplementation.extendsFrom(
+            tests,
+            lambda_tests,
+            lambda,
+            dynamodb
+            )
+    testRuntimeOnly.extendsFrom(test_runtime)
+}
 
 dependencies {
-    implementation configurations.govuk_notify,
-            configurations.lambda,
-            configurations.gson,
-            configurations.libphonenumber,
-            configurations.cloudwatch
-
     implementation project(":shared")
-
-    runtimeOnly configurations.logging_runtime
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(":shared-test"),
-            configurations.lambda,
-            configurations.dynamodb
-
-    testRuntimeOnly configurations.test_runtime
+    testImplementation project(":shared-test")
 }
 
 test {
@@ -46,7 +49,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

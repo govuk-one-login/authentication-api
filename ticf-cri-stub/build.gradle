@@ -6,16 +6,18 @@ plugins {
 group = 'uk.gov.di.authentication.ticf-cri-stub'
 version = 'unspecified'
 
+configurations {
+    compileOnly.extendsFrom(lambda)
+    implementation.extendsFrom(gson)
+    testImplementation.extendsFrom(
+            tests,
+            lambda
+            )
+    testRuntimeOnly.extendsFrom(test_runtime)
+}
+
 dependencies {
-    compileOnly configurations.lambda
-
-    implementation project(":shared"),
-            configurations.gson
-
-    testImplementation configurations.tests,
-            configurations.lambda
-
-    testRuntimeOnly configurations.test_runtime
+    implementation project(":shared")
 }
 
 test {
@@ -38,7 +40,7 @@ task buildZip(type: Zip) {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

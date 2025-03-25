@@ -3,36 +3,41 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
+
+configurations {
+    implementation.extendsFrom(
+            lambda,
+            nimbus,
+            bouncycastle,
+            govuk_notify,
+            dynamodb,
+            jetbrains_annotations,
+            kms,
+            lettuce,
+            libphonenumber,
+            hamcrest,
+            sns,
+            s3,
+            sqs,
+            ssm,
+            xray,
+            cloudwatch,
+            gson,
+            apache,
+            vavr
+            )
+    testImplementation.extendsFrom(
+            tests,
+            lambda_tests
+            )
+    testRuntimeOnly.extendsFrom(test_runtime)
+}
 
 dependencies {
-
-    implementation configurations.lambda,
-            configurations.nimbus,
-            configurations.bouncycastle,
-            configurations.govuk_notify,
-            configurations.dynamodb,
-            configurations.jetbrains_annotations,
-            configurations.kms,
-            configurations.lettuce,
-            configurations.libphonenumber,
-            configurations.hamcrest,
-            configurations.sns,
-            configurations.s3,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.xray,
-            configurations.cloudwatch,
-            configurations.gson,
-            configurations.apache,
-            configurations.vavr
     implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(":shared-test")
-    testRuntimeOnly configurations.test_runtime
+    testImplementation project(":shared-test")
 }
 
 test {
@@ -47,7 +52,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

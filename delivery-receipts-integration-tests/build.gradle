@@ -3,15 +3,19 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
+
+configurations {
+    testImplementation.extendsFrom(
+            nimbus,
+            tests,
+            lambda,
+            lettuce
+            )
+}
 
 dependencies {
-    testImplementation configurations.nimbus,
-            configurations.tests,
-            configurations.lambda,
-            configurations.lettuce
-
     implementation project(":shared"), noXray
     testImplementation project(":delivery-receipts-api"), noXray
     testImplementation project(":shared-test"), noXray
@@ -66,6 +70,6 @@ test {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
 }

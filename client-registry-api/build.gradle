@@ -3,32 +3,36 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.clientregistry"
-version "unspecified"
+group = "uk.gov.di.clientregistry"
+version = "unspecified"
+
+configurations {
+    compileOnly.extendsFrom(
+            lambda,
+            ssm,
+            sns,
+            dynamodb
+            )
+    implementation.extendsFrom(
+            nimbus,
+            gson
+            )
+    runtimeOnly.extendsFrom(logging_runtime)
+    testImplementation.extendsFrom(
+            tests,
+            lambda_tests,
+            lambda,
+            sqs,
+            dynamodb
+            )
+    testRuntimeOnly.extendsFrom(test_runtime)
+}
 
 dependencies {
+    implementation 'commons-validator:commons-validator:1.8.0',
+            project(":orchestration-shared")
 
-    compileOnly configurations.lambda,
-            configurations.ssm,
-            configurations.sns,
-            configurations.dynamodb
-
-    implementation configurations.nimbus,
-            configurations.gson,
-            'commons-validator:commons-validator:1.8.0'
-
-    implementation project(":orchestration-shared")
-
-    runtimeOnly configurations.logging_runtime
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.dynamodb
-
-    testRuntimeOnly configurations.test_runtime
+    testImplementation project(":orchestration-shared-test")
 }
 
 test {
@@ -51,7 +55,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

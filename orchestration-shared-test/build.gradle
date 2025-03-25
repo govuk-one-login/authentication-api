@@ -2,24 +2,29 @@ plugins {
     id "java"
 }
 
-group "uk.gov.di.orchestration.sharedtest"
-version "unspecified"
+group = "uk.gov.di.orchestration.sharedtest"
+version = "unspecified"
+
+configurations {
+    implementation.extendsFrom(
+            tests,
+            lambda,
+            apache,
+            nimbus,
+            lettuce,
+            dynamodb,
+            kms,
+            sns,
+            s3,
+            sqs,
+            ssm,
+            cloudwatch,
+            pact_provider
+            )
+}
 
 dependencies {
-    implementation configurations.tests,
-            configurations.lambda,
-            configurations.apache,
-            configurations.nimbus,
-            configurations.lettuce,
-            configurations.dynamodb,
-            configurations.kms,
-            configurations.sns,
-            configurations.s3,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.cloudwatch,
-            configurations.pact_provider,
-            "org.eclipse.jetty:jetty-server:12.0.18",
+    implementation "org.eclipse.jetty:jetty-server:12.0.18",
             "com.google.code.gson:gson:2.12.1"
 
     implementation project(":orchestration-shared")

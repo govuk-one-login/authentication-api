@@ -3,35 +3,40 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.accountmanagement"
-version "unspecified"
+group = "uk.gov.di.authentication.accountmanagement"
+version = "unspecified"
+
+configurations {
+    compileOnly.extendsFrom(
+            lambda,
+            sqs,
+            ssm,
+            sns,
+            s3,
+            dynamodb
+            )
+    implementation.extendsFrom(
+            nimbus,
+            govuk_notify,
+            gson,
+            vavr
+            )
+    runtimeOnly.extendsFrom(logging_runtime)
+    testImplementation.extendsFrom(
+            tests,
+            lambda_tests,
+            lambda,
+            sqs,
+            dynamodb
+            )
+    testRuntimeOnly.extendsFrom(
+            test_runtime
+            )
+}
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.s3,
-            configurations.dynamodb
-
-
-    implementation configurations.nimbus,
-            configurations.govuk_notify,
-            configurations.gson,
-            configurations.vavr
-
     implementation project(":shared")
-
-    runtimeOnly configurations.logging_runtime
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(":shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.dynamodb
-
-    testRuntimeOnly configurations.test_runtime
+    testImplementation project(":shared-test")
 }
 
 test {
@@ -54,7 +59,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

@@ -4,35 +4,39 @@ plugins {
     id "au.com.dius.pact" version "4.6.17"
 }
 
-group "uk.gov.di.authentication.ipvapi"
-version "unspecified"
+group = "uk.gov.di.authentication.ipvapi"
+version = "unspecified"
+
+configurations {
+    compileOnly.extendsFrom(
+            lambda,
+            sqs,
+            ssm,
+            sns,
+            kms,
+            dynamodb
+            )
+    implementation.extendsFrom(
+            gson,
+            nimbus
+            )
+    runtimeOnly.extendsFrom(logging_runtime)
+    testImplementation.extendsFrom(
+            tests,
+            apache,
+            lambda_tests,
+            lambda,
+            sqs,
+            kms,
+            dynamodb,
+            pact_consumer
+            )
+    testRuntimeOnly.extendsFrom(test_runtime)
+}
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.kms,
-            configurations.dynamodb
-
-    implementation configurations.gson,
-            configurations.nimbus
-
     implementation project(":orchestration-shared")
-
-    runtimeOnly configurations.logging_runtime
-
-    testImplementation configurations.tests,
-            configurations.apache,
-            configurations.lambda_tests,
-            project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.kms,
-            configurations.dynamodb,
-            configurations.pact_consumer
-
-    testRuntimeOnly configurations.test_runtime
+    testImplementation project(":orchestration-shared-test")
 }
 
 test {
@@ -78,7 +82,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }
