@@ -9,6 +9,7 @@ shared_state_bucket                  = "digital-identity-prod-tfstate"
 # App-specific
 internal_sector_uri  = "https://identity.account.gov.uk"
 test_clients_enabled = false
+call_ticf_cri        = true
 
 evcs_audience              = "https://credential-store.account.gov.uk"
 auth_issuer_claim_for_evcs = "https://signin.account.gov.uk"

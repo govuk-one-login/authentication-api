@@ -68,7 +68,6 @@ import static java.lang.String.format;
 import static java.time.Clock.fixed;
 import static java.time.ZoneId.systemDefault;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -87,7 +86,6 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.C
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.LoginHandler.INTERNAL_SUBJECT_ID;
-import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -612,12 +610,6 @@ class AccountInterventionsHandlerTest {
         vtr.add(CredentialTrustLevel.LOW_LEVEL.getValue());
         assertEquals(ticfRequest.vtr(), vtr);
         verify(auditService).submitAuditEvent(expectedEvent, AUDIT_CONTEXT);
-
-        assertThat(
-                logging.events(),
-                hasItem(
-                        withMessageContaining(
-                                "Invoking TICF CRI with payload: %s".formatted(capturedPayload))));
     }
 
     @Test

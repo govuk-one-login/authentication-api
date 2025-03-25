@@ -264,7 +264,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             return;
         }
 
-        LOG.info("Invoking TICF CRI with payload: {}", payload);
         lambdaInvoker.invokeAsyncWithPayload(
                 payload, configurationService.getTicfCRILambdaIdentifier());
     }
