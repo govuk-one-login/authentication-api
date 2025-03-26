@@ -116,7 +116,7 @@ class LoginHandlerTest {
                     .withMethodVerified(true)
                     .withEnabled(true);
     private static final Json objectMapper = SerializationService.getInstance();
-    private static final Session session = new Session().setEmailAddress(EMAIL);
+    private static final Session session = new Session();
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);

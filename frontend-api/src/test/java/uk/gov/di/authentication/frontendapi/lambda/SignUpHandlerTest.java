@@ -171,9 +171,7 @@ class SignUpHandlerTest {
 
         verify(authenticationService)
                 .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
-        verify(sessionService)
-                .storeOrUpdateSession(
-                        argThat(s -> s.getEmailAddress().equals(EMAIL)), eq(SESSION_ID));
+        verify(authSessionService).updateSession(argThat(s -> s.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
         verify(authenticationService)
@@ -218,9 +216,7 @@ class SignUpHandlerTest {
 
         verify(authenticationService)
                 .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
-        verify(sessionService)
-                .storeOrUpdateSession(
-                        argThat(s -> s.getEmailAddress().equals(EMAIL)), eq(SESSION_ID));
+        verify(authSessionService).updateSession(argThat(s -> s.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
         verify(authSessionService)

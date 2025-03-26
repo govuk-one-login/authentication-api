@@ -134,7 +134,7 @@ class SendNotificationHandlerTest {
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
 
-    private final Session session = new Session().setEmailAddress(EMAIL);
+    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
