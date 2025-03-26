@@ -13,21 +13,17 @@ public class BackChannelLogoutService {
 
     private static final Logger LOGGER = LogManager.getLogger(BackChannelLogoutService.class);
     private final AwsSqsClient awsSqsClient;
-    private final AuthenticationService authenticationService;
 
     public BackChannelLogoutService(ConfigurationService configurationService) {
         this(
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getBackChannelLogoutQueueURI(),
-                        configurationService.getSqsEndpointURI()),
-                new DynamoService(configurationService));
+                        configurationService.getSqsEndpointURI()));
     }
 
-    public BackChannelLogoutService(
-            AwsSqsClient awsSqsClient, AuthenticationService authenticationService) {
+    public BackChannelLogoutService(AwsSqsClient awsSqsClient) {
         this.awsSqsClient = awsSqsClient;
-        this.authenticationService = authenticationService;
     }
 
     public void sendLogoutMessage(
