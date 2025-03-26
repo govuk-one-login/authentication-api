@@ -76,14 +76,19 @@ public class MFAMethodsPutHandler
                     configurationService.getEnvironment());
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
         }
-        var publicSubjectId =
-                input.getPathParameters()
-                        .get("publicSubjectId"); // Error handling for when this empty to come in
-        // subsequent commit
-        var mfaIdentifier =
-                input.getPathParameters()
-                        .get("mfaIdentifier"); // Error handling for when this empty to come in
-        // subsequent commit
+
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+        var mfaIdentifier = input.getPathParameters().get("mfaIdentifier");
+
+        if (publicSubjectId.isEmpty()) {
+            LOG.error("Request does not include public subject id");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+
+        if (mfaIdentifier.isEmpty()) {
+            LOG.error("Request does not include mfa identifier");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
 
         var userProfile =
                 authenticationService

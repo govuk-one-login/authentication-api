@@ -187,6 +187,28 @@ class MFAMethodsPutHandlerTest {
     }
 
     @Test
+    void shouldReturn400WhenPathParameterIsEmpty() {
+        event.withPathParameters(
+                Map.of("mfaIdentifier", "some-mfa-identifier", "publicSubjectId", ""));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+    }
+
+    @Test
+    void shouldReturn400WhenMfaIdentifierParameterIsEmpty() {
+        event.withPathParameters(
+                Map.of("publicSubjectId", "some-public-subject-id", "mfaIdentifier", ""));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+    }
+
+    @Test
     void shouldReturn400WhenFeatureFlagDisabled() {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
 
