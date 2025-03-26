@@ -1705,7 +1705,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 Map.of(
                         "vtr_list",
-                        jsonArrayOf("Cl.Cm", "Cl"),
+                        "Cl.Cm Cl",
                         "_ga",
                         "12345",
                         "cookie_consent",
@@ -1749,7 +1749,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 Map.of(
                         "vtr_list",
-                        jsonArrayOf("Cl.Cm", "Cl"),
+                        "Cl.Cm Cl",
                         "_ga",
                         "12345",
                         "cookie_consent",

@@ -101,6 +101,7 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
+import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseVtrStringListFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -899,8 +900,8 @@ public class AuthorisationHandler
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
         List<String> vtrStringList =
-                Optional.ofNullable(authenticationRequest.getCustomParameter(VTR_PARAM))
-                        .orElse(List.of(CredentialTrustLevel.getDefault().getValue()));
+                parseVtrStringListFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter(VTR_PARAM));
         String reauthSub = null;
         String reauthSid = null;
         if (reauthRequested) {
