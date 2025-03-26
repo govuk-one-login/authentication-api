@@ -312,7 +312,42 @@ class DynamoServiceIntegrationTest {
         }
 
         @Test
-        void shouldReturnAnErrorAndDoNoUpdatesIfMfaMethodByIdentifierDoesNotExist() {
+        void shouldUpdateAnAuthAppCredential() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var updatedCredential = "some-updated-credential";
+
+            var result =
+                    dynamoService.updateMigratedAuthAppCredential(
+                            TEST_EMAIL,
+                            updatedCredential,
+                            defaultPriorityAuthAppData.getMfaIdentifier());
+
+            var expectedUpdatedAuthAppMethod =
+                    MFAMethod.authAppMfaMethod(
+                            updatedCredential,
+                            defaultPriorityAuthAppData.isMethodVerified(),
+                            defaultPriorityAuthAppData.isEnabled(),
+                            PriorityIdentifier.valueOf(defaultPriorityAuthAppData.getPriority()),
+                            defaultPriorityAuthAppData.getMfaIdentifier());
+            assertEquals(
+                    MfaMethodData.authAppMfaData(
+                            defaultPriorityAuthAppData.getMfaIdentifier(),
+                            PriorityIdentifier.DEFAULT,
+                            true,
+                            updatedCredential),
+                    result.get());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, expectedUpdatedAuthAppMethod, backupPrioritySmsData);
+        }
+
+        @Test
+        void
+                shouldReturnAnErrorAndDoNoUpdatesForUpdatePhoneNumberIfMfaMethodByIdentifierDoesNotExist() {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
 
@@ -330,6 +365,28 @@ class DynamoServiceIntegrationTest {
 
             assertBackupAndDefaultMfaMethodsWithData(
                     userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        @Test
+        void
+                shouldReturnAnErrorAndDoNoUpdatesForUpdateAuthAppCredentialIfMfaMethodByIdentifierDoesNotExist() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var updatedCredential = "some-updated-credential";
+
+            var result =
+                    dynamoService.updateMigratedAuthAppCredential(
+                            TEST_EMAIL, updatedCredential, "some-other-identifier");
+
+            assertEquals(
+                    "Mfa method with identifier some-other-identifier does not exist",
+                    result.getLeft());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPriorityAuthAppData, backupPrioritySmsData);
         }
 
         @Test
@@ -355,6 +412,31 @@ class DynamoServiceIntegrationTest {
 
             assertBackupAndDefaultMfaMethodsWithData(
                     userCredentials, defaultPriorityAuthAppData, backupPrioritySmsData);
+        }
+
+        @Test
+        void shouldReturnAnErrorAndDoNoUpdatesWhenCallingUpdateAuthAppIfMfaMethodIsNotAuthApp() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var updatedCredential = "some-other-credential";
+
+            var result =
+                    dynamoService.updateMigratedAuthAppCredential(
+                            TEST_EMAIL,
+                            updatedCredential,
+                            defaultPrioritySmsData.getMfaIdentifier());
+
+            assertEquals(
+                    format(
+                            "Attempted to update auth app credential for non auth app method with identifier %s",
+                            defaultPrioritySmsData.getMfaIdentifier()),
+                    result.getLeft());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
         }
 
         private MFAMethod findMethodWithPriority(

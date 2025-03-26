@@ -281,14 +281,15 @@ public class MfaMethodsService {
                 return Either.left(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
             } else {
-                // TODO actually do the database operation - to come in subsequent commit
+                var result =
+                        persistentService.updateMigratedAuthAppCredential(
+                                email, authAppDetail.credential(), mfaIdentifier);
 
-                return Either.right(
-                        new MfaMethodData(
-                                defaultMethod.getMfaIdentifier(),
-                                requestedPriority,
-                                defaultMethod.isMethodVerified(),
-                                updatedMethod.method()));
+                return result.mapLeft(
+                        errorString -> {
+                            LOG.error(errorString);
+                            return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                        });
             }
         }
     }

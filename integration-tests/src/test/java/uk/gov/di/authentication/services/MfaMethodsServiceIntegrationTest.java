@@ -386,6 +386,7 @@ class MfaMethodsServiceIntegrationTest {
             @Test
             void returnsSuccessAndUpdatesMethodWhenAttemptingToUpdateAnAuthAppCredential() {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
                 var detailWithUpdatedCredential =
                         new AuthAppMfaDetail(MFAMethodType.AUTH_APP, AUTH_APP_CREDENTIAL_TWO);
@@ -406,14 +407,20 @@ class MfaMethodsServiceIntegrationTest {
 
                 assertEquals(expectedMfaData, result.get());
 
-                // TODO actual database update
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                var expectedRemainingMethods =
+                        List.of(expectedMfaData, mfaMethodDataFrom(backupPrioritySms));
+                assertEquals(
+                        expectedRemainingMethods.stream().sorted().toList(),
+                        remainingMfaMethods.stream().sorted().toList());
             }
 
             @Test
             void returnsSuccessWhenAttemptingToUpdateAnSmsNumber() {
-                var aThirdPhoneNumber = "111222333";
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+                var aThirdPhoneNumber = "111222333";
 
                 var detailWithUpdatedNumber =
                         new SmsMfaDetail(MFAMethodType.SMS, aThirdPhoneNumber);

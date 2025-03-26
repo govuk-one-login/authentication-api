@@ -87,4 +87,7 @@ public interface AuthenticationService {
 
     Either<String, MfaMethodData> updateMigratedMethodPhoneNumber(
             String email, String updatedPhoneNumber, String mfaMethodIdentifier);
+
+    Either<String, MfaMethodData> updateMigratedAuthAppCredential(
+            String email, String updatedCredential, String mfaMethodIdentifier);
 }
