@@ -61,6 +61,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -534,6 +535,8 @@ class LogoutServiceTest {
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id-3")), eq("rp-pairwise-id-client-3"));
+        verify(backChannelLogoutService, never())
+                .sendLogoutMessage(argThat(withClientId("client-id-4")), anyString());
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -648,7 +651,11 @@ class LogoutServiceTest {
         destroySessionsRequest =
                 new DestroySessionsRequest(
                         SESSION_ID,
-                        List.of(CLIENT_SESSION_ID, "client-session-id-2", "client-session-id-3"));
+                        List.of(
+                                CLIENT_SESSION_ID,
+                                "client-session-id-2",
+                                "client-session-id-3",
+                                "client-session-id-4"));
     }
 
     private void setupClientSessionToken(JWT idToken) {
