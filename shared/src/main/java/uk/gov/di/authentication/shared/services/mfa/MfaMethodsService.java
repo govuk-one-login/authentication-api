@@ -246,6 +246,8 @@ public class MfaMethodsService {
             return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
         }
 
+        Either<String, MFAMethod> databaseUpdateResult;
+
         if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
             var isExistingDefaultPhoneNumber =
                     updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination());
@@ -266,14 +268,9 @@ public class MfaMethodsService {
                 return Either.left(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER);
             } else {
-                var result =
+                databaseUpdateResult =
                         persistentService.updateMigratedMethodPhoneNumber(
                                 email, updatedSmsDetail.phoneNumber(), mfaIdentifier);
-                return result.mapLeft(
-                        errorString -> {
-                            LOG.error(errorString);
-                            return MfaUpdateFailureReason.UNEXPECTED_ERROR;
-                        });
             }
         } else {
             var authAppDetail = (AuthAppMfaDetail) updatedMethod.method();
@@ -281,17 +278,19 @@ public class MfaMethodsService {
                 return Either.left(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
             } else {
-                var result =
+                databaseUpdateResult =
                         persistentService.updateMigratedAuthAppCredential(
                                 email, authAppDetail.credential(), mfaIdentifier);
+            }
+        }
 
-                return result.mapLeft(
+        return databaseUpdateResult
+                .flatMap(MfaMethodData::from)
+                .mapLeft(
                         errorString -> {
                             LOG.error(errorString);
                             return MfaUpdateFailureReason.UNEXPECTED_ERROR;
                         });
-            }
-        }
     }
 
     private boolean updateRequestChangesMethodType(

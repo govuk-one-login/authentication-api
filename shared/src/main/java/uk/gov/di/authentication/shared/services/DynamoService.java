@@ -17,14 +17,12 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -740,9 +738,8 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, MfaMethodData> updateMigratedMethodPhoneNumber(
+    public Either<String, MFAMethod> updateMigratedMethodPhoneNumber(
             String email, String updatedPhoneNumber, String mfaMethodIdentifier) {
-        var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
                         Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
@@ -755,19 +752,30 @@ public class DynamoService implements AuthenticationService {
                                         "Attempted to update phone number for non sms method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    dynamoUserCredentialsTable.updateItem(
-                            userCredentials
-                                    .withUpdated(dateTime)
-                                    .withUpdatedMfaMethod(
-                                            mfaMethodIdentifier,
-                                            existingMethod.withDestination(updatedPhoneNumber)));
-                    return Either.right(
-                            MfaMethodData.smsMethodData(
-                                    mfaMethodIdentifier,
-                                    PriorityIdentifier.valueOf(existingMethod.getPriority()),
-                                    existingMethod.isMethodVerified(),
-                                    updatedPhoneNumber));
+                    return updateMigratedMfaMethod(
+                            existingMethod.withDestination(updatedPhoneNumber),
+                            mfaMethodIdentifier,
+                            userCredentials);
                 });
+    }
+
+    private Either<String, MFAMethod> updateMigratedMfaMethod(
+            MFAMethod updatedMFAMethod,
+            String mfaMethodIdentifier,
+            UserCredentials userCredentials) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var updatedUserCredentials =
+                dynamoUserCredentialsTable.updateItem(
+                        userCredentials
+                                .withUpdated(dateTime)
+                                .withUpdatedMfaMethod(mfaMethodIdentifier, updatedMFAMethod));
+
+        return getMfaMethodByIdentifier(updatedUserCredentials, mfaMethodIdentifier)
+                .mapLeft(
+                        err ->
+                                format(
+                                        "Error when retrieving updated mfa method with identifier: %s no such identifier exists",
+                                        mfaMethodIdentifier));
     }
 
     private Either<String, MFAMethod> getMfaMethodByIdentifier(
@@ -789,9 +797,8 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, MfaMethodData> updateMigratedAuthAppCredential(
+    public Either<String, MFAMethod> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier) {
-        var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
                         Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
@@ -806,19 +813,10 @@ public class DynamoService implements AuthenticationService {
                                         "Attempted to update auth app credential for non auth app method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    dynamoUserCredentialsTable.updateItem(
-                            userCredentials
-                                    .withUpdated(dateTime)
-                                    .withUpdatedMfaMethod(
-                                            mfaMethodIdentifier,
-                                            existingMethod.withCredentialValue(updatedCredential)));
-
-                    return Either.right(
-                            MfaMethodData.authAppMfaData(
-                                    mfaMethodIdentifier,
-                                    PriorityIdentifier.valueOf(existingMethod.getPriority()),
-                                    existingMethod.isMethodVerified(),
-                                    updatedCredential));
+                    return updateMigratedMfaMethod(
+                            existingMethod.withCredentialValue(updatedCredential),
+                            mfaMethodIdentifier,
+                            userCredentials);
                 });
     }
 

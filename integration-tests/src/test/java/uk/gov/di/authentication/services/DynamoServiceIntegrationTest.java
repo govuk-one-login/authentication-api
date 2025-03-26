@@ -11,8 +11,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
-import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -297,13 +295,8 @@ class DynamoServiceIntegrationTest {
                             updatedPhoneNumber,
                             PriorityIdentifier.valueOf(defaultPrioritySmsData.getPriority()),
                             defaultPrioritySmsData.getMfaIdentifier());
-            assertEquals(
-                    new MfaMethodData(
-                            defaultPrioritySmsData.getMfaIdentifier(),
-                            PriorityIdentifier.DEFAULT,
-                            true,
-                            new SmsMfaDetail(MFAMethodType.SMS, updatedPhoneNumber)),
-                    result.get());
+
+            assertRetrievedMethodHasData(expectedUpdatedDefaultSmsMethod, result.get());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
@@ -331,13 +324,8 @@ class DynamoServiceIntegrationTest {
                             defaultPriorityAuthAppData.isEnabled(),
                             PriorityIdentifier.valueOf(defaultPriorityAuthAppData.getPriority()),
                             defaultPriorityAuthAppData.getMfaIdentifier());
-            assertEquals(
-                    MfaMethodData.authAppMfaData(
-                            defaultPriorityAuthAppData.getMfaIdentifier(),
-                            PriorityIdentifier.DEFAULT,
-                            true,
-                            updatedCredential),
-                    result.get());
+
+            assertRetrievedMethodHasData(result.get(), expectedUpdatedAuthAppMethod);
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
