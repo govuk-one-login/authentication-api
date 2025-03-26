@@ -72,21 +72,7 @@ class MFAMethodsPutHandlerTest {
                 MfaMethodCreateOrUpdateRequest.from(
                         PriorityIdentifier.DEFAULT,
                         new SmsMfaDetail(MFAMethodType.SMS, phoneNumber));
-        var eventWithUpdateRequest =
-                event.withBody(
-                        format(
-                                """
-                        {
-                          "mfaMethod": {
-                            "priorityIdentifier": "DEFAULT",
-                            "method": {
-                                "mfaMethodType": "SMS",
-                                "phoneNumber": "%s"
-                            }
-                          }
-                        }
-                        """,
-                                phoneNumber));
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
 
         when(userProfile.getEmail()).thenReturn(EMAIL);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
@@ -209,10 +195,39 @@ class MFAMethodsPutHandlerTest {
     }
 
     @Test
+    void shouldReturn404WhenUserProfileNotFoundForPublicSubject() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.empty());
+
+        event.withBody(updateSmsRequest("123456789"));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(404));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+    }
+
+    @Test
     void shouldReturn400WhenFeatureFlagDisabled() {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
 
         var result = handler.handleRequest(event, context);
         assertEquals(400, result.getStatusCode());
+    }
+
+    private String updateSmsRequest(String phoneNumber) {
+        return format(
+                """
+        {
+          "mfaMethod": {
+            "priorityIdentifier": "DEFAULT",
+            "method": {
+                "mfaMethodType": "SMS",
+                "phoneNumber": "%s"
+            }
+          }
+        }
+        """,
+                phoneNumber);
     }
 }

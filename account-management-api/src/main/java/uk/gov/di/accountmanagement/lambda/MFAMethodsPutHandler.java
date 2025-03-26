@@ -90,10 +90,12 @@ public class MFAMethodsPutHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
-        var userProfile =
-                authenticationService
-                        .getOptionalUserProfileFromPublicSubject(publicSubjectId)
-                        .get(); // Error handling for this to come in subsequent commit
+        var maybeUserProfile =
+                authenticationService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+        if (maybeUserProfile.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+        }
+        var userProfile = maybeUserProfile.get();
 
         try {
             var mfaMethodUpdateRequest =
