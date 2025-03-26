@@ -596,6 +596,7 @@ public class AuthenticationCallbackHandler
                 */
                 try {
                     orchAuthCodeService.generateAndSaveAuthorisationCode(
+                            authCode,
                             clientId,
                             clientSessionId,
                             userInfo.getEmailAddress(),

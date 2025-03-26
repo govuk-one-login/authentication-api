@@ -220,6 +220,7 @@ class AuthenticationCallbackHandlerTest {
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
@@ -636,6 +637,7 @@ class AuthenticationCallbackHandlerTest {
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
