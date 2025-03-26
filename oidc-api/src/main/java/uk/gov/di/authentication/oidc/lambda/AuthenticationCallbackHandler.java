@@ -63,6 +63,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
@@ -117,6 +118,7 @@ public class AuthenticationCallbackHandler
     private final AuthenticationUserInfoStorageService userInfoStorageService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthorisationCodeService authorisationCodeService;
+    private final OrchAuthCodeService orchAuthCodeService;
     private final ClientService clientService;
     private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
     private final AccountInterventionService accountInterventionService;
@@ -145,6 +147,7 @@ public class AuthenticationCallbackHandler
                 new AuthenticationUserInfoStorageService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
 
         this.initiateIPVAuthorisationService =
@@ -192,6 +195,7 @@ public class AuthenticationCallbackHandler
                         configurationService,
                         redisConnectionService,
                         SerializationService.getInstance());
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.initiateIPVAuthorisationService =
                 new InitiateIPVAuthorisationService(
@@ -228,6 +232,7 @@ public class AuthenticationCallbackHandler
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthorisationCodeService authorisationCodeService,
+            OrchAuthCodeService orchAuthCodeService,
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
             AccountInterventionService accountInterventionService,
@@ -245,6 +250,7 @@ public class AuthenticationCallbackHandler
         this.userInfoStorageService = dynamoAuthUserInfoService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authorisationCodeService = authorisationCodeService;
+        this.orchAuthCodeService = orchAuthCodeService;
         this.clientService = clientService;
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
         this.accountInterventionService = accountInterventionService;
