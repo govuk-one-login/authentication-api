@@ -50,13 +50,7 @@ public class VectorOfTrust {
         return levelOfConfidence != null && !levelOfConfidence.equals(NONE);
     }
 
-    public static List<VectorOfTrust> parseFromAuthRequestAttribute(List<String> vtr) {
-        if (isNull(vtr) || vtr.isEmpty()) {
-            LOG.info(
-                    "VTR attribute is not present so defaulting to {}",
-                    CredentialTrustLevel.getDefault().getValue());
-            return List.of(new VectorOfTrust(CredentialTrustLevel.getDefault()));
-        }
+    private static JSONArray parseJSONArrayFromAuthRequestAttribute(List<String> vtr) {
         JSONParser parser = new JSONParser(DEFAULT_PERMISSIVE_MODE);
         JSONArray vtrJsonArray;
         try {
@@ -70,9 +64,33 @@ public class VectorOfTrust {
             LOG.warn("Error when parsing vtr attribute", e);
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
+        return vtrJsonArray;
+    }
+
+    public static List<VectorOfTrust> parseFromAuthRequestAttribute(List<String> vtr) {
+        if (isNull(vtr) || vtr.isEmpty()) {
+            LOG.info(
+                    "VTR attribute is not present so defaulting to {}",
+                    CredentialTrustLevel.getDefault().getValue());
+            return List.of(new VectorOfTrust(CredentialTrustLevel.getDefault()));
+        }
+        JSONArray vtrJsonArray = parseJSONArrayFromAuthRequestAttribute(vtr);
         List<VectorOfTrust> vtrList = parseVtrSet(vtrJsonArray);
         String vtrs = stringifyVtrList(vtrList);
         LOG.info("VTR list has been processed as vectorOfTrust list: [{}]", vtrs);
+        return vtrList;
+    }
+
+    public static List<String> parseVtrStringListFromAuthRequestAttribute(List<String> vtr) {
+        if (isNull(vtr) || vtr.isEmpty()) {
+            LOG.info(
+                    "VTR attribute is not present so defaulting to {}",
+                    CredentialTrustLevel.getDefault().getValue());
+            return List.of(CredentialTrustLevel.getDefault().getValue());
+        }
+        JSONArray vtrJsonArray = parseJSONArrayFromAuthRequestAttribute(vtr);
+        List<String> vtrList = vtrJsonArray.stream().map(String::valueOf).toList();
+        LOG.info("VTR list has been processed as vtrStringList list: {}", vtrList);
         return vtrList;
     }
 
