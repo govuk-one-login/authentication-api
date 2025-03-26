@@ -132,6 +132,8 @@ class AuthenticationCallbackHandlerTest {
             mock(AuthenticationUserInfoStorageService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+
+    // TODO: ATO-1218: Remove the following mock for the auth code service.
     private static final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
@@ -209,7 +211,15 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(
                         new AccountIntervention(
                                 new AccountInterventionState(false, false, false, false)));
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        any(Long.class)))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
@@ -618,12 +628,20 @@ class AuthenticationCallbackHandlerTest {
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(mediumRequestOrchSession));
 
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        any(Long.class)))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+
         usingValidClient();
 
         var event = new APIGatewayProxyRequestEvent();
