@@ -34,7 +34,6 @@ public class LogoutService {
 
     private static final Logger LOG = LogManager.getLogger(LogoutService.class);
 
-    private final ConfigurationService configurationService;
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
@@ -50,7 +49,6 @@ public class LogoutService {
 
     public LogoutService(ConfigurationService configurationService) {
         this(
-                configurationService,
                 new SessionService(configurationService),
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
@@ -65,7 +63,6 @@ public class LogoutService {
 
     public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
         this(
-                configurationService,
                 new SessionService(configurationService, redis),
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
@@ -79,7 +76,6 @@ public class LogoutService {
     }
 
     public LogoutService(
-            ConfigurationService configurationService,
             SessionService sessionService,
             OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
@@ -90,7 +86,6 @@ public class LogoutService {
             BackChannelLogoutService backChannelLogoutService,
             AuthFrontend authFrontend,
             NowClock nowClock) {
-        this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
