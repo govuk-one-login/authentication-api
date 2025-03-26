@@ -1704,7 +1704,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertResponseJarHasClaimsWithValues(
                 response,
                 Map.of(
-                        "vtr_list",
+                        "vtr",
                         "Cl.Cm Cl",
                         "_ga",
                         "12345",
@@ -1748,7 +1748,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertResponseJarHasClaimsWithValues(
                 response,
                 Map.of(
-                        "vtr_list",
+                        "vtr",
                         "Cl.Cm Cl",
                         "_ga",
                         "12345",

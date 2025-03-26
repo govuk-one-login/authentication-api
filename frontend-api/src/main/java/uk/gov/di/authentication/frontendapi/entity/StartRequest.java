@@ -14,7 +14,7 @@ public record StartRequest(
                 CredentialTrustLevel currentCredentialStrength,
         @Expose @SerializedName("cookie_consent") String cookieConsent,
         @Expose @SerializedName("_ga") String ga,
-        @Expose @SerializedName("vtr_list") String vtrList,
+        @Expose @SerializedName("vtr") String vtr,
         @Expose @SerializedName("state") String state,
         @Expose @SerializedName("client_id") String clientId,
         @Expose @SerializedName("redirect_uri") String redirectUri,

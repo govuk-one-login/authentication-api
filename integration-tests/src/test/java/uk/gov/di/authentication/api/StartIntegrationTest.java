@@ -69,7 +69,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     + "\"state\": \"%s\","
                     + "\"client_id\": \"%s\","
                     + "\"redirect_uri\": \"%s\","
-                    + "\"vtr_list\": \"%s\", "
+                    + "\"vtr\": \"%s\", "
                     + "\"scope\": \"%s\""
                     + "}";
 
@@ -372,7 +372,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             "redirect_uri", REDIRECT_URI.toString(),
                                             "scope", scope.toString(),
                                             "client_id", CLIENT_ID,
-                                            "vtr_list", "Cl.Cm"))),
+                                            "vtr", "Cl.Cm"))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -393,7 +393,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             "redirect_uri", REDIRECT_URI.toString(),
                                             "scope", scope.toString(),
                                             "client_id", CLIENT_ID,
-                                            "vtr_list", jsonArrayOf("Cl.Cm")))),
+                                            "vtr", jsonArrayOf("Cl.Cm")))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -431,7 +431,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 customAuthParams.get("state"),
                 customAuthParams.get("client_id"),
                 customAuthParams.get("redirect_uri"),
-                customAuthParams.get("vtr_list"),
+                customAuthParams.get("vtr"),
                 customAuthParams.get("scope"));
     }
 

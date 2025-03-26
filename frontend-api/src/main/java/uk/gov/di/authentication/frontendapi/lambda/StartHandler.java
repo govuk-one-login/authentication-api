@@ -380,14 +380,14 @@ public class StartHandler
                         .map(vtr -> List.of(VectorOfTrust.parseFromAuthRequestAttribute(vtr)))
                         .orElse(null);
         var startRequestVtrList =
-                Optional.ofNullable(startRequest.vtrList())
+                Optional.ofNullable(startRequest.vtr())
                         .map(vtrStringList -> List.of(vtrStringList.split(" ")))
                         .map(
                                 vtrStringList ->
                                         List.of(VectorOfTrust.parseVtrStringList(vtrStringList)))
                         .orElse(null);
         if (!Objects.equals(startRequestVtrList, authRequestVtrList)) {
-            LOG.warn("\"vtr_list\" field does match custom parameter in auth request params");
+            LOG.warn("\"vtr\" field does match custom parameter in auth request params");
         }
         if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
             LOG.warn("\"state\" field does match custom parameter in auth request params");

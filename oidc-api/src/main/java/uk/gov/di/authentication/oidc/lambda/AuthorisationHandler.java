@@ -962,7 +962,7 @@ public class AuthorisationHandler
                         .claim(
                                 "current_credential_strength",
                                 orchSession.getCurrentCredentialStrength())
-                        .claim("vtr_list", String.join(" ", vtrStringList))
+                        .claim("vtr", String.join(" ", vtrStringList))
                         .claim("scope", authenticationRequest.getScope().toString());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
