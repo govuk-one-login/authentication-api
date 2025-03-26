@@ -65,3 +65,13 @@ import {
   to = aws_ssm_parameter.user_credentials_table
   id = "/acceptance-tests/${var.environment}/USER_CREDENTIALS_TABLE"
 }
+
+resource "aws_ssm_parameter" "client_registry_table" {
+  name  = "/acceptance-tests/${var.environment}/CLIENT_REGISTRY_TABLE"
+  type  = "String"
+  value = aws_dynamodb_table.client_registry_table.arn
+}
+import {
+  to = aws_ssm_parameter.client_registry_table
+  id = "/acceptance-tests/${var.environment}/CLIENT_REGISTRY_TABLE"
+}
