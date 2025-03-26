@@ -150,10 +150,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             emitPasswordResetRequestedAuditEvent(input, request, userContext, isTestClient);
 
-            sessionService.storeOrUpdateSession(
-                    userContext.getSession().incrementPasswordResetCount(),
-                    userContext.getAuthSession().getSessionId());
-
             authSessionService.updateSession(
                     userContext.getAuthSession().incrementPasswordResetCount());
 
@@ -191,9 +187,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 userContext.getAuthSession().getEmailAddress(),
                 codeRequestBlockedKeyPrefix,
                 configurationService.getLockoutDuration());
-        sessionService.storeOrUpdateSession(
-                userContext.getSession().resetPasswordResetCount(),
-                userContext.getAuthSession().getSessionId());
         authSessionService.updateSession(userContext.getAuthSession().resetPasswordResetCount());
     }
 
