@@ -161,7 +161,6 @@ class LogoutServiceTest {
 
         logoutService =
                 new LogoutService(
-                        configurationService,
                         sessionService,
                         orchSessionService,
                         dynamoClientService,
@@ -632,7 +631,6 @@ class LogoutServiceTest {
 
     private LogoutService logoutServiceWithClock(Clock clock) {
         return new LogoutService(
-                configurationService,
                 sessionService,
                 orchSessionService,
                 dynamoClientService,
