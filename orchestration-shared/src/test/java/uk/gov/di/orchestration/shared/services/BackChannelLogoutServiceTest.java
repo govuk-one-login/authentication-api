@@ -21,8 +21,7 @@ class BackChannelLogoutServiceTest {
     private final AwsSqsClient sqs = Mockito.mock(AwsSqsClient.class);
     private final AuthenticationService authenticationService =
             Mockito.mock(AuthenticationService.class);
-    private final BackChannelLogoutService service =
-            new BackChannelLogoutService(sqs, authenticationService);
+    private final BackChannelLogoutService service = new BackChannelLogoutService(sqs);
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String RP_SECTOR_HOST = "example.sign-in.service.gov.uk";
     private static final String SUBJECT_ID = "subject";
