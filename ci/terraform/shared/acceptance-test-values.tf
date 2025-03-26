@@ -71,17 +71,9 @@ resource "aws_ssm_parameter" "client_registry_table" {
   type  = "String"
   value = aws_dynamodb_table.client_registry_table.arn
 }
-import {
-  to = aws_ssm_parameter.client_registry_table
-  id = "/acceptance-tests/${var.environment}/CLIENT_REGISTRY_TABLE"
-}
 
 resource "aws_ssm_parameter" "at_client_id" {
   name = "/acceptance-tests/${var.environment}/CLIENT_ID"
   type = "String"
   value = random_string.stub_relying_party_client_id[local.stub_rp_client_name_pattern].result
-}
-import {
-  to = aws_ssm_parameter.at_client_id
-  id = "/acceptance-tests/${var.environment}/CLIENT_ID"
 }
