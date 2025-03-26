@@ -42,6 +42,7 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.AUTHORIZATION
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -128,6 +129,8 @@ public class UserInfoHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> userInfoRequestHandler(input, context));
@@ -135,7 +138,6 @@ public class UserInfoHandler
 
     public APIGatewayProxyResponseEvent userInfoRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        ThreadContext.clearMap();
         LOG.info("Request received to the UserInfoHandler");
         if (!headersContainValidHeader(
                 input.getHeaders(),

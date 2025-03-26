@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static java.util.Collections.emptyMap;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent, Object> {
@@ -66,6 +67,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
     @Override
     public Object handleRequest(SQSEvent event, Context context) {
         ThreadContext.clearMap();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> backChannelLogoutRequestHandler(event, context));
