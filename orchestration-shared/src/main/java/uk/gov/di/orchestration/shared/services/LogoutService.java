@@ -127,18 +127,20 @@ public class LogoutService {
                             orchClientSessionService);
             logIfClientSessionsAreNotEqual(
                     clientSessionOpt.orElse(null), orchClientSessionOpt.orElse(null));
-            clientSessionOpt
-                    .flatMap(
-                            t ->
-                                    t.getAuthRequestParams().get("client_id").stream()
-                                            .findFirst()
-                                            .flatMap(dynamoClientService::getClient))
-                    .ifPresent(
-                            clientRegistry ->
-                                    backChannelLogoutService.sendLogoutMessage(
-                                            clientRegistry,
-                                            request.getEmailAddress(),
-                                            configurationService.getInternalSectorURI()));
+            if (clientSessionOpt.isPresent()) {
+                var rpPairwiseId = clientSessionOpt.get().getRpPairwiseId();
+                clientSessionOpt.get().getAuthRequestParams().get("client_id").stream()
+                        .findFirst()
+                        .flatMap(dynamoClientService::getClient)
+                        .ifPresent(
+                                clientRegistry ->
+                                        backChannelLogoutService.sendLogoutMessage(
+                                                clientRegistry,
+                                                request.getEmailAddress(),
+                                                configurationService.getInternalSectorURI(),
+                                                rpPairwiseId));
+            }
+
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);
             LOG.info("Deleting Orch Client session");
