@@ -604,7 +604,7 @@ class VerifyCodeHandlerTest {
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
         verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
-        verify(sessionService, times(2)).storeOrUpdateSession(session, SESSION_ID);
+        verify(sessionService, times(1)).storeOrUpdateSession(session, SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
