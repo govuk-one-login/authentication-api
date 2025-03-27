@@ -496,6 +496,21 @@ Resources:
                         !Ref Environment,
                         authAccountId,
                       ]
+            - Sid: AllowOrchSessionTableCrossAccountWriteAccess
+              Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource: "*"
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
 
   #endregion
 
