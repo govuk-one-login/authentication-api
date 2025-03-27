@@ -65,6 +65,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -142,9 +143,18 @@ class DocAppCallbackHandlerTest {
 
     @BeforeEach
     void setUp() {
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_ID.getValue(), CLIENT_SESSION_ID, null, null))
                 .thenReturn(AUTH_CODE);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        eq(null)))
+                .thenReturn(AUTH_CODE);
+
         handler =
                 new DocAppCallbackHandler(
                         configService,

@@ -23,6 +23,7 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -317,6 +318,16 @@ public class DocAppCallbackHandler
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
                                 clientId, clientSessionId, null, null);
+
+                // TODO: ATO-1218: Remove the try-catch block below
+                try {
+                    orchAuthCodeService.generateAndSaveAuthorisationCode(
+                            authCode, clientId, clientSessionId, null, null);
+                } catch (OrchAuthCodeException e) {
+                    LOG.warn(
+                            "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
+                            e.getMessage());
+                }
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
