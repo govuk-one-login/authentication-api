@@ -358,6 +358,9 @@ public class IPVCallbackHandler
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
             // TODO: ATO-1117: temporary logs to check values are as expected
+            LOG.info(
+                    "is rpPairwiseId the same on clientSession as calculated: {}",
+                    rpPairwiseSubject.getValue().equals(clientSession.getRpPairwiseId()));
             if (orchSession.getInternalCommonSubjectId() != null
                     && !orchSession.getInternalCommonSubjectId().isBlank()) {
                 Optional<UserInfo> authUserInfo =
