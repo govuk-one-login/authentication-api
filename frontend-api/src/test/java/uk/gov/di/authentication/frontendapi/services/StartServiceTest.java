@@ -104,13 +104,11 @@ class StartServiceTest {
     void shouldOverwriteSessionWithNewSessionUsingExistingSessionAndClientSessionIds() {
         var currentClientSessionId = "some-client-session-id";
         SESSION.addClientSession("previous-session-client-session-id");
-        SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
 
         var session =
                 startService.createNewSessionWithExistingIdAndClientSession(
                         SESSION_ID, currentClientSessionId);
 
-        assertThat(session.getCurrentCredentialStrength(), equalTo(null));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
         assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
         verify(sessionService).storeOrUpdateSession(session, SESSION_ID);

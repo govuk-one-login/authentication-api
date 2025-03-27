@@ -251,8 +251,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertThat(
-                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        assertThat(
                 authSession.getCurrentCredentialStrength(),
                 equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
@@ -337,8 +335,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertThat(
-                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        assertThat(
                 authSession.getCurrentCredentialStrength(),
                 equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
@@ -383,8 +379,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         assertThat(
-                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        assertThat(
                 authSession.getCurrentCredentialStrength(),
                 equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(phoneNumberCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
@@ -428,8 +422,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(
-                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(
                 authSession.getCurrentCredentialStrength(),
                 equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
@@ -480,8 +472,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        assertThat(
-                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(
                 authSession.getCurrentCredentialStrength(),
                 equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
