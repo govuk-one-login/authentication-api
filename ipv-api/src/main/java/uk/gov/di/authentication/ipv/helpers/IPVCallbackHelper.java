@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -61,6 +62,7 @@ public class IPVCallbackHelper {
     private final AuditService auditService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
+    private final OrchAuthCodeService orchAuthCodeService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoClientService dynamoClientService;
     private final DynamoIdentityService dynamoIdentityService;
@@ -74,6 +76,7 @@ public class IPVCallbackHelper {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
@@ -97,6 +100,7 @@ public class IPVCallbackHelper {
         this.authorisationCodeService =
                 new AuthorisationCodeService(
                         configurationService, redis, SerializationService.getInstance());
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
@@ -117,6 +121,7 @@ public class IPVCallbackHelper {
             AuditService auditService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
+            OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoClientService dynamoClientService,
             DynamoIdentityService dynamoIdentityService,
@@ -129,6 +134,7 @@ public class IPVCallbackHelper {
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
+        this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.dynamoClientService = dynamoClientService;
         this.dynamoIdentityService = dynamoIdentityService;
