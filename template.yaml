@@ -424,7 +424,7 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
-          - Sid: AllowKeyDecryptionAccess
+          - Sid: AllowKeyEncryptDecryptActions
             Effect: Allow
             Principal:
               AWS: !Sub
@@ -437,6 +437,7 @@ Resources:
                     ]
             Action:
               - kms:Decrypt
+              - kms:Encrypt
             Resource: "*"
 
   OrchSessionTable:
@@ -485,6 +486,21 @@ Resources:
               Effect: Allow
               Action:
                 - dynamodb:DeleteItem
+              Resource: "*"
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+            - Sid: AllowOrchSessionTableCrossAccountWriteAccess
+              Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
               Resource: "*"
               Principal:
                 AWS: !Sub

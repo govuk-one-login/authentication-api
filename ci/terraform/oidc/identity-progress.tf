@@ -11,7 +11,9 @@ module "identity_progress_role_1" {
     module.oidc_txma_audit.access_policy_arn,
     ], var.is_orch_stubbed ? [] : [
     aws_iam_policy.dynamo_orch_session_cross_account_read_access_policy[0].arn,
-    aws_iam_policy.dynamo_orch_client_session_cross_account_read_access_policy[0].arn
+    aws_iam_policy.dynamo_orch_client_session_cross_account_read_access_policy[0].arn,
+    aws_iam_policy.dynamo_orch_session_cross_account_write_access_policy[0].arn,
+    aws_iam_policy.dynamo_orch_session_encryption_key_cross_account_encrypt_policy[0].arn
   ])
   extra_tags = {
     Service = "identity-progress"
