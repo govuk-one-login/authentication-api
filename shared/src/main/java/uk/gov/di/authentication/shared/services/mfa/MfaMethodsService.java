@@ -4,7 +4,9 @@ import io.vavr.Value;
 import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -19,6 +21,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
@@ -365,5 +368,38 @@ public class MfaMethodsService {
         return updatedMethodDetail instanceof AuthAppMfaDetail
                 ? !MFAMethodType.AUTH_APP.name().equals(methodTypeFromExisting)
                 : !MFAMethodType.SMS.name().equals(methodTypeFromExisting);
+    }
+
+    public Optional<MfaMigrationFailureReason> migrateSmsMfaToCredentialsTableForUser(
+            String email) {
+        Optional<UserProfile> maybeUserProfile = persistentService.getUserProfileFromEmail(email);
+        if (maybeUserProfile.isEmpty())
+            return Optional.of(MfaMigrationFailureReason.NO_USER_PROFILE_FOUND_FOR_EMAIL);
+        UserProfile userProfile = maybeUserProfile.get();
+
+        if (userProfile.getMfaMethodsMigrated())
+            return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_ALREADY_MIGRATED);
+
+        if (!userProfile.isPhoneNumberVerified())
+            return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_NOT_VERIFIED);
+
+        Optional<String> maybePhoneNumber = Optional.ofNullable(userProfile.getPhoneNumber());
+        if (maybePhoneNumber.isPresent()) {
+            String phoneNumber = maybePhoneNumber.get();
+
+            persistentService.addMFAMethodSupportingMultiple(
+                    email,
+                    MFAMethod.smsMfaMethod(
+                            userProfile.isPhoneNumberVerified(),
+                            true,
+                            phoneNumber,
+                            PriorityIdentifier.DEFAULT,
+                            UUID.randomUUID().toString()));
+        } // TODO - AUT-2198 - Change this into an if/else and contain the migration+flag into one
+        // transaction
+
+        persistentService.setMfaMethodsMigrated(email, true);
+
+        return Optional.empty();
     }
 }

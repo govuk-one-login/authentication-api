@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -17,6 +18,9 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
+
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -79,7 +83,10 @@ public class MFAMethodsCreateHandler
         if (maybeUserProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
-        String email = maybeUserProfile.get().getEmail();
+        var userProfile = maybeUserProfile.get();
+
+        var maybeSmsMigrationError = migrateSmsMfaForUserIfRequired(userProfile);
+        if (maybeSmsMigrationError.isPresent()) return maybeSmsMigrationError.get();
 
         try {
             MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
@@ -88,7 +95,8 @@ public class MFAMethodsCreateHandler
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
 
             Either<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
-                    mfaMethodsService.addBackupMfa(email, mfaMethodCreateRequest.mfaMethod());
+                    mfaMethodsService.addBackupMfa(
+                            userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
             if (addBackupMfaResult.isLeft()) {
                 switch (addBackupMfaResult.getLeft()) {
@@ -112,6 +120,33 @@ public class MFAMethodsCreateHandler
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private Optional<APIGatewayProxyResponseEvent> migrateSmsMfaForUserIfRequired(
+            UserProfile userProfile) {
+        if (!userProfile.getMfaMethodsMigrated()) {
+            Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
+                    mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(
+                            userProfile.getEmail());
+
+            if (maybeMfaMigrationFailureReason.isPresent()) {
+                switch (maybeMfaMigrationFailureReason.get()) {
+                    case NO_USER_PROFILE_FOUND_FOR_EMAIL -> {
+                        return Optional.of(
+                                generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1056));
+                    }
+                    case PHONE_NUMBER_NOT_VERIFIED -> {
+                        // TODO - AUT-2198 - What should we do in this case?
+                        return Optional.of(
+                                generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.ERROR_1000));
+                    }
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     private MfaMethodCreateOrUpdateRequest readMfaMethodCreateRequest(
