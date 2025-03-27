@@ -17,15 +17,14 @@ import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -36,7 +35,6 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -64,7 +62,6 @@ public class IPVCallbackHelper {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoClientService dynamoClientService;
     private final DynamoIdentityService dynamoIdentityService;
-    private final DynamoService dynamoService;
     private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
     private final OidcAPI oidcAPI;
@@ -76,7 +73,6 @@ public class IPVCallbackHelper {
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sessionService = new SessionService(configurationService);
         this.sqsClient =
@@ -84,8 +80,7 @@ public class IPVCallbackHelper {
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
                         configurationService.getSqsEndpointURI());
-        this.authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -99,7 +94,6 @@ public class IPVCallbackHelper {
                         configurationService, redis, SerializationService.getInstance());
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sessionService = new SessionService(configurationService, redis);
         this.sqsClient =
@@ -107,8 +101,7 @@ public class IPVCallbackHelper {
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
                         configurationService.getSqsEndpointURI());
-        this.authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -120,7 +113,6 @@ public class IPVCallbackHelper {
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoClientService dynamoClientService,
             DynamoIdentityService dynamoIdentityService,
-            DynamoService dynamoService,
             SerializationService objectMapper,
             SessionService sessionService,
             AwsSqsClient sqsClient,
@@ -132,7 +124,6 @@ public class IPVCallbackHelper {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.dynamoClientService = dynamoClientService;
         this.dynamoIdentityService = dynamoIdentityService;
-        this.dynamoService = dynamoService;
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.sqsClient = sqsClient;
@@ -191,7 +182,6 @@ public class IPVCallbackHelper {
     public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
             AuthenticationRequest authRequest,
             String clientSessionId,
-            UserProfile userProfile,
             Session session,
             String sessionId,
             OrchSessionItem orchSession,
@@ -201,8 +191,9 @@ public class IPVCallbackHelper {
             UserInfo userIdentityUserInfo,
             String ipAddress,
             String persistentSessionId,
-            String clientId)
-            throws UserNotFoundException {
+            String clientId,
+            String email,
+            String subjectId) {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
                 "saveIdentityClaims",
@@ -211,10 +202,7 @@ public class IPVCallbackHelper {
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
-                        clientId,
-                        clientSessionId,
-                        userProfile.getEmail(),
-                        orchSession.getAuthTime());
+                        clientId, clientSessionId, email, orchSession.getAuthTime());
         var authenticationResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -228,8 +216,6 @@ public class IPVCallbackHelper {
         var dimensions =
                 authCodeResponseService.getDimensions(
                         orchSession, clientSession, clientSessionId, false, false);
-
-        var subjectId = authCodeResponseService.getSubjectId(session);
 
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
@@ -247,15 +233,12 @@ public class IPVCallbackHelper {
                         .withGovukSigninJourneyId(clientSessionId)
                         .withSessionId(sessionId)
                         .withUserId(internalPairwiseSubjectId)
-                        .withEmail(
-                                Optional.ofNullable(session.getEmailAddress())
-                                        .orElse(AuditService.UNKNOWN))
+                        .withEmail(Optional.ofNullable(email).orElse(AuditService.UNKNOWN))
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
-        var isTestJourney =
-                dynamoClientService.isTestJourney(clientSessionId, session.getEmailAddress());
+        var isTestJourney = dynamoClientService.isTestJourney(clientSessionId, email);
         LOG.info("Is journey a test journey: {}", isTestJourney);
 
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
@@ -274,8 +257,8 @@ public class IPVCallbackHelper {
     public void queueSPOTRequest(
             LogIds logIds,
             String sectorIdentifier,
-            UserProfile userProfile,
-            Subject pairwiseSubject,
+            UserInfo authUserInfo,
+            Subject rpPairwiseSubject,
             UserInfo userIdentityUserInfo,
             String clientId)
             throws JsonException {
@@ -298,10 +281,10 @@ public class IPVCallbackHelper {
         var spotRequest =
                 new SPOTRequest(
                         spotClaimsBuilder.build(),
-                        userProfile.getSubjectID(),
-                        dynamoService.getOrGenerateSalt(userProfile),
+                        authUserInfo.getStringClaim(AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()),
+                        authUserInfo.getStringClaim(AuthUserInfoClaims.SALT.getValue()),
                         sectorIdentifier,
-                        pairwiseSubject.getValue(),
+                        rpPairwiseSubject.getValue(),
                         logIds,
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);

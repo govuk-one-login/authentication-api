@@ -39,7 +39,6 @@ import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -86,7 +85,6 @@ public class AuthCodeHandler
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
-    private final DynamoService dynamoService;
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -99,8 +97,7 @@ public class AuthCodeHandler
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            ConfigurationService configurationService,
-            DynamoService dynamoService) {
+            ConfigurationService configurationService) {
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
@@ -112,7 +109,6 @@ public class AuthCodeHandler
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
-        this.dynamoService = dynamoService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
@@ -127,9 +123,7 @@ public class AuthCodeHandler
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
-        dynamoService = new DynamoService(configurationService);
-        authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
     }
 
     public AuthCodeHandler(
@@ -145,9 +139,7 @@ public class AuthCodeHandler
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
-        dynamoService = new DynamoService(configurationService);
-        authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
     }
 
     public AuthCodeHandler() {

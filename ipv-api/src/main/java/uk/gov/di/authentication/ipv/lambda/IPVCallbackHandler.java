@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
@@ -34,8 +35,6 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -49,7 +48,6 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
@@ -60,9 +58,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -93,7 +88,6 @@ public class IPVCallbackHandler
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
-    private final DynamoService dynamoService;
     private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService dynamoClientService;
@@ -116,7 +110,6 @@ public class IPVCallbackHandler
             SessionService sessionService,
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
-            DynamoService dynamoService,
             ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             DynamoClientService dynamoClientService,
@@ -132,7 +125,6 @@ public class IPVCallbackHandler
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
-        this.dynamoService = dynamoService;
         this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.dynamoClientService = dynamoClientService;
@@ -157,7 +149,6 @@ public class IPVCallbackHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
@@ -185,7 +176,6 @@ public class IPVCallbackHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
@@ -286,47 +276,27 @@ public class IPVCallbackHandler
                             () ->
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(), sessionId));
-            var userProfile =
-                    dynamoService
-                            .getUserProfileByEmailMaybe(session.getEmailAddress())
-                            .orElseThrow(
-                                    () ->
-                                            new IpvCallbackException(
-                                                    "Email from session does not have a user profile"));
-            var rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            clientRegistry,
-                            dynamoService,
-                            configurationService.getInternalSectorURI());
 
-            var internalPairwiseSubjectId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
-                            dynamoService.getOrGenerateSalt(userProfile));
+            UserInfo authUserInfo =
+                    getAuthUserInfo(
+                                    authUserInfoStorageService,
+                                    orchSession.getInternalCommonSubjectId(),
+                                    clientSessionId)
+                            .orElseThrow(() -> new IpvCallbackException("authUserInfo not found"));
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
-            var user =
-                    TxmaAuditUser.user()
-                            .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(sessionId)
-                            .withUserId(internalPairwiseSubjectId)
-                            .withEmail(session.getEmailAddress())
-                            .withPhone(userProfile.getPhoneNumber())
-                            .withPersistentSessionId(persistentId);
 
             var auditContext =
                     new AuditContext(
                             clientSessionId,
                             sessionId,
                             clientId,
-                            internalPairwiseSubjectId,
-                            session.getEmailAddress(),
+                            orchSession.getInternalCommonSubjectId(),
+                            authUserInfo.getEmailAddress(),
                             ipAddress,
-                            Objects.isNull(userProfile.getPhoneNumber())
+                            Objects.isNull(authUserInfo.getPhoneNumber())
                                     ? AuditService.UNKNOWN
-                                    : userProfile.getPhoneNumber(),
+                                    : authUserInfo.getPhoneNumber(),
                             persistentId);
 
             if (errorObject.isPresent()) {
@@ -335,7 +305,8 @@ public class IPVCallbackHandler
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                orchSession.getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -354,58 +325,22 @@ public class IPVCallbackHandler
                         sessionId);
             }
 
+            var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
+
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(sessionId)
+                            .withUserId(orchSession.getInternalCommonSubjectId())
+                            .withEmail(authUserInfo.getEmailAddress())
+                            .withPhone(
+                                    Objects.isNull(authUserInfo.getPhoneNumber())
+                                            ? AuditService.UNKNOWN
+                                            : authUserInfo.getPhoneNumber())
+                            .withPersistentSessionId(persistentId);
+
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
-
-            // TODO: ATO-1117: temporary logs to check values are as expected
-            if (orchSession.getInternalCommonSubjectId() != null
-                    && !orchSession.getInternalCommonSubjectId().isBlank()) {
-                Optional<UserInfo> authUserInfo =
-                        getAuthUserInfo(
-                                authUserInfoStorageService,
-                                orchSession.getInternalCommonSubjectId(),
-                                clientSessionId);
-
-                if (authUserInfo.isEmpty()) {
-                    LOG.info("authUserInfo not found");
-                } else {
-                    LOG.info(
-                            "is email the same on authUserInfo as on session: {}",
-                            session.getEmailAddress().equals(authUserInfo.get().getEmailAddress()));
-                    if (userProfile.getPhoneNumber() != null) {
-                        LOG.info(
-                                "is phone number the same on authUserInfo as on UserProfile: {}",
-                                userProfile
-                                        .getPhoneNumber()
-                                        .equals(authUserInfo.get().getPhoneNumber()));
-                    }
-                    var saltFromAuthUserInfo = authUserInfo.get().getStringClaim("salt");
-                    if (saltFromAuthUserInfo != null && !saltFromAuthUserInfo.isBlank()) {
-                        var saltDecoded = Base64.getDecoder().decode(saltFromAuthUserInfo);
-                        var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
-                        LOG.info(
-                                "is salt the same on authUserInfo as on UserProfile: {}",
-                                userProfile.getSalt().equals(saltBuffer));
-                    } else {
-                        LOG.info(
-                                "salt on authUserInfo is null or blank. Is salt on UserProfile defined: {}",
-                                userProfile.getSalt() != null);
-                    }
-                    LOG.info(
-                            "is subjectId the same on authUserInfo as on UserProfile: {}",
-                            userProfile
-                                    .getSubjectID()
-                                    .equals(
-                                            authUserInfo
-                                                    .get()
-                                                    .getClaim(
-                                                            AuthUserInfoClaims.LOCAL_ACCOUNT_ID
-                                                                    .getValue())));
-                }
-            } else {
-                LOG.info("internalCommonSubjectId is empty");
-            }
-            //
 
             var tokenResponse =
                     segmentedFunctionCall(
@@ -446,7 +381,8 @@ public class IPVCallbackHandler
                                 "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                orchSession.getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -465,17 +401,19 @@ public class IPVCallbackHandler
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
                                         clientSessionId,
-                                        userProfile,
                                         session,
                                         sessionId,
                                         orchSession,
                                         clientSession,
                                         rpPairwiseSubject,
-                                        internalPairwiseSubjectId,
+                                        orchSession.getInternalCommonSubjectId(),
                                         userIdentityUserInfo,
                                         ipAddress,
                                         persistentId,
-                                        clientId);
+                                        clientId,
+                                        authUserInfo.getEmailAddress(),
+                                        authUserInfo.getStringClaim(
+                                                AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()));
                         return generateApiGatewayProxyResponse(
                                 302,
                                 "",
@@ -525,7 +463,7 @@ public class IPVCallbackHandler
                     logIds,
                     getSectorIdentifierForClient(
                             clientRegistry, configurationService.getInternalSectorURI()),
-                    userProfile,
+                    authUserInfo,
                     rpPairwiseSubject,
                     userIdentityUserInfo,
                     clientId);
@@ -552,9 +490,6 @@ public class IPVCallbackHandler
         } catch (JsonException e) {
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
             return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
-        } catch (UserNotFoundException e) {
-            LOG.error(e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 
@@ -562,13 +497,16 @@ public class IPVCallbackHandler
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             String internalCommonSubjectId,
             String clientSessionId) {
+
+        if (internalCommonSubjectId == null || internalCommonSubjectId.isBlank()) {
+            return Optional.empty();
+        }
+
         try {
             return authUserInfoStorageService.getAuthenticationUserInfo(
                     internalCommonSubjectId, clientSessionId);
         } catch (ParseException e) {
-            // TODO: ATO-1117: temporary logs. authUserInfo is not essential, so we don't want this
-            // to exit the lambda yet.
-            LOG.info("error parsing authUserInfo. Message: {}", e.getMessage());
+            LOG.warn("error parsing authUserInfo. Message: {}", e.getMessage());
             return Optional.empty();
         }
     }
