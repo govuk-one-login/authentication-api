@@ -76,13 +76,10 @@ public class OrchAuthCodeExtension extends DynamoExtension implements AfterEachC
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientId, String clientSessionId, String email, Long authTime) {
-        // TODO: ATO-1198: Remove generation of this authorisation code after consistency checks are
-        // complete - the method in orchAuthCodeService needs to generate this itself.
-        AuthorizationCode authorizationCode = new AuthorizationCode();
-
+            String clientId, String clientSessionId, String email, Long authTime)
+            throws Json.JsonException {
         return orchAuthCodeService.generateAndSaveAuthorisationCode(
-                authorizationCode, clientId, clientSessionId, email, authTime);
+                clientId, clientSessionId, email, authTime);
     }
 
     public Optional<AuthCodeExchangeData> getExchangeDataForCode(String code) {

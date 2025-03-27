@@ -46,15 +46,10 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
         this.objectMapper = SerializationService.getInstance();
     }
 
-    // TODO: ATO-1198: Move generation of the authorisation code back into this method (removing the
-    // parameter) after consistency checks are complete.
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            AuthorizationCode authorizationCode,
-            String clientId,
-            String clientSessionId,
-            String email,
-            Long authTime) {
+            String clientId, String clientSessionId, String email, Long authTime) {
         LOG.info("Generating and saving authorisation code to orch auth code store");
+        AuthorizationCode authorizationCode = new AuthorizationCode();
 
         var exchangeData =
                 new AuthCodeExchangeData()
