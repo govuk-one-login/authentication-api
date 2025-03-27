@@ -61,6 +61,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
@@ -174,8 +175,17 @@ class IPVCallbackHelperTest {
                 .thenReturn(
                         new AccountIntervention(
                                 new AccountInterventionState(false, true, false, false)));
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         anyString(), anyString(), anyString(), any(Long.class)))
+                .thenReturn(AUTH_CODE);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        any(Long.class)))
                 .thenReturn(AUTH_CODE);
 
         when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
