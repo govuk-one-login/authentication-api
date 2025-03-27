@@ -55,6 +55,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -111,6 +112,7 @@ class AuthCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
@@ -183,6 +185,7 @@ class AuthCodeHandlerTest {
                         authUserInfoService,
                         authCodeResponseService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         orchestrationAuthorizationService,
                         clientSessionService,
                         orchClientSessionService,
