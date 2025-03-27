@@ -848,6 +848,12 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         private static final List<String> PREVIOUS_CLIENTS_FOR_CLIENT_SESSION =
                 List.of("client-id-1", "client-id-2", "client-id-3");
 
+        private static final List<String> PREVIOUS_RP_PAIRWISE_IDS_FOR_CLIENT_SESSION =
+                List.of(
+                        "rp-pairwise-id-client-1",
+                        "rp-pairwise-id-client-2",
+                        "rp-pairwise-id-client-3");
+
         @Test
         void
                 updatesOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdMatchesAuthUserInfoResponse()
@@ -955,10 +961,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.forEach(
                     AuthenticationCallbackHandlerIntegrationTest.this::setupClientRegWithClientId);
             for (String clientSessionId : PREVIOUS_CLIENT_SESSIONS) {
+                var index = PREVIOUS_CLIENT_SESSIONS.indexOf(clientSessionId);
                 setupClientSessionWithId(
                         clientSessionId,
-                        PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.get(
-                                PREVIOUS_CLIENT_SESSIONS.indexOf(clientSessionId)));
+                        PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.get(index),
+                        PREVIOUS_RP_PAIRWISE_IDS_FOR_CLIENT_SESSION.get(index));
             }
         }
     }
@@ -1330,7 +1337,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
     }
 
-    public void setupClientSessionWithId(String clientSessionId, String clientId)
+    public void setupClientSessionWithId(
+            String clientSessionId, String clientId, String rpPairwiseId)
             throws Json.JsonException {
         String vtrStr1 =
                 LevelOfConfidence.MEDIUM_LEVEL.getValue()
@@ -1353,23 +1361,25 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         var creationDate = LocalDateTime.now();
         var clientSession =
                 new ClientSession(
-                        authRequestBuilder.build().toParameters(),
-                        creationDate,
-                        vtrList,
-                        CLIENT_NAME);
+                                authRequestBuilder.build().toParameters(),
+                                creationDate,
+                                vtrList,
+                                CLIENT_NAME)
+                        .setRpPairwiseId(rpPairwiseId);
 
         redis.createClientSession(clientSessionId, clientSession);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
-                        clientSessionId,
-                        authRequestBuilder.build().toParameters(),
-                        creationDate,
-                        vtrList,
-                        CLIENT_NAME));
+                                clientSessionId,
+                                authRequestBuilder.build().toParameters(),
+                                creationDate,
+                                vtrList,
+                                CLIENT_NAME)
+                        .withRpPairwiseId(rpPairwiseId));
     }
 
     private void setUpClientSession() throws Json.JsonException {
-        setupClientSessionWithId(CLIENT_SESSION_ID, CLIENT_ID);
+        setupClientSessionWithId(CLIENT_SESSION_ID, CLIENT_ID, null);
     }
 
     private AuthorizationRequest validateQueryRequestToIPVAndReturnAuthRequest(
