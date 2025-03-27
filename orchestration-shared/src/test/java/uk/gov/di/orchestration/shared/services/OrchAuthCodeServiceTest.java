@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -61,8 +62,10 @@ class OrchAuthCodeServiceTest {
 
     @Test
     void shouldStoreOrchAuthCodeItem() throws Json.JsonException {
+        AuthorizationCode authorizationCode = new AuthorizationCode();
+
         orchAuthCodeService.generateAndSaveAuthorisationCode(
-                CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
+                authorizationCode, CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
 
         var orchAuthCodeItemCaptor = ArgumentCaptor.forClass(OrchAuthCodeItem.class);
         verify(table).putItem(orchAuthCodeItemCaptor.capture());
@@ -82,13 +85,15 @@ class OrchAuthCodeServiceTest {
 
     @Test
     void shouldThrowWhenFailingToStoreOrchAuthCode() {
+        AuthorizationCode authorizationCode = new AuthorizationCode();
+
         withFailedPut();
 
         assertThrows(
                 OrchAuthCodeException.class,
                 () ->
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
-                                CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME));
+                                authorizationCode, CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME));
     }
 
     @Test
