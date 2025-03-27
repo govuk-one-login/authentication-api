@@ -924,6 +924,12 @@ class VerifyMfaCodeHandlerTest {
                 .storeOrUpdateSession(
                         argThat(s -> s.getPreservedReauthCountsForAudit().equals(existingCounts)),
                         eq(SESSION_ID));
+        verify(authSessionService, atLeastOnce())
+                .updateSession(
+                        argThat(
+                                s ->
+                                        s.getPreservedReauthCountsForAuditMap()
+                                                .equals(existingCounts)));
     }
 
     @Test
@@ -958,6 +964,13 @@ class VerifyMfaCodeHandlerTest {
                                                 s.getPreservedReauthCountsForAudit(),
                                                 existingCounts)),
                         eq(SESSION_ID));
+        verify(authSessionService, never())
+                .updateSession(
+                        argThat(
+                                s ->
+                                        Objects.equals(
+                                                s.getPreservedReauthCountsForAuditMap(),
+                                                existingCounts)));
     }
 
     @Test

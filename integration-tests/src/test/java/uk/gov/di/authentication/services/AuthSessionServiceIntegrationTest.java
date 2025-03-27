@@ -4,9 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -120,6 +122,24 @@ class AuthSessionServiceIntegrationTest {
                 authSessionExtension.getSessionFromRequestHeaders(headersWithSessionId);
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+    }
+
+    @Test
+    void shouldStorePreservedReauthCountsForAuditMapSession() {
+        var session = withStoredSession(SESSION_ID);
+
+        var counts =
+                new HashMap<CountType, Integer>() {
+                    {
+                        put(CountType.ENTER_EMAIL, 1);
+                        put(CountType.ENTER_SMS_CODE, 3);
+                    }
+                };
+
+        session.setPreservedReauthCountsForAuditMap(counts);
+        authSessionExtension.updateSession(session);
+        var updatedSession = authSessionExtension.getSession(SESSION_ID).get();
+        assertThat(updatedSession.getPreservedReauthCountsForAuditMap(), equalTo(counts));
     }
 
     private AuthSessionItem withStoredSession(String sessionId) {
