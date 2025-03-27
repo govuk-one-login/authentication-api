@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -75,8 +76,11 @@ class IPVCallbackHelperTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
+
+    // TODO: ATO-1218: Remove the following mock for the auth code service.
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -150,6 +154,7 @@ class IPVCallbackHelperTest {
                         auditService,
                         authCodeResponseService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         cloudwatchMetricsService,
                         dynamoClientService,
                         dynamoIdentityService,
@@ -288,6 +293,7 @@ class IPVCallbackHelperTest {
                         auditService,
                         authCodeResponseService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         cloudwatchMetricsService,
                         dynamoClientService,
                         dynamoIdentityService,
