@@ -1,5 +1,5 @@
 locals {
-  deploy_unmigrated_users_index = var.environment != "production" || var.environment != "integration" ? ["1"] : []
+  deploy_count_users_index = var.environment == "production" ? [] : ["1"]
 }
 
 resource "aws_dynamodb_table" "user_credentials_table" {
@@ -27,12 +27,9 @@ resource "aws_dynamodb_table" "user_credentials_table" {
     type = "N"
   }
 
-  dynamic "attribute" {
-    for_each = local.deploy_unmigrated_users_index
-    content {
-      name = "MigratedPassword"
-      type = "S"
-    }
+  attribute {
+    name = "MigratedPassword"
+    type = "S"
   }
 
   global_secondary_index {
@@ -52,16 +49,13 @@ resource "aws_dynamodb_table" "user_credentials_table" {
     write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
-  dynamic "global_secondary_index" {
-    for_each = local.deploy_unmigrated_users_index
-    content {
-      name            = "UnmigratedGovukAccountUsers"
-      hash_key        = "SubjectID"
-      range_key       = "MigratedPassword"
-      projection_type = "KEYS_ONLY"
-      read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-      write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
-    }
+  global_secondary_index {
+    name            = "UnmigratedGovukAccountUsers"
+    hash_key        = "SubjectID"
+    range_key       = "MigratedPassword"
+    projection_type = "KEYS_ONLY"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
 
   server_side_encryption {
@@ -153,6 +147,18 @@ resource "aws_dynamodb_table" "user_profile_table" {
     projection_type = "KEYS_ONLY"
     read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
     write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+  }
+
+  dynamic "global_secondary_index" {
+    for_each = local.deploy_count_users_index
+    content {
+      name            = "CountUserIndex"
+      hash_key        = "testUser"
+      range_key       = "accountVerified"
+      projection_type = "KEYS_ONLY"
+      read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+      write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+    }
   }
 
   server_side_encryption {
