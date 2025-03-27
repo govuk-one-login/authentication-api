@@ -184,7 +184,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         try {
-            if (!userContext.getSession().validateSession(request.getEmail())) {
+            if (!userContext.getAuthSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {

@@ -40,6 +40,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String subjectId = "new-subject";
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
         authSessionStore.addSession(SESSION_ID);
+        authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
         userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
     }
@@ -106,6 +107,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
         authSessionStore.addSession(authenticatedSessionId);
+        authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
         var response =
                 makeRequest(
