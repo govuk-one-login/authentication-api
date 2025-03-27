@@ -67,7 +67,8 @@ class AuthenticateHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     PERSISTENT_SESSION_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                    Optional.empty());
     private String clientSubjectId;
 
     @BeforeEach

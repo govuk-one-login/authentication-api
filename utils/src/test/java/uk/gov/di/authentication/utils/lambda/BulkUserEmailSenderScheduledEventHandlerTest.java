@@ -85,6 +85,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
+                    Optional.empty(),
                     Optional.empty());
 
     private final String[] TEST_EMAILS = {

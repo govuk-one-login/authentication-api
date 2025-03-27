@@ -17,7 +17,7 @@ public class AuthCodeStore {
     private static final String ATTRIBUTE_SECTOR_IDENTIFIER = "SectorIdentifier";
     private static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
     private static final String ATTRIBUTE_PASSWORD_RESET_TIME = "PasswordResetTime";
-    private static final String JOURNEY_ID = "JourneyID";
+    private static final String ATTRIBUTE_JOURNEY_ID = "JourneyID";
 
     private String subjectID;
     private String authCode;
@@ -144,8 +144,8 @@ public class AuthCodeStore {
         return this;
     }
 
-    @DynamoDbAttribute(JOURNEY_ID)
-    public String getJourneyId() {
+    @DynamoDbAttribute(ATTRIBUTE_JOURNEY_ID)
+    public String getJourneyID() {
         return journeyID;
     }
 

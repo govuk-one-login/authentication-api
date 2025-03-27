@@ -183,8 +183,6 @@ public class TokenHandler
                                     URI.create(configurationService.getInternalSectorUri()),
                                     SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
 
-            LOG.info(authCodeStore.getJourneyId());
-
             var auditContext =
                     AuditContext.emptyAuditContext()
                             .withClientId(
@@ -193,7 +191,7 @@ public class TokenHandler
                             .withSubjectId(
                                     Optional.ofNullable(internalPairwiseId)
                                             .orElse(AuditService.UNKNOWN))
-                            .withJourneyId(authCodeStore.getJourneyId());
+                            .withJourneyId(authCodeStore.getJourneyID());
 
             auditService.submitAuditEvent(AUTH_TOKEN_SENT_TO_ORCHESTRATION, auditContext);
 
