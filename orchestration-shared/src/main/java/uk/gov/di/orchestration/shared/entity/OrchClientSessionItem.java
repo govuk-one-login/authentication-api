@@ -5,6 +5,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import uk.gov.di.orchestration.shared.converters.VtrListConverter;
+import uk.gov.di.orchestration.shared.utils.VtrListUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -183,5 +184,9 @@ public class OrchClientSessionItem {
     public OrchClientSessionItem withTimeToLive(long timeToLive) {
         this.timeToLive = timeToLive;
         return this;
+    }
+
+    public String getVtrLocsAsCommaSeparatedString() {
+        return VtrListUtils.getVtrLocsAsCommaSeparatedString(vtrList);
     }
 }

@@ -8,8 +8,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.shared.entity.BaseFrontendRequest;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
@@ -18,7 +18,6 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -44,7 +43,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeadersOpt;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -54,7 +52,6 @@ public abstract class BaseFrontendHandler<T>
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
-    protected final ClientSessionService clientSessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -65,7 +62,6 @@ public abstract class BaseFrontendHandler<T>
             Class<T> clazz,
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             OrchSessionService orchSessionService,
@@ -73,7 +69,6 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = sessionService;
-        this.clientSessionService = clientSessionService;
         this.clientService = clientService;
         this.authenticationService = authenticationService;
         this.orchSessionService = orchSessionService;
@@ -84,7 +79,6 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
@@ -98,7 +92,6 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
@@ -144,11 +137,8 @@ public abstract class BaseFrontendHandler<T>
                         configurationService.getHeadersCaseInsensitive());
         onRequestReceived(clientSessionId);
         Optional<Session> session = sessionService.getSession(sessionId);
-        var clientSession =
-                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
         var orchClientSession =
                 orchClientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
-        logIfClientSessionsAreNotEqual(clientSession.orElse(null), orchClientSession.orElse(null));
 
         if (session.isEmpty()) {
             LOG.warn("Session cannot be found");
@@ -183,8 +173,8 @@ public abstract class BaseFrontendHandler<T>
         userContextBuilder.withOrchSession(orchSession.get());
 
         var clientID =
-                clientSession
-                        .map(ClientSession::getAuthRequestParams)
+                orchClientSession
+                        .map(OrchClientSessionItem::getAuthRequestParams)
                         .map(t -> t.get(CLIENT_ID))
                         .flatMap(v -> v.stream().findFirst());
 
@@ -192,7 +182,7 @@ public abstract class BaseFrontendHandler<T>
 
         clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 
-        clientSession.ifPresent(userContextBuilder::withClientSession);
+        orchClientSession.ifPresent(userContextBuilder::withOrchClientSession);
 
         session.map(Session::getEmailAddress)
                 .map(authenticationService::getUserProfileFromEmail)

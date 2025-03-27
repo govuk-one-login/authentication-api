@@ -19,9 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.state.UserContext;
@@ -145,7 +145,8 @@ class DocAppUserHelperTest {
         var userContext = buildUserContext(ClientType.APP, authRequest, Optional.of(SUBJECT));
 
         assertTrue(
-                DocAppUserHelper.isDocCheckingAppUserWithSubjectId(userContext.getClientSession()));
+                DocAppUserHelper.isDocCheckingAppUserWithSubjectId(
+                        userContext.getOrchClientSession()));
     }
 
     @Test
@@ -159,7 +160,8 @@ class DocAppUserHelperTest {
         var userContext = buildUserContext(ClientType.APP, authRequest, Optional.empty());
 
         assertFalse(
-                DocAppUserHelper.isDocCheckingAppUserWithSubjectId(userContext.getClientSession()));
+                DocAppUserHelper.isDocCheckingAppUserWithSubjectId(
+                        userContext.getOrchClientSession()));
     }
 
     private JWTClaimsSet.Builder getBaseJWTClaimsSetBuilder() {
@@ -175,13 +177,14 @@ class DocAppUserHelperTest {
 
     private UserContext buildUserContext(
             ClientType clientType, AuthenticationRequest authRequest, Optional<Subject> subject) {
-        var clientSession =
-                new ClientSession(
+        var orchClientSession =
+                new OrchClientSessionItem(
+                        "test-client-session-id",
                         authRequest.toParameters(),
                         LocalDateTime.now(),
                         List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
-        subject.ifPresent(clientSession::setDocAppSubjectId);
+        subject.map(Subject::getValue).ifPresent(orchClientSession::setDocAppSubjectId);
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())
@@ -190,7 +193,7 @@ class DocAppUserHelperTest {
                         .withClientType(clientType.getValue());
         return UserContext.builder(SESSION)
                 .withSessionId(SESSION_ID)
-                .withClientSession(clientSession)
+                .withOrchClientSession(orchClientSession)
                 .withClient(clientRegistry)
                 .build();
     }

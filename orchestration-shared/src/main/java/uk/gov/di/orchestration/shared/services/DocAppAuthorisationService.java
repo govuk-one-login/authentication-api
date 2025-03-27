@@ -21,7 +21,6 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -143,7 +142,10 @@ public class DocAppAuthorisationService {
     }
 
     public EncryptedJWT constructRequestJWT(
-            State state, Subject subject, ClientRegistry clientRegistry, String clientSessionId) {
+            State state,
+            String subjectValue,
+            ClientRegistry clientRegistry,
+            String clientSessionId) {
         LOG.info("Generating request JWT");
         var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
         var signingKeyId =
@@ -171,7 +173,7 @@ public class DocAppAuthorisationService {
                         .issuer(configurationService.getDocAppAuthorisationClientId())
                         .audience(audience.getValue())
                         .expirationTime(expiryDate)
-                        .subject(subject.getValue())
+                        .subject(subjectValue)
                         .issueTime(NowHelper.now())
                         .notBeforeTime(NowHelper.now())
                         .jwtID(jwtID)

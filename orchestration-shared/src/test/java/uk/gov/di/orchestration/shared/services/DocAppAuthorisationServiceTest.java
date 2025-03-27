@@ -222,7 +222,7 @@ class DocAppAuthorisationServiceTest {
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
-                        state, pairwise, clientRegistry, "client-session-id");
+                        state, pairwise.getValue(), clientRegistry, "client-session-id");
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
@@ -275,7 +275,7 @@ class DocAppAuthorisationServiceTest {
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
-                        state, pairwise, clientRegistry, "client-session-id");
+                        state, pairwise.getValue(), clientRegistry, "client-session-id");
 
         var signedJwt = decryptJWT(encryptedJWT);
         assertThat(signedJwt.getJWTClaimsSet().getAudience(), contains(newAudience));

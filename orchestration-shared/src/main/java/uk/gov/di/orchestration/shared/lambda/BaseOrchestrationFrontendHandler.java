@@ -7,11 +7,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -27,8 +26,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeadersOpt;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public abstract class BaseOrchestrationFrontendHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -36,19 +33,16 @@ public abstract class BaseOrchestrationFrontendHandler
     private static final String CLIENT_ID = "client_id";
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
-    protected final ClientSessionService clientSessionService;
     protected final OrchSessionService orchSessionService;
     protected final OrchClientSessionService orchClientSessionService;
 
     protected BaseOrchestrationFrontendHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
-        this.clientSessionService = clientSessionService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
     }
@@ -56,7 +50,6 @@ public abstract class BaseOrchestrationFrontendHandler
     protected BaseOrchestrationFrontendHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }
@@ -105,18 +98,8 @@ public abstract class BaseOrchestrationFrontendHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
 
-        var clientSessionOpt = clientSessionIdOpt.flatMap(clientSessionService::getClientSession);
-        var clientSession = clientSessionOpt.orElse(null);
-        var orchClientSession =
-                clientSessionIdOpt
-                        .flatMap(
-                                clientSessionId ->
-                                        getOrchClientSessionWithRetryIfNotEqual(
-                                                clientSession,
-                                                clientSessionId,
-                                                orchClientSessionService))
-                        .orElse(null);
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
+        var orchClientSessionOpt =
+                clientSessionIdOpt.flatMap(orchClientSessionService::getClientSession);
         attachSessionIdToLogs(sessionId);
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID,
@@ -126,12 +109,12 @@ public abstract class BaseOrchestrationFrontendHandler
                 OrchestrationUserSession.builder(sessionOpt.get())
                         .withSessionId(sessionId)
                         .withClientSessionId(clientSessionIdOpt.orElse(null))
-                        .withClientSession(clientSession)
+                        .withOrchClientSession(orchClientSessionOpt.orElse(null))
                         .withOrchSession(orchSessionOpt.get());
 
         var clientID =
-                clientSessionOpt
-                        .map(ClientSession::getAuthRequestParams)
+                orchClientSessionOpt
+                        .map(OrchClientSessionItem::getAuthRequestParams)
                         .map(t -> t.get(CLIENT_ID))
                         .flatMap(v -> v.stream().findFirst());
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));

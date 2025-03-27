@@ -397,7 +397,7 @@ class AuthenticationCallbackHandlerTest {
         when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
                 .thenReturn(
                         new NoSessionEntity(
-                                CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, clientSession));
+                                CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
 
         var response = handler.handleRequest(event, CONTEXT);
 

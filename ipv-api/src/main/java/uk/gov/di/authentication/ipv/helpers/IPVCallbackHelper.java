@@ -17,7 +17,6 @@ import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -195,7 +194,7 @@ public class IPVCallbackHelper {
             Session session,
             String sessionId,
             OrchSessionItem orchSession,
-            ClientSession clientSession,
+            String clientName,
             Subject rpPairwiseSubject,
             String internalPairwiseSubjectId,
             UserInfo userIdentityUserInfo,
@@ -227,7 +226,7 @@ public class IPVCallbackHelper {
 
         var dimensions =
                 authCodeResponseService.getDimensions(
-                        orchSession, clientSession, clientSessionId, false, false);
+                        orchSession, clientName, clientSessionId, false, false);
 
         var subjectId = authCodeResponseService.getSubjectId(session);
 
@@ -261,10 +260,7 @@ public class IPVCallbackHelper {
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
         cloudwatchMetricsService.incrementSignInByClient(
-                orchSession.getIsNewAccount(),
-                clientId,
-                clientSession.getClientName(),
-                isTestJourney);
+                orchSession.getIsNewAccount(), clientId, clientName, isTestJourney);
 
         authCodeResponseService.saveSession(
                 false, sessionService, session, sessionId, orchSessionService, orchSession);

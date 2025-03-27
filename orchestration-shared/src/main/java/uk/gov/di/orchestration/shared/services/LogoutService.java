@@ -27,7 +27,6 @@ import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class LogoutService {
@@ -120,14 +119,10 @@ public class LogoutService {
     private void destroySessions(DestroySessionsRequest request) {
         for (String clientSessionId : request.getClientSessions()) {
             var clientSessionOpt = clientSessionService.getClientSession(clientSessionId);
-            var orchClientSessionOpt =
-                    getOrchClientSessionWithRetryIfNotEqual(
-                            clientSessionOpt.orElse(null),
-                            clientSessionId,
-                            orchClientSessionService);
+            var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
             logIfClientSessionsAreNotEqual(
                     clientSessionOpt.orElse(null), orchClientSessionOpt.orElse(null));
-            clientSessionOpt
+            orchClientSessionOpt
                     .flatMap(
                             t ->
                                     t.getAuthRequestParams().get("client_id").stream()

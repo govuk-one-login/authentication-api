@@ -82,7 +82,6 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
@@ -92,10 +91,8 @@ import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
-import uk.gov.di.orchestration.shared.state.UserContext;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -172,14 +169,12 @@ class AuthorisationHandlerTest {
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
-    private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
     private final AuthorisationService authorisationService = mock(AuthorisationService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
-    protected final Json objectMapper = SerializationService.getInstance();
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
@@ -297,7 +292,6 @@ class AuthorisationHandlerTest {
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
         when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
-        when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
         handler =
                 new AuthorisationHandler(
@@ -662,8 +656,6 @@ class AuthorisationHandlerTest {
         @Test
         void shouldRedirectToLoginWithPromptParamWhenSetToLoginAndExistingSessionIsPresent() {
             withExistingSession(session);
-            when(userContext.getClientSession()).thenReturn(clientSession);
-            when(userContext.getSession()).thenReturn(session);
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
             when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -708,8 +700,6 @@ class AuthorisationHandlerTest {
         void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp(
                 boolean isAuthOrchSplitEnabled) {
             withExistingSession(session);
-            when(userContext.getClientSession()).thenReturn(clientSession);
-            when(userContext.getSession()).thenReturn(session);
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
             when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -736,8 +726,6 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
             session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
             withExistingSession(session);
-            when(userContext.getClientSession()).thenReturn(clientSession);
-            when(userContext.getSession()).thenReturn(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
             when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -781,8 +769,6 @@ class AuthorisationHandlerTest {
         @Test
         void shouldRedirectToLoginWhenSingleFactorInVtr() {
             withExistingSession(session);
-            when(userContext.getClientSession()).thenReturn(clientSession);
-            when(userContext.getSession()).thenReturn(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl"))).toParameters();
             when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -829,8 +815,6 @@ class AuthorisationHandlerTest {
         @Test
         void shouldRedirectToLoginWhenIdentityIsPresentInVtr() {
             withExistingSession(session);
-            when(userContext.getClientSession()).thenReturn(clientSession);
-            when(userContext.getSession()).thenReturn(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
             when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -2288,7 +2272,7 @@ class AuthorisationHandlerTest {
             when(configService.getDocAppAuthorisationURI())
                     .thenReturn(URI.create(DOC_APP_REDIRECT_URI));
             encryptedJwt = createEncryptedJWT();
-            when(docAppAuthorisationService.constructRequestJWT(any(), any(), any(), any()))
+            when(docAppAuthorisationService.constructRequestJWT(any(), anyString(), any(), any()))
                     .thenReturn(encryptedJwt);
         }
 
