@@ -123,8 +123,10 @@ public class AuthoriseAccessTokenHandler
             Map<String, Object> context = Map.of("clientId", clientId);
 
             LOG.info("Generating AuthPolicy");
-            return new AuthPolicy(
+            var policy = new AuthPolicy(
                     subject, getAllowAllPolicy(region, awsAccountId, restApiId, stage), context);
+            LOG.info("Generated AuthPolicy: {}", policy);
+            return policy;
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());
             throw new RuntimeException("Unauthorized");
