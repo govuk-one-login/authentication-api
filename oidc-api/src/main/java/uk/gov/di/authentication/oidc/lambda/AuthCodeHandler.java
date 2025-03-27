@@ -29,6 +29,7 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -464,10 +465,28 @@ public class AuthCodeHandler
                 || lowestRequestedCredentialTrustLevel.compareTo(currentCredentialStrength) > 0) {
             orchSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
-        return authorisationCodeService.generateAndSaveAuthorisationCode(
-                clientID.getValue(),
-                clientSessionId,
-                emailOptional.orElse(null),
-                orchSession.getAuthTime());
+
+        var authCode =
+                authorisationCodeService.generateAndSaveAuthorisationCode(
+                        clientID.getValue(),
+                        clientSessionId,
+                        emailOptional.orElse(null),
+                        orchSession.getAuthTime());
+
+        // TODO: ATO-1218: Remove the try-catch block below
+        try {
+            orchAuthCodeService.generateAndSaveAuthorisationCode(
+                    authCode,
+                    clientID.getValue(),
+                    clientSessionId,
+                    emailOptional.orElse(null),
+                    orchSession.getAuthTime());
+        } catch (OrchAuthCodeException e) {
+            LOG.warn(
+                    "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
+                    e.getMessage());
+        }
+
+        return authCode;
     }
 }

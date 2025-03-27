@@ -275,7 +275,16 @@ class AuthCodeHandlerTest {
                         authRequest.getResponseMode());
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        any(Long.class)))
+                .thenReturn(authorizationCode);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
@@ -389,8 +398,17 @@ class AuthCodeHandlerTest {
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
+                .thenReturn(authorizationCode);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -700,7 +718,16 @@ class AuthCodeHandlerTest {
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        any(Long.class)))
+                .thenReturn(authorizationCode);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
