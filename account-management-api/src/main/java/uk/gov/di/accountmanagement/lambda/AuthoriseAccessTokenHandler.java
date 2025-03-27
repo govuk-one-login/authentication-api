@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.google.gson.Gson;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
@@ -125,7 +126,9 @@ public class AuthoriseAccessTokenHandler
             LOG.info("Generating AuthPolicy");
             var policy = new AuthPolicy(
                     subject, getAllowAllPolicy(region, awsAccountId, restApiId, stage), context);
-            LOG.info("Generated AuthPolicy: {}", policy);
+            var gson = new Gson();
+            var jsonPolicy = gson.toJson(policy);
+            LOG.info("Generated AuthPolicy: {}", jsonPolicy);
             return policy;
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token {}", e.getMessage());
