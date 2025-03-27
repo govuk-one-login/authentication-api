@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -160,7 +161,8 @@ public class UpdatePhoneNumberHandler
                             IpAddressHelper.extractIpAddress(input),
                             updatePhoneNumberRequest.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                            Optional.empty());
 
             auditService.submitAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext);
 

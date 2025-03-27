@@ -96,7 +96,8 @@ class MfaResetAuthorizeHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    Optional.empty());
     private static final String ORCHESTRATION_STATE = "ORCHESTRATION_STATE";
     private static final APIGatewayProxyRequestEvent TEST_INVOKE_EVENT =
             ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(

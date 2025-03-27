@@ -32,7 +32,8 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
             boolean hasBeenUsed,
             String sectorIdentifier,
             boolean isNewAccount,
-            Long passwordResetTime) {
+            Long passwordResetTime,
+            String journeyId) {
         var authCodeStore =
                 new AuthCodeStore()
                         .withSubjectID(subjectID)
@@ -45,7 +46,8 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond())
-                        .withPasswordResetTime(passwordResetTime);
+                        .withPasswordResetTime(passwordResetTime)
+                        .withJourneyID(journeyId);
 
         put(authCodeStore);
     }

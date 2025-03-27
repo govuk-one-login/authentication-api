@@ -47,6 +47,7 @@ class AuditServiceTest {
                     "ip-address",
                     "phone-number",
                     "persistent-session-id",
+                    Optional.empty(),
                     Optional.empty());
 
     enum TestEvents implements AuditableEvent {
@@ -76,6 +77,7 @@ class AuditServiceTest {
                         "ip-address",
                         "phone-number",
                         "persistent-session-id",
+                        Optional.empty(),
                         Optional.empty());
 
         auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, myContext);

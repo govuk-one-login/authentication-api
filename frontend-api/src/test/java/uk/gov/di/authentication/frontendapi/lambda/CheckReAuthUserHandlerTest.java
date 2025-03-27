@@ -103,6 +103,7 @@ class CheckReAuthUserHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
+                    Optional.empty(),
                     Optional.empty());
 
     private final AuditContext testAuditContextWithAuditEncoded =

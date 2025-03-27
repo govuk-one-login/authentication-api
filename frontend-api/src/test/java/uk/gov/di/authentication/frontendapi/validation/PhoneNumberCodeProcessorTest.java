@@ -87,7 +87,8 @@ class PhoneNumberCodeProcessorTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                    Optional.empty());
 
     @BeforeEach
     void setup() {

@@ -328,7 +328,8 @@ public class SendOtpNotificationHandler
                         IpAddressHelper.extractIpAddress(input),
                         sendNotificationRequest.getPhoneNumber(),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                        Optional.empty());
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_SEND_OTP,

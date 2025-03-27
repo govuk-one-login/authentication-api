@@ -90,7 +90,8 @@ public class AuthenticateHandler
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                        Optional.empty());
 
         try {
             AuthenticateRequest loginRequest =
