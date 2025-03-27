@@ -46,6 +46,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -93,6 +94,7 @@ class DocAppCallbackHandlerTest {
             mock(NoSessionOrchestrationService.class);
     private static final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
@@ -153,6 +155,7 @@ class DocAppCallbackHandlerTest {
                         auditService,
                         dynamoDocAppService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
                         authFrontend,
