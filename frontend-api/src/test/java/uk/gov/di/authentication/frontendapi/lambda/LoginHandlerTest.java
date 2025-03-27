@@ -214,7 +214,8 @@ class LoginHandlerTest {
                 .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+                                Collections.singletonList(jsonArrayOf("P0.Cl")))
+                        .get(0);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
@@ -266,7 +267,8 @@ class LoginHandlerTest {
                 .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+                                Collections.singletonList(jsonArrayOf("P0.Cl")))
+                        .get(0);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
@@ -763,7 +765,8 @@ class LoginHandlerTest {
                 .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+                                Collections.singletonList(jsonArrayOf("P0.Cl")))
+                        .get(0);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
@@ -788,7 +791,8 @@ class LoginHandlerTest {
                 .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+                                Collections.singletonList(jsonArrayOf("P0.Cl")))
+                        .get(0);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
@@ -882,9 +886,7 @@ class LoginHandlerTest {
     }
 
     private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
+        VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 
