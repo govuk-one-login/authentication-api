@@ -85,37 +85,6 @@ public class Session {
         return this;
     }
 
-    public int getCodeRequestCount(NotificationType notificationType, JourneyType journeyType) {
-        CodeRequestType requestType =
-                CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        return getCodeRequestCount(requestType);
-    }
-
-    public int getCodeRequestCount(CodeRequestType requestType) {
-        LOG.info("CodeRequest count: {}", codeRequestCountMap);
-        return codeRequestCountMap.getOrDefault(requestType, 0);
-    }
-
-    public Session incrementCodeRequestCount(
-            NotificationType notificationType, JourneyType journeyType) {
-        CodeRequestType requestType =
-                CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        int currentCount = getCodeRequestCount(requestType);
-        codeRequestCountMap.put(requestType, currentCount + 1);
-        LOG.info("CodeRequest count incremented: {}", codeRequestCountMap);
-
-        return this;
-    }
-
-    public Session resetCodeRequestCount(
-            NotificationType notificationType, JourneyType journeyType) {
-        CodeRequestType requestType =
-                CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        codeRequestCountMap.put(requestType, 0);
-        LOG.info("CodeRequest count reset: {}", codeRequestCountMap);
-        return this;
-    }
-
     public CredentialTrustLevel getCurrentCredentialStrength() {
         return currentCredentialStrength;
     }
