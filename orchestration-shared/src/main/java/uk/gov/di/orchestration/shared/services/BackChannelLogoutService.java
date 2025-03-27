@@ -5,6 +5,8 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 
+import java.util.Objects;
+
 import static org.apache.logging.log4j.util.Strings.isBlank;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSubject;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -57,6 +59,8 @@ public class BackChannelLogoutService {
         var subjectId =
                 getSubject(user.get(), clientRegistry, authenticationService, internalSectorUri)
                         .getValue();
+
+        LOGGER.info("are subjects the same: {}", Objects.equals(subjectId, rpPairwiseId));
 
         var message =
                 new BackChannelLogoutMessage(
