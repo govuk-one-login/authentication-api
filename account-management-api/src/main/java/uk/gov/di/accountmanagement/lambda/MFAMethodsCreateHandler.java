@@ -9,7 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -82,7 +82,8 @@ public class MFAMethodsCreateHandler
         String email = maybeUserProfile.get().getEmail();
 
         try {
-            MfaMethodCreateRequest mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
+            MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
+                    readMfaMethodCreateRequest(input);
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
 
@@ -113,17 +114,19 @@ public class MFAMethodsCreateHandler
         }
     }
 
-    private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
-            throws Json.JsonException {
+    private MfaMethodCreateOrUpdateRequest readMfaMethodCreateRequest(
+            APIGatewayProxyRequestEvent input) throws Json.JsonException {
 
-        MfaMethodCreateRequest mfaMethodCreateRequest;
+        MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest;
         try {
             mfaMethodCreateRequest =
                     segmentedFunctionCall(
                             "SerializationService::GSON::fromJson",
                             () ->
                                     objectMapper.readValue(
-                                            input.getBody(), MfaMethodCreateRequest.class, true));
+                                            input.getBody(),
+                                            MfaMethodCreateOrUpdateRequest.class,
+                                            true));
 
         } catch (RuntimeException e) {
             LOG.error("Error during JSON deserialization", e);

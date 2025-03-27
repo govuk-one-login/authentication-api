@@ -68,12 +68,12 @@ public class MFAMethodsDeleteHandler
 
         if (publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
         if (mfaIdentifier.isEmpty()) {
             LOG.error("Request does not include mfa identifier");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1064);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
         var deleteResult = mfaMethodsService.deleteMfaMethod(publicSubjectId, mfaIdentifier);

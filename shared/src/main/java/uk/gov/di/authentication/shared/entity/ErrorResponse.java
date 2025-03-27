@@ -81,7 +81,11 @@ public enum ErrorResponse {
     ERROR_1067(1067, "Cannot delete mfa method for non-migrated user"),
     ERROR_1068(1068, "MFA method count limit reached"),
     ERROR_1069(1069, "SMS MFA with same number already exists"),
-    ERROR_1070(1070, "AUTH APP MFA already exists");
+    ERROR_1070(1070, "AUTH APP MFA already exists"),
+    ERROR_1071(1071, "Account Management API encountered Unexpected Error"),
+    ERROR_1072(1072, "Cannot change type of mfa method"),
+    ERROR_1073(1073, "Cannot change priority of default mfa method"),
+    ERROR_1074(1074, "Cannot update primary sms number to number already in use by backup");
 
     private int code;
 

@@ -7,7 +7,8 @@ import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 
 public class MfaMethodsService {
     private static final Logger LOG = LogManager.getLogger(MfaMethodsService.class);
@@ -103,7 +105,7 @@ public class MfaMethodsService {
             return Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST);
         }
 
-        if (!PriorityIdentifier.BACKUP.name().equals(maybeMethodToDelete.get().getPriority())) {
+        if (!BACKUP.name().equals(maybeMethodToDelete.get().getPriority())) {
             return Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
         }
 
@@ -135,7 +137,7 @@ public class MfaMethodsService {
     }
 
     public Either<MfaCreateFailureReason, MfaMethodData> addBackupMfa(
-            String email, MfaMethodCreateRequest.MfaMethod mfaMethod) {
+            String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
         if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
             return Either.left(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER);
         }
@@ -202,5 +204,99 @@ public class MfaMethodsService {
                             true,
                             ((AuthAppMfaDetail) mfaMethod.method()).credential()));
         }
+    }
+
+    public Either<MfaUpdateFailureReason, MfaMethodData> updateMfaMethod(
+            String email, String mfaIdentifier, MfaMethodCreateOrUpdateRequest request) {
+        var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
+
+        var maybeMethodToUpdate =
+                mfaMethods.stream()
+                        .filter(mfaMethod -> mfaIdentifier.equals(mfaMethod.getMfaIdentifier()))
+                        .findFirst();
+
+        return maybeMethodToUpdate
+                .map(
+                        method ->
+                                switch (PriorityIdentifier.valueOf(method.getPriority())) {
+                                    case DEFAULT -> handleDefaultMethodUpdate(
+                                            method,
+                                            request.mfaMethod(),
+                                            email,
+                                            mfaIdentifier,
+                                            mfaMethods);
+                                    case BACKUP -> null; // will be implemented in subsequent PR
+                                })
+                .orElse(Either.left(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
+    }
+
+    private Either<MfaUpdateFailureReason, MfaMethodData> handleDefaultMethodUpdate(
+            MFAMethod defaultMethod,
+            MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
+            String email,
+            String mfaIdentifier,
+            List<MFAMethod> allMethodsForUser) {
+        var requestedPriority = updatedMethod.priorityIdentifier();
+        if (requestedPriority == BACKUP) {
+            return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD);
+        }
+
+        if (updateRequestChangesMethodType(
+                defaultMethod.getMfaMethodType(), updatedMethod.method())) {
+            return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
+        }
+
+        Either<String, MFAMethod> databaseUpdateResult;
+
+        if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
+            var isExistingDefaultPhoneNumber =
+                    updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination());
+            var isExistingBackupPhoneNumber =
+                    allMethodsForUser.stream()
+                            .filter(
+                                    mfaMethod ->
+                                            !mfaMethod.getMfaIdentifier().equals(mfaIdentifier))
+                            .anyMatch(
+                                    mfaMethod ->
+                                            mfaMethod
+                                                    .getDestination()
+                                                    .equals(updatedSmsDetail.phoneNumber()));
+            if (isExistingDefaultPhoneNumber) {
+                return Either.left(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+            } else if (isExistingBackupPhoneNumber) {
+                return Either.left(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER);
+            } else {
+                databaseUpdateResult =
+                        persistentService.updateMigratedMethodPhoneNumber(
+                                email, updatedSmsDetail.phoneNumber(), mfaIdentifier);
+            }
+        } else {
+            var authAppDetail = (AuthAppMfaDetail) updatedMethod.method();
+            if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
+                return Either.left(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+            } else {
+                databaseUpdateResult =
+                        persistentService.updateMigratedAuthAppCredential(
+                                email, authAppDetail.credential(), mfaIdentifier);
+            }
+        }
+
+        return databaseUpdateResult
+                .flatMap(MfaMethodData::from)
+                .mapLeft(
+                        errorString -> {
+                            LOG.error(errorString);
+                            return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                        });
+    }
+
+    private boolean updateRequestChangesMethodType(
+            String methodTypeFromExisting, MfaDetail updatedMethodDetail) {
+        return updatedMethodDetail instanceof AuthAppMfaDetail
+                ? !MFAMethodType.AUTH_APP.name().equals(methodTypeFromExisting)
+                : !MFAMethodType.SMS.name().equals(methodTypeFromExisting);
     }
 }

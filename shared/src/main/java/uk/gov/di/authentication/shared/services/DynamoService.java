@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -734,6 +735,89 @@ public class DynamoService implements AuthenticationService {
                                         .build())
                         .removeMfaMethodByIdentifierIfPresent(mfaMethodIdentifier)
                         .withUpdated(dateTime));
+    }
+
+    @Override
+    public Either<String, MFAMethod> updateMigratedMethodPhoneNumber(
+            String email, String updatedPhoneNumber, String mfaMethodIdentifier) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        var maybeExistingMethod = getMfaMethodByIdentifier(userCredentials, mfaMethodIdentifier);
+        return maybeExistingMethod.flatMap(
+                existingMethod -> {
+                    if (!existingMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
+                        return Either.left(
+                                format(
+                                        "Attempted to update phone number for non sms method with identifier %s",
+                                        mfaMethodIdentifier));
+                    }
+                    return updateMigratedMfaMethod(
+                            existingMethod.withDestination(updatedPhoneNumber),
+                            mfaMethodIdentifier,
+                            userCredentials);
+                });
+    }
+
+    private Either<String, MFAMethod> updateMigratedMfaMethod(
+            MFAMethod updatedMFAMethod,
+            String mfaMethodIdentifier,
+            UserCredentials userCredentials) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var updatedUserCredentials =
+                dynamoUserCredentialsTable.updateItem(
+                        userCredentials
+                                .withUpdated(dateTime)
+                                .withUpdatedMfaMethod(mfaMethodIdentifier, updatedMFAMethod));
+
+        return getMfaMethodByIdentifier(updatedUserCredentials, mfaMethodIdentifier)
+                .mapLeft(
+                        err ->
+                                format(
+                                        "Error when retrieving updated mfa method with identifier: %s no such identifier exists",
+                                        mfaMethodIdentifier));
+    }
+
+    private Either<String, MFAMethod> getMfaMethodByIdentifier(
+            UserCredentials userCredentials, String mfaMethodIdentifier) {
+        var maybeExistingMethod =
+                userCredentials.getMfaMethods().stream()
+                        .filter(
+                                mfaMethod ->
+                                        mfaMethod.getMfaIdentifier().equals(mfaMethodIdentifier))
+                        .findFirst();
+        return maybeExistingMethod
+                .<Either<String, MFAMethod>>map(Either::right)
+                .orElseGet(
+                        () ->
+                                Either.left(
+                                        format(
+                                                "Mfa method with identifier %s does not exist",
+                                                mfaMethodIdentifier)));
+    }
+
+    @Override
+    public Either<String, MFAMethod> updateMigratedAuthAppCredential(
+            String email, String updatedCredential, String mfaMethodIdentifier) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        var maybeExistingMethod = getMfaMethodByIdentifier(userCredentials, mfaMethodIdentifier);
+        return maybeExistingMethod.flatMap(
+                existingMethod -> {
+                    if (!existingMethod
+                            .getMfaMethodType()
+                            .equals(MFAMethodType.AUTH_APP.getValue())) {
+                        return Either.left(
+                                format(
+                                        "Attempted to update auth app credential for non auth app method with identifier %s",
+                                        mfaMethodIdentifier));
+                    }
+                    return updateMigratedMfaMethod(
+                            existingMethod.withCredentialValue(updatedCredential),
+                            mfaMethodIdentifier,
+                            userCredentials);
+                });
     }
 
     public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(

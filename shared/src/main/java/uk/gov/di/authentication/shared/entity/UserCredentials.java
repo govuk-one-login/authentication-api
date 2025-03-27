@@ -174,6 +174,12 @@ public class UserCredentials {
         }
     }
 
+    public UserCredentials withUpdatedMfaMethod(String mfaMethodIdentifier, MFAMethod mfaMethod) {
+        removeMfaMethodByIdentifierIfPresent(mfaMethodIdentifier);
+        this.mfaMethods.add(mfaMethod);
+        return this;
+    }
+
     @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
     @DynamoDbSecondaryPartitionKey(indexNames = {"TestUserIndex"})
     public int getTestUser() {
