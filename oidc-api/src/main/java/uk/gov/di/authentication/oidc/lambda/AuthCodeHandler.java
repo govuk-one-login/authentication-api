@@ -39,6 +39,7 @@ import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -79,6 +80,7 @@ public class AuthCodeHandler
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
+    private final OrchAuthCodeService orchAuthCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
@@ -92,6 +94,7 @@ public class AuthCodeHandler
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
+            OrchAuthCodeService orchAuthCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
@@ -103,6 +106,7 @@ public class AuthCodeHandler
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
+        this.orchAuthCodeService = orchAuthCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
@@ -116,6 +120,7 @@ public class AuthCodeHandler
         orchSessionService = new OrchSessionService(configurationService);
         authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
+        orchAuthCodeService = new OrchAuthCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
@@ -133,6 +138,7 @@ public class AuthCodeHandler
         orchSessionService = new OrchSessionService(configurationService);
         authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
+        orchAuthCodeService = new OrchAuthCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
