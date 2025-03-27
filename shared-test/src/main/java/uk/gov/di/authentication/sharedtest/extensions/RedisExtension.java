@@ -10,7 +10,6 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -139,13 +138,6 @@ public class RedisExtension
     public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setEmailAddress(emailAddress);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-    }
-
-    public void setSessionCredentialTrustLevel(
-            String sessionId, CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setCurrentCredentialStrength(credentialTrustLevel);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
