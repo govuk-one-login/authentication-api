@@ -60,13 +60,6 @@ public class RedisExtension
         return sessionId;
     }
 
-    public void setVerifiedMfaMethodType(String sessionId, MFAMethodType mfaMethodType)
-            throws Json.JsonException {
-        var session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setVerifiedMfaMethodType(mfaMethodType);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-    }
-
     public String createSession() throws Json.JsonException {
         return createSession(IdGenerator.generate());
     }

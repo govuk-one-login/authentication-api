@@ -550,7 +550,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
         assertThat(result, hasStatus(204));
-        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
         verify(accountModifiersService)
                 .removeAccountRecoveryBlockIfPresent(INTERNAL_COMMON_SUBJECT_ID);
@@ -601,7 +601,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
 
         assertThat(result, hasStatus(204));
-        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService).deleteOtpCode(EMAIL, MFA_SMS);
         verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
         verify(sessionService, times(2)).storeOrUpdateSession(session, SESSION_ID);
