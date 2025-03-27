@@ -79,10 +79,6 @@ public class Session {
         return preservedReauthCountsForAudit;
     }
 
-    public CredentialTrustLevel getCurrentCredentialStrength() {
-        return currentCredentialStrength;
-    }
-
     public Session setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
         this.currentCredentialStrength = currentCredentialStrength;
         return this;
