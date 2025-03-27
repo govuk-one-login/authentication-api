@@ -79,11 +79,6 @@ public class Session {
         return preservedReauthCountsForAudit;
     }
 
-    public Session setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
-        return this;
-    }
-
     public MFAMethodType getVerifiedMfaMethodType() {
         return verifiedMfaMethodType;
     }
