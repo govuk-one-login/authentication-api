@@ -67,13 +67,15 @@ import {
 }
 
 resource "aws_ssm_parameter" "client_registry_table" {
+  #checkov:skip=CKV2_AWS_34:AWS SSM Parameter should be Encrypted - not sensitive data
   name  = "/acceptance-tests/${var.environment}/CLIENT_REGISTRY_TABLE"
   type  = "String"
   value = aws_dynamodb_table.client_registry_table.arn
 }
 
 resource "aws_ssm_parameter" "at_client_id" {
-  name = "/acceptance-tests/${var.environment}/CLIENT_ID"
-  type = "String"
+  #checkov:skip=CKV2_AWS_34:AWS SSM Parameter should be Encrypted - not sensitive data
+  name  = "/acceptance-tests/${var.environment}/CLIENT_ID"
+  type  = "String"
   value = random_string.stub_relying_party_client_id[local.stub_rp_client_name_pattern].result
 }
