@@ -455,16 +455,17 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void addMFAMethodSupportingMultiple(String email, MFAMethod mfaMethod) {
+        dynamoUserCredentialsTable.updateItem(
+                buildAddMFAMethodSupportingMultiple(email, mfaMethod));
+    }
+
+    private UserCredentials buildAddMFAMethodSupportingMultiple(String email, MFAMethod mfaMethod) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         mfaMethod.setUpdated(dateTime);
 
-        dynamoUserCredentialsTable.updateItem(
-                dynamoUserCredentialsTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .setMfaMethodBasedOnPriority(mfaMethod));
+        return dynamoUserCredentialsTable
+                .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                .setMfaMethodBasedOnPriority(mfaMethod);
     }
 
     @Override
@@ -569,13 +570,25 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
-        dynamoUserProfileTable.updateItem(
-                dynamoUserProfileTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .withMfaMethodsMigrated(mfaMethodsMigrated));
+        dynamoUserProfileTable.updateItem(buildSetMfaMethodsMigrated(email, mfaMethodsMigrated));
+    }
+
+    private UserProfile buildSetMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
+        return dynamoUserProfileTable
+                .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                .withMfaMethodsMigrated(mfaMethodsMigrated);
+    }
+
+    @Override
+    public void migrateSmsMfaToCredentialsTableForUser(String email, MFAMethod mfaMethod) {
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addUpdateItem(
+                                dynamoUserCredentialsTable,
+                                buildAddMFAMethodSupportingMultiple(email, mfaMethod))
+                        .addUpdateItem(
+                                dynamoUserProfileTable, buildSetMfaMethodsMigrated(email, true))
+                        .build());
     }
 
     public List<UserProfile> getAllBulkTestUsers() {

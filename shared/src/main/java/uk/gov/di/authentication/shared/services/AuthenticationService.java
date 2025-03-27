@@ -83,6 +83,8 @@ public interface AuthenticationService {
 
     void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated);
 
+    void migrateSmsMfaToCredentialsTableForUser(String email, MFAMethod mfaMethod);
+
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 
     Either<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(

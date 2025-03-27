@@ -387,7 +387,7 @@ public class MfaMethodsService {
         if (maybePhoneNumber.isPresent()) {
             String phoneNumber = maybePhoneNumber.get();
 
-            persistentService.addMFAMethodSupportingMultiple(
+            persistentService.migrateSmsMfaToCredentialsTableForUser(
                     email,
                     MFAMethod.smsMfaMethod(
                             userProfile.isPhoneNumberVerified(),
@@ -395,10 +395,9 @@ public class MfaMethodsService {
                             phoneNumber,
                             PriorityIdentifier.DEFAULT,
                             UUID.randomUUID().toString()));
-        } // TODO - AUT-2198 - Change this into an if/else and contain the migration+flag into one
-        // transaction
-
-        persistentService.setMfaMethodsMigrated(email, true);
+        } else {
+            persistentService.setMfaMethodsMigrated(email, true);
+        }
 
         return Optional.empty();
     }
