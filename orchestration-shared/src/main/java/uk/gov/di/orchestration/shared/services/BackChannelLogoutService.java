@@ -60,7 +60,21 @@ public class BackChannelLogoutService {
                 getSubject(user.get(), clientRegistry, authenticationService, internalSectorUri)
                         .getValue();
 
-        LOGGER.info("are subjects the same: {}", Objects.equals(subjectId, rpPairwiseId));
+        if (Objects.equals(subjectId, rpPairwiseId)) {
+            LOGGER.info(
+                    "calculated and given rpPairwiseId are the same, client-id = {}",
+                    clientRegistry.getClientID());
+        } else {
+            if (Objects.equals(subjectId, user.get().getPublicSubjectID())) {
+                LOGGER.info(
+                        "subjectId is publicSubjectId, client-id = {}",
+                        clientRegistry.getClientID());
+            } else {
+                LOGGER.info(
+                        "calculated and given rpPairwiseId are different, client-id = {}",
+                        clientRegistry.getClientID());
+            }
+        }
 
         var message =
                 new BackChannelLogoutMessage(
