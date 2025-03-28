@@ -462,7 +462,12 @@ class StartServiceTest {
                         Optional.empty(),
                         oneLoginService);
 
-        var clientStartInfo = startService.buildClientStartInfo(userContext);
+        var clientStartInfo =
+                startService.buildClientStartInfo(
+                        userContext,
+                        Objects.nonNull(signedJWT) ? DOC_APP_SCOPES.toString() : SCOPES.toString(),
+                        REDIRECT_URI.toString(),
+                        STATE.getValue());
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));

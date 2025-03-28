@@ -1,9 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -94,29 +92,12 @@ public class StartService {
         return userContext;
     }
 
-    public ClientStartInfo buildClientStartInfo(UserContext userContext) throws ParseException {
-        List<String> scopes;
+    public ClientStartInfo buildClientStartInfo(
+            UserContext userContext, String scopesString, String redirectUriString, String state)
+            throws ParseException {
+        List<String> scopes = List.of(scopesString.split(" "));
         URI redirectURI;
-        State state;
-        try {
-            var authenticationRequest =
-                    AuthenticationRequest.parse(
-                            userContext.getClientSession().getAuthRequestParams());
-            if (Objects.nonNull(authenticationRequest.getRequestObject())) {
-                var claimSet = authenticationRequest.getRequestObject().getJWTClaimsSet();
-                scopes = Scope.parse((String) claimSet.getClaim("scope")).toStringList();
-                redirectURI = URI.create((String) claimSet.getClaim("redirect_uri"));
-                state = State.parse((String) claimSet.getClaim("state"));
-            } else {
-                scopes = authenticationRequest.getScope().toStringList();
-                redirectURI = authenticationRequest.getRedirectionURI();
-                state = authenticationRequest.getState();
-            }
-        } catch (ParseException e) {
-            throw new ParseException("Unable to parse authentication request");
-        } catch (java.text.ParseException e) {
-            throw new RuntimeException("Unable to parse claims in request object");
-        }
+        redirectURI = URI.create(redirectUriString);
         var clientRegistry = userContext.getClient().orElseThrow();
         var clientInfo =
                 new ClientStartInfo(
@@ -125,7 +106,7 @@ public class StartService {
                         clientRegistry.getServiceType(),
                         clientRegistry.isCookieConsentShared(),
                         redirectURI,
-                        state,
+                        new State(state),
                         clientRegistry.isOneLoginService());
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",

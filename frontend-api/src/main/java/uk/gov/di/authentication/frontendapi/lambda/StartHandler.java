@@ -207,7 +207,12 @@ public class StartHandler
             attachLogFieldToLogs(
                     CLIENT_ID,
                     userContext.getClient().map(ClientRegistry::getClientID).orElse(UNKNOWN));
-            var clientStartInfo = startService.buildClientStartInfo(userContext);
+            var clientStartInfo =
+                    startService.buildClientStartInfo(
+                            userContext,
+                            startRequest.scope(),
+                            startRequest.redirectUri(),
+                            startRequest.state());
 
             var cookieConsent = startRequest.cookieConsent();
             var gaTrackingId = startRequest.ga();

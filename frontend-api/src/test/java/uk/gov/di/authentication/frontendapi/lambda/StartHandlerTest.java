@@ -516,7 +516,8 @@ class StartHandlerTest {
         when(startService.buildUserContext(
                         eq(session), eq(clientSession), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext))
+        when(startService.buildClientStartInfo(
+                        eq(userContext), anyString(), anyString(), anyString()))
                 .thenThrow(new ParseException("Unable to parse authentication request"));
         usingValidClientSession();
         usingValidSession();
@@ -597,7 +598,9 @@ class StartHandlerTest {
             throws ParseException {
         when(startService.buildUserContext(eq(session), any(), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
+        when(startService.buildClientStartInfo(
+                        eq(userContext), anyString(), anyString(), anyString()))
+                .thenReturn(clientStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
