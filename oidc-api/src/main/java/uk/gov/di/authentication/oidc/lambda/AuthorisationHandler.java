@@ -101,7 +101,6 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
-import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseVtrStringListFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -899,9 +898,10 @@ public class AuthorisationHandler
         var state = new State();
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
-        List<String> vtrStringList =
-                parseVtrStringListFromAuthRequestAttribute(
-                        authenticationRequest.getCustomParameter(VTR_PARAM));
+        var vtrList =
+                Optional.ofNullable(authenticationRequest.getCustomParameter(VTR_PARAM))
+                        .map(VectorOfTrust::parseVtrStringListFromAuthRequestAttribute)
+                        .orElse(null);
         String reauthSub = null;
         String reauthSid = null;
         if (reauthRequested) {
@@ -910,7 +910,7 @@ public class AuthorisationHandler
                 reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
                 reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
                 if (isNull(authenticationRequest.getCustomParameter(VTR_PARAM))) {
-                    vtrStringList = extractVoTStringListFromIdTokenHint(reauthIdToken);
+                    vtrList = extractVoTStringListFromIdTokenHint(reauthIdToken);
                 }
             } catch (RuntimeException e) {
                 return generateErrorResponse(
@@ -962,7 +962,7 @@ public class AuthorisationHandler
                         .claim(
                                 "current_credential_strength",
                                 orchSession.getCurrentCredentialStrength())
-                        .claim("vtr_list", String.join(" ", vtrStringList))
+                        .claim("vtr", vtrList)
                         .claim("scope", authenticationRequest.getScope().toString());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));

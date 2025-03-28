@@ -69,7 +69,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     + "\"state\": \"%s\","
                     + "\"client_id\": \"%s\","
                     + "\"redirect_uri\": \"%s\","
-                    + "\"vtr_list\": \"%s\", "
+                    + "\"vtr\": %s, "
                     + "\"scope\": \"%s\""
                     + "}";
 
@@ -88,10 +88,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static Stream<Arguments> successfulRequests() {
         return Stream.of(
-                Arguments.of("Cl.Cm", false, false),
-                Arguments.of("Cl.Cm", false, true),
-                Arguments.of("Cl.Cm P0.Cl.Cm", false, false),
-                Arguments.of("P2.Cl.Cm", true, false));
+                Arguments.of(jsonArrayOf("Cl.Cm"), false, false),
+                Arguments.of(jsonArrayOf("Cl.Cm"), false, true),
+                Arguments.of(jsonArrayOf("Cl.Cm", "P0.Cl.Cm"), false, false),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, false));
     }
 
     @ParameterizedTest
@@ -114,7 +114,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .customParameter("client_id", CLIENT_ID)
                         .customParameter("redirect_uri", REDIRECT_URI.toString())
                         .customParameter("state", state.getValue())
-                        .customParameter("vtr", jsonArrayOf(vtrStringList.split(" ")))
+                        .customParameter("vtr", vtrStringList)
                         .state(state);
         var authRequest = builder.build();
 
@@ -372,7 +372,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             "redirect_uri", REDIRECT_URI.toString(),
                                             "scope", scope.toString(),
                                             "client_id", CLIENT_ID,
-                                            "vtr_list", "Cl.Cm"))),
+                                            "vtr", jsonArrayOf("Cl.Cm")))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -393,7 +393,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             "redirect_uri", REDIRECT_URI.toString(),
                                             "scope", scope.toString(),
                                             "client_id", CLIENT_ID,
-                                            "vtr_list", jsonArrayOf("Cl.Cm")))),
+                                            "vtr", jsonArrayOf("Cl.Cm")))),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -405,7 +405,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private String makeRequestBody(boolean isAuthenticated, AuthenticationRequest authRequest) {
-        return makeRequestBody(isAuthenticated, authRequest, "Cl.Cm");
+        return makeRequestBody(isAuthenticated, authRequest, jsonArrayOf("Cl.Cm"));
     }
 
     private String makeRequestBody(
@@ -431,7 +431,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 customAuthParams.get("state"),
                 customAuthParams.get("client_id"),
                 customAuthParams.get("redirect_uri"),
-                customAuthParams.get("vtr_list"),
+                customAuthParams.get("vtr"),
                 customAuthParams.get("scope"));
     }
 
