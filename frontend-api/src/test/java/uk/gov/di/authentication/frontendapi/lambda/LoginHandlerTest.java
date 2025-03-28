@@ -27,7 +27,6 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -57,10 +56,10 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -85,7 +84,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VTR_P0_CL;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -210,17 +209,13 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf("P0.Cl")))
-                        .get(0);
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        var vtrList = List.of(VTR_P0_CL);
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vtrList.get(0));
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
+        usingValidAuthSession(vtrList);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -263,16 +258,12 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf("P0.Cl")))
-                        .get(0);
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        var vtrList = List.of(VTR_P0_CL);
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vtrList.get(0));
 
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSession(vtrList);
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event =
@@ -297,7 +288,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSession(List.of(VectorOfTrust.getDefaults()));
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
@@ -761,8 +752,7 @@ class LoginHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                                 Collections.singletonList(jsonArrayOf("P0.Cl")))
@@ -787,8 +777,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                                 Collections.singletonList(jsonArrayOf("P0.Cl")))
@@ -808,10 +797,6 @@ class LoginHandlerTest {
     }
 
     private AuthenticationRequest generateAuthRequest() {
-        return generateAuthRequest(null);
-    }
-
-    private AuthenticationRequest generateAuthRequest(CredentialTrustLevel credentialTrustLevel) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest.Builder builder =
@@ -822,9 +807,6 @@ class LoginHandlerTest {
                                 URI.create("http://localhost/redirect"))
                         .state(new State())
                         .nonce(new Nonce());
-        if (nonNull(credentialTrustLevel)) {
-            builder.customParameter("vtr", jsonArrayOf(credentialTrustLevel.getValue()));
-        }
         return builder.build();
     }
 
@@ -834,13 +816,18 @@ class LoginHandlerTest {
     }
 
     private void usingValidAuthSession() {
+        usingValidAuthSession(List.of(VectorOfTrust.getDefaults()));
+    }
+
+    private void usingValidAuthSession(List<VectorOfTrust> vtrList) {
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withVtrList(vtrList)));
     }
 
     private void usingInvalidAuthSession() {

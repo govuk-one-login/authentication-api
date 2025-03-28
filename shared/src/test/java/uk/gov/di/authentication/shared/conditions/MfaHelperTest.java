@@ -15,9 +15,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.entity.UserMfaDetail;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -210,6 +212,10 @@ class MfaHelperTest {
 
         var userContext = mock(UserContext.class);
         when(userContext.getClientSession()).thenReturn(clientSession);
+
+        var authSession = mock(AuthSessionItem.class);
+        when(authSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(trustLevel)));
+        when(userContext.getAuthSession()).thenReturn(authSession);
 
         return userContext;
     }

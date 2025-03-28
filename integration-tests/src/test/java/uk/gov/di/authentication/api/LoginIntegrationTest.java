@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -107,9 +108,14 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var password = "password-1";
         var sessionId = IdGenerator.generate();
+        var levelOrDefault = Optional.ofNullable(level).orElse(CredentialTrustLevel.getDefault());
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
+        authSessionExtension.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(email)
+                                .withVtrList(List.of(new VectorOfTrust(levelOrDefault))));
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -191,8 +197,12 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var password = "password-1";
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
+        authSessionExtension.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(email)
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
