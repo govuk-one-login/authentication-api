@@ -159,9 +159,9 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                                         .getAuthSession()
                                         .getPreservedReauthCountsForAuditMap()));
 
-                if (userContext.getSession().getPreservedReauthCountsForAudit() != null) {
+                if (userContext.getAuthSession().getPreservedReauthCountsForAuditMap() != null) {
                     metadataBuilder.withAllIncorrectAttemptCounts(
-                            userContext.getSession().getPreservedReauthCountsForAudit());
+                            userContext.getAuthSession().getPreservedReauthCountsForAuditMap());
                 } else {
                     LOG.warn("No preserved reauth counts found for reauth journey");
                 }
