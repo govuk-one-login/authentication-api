@@ -15,7 +15,10 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
-import uk.gov.di.orchestration.shared.services.*;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -26,11 +29,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
 
 @PactConsumerTest
-@MockServerConfig(hostInterface = "localhost", port = "1234")
+@MockServerConfig
 class AccountInterventionServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =

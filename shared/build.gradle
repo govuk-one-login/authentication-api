@@ -35,19 +35,7 @@ dependencies {
     testRuntimeOnly configurations.test_runtime
 }
 
-test {
-    useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
-}
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled true
-    }
-    dependsOn "test"
 }

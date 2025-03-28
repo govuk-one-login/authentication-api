@@ -27,8 +27,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
-
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
@@ -40,7 +38,6 @@ test {
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
     environment "SQS_ENDPOINT", "http://localhost:45678"
-    environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 
     testLogging {
@@ -58,10 +55,4 @@ test {
     }
     dependsOn ":composeUp"
     finalizedBy ":composeDown"
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled true
-    }
 }

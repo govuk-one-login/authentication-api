@@ -19,11 +19,6 @@ dependencies {
     testRuntimeOnly configurations.test_runtime
 }
 
-test {
-    useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
-}
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
@@ -35,11 +30,4 @@ task buildZip(type: Zip) {
     into("lib") {
         from configurations.runtimeClasspath
     }
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled true
-    }
-    dependsOn "test"
 }
