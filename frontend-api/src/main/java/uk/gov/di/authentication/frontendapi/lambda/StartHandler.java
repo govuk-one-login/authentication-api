@@ -180,7 +180,8 @@ public class StartHandler
                             sessionId,
                             startRequest.currentCredentialStrength());
             authSession.setClientId(startRequest.clientId());
-            authSession.setVtrList(VectorOfTrust.parseVtrStringList(startRequest.vtr()));
+            var vtrList = VectorOfTrust.parseVtrStringList(startRequest.vtr());
+            authSession.setVtrList(vtrList);
 
             var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
 
@@ -267,10 +268,10 @@ public class StartHandler
                         checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
                                 maybeInternalSubjectId, auditContext, startRequest);
             }
-
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
+                            vtrList,
                             cookieConsent,
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),

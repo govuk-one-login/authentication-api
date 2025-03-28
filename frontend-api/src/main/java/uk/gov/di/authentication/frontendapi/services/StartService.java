@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -117,37 +116,6 @@ public class StartService {
                 clientRegistry.getServiceType());
 
         return clientInfo;
-    }
-
-    public UserStartInfo buildUserStartInfo(
-            UserContext userContext,
-            String cookieConsent,
-            String gaTrackingId,
-            boolean identityEnabled,
-            boolean reauthenticate,
-            boolean isBlockedForReauth,
-            boolean isAuthenticated,
-            boolean upliftRequired) {
-        AuthenticationRequest authRequest;
-        try {
-            authRequest =
-                    AuthenticationRequest.parse(
-                            userContext.getClientSession().getAuthRequestParams());
-        } catch (ParseException e) {
-            throw new RuntimeException();
-        }
-        List<String> vtr = authRequest.getCustomParameter("vtr");
-        List<VectorOfTrust> vtrList = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
-        return buildUserStartInfo(
-                userContext,
-                vtrList,
-                cookieConsent,
-                gaTrackingId,
-                identityEnabled,
-                reauthenticate,
-                isBlockedForReauth,
-                isAuthenticated,
-                upliftRequired);
     }
 
     public UserStartInfo buildUserStartInfo(

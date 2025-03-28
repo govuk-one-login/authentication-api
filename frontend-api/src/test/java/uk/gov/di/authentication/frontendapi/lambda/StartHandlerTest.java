@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -326,6 +327,7 @@ class StartHandlerTest {
         verify(startService)
                 .buildUserStartInfo(
                         any(),
+                        anyList(),
                         any(),
                         any(),
                         anyBoolean(),
@@ -355,6 +357,7 @@ class StartHandlerTest {
         verify(startService)
                 .buildUserStartInfo(
                         any(),
+                        anyList(),
                         any(),
                         any(),
                         anyBoolean(),
@@ -605,6 +608,7 @@ class StartHandlerTest {
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
                         eq(userContext),
+                        anyList(),
                         any(),
                         any(),
                         anyBoolean(),
