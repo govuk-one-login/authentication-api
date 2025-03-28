@@ -1,0 +1,33 @@
+Template name:
+
+di-authentication-en-cy-confirm-your-email
+
+Subject:
+
+Your security code for your GOV.UK One Login | Eich cod diogelwch ar gyfer eich GOV.UK One Login
+
+Message:
+
+Use this security code to confirm the email address for your GOV.UK One Login.
+
+^((validation-code))
+
+The code will expire after one hour.
+
+---
+
+Do not reply to this email - it’s an automatic message from an unmonitored account.
+
+---
+
+# Eich cod diogelwch ar gyfer eich GOV.UK One Login
+
+Defnyddiwch y cod diogelwch hwn i gadarnhau eich cyfeiriad e-bost ar gyfer eich GOV.UK One Login.
+
+^((validation-code))
+
+Bydd y cod yn dod i ben ar ôl awr.
+
+---
+
+Peidiwch ag ymateb i’r e-bost hwn - mae’n neges awtomatig o gyfrif heb ei fonitro.
