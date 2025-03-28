@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -14,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -126,14 +128,44 @@ public class StartService {
             boolean isBlockedForReauth,
             boolean isAuthenticated,
             boolean upliftRequired) {
+        AuthenticationRequest authRequest;
+        try {
+            authRequest =
+                    AuthenticationRequest.parse(
+                            userContext.getClientSession().getAuthRequestParams());
+        } catch (ParseException e) {
+            throw new RuntimeException();
+        }
+        List<String> vtr = authRequest.getCustomParameter("vtr");
+        List<VectorOfTrust> vtrList = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
+        return buildUserStartInfo(
+                userContext,
+                vtrList,
+                cookieConsent,
+                gaTrackingId,
+                identityEnabled,
+                reauthenticate,
+                isBlockedForReauth,
+                isAuthenticated,
+                upliftRequired);
+    }
+
+    public UserStartInfo buildUserStartInfo(
+            UserContext userContext,
+            List<VectorOfTrust> vtrList,
+            String cookieConsent,
+            String gaTrackingId,
+            boolean identityEnabled,
+            boolean reauthenticate,
+            boolean isBlockedForReauth,
+            boolean isAuthenticated,
+            boolean upliftRequired) {
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
         var clientRegistry = userContext.getClient().orElseThrow();
         identityRequired =
                 IdentityHelper.identityRequired(
-                        userContext.getClientSession().getAuthRequestParams(),
-                        clientRegistry.isIdentityVerificationSupported(),
-                        identityEnabled);
+                        vtrList, clientRegistry.isIdentityVerificationSupported(), identityEnabled);
         if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
             mfaMethodType = MFAMethodType.SMS;
         } else if (authApp(userContext)) {
