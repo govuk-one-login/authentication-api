@@ -179,6 +179,8 @@ public class StartHandler
                             Optional.ofNullable(startRequest.previousSessionId()),
                             sessionId,
                             startRequest.currentCredentialStrength());
+            authSession.setClientId(startRequest.clientId());
+            authSession.setVtrList(VectorOfTrust.parseVtrStringList(startRequest.vtr()));
 
             var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
 
@@ -378,11 +380,11 @@ public class StartHandler
         }
         var authRequestVtrList =
                 Optional.ofNullable(clientSession.getAuthRequestParams().get("vtr"))
-                        .map(vtr -> List.of(VectorOfTrust.parseFromAuthRequestAttribute(vtr)))
+                        .map(VectorOfTrust::parseFromAuthRequestAttribute)
                         .orElse(null);
         var startRequestVtrList =
                 Optional.ofNullable(startRequest.vtr())
-                        .map(vtr -> List.of(VectorOfTrust.parseVtrStringList(vtr)))
+                        .map(VectorOfTrust::parseVtrStringList)
                         .orElse(null);
         if (!Objects.equals(startRequestVtrList, authRequestVtrList)) {
             LOG.warn("\"vtr\" field does match custom parameter in auth request params");

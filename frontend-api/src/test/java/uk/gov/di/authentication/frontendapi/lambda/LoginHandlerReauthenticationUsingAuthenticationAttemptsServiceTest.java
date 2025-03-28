@@ -59,7 +59,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -641,9 +640,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     }
 
     private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
+        VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 

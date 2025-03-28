@@ -50,7 +50,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -333,9 +332,7 @@ class LoginHandlerReauthenticationRedisTest {
     }
 
     private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
+        VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 
