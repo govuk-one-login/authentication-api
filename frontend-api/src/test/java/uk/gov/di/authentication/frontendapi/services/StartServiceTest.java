@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -61,6 +60,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VTR_CL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VTR_CL_CM;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VTR_P2_CL_CM;
 
 class StartServiceTest {
 
@@ -69,11 +71,6 @@ class StartServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final String SESSION_ID = "a-session-id";
-    private static final VectorOfTrust VTR_CL = new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL);
-    private static final VectorOfTrust VTR_CL_CM =
-            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL);
-    private static final VectorOfTrust VTR_P2_CL_CM =
-            VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
     private static final Session SESSION = new Session().setEmailAddress(EMAIL);
     private static final AuthSessionItem AUTH_SESSION =
             new AuthSessionItem().withEmailAddress(EMAIL).withSessionId(SESSION_ID);
