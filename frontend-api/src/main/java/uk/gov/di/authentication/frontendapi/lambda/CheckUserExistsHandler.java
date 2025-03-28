@@ -131,7 +131,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
             var userExists = userProfile.isPresent();
-            userContext.getSession().setEmailAddress(emailAddress);
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
             var session = userContext.getSession();

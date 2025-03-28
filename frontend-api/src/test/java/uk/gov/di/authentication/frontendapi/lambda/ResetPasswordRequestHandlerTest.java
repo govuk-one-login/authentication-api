@@ -134,7 +134,7 @@ class ResetPasswordRequestHandlerTest {
                                     CommonTestVariables.EMAIL,
                                     "jb2@digital.cabinet-office.gov.uk"));
 
-    private final Session session = new Session().setEmailAddress(CommonTestVariables.EMAIL);
+    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)

@@ -117,7 +117,7 @@ class AuthenticationAuthCodeHandlerTest {
 
     @BeforeEach
     void setUp() throws Json.JsonException {
-        session = new Session().setEmailAddress(CommonTestVariables.EMAIL);
+        session = new Session();
         authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
