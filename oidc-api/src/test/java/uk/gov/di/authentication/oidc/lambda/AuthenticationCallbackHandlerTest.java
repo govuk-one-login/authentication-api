@@ -71,6 +71,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -131,8 +132,11 @@ class AuthenticationCallbackHandlerTest {
             mock(AuthenticationUserInfoStorageService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+
+    // TODO: ATO-1218: Remove the following mock for the auth code service.
     private static final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
@@ -207,7 +211,16 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(
                         new AccountIntervention(
                                 new AccountInterventionState(false, false, false, false)));
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        any(Long.class)))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
@@ -265,6 +278,7 @@ class AuthenticationCallbackHandlerTest {
                         userInfoStorageService,
                         cloudwatchMetricsService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         clientService,
                         initiateIPVAuthorisationService,
                         accountInterventionService,
@@ -615,12 +629,21 @@ class AuthenticationCallbackHandlerTest {
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(mediumRequestOrchSession));
 
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        any(Long.class)))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+
         usingValidClient();
 
         var event = new APIGatewayProxyRequestEvent();
