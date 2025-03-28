@@ -130,7 +130,16 @@ public class AuthoriseAccessTokenHandler
                     awsAccountId,
                     restApiId,
                     stage);
-            LOG.info("Policy document: {}", getAllowAllPolicy(region, awsAccountId, restApiId, stage));
+            AuthPolicy.PolicyDocument policyDoc =
+                    getAllowAllPolicy(region, awsAccountId, restApiId, stage);
+
+            if (policyDoc == null) {
+                LOG.warn("Policy document is missing");
+            }
+
+            LOG.info(
+                    "Policy document: {}",
+                    policyDoc != null ? policyDoc.toString().replace(",", ",\n") : "null");
 
             var policy =
                     new AuthPolicy(
