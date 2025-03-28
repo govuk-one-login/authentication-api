@@ -131,7 +131,7 @@ public class MFAMethodsCreateHandler
 
             if (maybeMfaMigrationFailureReason.isPresent()) {
                 switch (maybeMfaMigrationFailureReason.get()) {
-                    case NO_USER_PROFILE_FOUND_FOR_EMAIL -> {
+                    case NO_USER_FOUND_FOR_EMAIL -> {
                         return Optional.of(
                                 generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1056));

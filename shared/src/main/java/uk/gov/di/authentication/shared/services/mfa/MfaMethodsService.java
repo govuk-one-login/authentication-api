@@ -372,33 +372,49 @@ public class MfaMethodsService {
 
     public Optional<MfaMigrationFailureReason> migrateSmsMfaToCredentialsTableForUser(
             String email) {
+        // Bail if user doesn't exist
         Optional<UserProfile> maybeUserProfile = persistentService.getUserProfileFromEmail(email);
-        if (maybeUserProfile.isEmpty())
-            return Optional.of(MfaMigrationFailureReason.NO_USER_PROFILE_FOUND_FOR_EMAIL);
+        Optional<UserCredentials> maybeUserCredentials =
+                Optional.ofNullable(persistentService.getUserCredentialsFromEmail(email));
+        if (maybeUserProfile.isEmpty() || maybeUserCredentials.isEmpty())
+            return Optional.of(MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL);
         UserProfile userProfile = maybeUserProfile.get();
+        UserCredentials userCredentials = maybeUserCredentials.get();
 
+        // Bail if phoneNumber already migrated
         if (userProfile.getMfaMethodsMigrated())
             return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_ALREADY_MIGRATED);
 
+        // Set migrated=true and bail if no phoneNumber on UserProfile or UserCredential already has
+        // active DEFAULT
+        Optional<String> maybePhoneNumber = Optional.ofNullable(userProfile.getPhoneNumber());
+        var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
+        var userHasActiveDefaultMfaMethod =
+                mfaMethods.stream()
+                        .anyMatch(
+                                mfaMethod ->
+                                        mfaMethod
+                                                        .priorityIdentifier()
+                                                        .equals(PriorityIdentifier.DEFAULT)
+                                                && mfaMethod.methodVerified());
+        if (maybePhoneNumber.isEmpty() || userHasActiveDefaultMfaMethod) {
+            persistentService.setMfaMethodsMigrated(email, true);
+            return Optional.empty();
+        }
+
+        // Bail if phoneNumber isn't verified
         if (!userProfile.isPhoneNumberVerified())
             return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_NOT_VERIFIED);
 
-        Optional<String> maybePhoneNumber = Optional.ofNullable(userProfile.getPhoneNumber());
-        if (maybePhoneNumber.isPresent()) {
-            String phoneNumber = maybePhoneNumber.get();
-
-            persistentService.migrateSmsMfaToCredentialsTableForUser(
-                    email,
-                    MFAMethod.smsMfaMethod(
-                            userProfile.isPhoneNumberVerified(),
-                            true,
-                            phoneNumber,
-                            PriorityIdentifier.DEFAULT,
-                            UUID.randomUUID().toString()));
-        } else {
-            persistentService.setMfaMethodsMigrated(email, true);
-        }
-
+        // Migrate phoneNumber
+        persistentService.migrateSmsMfaToCredentialsTableForUser(
+                email,
+                MFAMethod.smsMfaMethod(
+                        userProfile.isPhoneNumberVerified(),
+                        true,
+                        maybePhoneNumber.get(),
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString()));
         return Optional.empty();
     }
 }
