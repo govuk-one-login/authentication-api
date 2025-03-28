@@ -69,7 +69,7 @@ public class AuthoriseAccessTokenHandler
         LOG.info("Request received in AuthoriseAccessTokenHandler");
         try {
             String token = input.getAuthorizationToken();
-
+LOG.debug("Authorization token: " + token);
             AccessToken accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
             SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
             JWTClaimsSet claimsSet = signedAccessToken.getJWTClaimsSet();
@@ -153,7 +153,7 @@ public class AuthoriseAccessTokenHandler
 
             return policy;
         } catch (ParseException | java.text.ParseException e) {
-            LOG.warn("Unable to parse Access Token {}", e.getMessage());
+            LOG.warn("Unable to parse Access Token: {}", e.getMessage());
             throw new RuntimeException("Unauthorized");
         }
     }
