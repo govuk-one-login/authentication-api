@@ -3,32 +3,31 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.clientregistry"
-version "unspecified"
+group = "uk.gov.di.clientregistry"
+version = "unspecified"
 
 dependencies {
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.bundles.dynamodb)
 
-    compileOnly configurations.lambda,
-            configurations.ssm,
-            configurations.sns,
-            configurations.dynamodb
+    testRuntimeOnly(libs.junit.engine)
 
-    implementation configurations.nimbus,
-            configurations.gson,
-            'commons-validator:commons-validator:1.8.0'
+    runtimeOnly(libs.bundles.runtime.logging)
 
-    implementation project(":orchestration-shared")
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.bundles.dynamodb)
 
-    runtimeOnly configurations.logging_runtime
+    implementation 'commons-validator:commons-validator:1.8.0',
+            project(":orchestration-shared")
 
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.dynamodb
-
-    testRuntimeOnly configurations.test_runtime
+    testImplementation project(":orchestration-shared-test")
+    testImplementation(libs.bundles.testing)
+    implementation(libs.bundles.nimbusds)
+    implementation(libs.gson)
 }
 
 test {
@@ -51,7 +50,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

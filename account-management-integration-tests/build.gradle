@@ -3,27 +3,26 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
 
 dependencies {
-    testImplementation configurations.bouncycastle,
-            configurations.apache,
-            configurations.nimbus,
-            configurations.gson,
-            configurations.tests,
-            configurations.sqs,
-            configurations.dynamodb,
-            configurations.lambda,
-            configurations.lettuce,
-            configurations.libphonenumber
+    testImplementation(libs.gson)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.bundles.dynamodb)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.bundles.lettuce)
+    testImplementation(libs.libphonenumber)
 
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.apache)
+    testImplementation(libs.bundles.nimbusds)
+    testImplementation(libs.bouncycastle)
 
-
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+    testRuntimeOnly(libs.junit.engine)
 }
 
 test {
@@ -62,6 +61,6 @@ test {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
 }

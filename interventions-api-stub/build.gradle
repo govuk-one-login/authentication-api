@@ -6,17 +6,18 @@ plugins {
 group = 'uk.gov.di.authentication.interventions-api-stub'
 version = 'unspecified'
 
+
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.dynamodb
+    testRuntimeOnly(libs.junit.engine)
 
-    implementation project(":shared"),
-            configurations.gson
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.bundles.dynamodb)
 
-    testImplementation configurations.tests,
-            configurations.lambda
+    implementation project(":shared")
+    implementation(libs.gson)
 
-    testRuntimeOnly configurations.test_runtime
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.aws.lambda)
 }
 
 test {
@@ -39,7 +40,7 @@ task buildZip(type: Zip) {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

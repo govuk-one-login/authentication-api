@@ -2,7 +2,8 @@ default_language_version:
   golang: 1.23.6
 exclude: |
   (?x)^(
-      .*/test/.*/.*\.approved.json
+      .*/test/.*/.*\.approved.json|
+      gradlew
   )$
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -3,34 +3,32 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.external.api"
-version "unspecified"
+group = "uk.gov.di.authentication.external.api"
+version = "unspecified"
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.kms,
-            configurations.dynamodb
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.aws.kms)
+    testImplementation(libs.bundles.dynamodb)
 
-    implementation configurations.gson,
-            configurations.nimbus
+    testRuntimeOnly(libs.junit.engine)
+    runtimeOnly(libs.bundles.runtime.logging)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.sqs)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.aws.kms)
+    compileOnly(libs.bundles.dynamodb)
 
     implementation project(":shared")
-
-    runtimeOnly configurations.logging_runtime
-
-    testImplementation configurations.tests,
-            configurations.apache,
-            configurations.lambda_tests,
-            project(":shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.kms,
-            configurations.dynamodb
-
-    testRuntimeOnly configurations.test_runtime
+    implementation(libs.gson)
+    implementation(libs.bundles.nimbusds)
+    testImplementation project(":shared-test")
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.bundles.apache)
 }
 
 test {
@@ -53,7 +51,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

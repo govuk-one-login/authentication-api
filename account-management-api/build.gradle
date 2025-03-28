@@ -3,35 +3,33 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.accountmanagement"
-version "unspecified"
+group = "uk.gov.di.authentication.accountmanagement"
+version = "unspecified"
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.s3,
-            configurations.dynamodb
+    testImplementation(libs.lambda.tests)
+    testImplementation(libs.bundles.aws.lambda)
+    testImplementation(libs.aws.sqs)
+    testImplementation(libs.bundles.dynamodb)
 
+    testRuntimeOnly(libs.junit.engine)
+    runtimeOnly(libs.bundles.runtime.logging)
 
-    implementation configurations.nimbus,
-            configurations.govuk_notify,
-            configurations.gson,
-            configurations.vavr
+    implementation(libs.govuk.notify)
+    implementation(libs.gson)
+    implementation(libs.vavr)
+
+    compileOnly(libs.bundles.aws.lambda)
+    compileOnly(libs.aws.sqs)
+    compileOnly(libs.aws.ssm)
+    compileOnly(libs.aws.sns)
+    compileOnly(libs.aws.s3)
+    compileOnly(libs.bundles.dynamodb)
 
     implementation project(":shared")
-
-    runtimeOnly configurations.logging_runtime
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
-            project(":shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.dynamodb
-
-    testRuntimeOnly configurations.test_runtime
+    implementation(libs.bundles.nimbusds)
+    testImplementation project(":shared-test")
+    testImplementation(libs.bundles.testing)
 }
 
 test {
@@ -54,7 +52,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }
