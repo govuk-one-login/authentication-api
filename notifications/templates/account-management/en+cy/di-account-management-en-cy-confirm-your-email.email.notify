@@ -1,0 +1,37 @@
+Template Name:
+
+di-account-management-en-cy-confirm-your-email
+
+Subject:
+
+Your security code for your GOV.UK One Login | Eich cod diogelwch ar gyfer eich GOV.UK One Login
+
+Message:
+
+Use this security code to confirm you want to change the email address for your GOV.UK One Login.
+
+^((validation-code))
+
+The code will expire after 15 minutes.
+
+If you did not ask to change the email address for your GOV.UK One Login, or you need help using the code, contact us: ((contact-us-link))
+
+---
+
+Do not reply to this email - it’s an automatic message from an unmonitored account.
+
+---
+
+# Eich cod diogelwch ar gyfer eich GOV.UK One Login
+
+Defnyddiwch y cod diogelwch hwn i gadarnhau yr ydych eisiau newid y cyfeiriad e-bost am eich GOV.UK One Login.
+
+^((validation-code))
+
+Bydd y cod yn dod i ben ar ôl 15 munud.
+
+Os na wnaethoch ofyn i newid y cyfeiriad e-bost ar gyfer eich GOV.UK One Login, neu rydych angen help i ddefnyddio'r cod, cysylltwch â ni: ((contact-us-link))
+
+---
+
+Peidiwch ag ymateb i’r e-bost hwn - mae’n neges awtomatig o gyfrif heb ei fonitro.

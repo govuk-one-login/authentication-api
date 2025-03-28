@@ -1,0 +1,87 @@
+Template name:
+
+di-account-management-en-cy-report-confirmation
+
+Subject:
+
+You’ve reported activity in your GOV.UK One Login | Rydych chi wedi adrodd am weithgaredd yn eich GOV.UK One Login
+
+Message:
+
+You’ve reported activity you do not recognise in your GOV.UK One Login.
+
+Your report number is ((ticketId)).
+
+# The activity you reported
+
+
+You visited:
+
+^ ## ((clientNameEn))
+((showHomeHintText??^This includes ‘Security’ and ‘Your services’))
+((showHomeHintText??^))
+^ ((dateEn)) (UK time)
+
+# Change your password
+
+If you have not done this already, change your password at: https://home.account.gov.uk/security
+
+Changing your password is the best way to keep your GOV.UK One Login secure.
+
+We recommend that you:
+
+* create a secure and memorable password, for example by using 3 random words
+* use a different password to the one you use to sign in to your email
+
+# What happens next
+
+The GOV.UK One Login team will investigate your report.
+
+We’ll only email you again if you need to do something to help protect your GOV.UK One Login.
+
+We’ll always include your report number when we email you.
+
+
+---
+
+Do not reply to this email - it’s an automatic message from an unmonitored account.
+
+---
+
+
+Rydych chi wedi adrodd am weithgaredd nad ydych yn ei adnabod yn eich GOV.UK One Login.
+
+Rhif eich adroddiad yw ((ticketId)).
+
+# Y gweithgaredd rydych wedi adrodd amdano
+
+Rydych wedi ymweld â:
+
+^ ## ((clientNameCy))
+((showHomeHintText??^Mae hyn yn cynnwys 'Diogelwch' a 'Eich gwasanaethau'))
+((showHomeHintText??^))
+^ ((dateCy)) (Amser y DU)
+
+# Newid eich cyfrinair
+
+Os nad ydych wedi gwneud hyn yn barod, newidiwch eich cyfrinair yn: https://home.account.gov.uk/security
+
+Newid eich cyfrinair yw'r ffordd orau i gadw'ch GOV.UK One Login yn ddiogel.
+
+Rydym yn argymell eich bod yn:
+
+* creu cyfrinair diogel a chofiadwy, er enghraifft trwy ddefnyddio 3 gair ar hap
+* defnyddio cyfrinair gwahanol i'r un a ddefnyddiwch i fewngofnodi i'ch e-bost
+
+# Beth sy'n digwydd nesaf
+
+Bydd y tîm GOV.UK One Login yn ymchwilio i'ch adroddiad.
+
+Byddwn ond yn anfon e-bost atoch eto os oes angen i chi wneud rhywbeth i helpu i amddiffyn eich GOV.UK One Login.
+
+Byddwn bob amser yn cynnwys eich rhif adroddiad pan fyddwn yn anfon e-bost atoch.
+
+
+---
+
+Peidiwch ag ymateb i’r e-bost hwn – mae’n neges awtomatig o gyfrif heb ei fonitro.
