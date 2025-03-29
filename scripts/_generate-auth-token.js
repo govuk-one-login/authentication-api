@@ -71,5 +71,8 @@ async function createJwt() {
 }
 
 createJwt()
-  .then((jwt) => console.log("Auth Token", jwt))
+  .then((jwt) => {
+    console.log("Auth Token:");
+    console.log("Bearer", jwt);
+  })
   .catch((err) => console.error("Error creating JWT:", err));

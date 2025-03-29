@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+cd "${DIR}" || exit 1
+
 environments=("authdev1" "authdev2" "sandpit" "dev" "build")
 
 function usage() {
@@ -72,10 +75,7 @@ fi
 configured_region="$(aws configure get region --profile "${AWS_PROFILE}" 2> /dev/null || true)"
 export AWS_REGION="${configured_region:-eu-west-2}"
 
-# shellcheck source=scripts/export_aws_creds.sh
-source "./export_aws_creds.sh"
-
-INTERNAL_COMMON_SUBJECT_ID=$(./export-ics.sh "${EMAIL}" "${ENVIRONMENT}" | tail -n 1)
+INTERNAL_COMMON_SUBJECT_ID=$("${DIR}/export-ics.sh" "${EMAIL}" "${ENVIRONMENT}" | tail -n 1)
 if [[ ${INTERNAL_COMMON_SUBJECT_ID} == *"does not exist"* ]]; then
   echo "${INTERNAL_COMMON_SUBJECT_ID}"
   exit 1
