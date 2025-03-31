@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.google.gson.Gson;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
@@ -68,7 +69,7 @@ public class AuthoriseAccessTokenHandler
         LOG.info("Request received in AuthoriseAccessTokenHandler");
         try {
             String token = input.getAuthorizationToken();
-
+            LOG.debug("Authorization token: " + token);
             AccessToken accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
             SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
             JWTClaimsSet claimsSet = signedAccessToken.getJWTClaimsSet();
@@ -122,11 +123,37 @@ public class AuthoriseAccessTokenHandler
             LOG.info("Generating context");
             Map<String, Object> context = Map.of("clientId", clientId);
 
-            LOG.info("Generating AuthPolicy");
-            return new AuthPolicy(
-                    subject, getAllowAllPolicy(region, awsAccountId, restApiId, stage), context);
+            LOG.info("Generating AuthPolicy using sub: {}", subject);
+            LOG.info(
+                    "Generating AuthPolicy using region: {} account: {} restApiId: {} stage: {}",
+                    region,
+                    awsAccountId,
+                    restApiId,
+                    stage);
+            AuthPolicy.PolicyDocument policyDoc =
+                    getAllowAllPolicy(region, awsAccountId, restApiId, stage);
+
+            if (policyDoc == null) {
+                LOG.warn("Policy document is missing");
+            }
+
+            LOG.info(
+                    "Policy document: {}",
+                    policyDoc != null ? policyDoc.toString().replace(",", ",\n") : "null");
+
+            var policy =
+                    new AuthPolicy(
+                            subject,
+                            getAllowAllPolicy(region, awsAccountId, restApiId, stage),
+                            context);
+
+            var gson = new Gson();
+            var jsonPolicy = gson.toJson(policy);
+            LOG.info("Generated AuthPolicy: {}", jsonPolicy);
+
+            return policy;
         } catch (ParseException | java.text.ParseException e) {
-            LOG.warn("Unable to parse Access Token {}", e.getMessage());
+            LOG.warn("Unable to parse Access Token: {}", e.getMessage());
             throw new RuntimeException("Unauthorized");
         }
     }
