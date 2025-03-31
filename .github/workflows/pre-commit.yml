@@ -7,39 +7,73 @@ on:
       - reopened
       - ready_for_review
       - synchronize
+  push:
+    branches:
+      - main
+  merge_group:
 
 jobs:
-  pre-commit:
+  noop-on-merge-group:
+    if: github.event_name == 'merge_group'
     runs-on: ubuntu-latest
-    name: Run pre-commit
+    name: Run pre-commit # important this is the same name as the pre-commit job
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: 🛑 Skip Pre-commit Checks for Merge Group
+        run: echo "This is a merge group event. Skipping pre-commit checks."; true
+        shell: bash
+  pre-commit:
+    # This job will run on all pull requests and pushes to main, but not on merge groups
+    # We run it on merge to main to ensure that pre-commit's cache is up to date
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    name: Run pre-commit # important this is the same name as the noop-on-merge-group job
+    steps:
+      - name: 📦 Check Out Repository Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
-      - name: 🏗️ Set up JDK 17
+      - name: 🏗️ Set Up JDK 17
         uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 #v4.7.0
         with:
           java-version: "17"
           distribution: "corretto"
 
-      - name: 🏗️ Set up Gradle
+      - name: 🏗️ Set Up Gradle
         uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4
         with:
           cache-read-only: false
           add-job-summary: never
 
-      - name: 🏗️ Set up Python
+      - name: 🏗️ Set Up Python
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.x"
+          cache: "pip"
 
-      - name: 🏗️ Set up Terraform
+      - name: 🏗️ Set Up Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 
-      - name: Run pre-commit
-        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+      - name: 🏗️ Install Pre-commit
+        run: python -m pip install pre-commit
+        shell: bash
+      - name: 🛠️ Freeze Python Dependencies
+        run: python -m pip freeze --local
+        shell: bash
+      - name: 📦 Cache Pre-commit tools
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          extra_args: |
-            --from-ref "${{ github.event.pull_request.base.sha }}" \
-            --to-ref "${{ github.event.pull_request.head.sha }}"
+          path: ~/.cache/pre-commit
+          key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-3|${{ env.pythonLocation }}|
+            pre-commit-3|
+      - name: ✅ Run Pre-commit Hooks
+        run: |
+          pre-commit run --show-diff-on-failure --color=always \
+          --from-ref "${{ github.event.pull_request.base.sha }}" \
+          --to-ref "${{ github.event.pull_request.head.sha }}"
+        shell: bash
+      - name: 🧹 Cache Cleanup
+        run: pre-commit gc
+        shell: bash
