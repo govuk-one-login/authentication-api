@@ -1,0 +1,33 @@
+Template name:
+
+di-authentication-en-cy-verify-change-how-get-security-codes
+
+Subject:
+
+Your security code for your GOV.UK One Login | Eich cod diogelwch ar gyfer eich GOV.UK One Login
+
+Message:
+
+Use this security code to change how you get security codes when you sign in to your GOV.UK One Login.
+
+^((validation-code))
+
+The code will expire after 15 minutes.
+
+---
+
+Do not reply to this email - it’s an automatic message from an unmonitored account.
+
+---
+
+# Eich cod diogelwch ar gyfer eich GOV.UK One Login
+
+Defnyddiwch y cod diogelwch hwn i newid sut rydych yn cael codau diogelwch pan fyddwch yn mewngofnodi i'ch GOV.UK One Login.
+
+^((validation-code))
+
+Bydd y cod yn dod i ben ar ôl 15 munud.
+
+---
+
+Peidiwch ag ymateb i’r e-bost hwn - mae’n neges awtomatig o gyfrif heb ei fonitro.

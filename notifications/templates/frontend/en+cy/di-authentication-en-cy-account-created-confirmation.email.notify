@@ -1,0 +1,59 @@
+Template name:
+
+di-authentication-en-cy-account-created-confirmation
+
+Subject:
+
+Your GOV.UK One Login | Eich GOV.UK One Login
+
+Message:
+
+You’ve created your GOV.UK One Login.
+
+Sign in to your GOV.UK One Login to:
+
+* manage your sign in details
+* see and access the services you've used with it
+
+Sign in: ((gov-uk-accounts-url))
+
+GOV.UK One Login is new. At the moment you can only use it to access some government services.
+
+It does not work with all government accounts and services yet (for example Universal Credit).
+
+Over time, GOV.UK One Login will replace all other ways to sign in to services on GOV.UK, including Government Gateway.
+
+Read more about using your GOV.UK One Login: https://www.gov.uk/using-your-gov-uk-one-login
+
+If you have questions, problems or suggestions for how we could make your GOV.UK One Login better, you can contact us: ((contact-us-link))
+
+---
+
+Do not reply to this email - it’s an automatic message from an unmonitored account.
+
+---
+
+# Eich GOV.UK One Login
+
+Rydych wedi creu eich GOV.UK One Login.
+
+Mewngofnodwch i'ch GOV.UK One Login i:
+
+* reoli eich manylion mewngofnodi
+* gweld a chael mynediad at y gwasanaethau rydych chi wedi'u defnyddio gydag ef
+
+Mewngofnodi: ((gov-uk-accounts-url))
+
+Mae GOV.UK One Login yn newydd. Ar hyn o bryd gallwch ond ei ddefnyddio i gael mynediad i rai gwasanaethau’r llywodraeth.
+
+Nid yw'n gweithio gyda holl gyfrifon a gwasanaethau'r llywodraeth eto (er enghraifft Credyd Cynhwysol).
+
+Dros amser, bydd GOV.UK One Login yn disodli'r holl ffyrdd eraill o fewngofnodi i wasanaethau ar GOV.UK, gan gynnwys Porth y Llywodraeth.
+
+Darllenwch fwy am ddefnyddio eich GOV.UK One Login: https://www.gov.uk/defnyddio-eich-gov-uk-one-login
+
+Os oes gennych gwestiynau, problemau neu awgrymiadau am sut y gallem wneud eich GOV.UK One Login yn well, gallwch gysylltu â ni: ((contact-us-link))
+
+---
+
+Peidiwch ag ymateb i’r e-bost hwn - mae’n neges awtomatig o gyfrif heb ei fonitro.
