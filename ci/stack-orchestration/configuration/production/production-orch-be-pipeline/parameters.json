@@ -81,6 +81,6 @@
   },
   {
     "ParameterKey": "LambdaCanaryDeployment",
-    "ParameterValue": "AllAtOnce"
+    "ParameterValue": "Canary10Percent5Minutes"
   }
 ]
