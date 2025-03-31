@@ -227,6 +227,20 @@ public class AuthPolicy {
                 String region, String awsAccountId, String restApiId, String stage) {
             return getDenyOnePolicy(region, awsAccountId, restApiId, stage, HttpMethod.ALL, "*");
         }
+
+        @Override
+        public String toString() {
+            return "PolicyDocument{" +
+                    "allowStatement=" + allowStatement +
+                    ", Version='" + Version + '\'' +
+                    ", denyStatement=" + denyStatement +
+                    ", statements=" + statements +
+                    ", region='" + region + '\'' +
+                    ", awsAccountId='" + awsAccountId + '\'' +
+                    ", restApiId='" + restApiId + '\'' +
+                    ", stage='" + stage + '\'' +
+                    '}';
+        }
     }
 
     public enum HttpMethod {
@@ -295,6 +309,16 @@ public class AuthPolicy {
 
         public void addCondition(String operator, String key, Object value) {
             Condition.put(operator, Collections.singletonMap(key, value));
+        }
+
+        @Override
+        public String toString() {
+            return "Statement{" +
+                    "Action='" + Action + '\'' +
+                    ", Effect='" + Effect + '\'' +
+                    ", Condition=" + Condition +
+                    ", resourceList=" + resourceList +
+                    '}';
         }
     }
 }
