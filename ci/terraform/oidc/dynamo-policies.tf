@@ -749,6 +749,22 @@ data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_write_del
   }
 }
 
+data "aws_iam_policy_document" "dynamo_orch_session_cross_account_write_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  statement {
+    sid    = "AllowOrchSessionCrossAccountWriteAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Orch-Session",
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_orch_session_cross_account_delete_access_policy_document" {
   count = var.is_orch_stubbed ? 0 : 1
   statement {
@@ -1163,6 +1179,15 @@ resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_access_policy"
   policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_read_access_policy_document[count.index].json
 }
 
+resource "aws_iam_policy" "dynamo_orch_session_cross_account_write_access_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-orch-session-cross-account-write-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing write permissions to the orch session table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_write_access_policy_document[count.index].json
+}
 
 resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_write_delete_access_policy" {
   count = var.is_orch_stubbed ? 0 : 1
