@@ -36,33 +36,11 @@ resource "aws_iam_role_policy" "invocation_policy" {
 EOF
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "authorizer-log-subscription"
-  log_group_name  = aws_cloudwatch_log_group.lambda_log_group.name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
-
-  lifecycle {
-    create_before_destroy = false
-  }
-}
-
 resource "aws_iam_role" "invocation_role" {
   name = "${var.environment}-api_gateway_auth_invocation"
   path = "/"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
-}
-
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-  retention_in_days = var.cloudwatch_log_retention
-
-  depends_on = [
-    aws_lambda_function.authorizer
-  ]
 }
 
 resource "aws_api_gateway_rest_api" "di_account_management_api" {

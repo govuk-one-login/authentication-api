@@ -1,5 +1,3 @@
-
-
 resource "aws_api_gateway_rest_api" "rest_api" {
   name = var.api_gateway_name
 
@@ -24,9 +22,10 @@ resource "aws_api_gateway_rest_api_policy" "rest_api_policy" {
   policy      = data.aws_iam_policy_document.rest_api_policy_document.json
 }
 
-
 data "aws_iam_policy_document" "rest_api_policy_document" {
+  # Default allow statement for all traffic
   statement {
+    sid    = "AllowAll"
     effect = "Allow"
 
     principals {
@@ -38,21 +37,26 @@ data "aws_iam_policy_document" "rest_api_policy_document" {
     resources = ["${aws_api_gateway_rest_api.rest_api.execution_arn}/*"]
   }
 
-  statement {
-    effect = "Deny"
+  dynamic "statement" {
+    # Only add this statement if we have VPC endpoint IDs
+    for_each = length(var.vpc_endpoint_ids) > 0 ? [1] : []
+    content {
+      sid    = "EnforceVpcEndpointAccess"
+      effect = "Deny"
 
-    principals {
-      identifiers = ["*"]
-      type        = "*"
-    }
+      principals {
+        identifiers = ["*"]
+        type        = "*"
+      }
 
-    actions   = ["execute-api:Invoke"]
-    resources = ["${aws_api_gateway_rest_api.rest_api.execution_arn}/*"]
+      actions   = ["execute-api:Invoke"]
+      resources = ["${aws_api_gateway_rest_api.rest_api.execution_arn}/*"]
 
-    condition {
-      test     = "StringNotEquals"
-      values   = var.vpc_endpoint_ids
-      variable = "aws:SourceVpce"
+      condition {
+        test     = "StringNotEquals"
+        values   = var.vpc_endpoint_ids
+        variable = "aws:SourceVpce"
+      }
     }
   }
 }
@@ -101,8 +105,6 @@ resource "aws_api_gateway_usage_plan" "api_usage_plan" {
   tags = var.extra_tags
   # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda
 }
-
-
 
 resource "aws_api_gateway_method_settings" "logging_settings" {
   count = var.enable_api_gateway_execution_logging ? 1 : 0
@@ -172,7 +174,6 @@ resource "aws_wafv2_web_acl_association" "waf_association" {
   resource_arn = aws_api_gateway_stage.stage.arn
   web_acl_arn  = var.waf_arns[count.index]
 }
-
 
 resource "aws_cloudwatch_log_group" "waf_logs" {
   count = length(var.waf_arns) > 0 ? 1 : 0
