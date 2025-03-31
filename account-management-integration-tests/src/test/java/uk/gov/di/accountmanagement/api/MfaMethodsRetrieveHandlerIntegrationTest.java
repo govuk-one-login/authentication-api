@@ -28,7 +28,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final String PASSWORD = "password-1";
-    private static final String PHONE_NUMBER = "+441234567890";
+    private static final String PHONE_NUMBER = "+447700900000";
 
     @RegisterExtension
     private static UserStoreExtension userStoreExtension = new UserStoreExtension();
@@ -68,11 +68,11 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                      "methodVerified": true,
                      "method": {
                        "mfaMethodType": "SMS",
-                       "phoneNumber": "+441234567890"
+                       "phoneNumber": "%s"
                      }
                    }]
                 """,
-                        HARDCODED_SMS_MFA_ID);
+                        HARDCODED_SMS_MFA_ID, PHONE_NUMBER);
         var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
         assertThat(response, hasJsonBody(expectedResponseAsJson));
     }
@@ -157,11 +157,11 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                      "methodVerified": true,
                      "method": {
                        "mfaMethodType": "SMS",
-                       "phoneNumber": "+441234567890"
+                       "phoneNumber": "%s"
                      }
                    }]
                 """,
-                        authAppIdentifier, smsIdentifier);
+                        authAppIdentifier, smsIdentifier, PHONE_NUMBER);
         var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
         assertThat(response, hasJsonBody(expectedResponseAsJson));
     }
