@@ -208,18 +208,36 @@ resource "aws_instance" "developer_proxy" {
 }
 
 locals {
-  required_vpc_endpoints = ["ssm", "ssmmessages", "ec2messages", "execute-api", "logs"]
+  required_vpc_interface_endpoints = local.is_dev ? ["ssm", "ssmmessages", "ec2messages", "execute-api", "logs"] : []
+  required_vpc_gateway_endpoints   = local.is_dev ? ["s3"] : []
 }
 
 data "aws_vpc_endpoint_service" "auth_dev_access_vpc_endpoint_services" {
-  for_each = toset(local.required_vpc_endpoints)
+  for_each = toset(local.required_vpc_interface_endpoints)
 
   service      = each.value
   service_type = "Interface"
 }
+data "aws_vpc_endpoint_service" "auth_dev_access_vpc_gateway_endpoint_services" {
+  for_each = toset(local.required_vpc_gateway_endpoints)
+
+  service      = each.value
+  service_type = "Gateway"
+}
 
 data "aws_vpc_endpoint" "auth_dev_access_vpc_endpoints" {
   for_each = data.aws_vpc_endpoint_service.auth_dev_access_vpc_endpoint_services
+
+  vpc_id       = data.aws_vpc.auth_shared_vpc.id
+  service_name = each.value.service_name
+  tags = {
+    Environment = local.vpc_environment
+    terraform   = "di-infrastructure/core"
+  }
+}
+
+data "aws_vpc_endpoint" "auth_dev_access_vpc_gateway_endpoints" {
+  for_each = data.aws_vpc_endpoint_service.auth_dev_access_vpc_gateway_endpoint_services
 
   vpc_id       = data.aws_vpc.auth_shared_vpc.id
   service_name = each.value.service_name
@@ -241,9 +259,18 @@ resource "aws_security_group" "developer_proxy_sg" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    description = "Allow HTTPS to ${join(",", local.required_vpc_endpoints)} VPC Endpoint${length(local.required_vpc_endpoints) > 1 ? "s" : ""}"
+    description = "Allow HTTPS to ${join(",", local.required_vpc_interface_endpoints)} VPC Endpoint${length(local.required_vpc_interface_endpoints) > 1 ? "s" : ""}"
     security_groups = distinct(flatten([
       for k, v in data.aws_vpc_endpoint.auth_dev_access_vpc_endpoints : v.security_group_ids
+    ]))
+  }
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    description = "Allow HTTPS to ${join(",", local.required_vpc_gateway_endpoints)} VPC Endpoint${length(local.required_vpc_gateway_endpoints) > 1 ? "s" : ""}"
+    cidr_blocks = distinct(flatten([
+      for k, v in data.aws_vpc_endpoint.auth_dev_access_vpc_gateway_endpoints : v.cidr_blocks
     ]))
   }
 }
