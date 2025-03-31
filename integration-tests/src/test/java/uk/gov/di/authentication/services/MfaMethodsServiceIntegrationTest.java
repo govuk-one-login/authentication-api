@@ -572,6 +572,42 @@ class MfaMethodsServiceIntegrationTest {
 
         @Nested
         class WhenUpdatingABackupMethod {
+            @Test
+            void successfullySwitchesPriorityOfDefaultAndBackupMethods() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT,
+                                new SmsMfaDetail(
+                                        MFAMethodType.SMS, backupPrioritySms.getDestination()));
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, backupPrioritySms.getMfaIdentifier(), request);
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+
+                var expectedDefaultMethod =
+                        MfaMethodData.smsMethodData(
+                                backupPrioritySms.getMfaIdentifier(),
+                                PriorityIdentifier.DEFAULT,
+                                backupPrioritySms.isMethodVerified(),
+                                backupPrioritySms.getDestination());
+                var expectedBackupMethod =
+                        MfaMethodData.authAppMfaData(
+                                defaultPriorityAuthApp.getMfaIdentifier(),
+                                PriorityIdentifier.BACKUP,
+                                defaultPriorityAuthApp.isMethodVerified(),
+                                defaultPriorityAuthApp.getCredentialValue());
+                var expectedMethodsAfterUpdate =
+                        Stream.of(expectedDefaultMethod, expectedBackupMethod).sorted().toList();
+
+                assertEquals(expectedMethodsAfterUpdate, result.get().stream().sorted().toList());
+
+                assertEquals(
+                        expectedMethodsAfterUpdate, remainingMfaMethods.stream().sorted().toList());
+            }
 
             private static Stream<Arguments> existingBackupMethodsAndRequestedUpdates() {
                 return Stream.of(

@@ -817,6 +817,20 @@ public class DynamoService implements AuthenticationService {
                 });
     }
 
+    @Override
+    public Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
+            String email, List<MFAMethod> updatedMfaMethods) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var updatedUserCredentials =
+                dynamoUserCredentialsTable.updateItem(
+                        userCredentials.withUpdated(dateTime).withMfaMethods(updatedMfaMethods));
+
+        return Either.right(updatedUserCredentials.getMfaMethods());
+    }
+
     public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
             Map<String, AttributeValue> exclusiveStartKey, List<String> termsAndConditionsVersion) {
 

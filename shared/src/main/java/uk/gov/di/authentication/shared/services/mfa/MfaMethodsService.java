@@ -18,10 +18,12 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 
 public class MfaMethodsService {
     private static final Logger LOG = LogManager.getLogger(MfaMethodsService.class);
@@ -232,7 +234,7 @@ public class MfaMethodsService {
                                             mfaIdentifier,
                                             mfaMethods);
                                     case BACKUP -> handleBackupMethodUpdate(
-                                            method, request.mfaMethod());
+                                            method, request.mfaMethod(), email, mfaMethods);
                                 };
                             }
                         })
@@ -240,7 +242,10 @@ public class MfaMethodsService {
     }
 
     private Either<MfaUpdateFailureReason, List<MfaMethodData>> handleBackupMethodUpdate(
-            MFAMethod backupMethod, MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod) {
+            MFAMethod backupMethod,
+            MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
+            String email,
+            List<MFAMethod> allMethods) {
         if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
             var changesPhoneNumber =
                     !updatedSmsDetail.phoneNumber().equals(backupMethod.getDestination());
@@ -261,7 +266,37 @@ public class MfaMethodsService {
         if (updatedMethod.priorityIdentifier().equals(BACKUP)) {
             return Either.left(MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
         }
-        return Either.right(List.of());
+        var defaultMethod =
+                allMethods.stream()
+                        .filter(m -> Objects.equals(m.getPriority(), DEFAULT.name()))
+                        .findFirst()
+                        .get(); // will be handled in subsequent commit
+        var databaseUpdateResult =
+                persistentService.updateAllMfaMethodsForUser(
+                        email,
+                        List.of(
+                                defaultMethod.withPriority(BACKUP.name()),
+                                backupMethod.withPriority(DEFAULT.name())));
+
+        return updateMfaResultToMfaMethodData(databaseUpdateResult);
+    }
+
+    private Either<MfaUpdateFailureReason, List<MfaMethodData>> updateMfaResultToMfaMethodData(
+            Either<String, List<MFAMethod>> updateResult) {
+        Either<String, List<MfaMethodData>> returnedMfaMethods =
+                updateResult.flatMap(
+                        mfaMethods ->
+                                Either.sequenceRight(
+                                                io.vavr.collection.List.ofAll(mfaMethods.stream())
+                                                        .map(MfaMethodData::from))
+                                        .map(Value::toJavaList)
+                                        .map(list -> list.stream().sorted().toList()));
+
+        return returnedMfaMethods.mapLeft(
+                errorString -> {
+                    LOG.error(errorString);
+                    return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                });
     }
 
     private Either<MfaUpdateFailureReason, List<MfaMethodData>> handleDefaultMethodUpdate(
@@ -280,16 +315,19 @@ public class MfaMethodsService {
         if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
             var isExistingDefaultPhoneNumber =
                     updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination());
-            var isExistingBackupPhoneNumber =
+            var otherMethods =
                     allMethodsForUser.stream()
                             .filter(
                                     mfaMethod ->
                                             !mfaMethod.getMfaIdentifier().equals(mfaIdentifier))
+                            .toList();
+            var isExistingBackupPhoneNumber =
+                    otherMethods.stream()
                             .anyMatch(
                                     mfaMethod ->
-                                            mfaMethod
-                                                    .getDestination()
-                                                    .equals(updatedSmsDetail.phoneNumber()));
+                                            updatedSmsDetail
+                                                    .phoneNumber()
+                                                    .equals(mfaMethod.getDestination()));
             if (isExistingDefaultPhoneNumber) {
                 return Either.left(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
@@ -313,20 +351,7 @@ public class MfaMethodsService {
             }
         }
 
-        Either<String, List<MfaMethodData>> returnedMfaMethods =
-                databaseUpdateResult.flatMap(
-                        mfaMethods ->
-                                Either.sequenceRight(
-                                                io.vavr.collection.List.ofAll(mfaMethods.stream())
-                                                        .map(MfaMethodData::from))
-                                        .map(Value::toJavaList)
-                                        .map(list -> list.stream().sorted().toList()));
-
-        return returnedMfaMethods.mapLeft(
-                errorString -> {
-                    LOG.error(errorString);
-                    return MfaUpdateFailureReason.UNEXPECTED_ERROR;
-                });
+        return updateMfaResultToMfaMethodData(databaseUpdateResult);
     }
 
     private boolean updateRequestChangesMethodType(
