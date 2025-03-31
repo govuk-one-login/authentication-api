@@ -218,7 +218,7 @@ paths:
         timeoutInMillis: 29000
       tags:
         - 2FAManagement
-      description: Updates an mfa method. If the MFA method is updated to 'DEFAULT', the current 'DEFAULT' gets relegated to backup.
+      description: Updates an mfa method. If the MFA method is updated to 'DEFAULT', the current 'DEFAULT' gets relegated to backup. Returns all a user's MFA methods following the update.
       operationId: "mfa-methods-update"
       requestBody:
         content:
@@ -232,7 +232,34 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MfaMethod"
+                type: array
+                items:
+                  $ref: "#/components/schemas/MfaMethod"
+              examples:
+                user-with-single-mfa-type-app:
+                  summary: a user with a single MFA after update
+                  value:
+                    - mfaIdentifier: "bb5ccc7d-2591-4ccd-ae04-2b2c95b4e256"
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
+                user-with-multiple-mfa-types-default-sms:
+                  summary: a user with a default mfa method of SMS, and a backup auth app method after update
+                  value:
+                    - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
+                      priorityIdentifier: DEFAULT
+                      method:
+                        mfaMethodType: SMS
+                        phoneNumber: "070"
+                      methodVerified: true
+                    - mfaIdentifier: "4372e333-266c-4245-8c4d-385aafdd3fb3"
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
         "400":
           description: Bad Request
           content:
