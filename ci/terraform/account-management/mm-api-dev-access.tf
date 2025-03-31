@@ -191,11 +191,11 @@ resource "aws_instance" "developer_proxy" {
           }
         owner: root:root
         permissions: '0644'
-      # - path: /etc/sudoers.d/ssm-agent-users
-      #   content: |
-      #     # User rules for ssm-user
-      #   owner: root:root
-      #   permissions: '0440'
+      - path: /etc/sudoers.d/ssm-agent-users
+        content: |
+          # User rules for ssm-user
+        owner: root:root
+        permissions: '0440'
 
     runcmd:
       - systemctl enable nginx

@@ -55,20 +55,20 @@ data "aws_iam_policy_document" "ssm_kms_access" {
     }
   }
   # Enabling this means people can start interactive sessions. Port forwarding works without this!
-  statement {
-    sid = "AllowSSOUsersToUseKey"
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-    actions = [
-      "kms:Decrypt",
-      "kms:Encrypt",
-      "kms:GenerateDataKey*",
-      "kms:ReEncrypt*"
-    ]
-    resources = ["*"]
-  }
+  # statement {
+  #   sid = "AllowSSOUsersToUseKey"
+  #   principals {
+  #     type = "AWS"
+  #     identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+  #   }
+  #   actions = [
+  #     "kms:Decrypt",
+  #     "kms:Encrypt",
+  #     "kms:GenerateDataKey*",
+  #     "kms:ReEncrypt*"
+  #   ]
+  #   resources = ["*"]
+  # }
 
   statement {
     sid = "AllowCloudWatchLogsKMSWithContext"
