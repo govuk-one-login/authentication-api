@@ -51,6 +51,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addSession(sessionId);
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
+        redis.addEmailToSession(sessionId, email);
         var clientSessionId = IdGenerator.generate();
         setUpClientSession(email, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
 

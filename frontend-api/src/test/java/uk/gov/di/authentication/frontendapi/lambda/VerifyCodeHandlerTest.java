@@ -131,7 +131,7 @@ class VerifyCodeHandlerTest {
     private final String expectedPairwiseId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
-    private final Session session = new Session();
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -383,6 +383,7 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+        session.setEmailAddress(email);
         authSession.setEmailAddress(email);
         String body =
                 format(
@@ -418,6 +419,7 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+        session.setEmailAddress(email);
         authSession.setEmailAddress(email);
         String body =
                 format("{ \"code\": \"%s\", \"notificationType\": \"%s\"  }", CODE, VERIFY_EMAIL);
@@ -744,6 +746,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE))
                 .thenReturn(Optional.of(CODE));
+        session.setEmailAddress(TEST_CLIENT_EMAIL);
         authSession.setEmailAddress(TEST_CLIENT_EMAIL);
         String body =
                 format(

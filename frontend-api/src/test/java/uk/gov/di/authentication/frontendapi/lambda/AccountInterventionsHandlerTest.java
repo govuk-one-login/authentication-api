@@ -123,7 +123,7 @@ class AccountInterventionsHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     private static final ClientSession clientSession = getClientSession();
-    private final Session session = new Session();
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
