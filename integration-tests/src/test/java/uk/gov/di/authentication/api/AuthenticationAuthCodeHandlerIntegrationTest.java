@@ -140,7 +140,6 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     private String setupSession() throws Json.JsonException {
         var sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         return sessionId;

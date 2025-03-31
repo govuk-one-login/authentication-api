@@ -55,7 +55,6 @@ public class RedisExtension
     private String createSession(String sessionId, Optional<String> email)
             throws Json.JsonException {
         Session session = new Session();
-        email.ifPresent(session::setEmailAddress);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         return sessionId;
     }
@@ -127,12 +126,6 @@ public class RedisExtension
                                 VectorOfTrust.getDefaults(),
                                 clientName)),
                 3600);
-    }
-
-    public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setEmailAddress(emailAddress);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public void setSessionCredentialTrustLevel(

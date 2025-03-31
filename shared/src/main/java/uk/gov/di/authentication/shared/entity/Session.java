@@ -24,8 +24,6 @@ public class Session {
     @Expose private String sessionId;
     @Expose private List<String> clientSessions;
 
-    @Expose private String emailAddress;
-
     @Expose private int retryCount;
 
     @Expose private int passwordResetCount;
@@ -57,15 +55,6 @@ public class Session {
 
     public Session addClientSession(String clientSessionId) {
         this.clientSessions.add(clientSessionId);
-        return this;
-    }
-
-    public String getEmailAddress() {
-        return emailAddress;
-    }
-
-    public Session setEmailAddress(String emailAddress) {
-        this.emailAddress = emailAddress;
         return this;
     }
 

@@ -125,7 +125,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
-    private static final Session session = new Session().setEmailAddress(EMAIL);
+    private static final Session session = new Session();
     private final Context context = mock(Context.class);
     private final Subject subject = mock(Subject.class);
     private final String expectedCommonSubject =
