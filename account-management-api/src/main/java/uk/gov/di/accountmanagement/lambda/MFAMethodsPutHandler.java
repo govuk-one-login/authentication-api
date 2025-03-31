@@ -123,6 +123,10 @@ public class MFAMethodsPutHandler
         return switch (failureReason) {
             case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.ERROR_1072);
+            case ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1075);
+            case ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1076);
             case UNEXPECTED_ERROR -> generateApiGatewayProxyErrorResponse(
                     500, ErrorResponse.ERROR_1071);
             case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(

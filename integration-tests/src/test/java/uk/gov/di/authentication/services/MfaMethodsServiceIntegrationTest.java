@@ -569,6 +569,169 @@ class MfaMethodsServiceIntegrationTest {
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
             }
         }
+
+        @Nested
+        class WhenUpdatingABackupMethod {
+
+            private static Stream<Arguments> existingBackupMethodsAndRequestedUpdates() {
+                return Stream.of(
+                        Arguments.of(backupPriorityAuthApp, smsMfaDetail),
+                        Arguments.of(backupPrioritySms, authAppDetail));
+            }
+
+            @ParameterizedTest
+            @MethodSource("existingBackupMethodsAndRequestedUpdates")
+            void returnsAFailureWhenAttemptingToChangeTypeOfExistingBackupMethod(
+                    MFAMethod existingMethod, MfaDetail requestedUpdate) {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP, requestedUpdate);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, existingMethod.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD, result.getLeft());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
+            }
+
+            private static Stream<Arguments> existingBackupMethodsAndNoChangeUpdates() {
+                return Stream.of(
+                        Arguments.of(
+                                backupPriorityAuthApp,
+                                new AuthAppMfaDetail(
+                                        MFAMethodType.valueOf(
+                                                backupPriorityAuthApp.getMfaMethodType()),
+                                        backupPriorityAuthApp.getCredentialValue())),
+                        Arguments.of(
+                                backupPrioritySms,
+                                new SmsMfaDetail(
+                                        MFAMethodType.valueOf(backupPrioritySms.getMfaMethodType()),
+                                        backupPrioritySms.getDestination())));
+            }
+
+            @ParameterizedTest
+            @MethodSource("existingBackupMethodsAndNoChangeUpdates")
+            void returnsAFailureWhenNoChangeDetectedForBackupMethod(
+                    MFAMethod existingMethod, MfaDetail requestedUpdate) {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP, requestedUpdate);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, existingMethod.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
+                        result.getLeft());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
+            }
+
+            @Test
+            void returnsFailureWhenAttemptingToUpdateAnSmsNumberForABackup() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+                var detailWithUpdatedNumber = new SmsMfaDetail(MFAMethodType.SMS, "07900000111");
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP, detailWithUpdatedNumber);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, backupPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER,
+                        result.getLeft());
+
+                var methodsInDatabase =
+                        mfaMethodsService.getMfaMethods(EMAIL).stream().sorted().toList();
+                var expectedMethods =
+                        List.of(
+                                        mfaMethodDataFrom(backupPrioritySms),
+                                        mfaMethodDataFrom(defaultPrioritySms))
+                                .stream()
+                                .sorted()
+                                .toList();
+                assertEquals(expectedMethods, methodsInDatabase);
+            }
+
+            @Test
+            void returnsFailureWhenAttemptingToUpdateAnAuthAppCredentialForABackup() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPriorityAuthApp);
+
+                var detailWithUpdatedCredential =
+                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, "a-very-different-credential");
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP, detailWithUpdatedCredential);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, backupPriorityAuthApp.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL,
+                        result.getLeft());
+
+                var methodsInDatabase =
+                        mfaMethodsService.getMfaMethods(EMAIL).stream().sorted().toList();
+                var expectedMethods =
+                        List.of(
+                                        mfaMethodDataFrom(backupPriorityAuthApp),
+                                        mfaMethodDataFrom(defaultPrioritySms))
+                                .stream()
+                                .sorted()
+                                .toList();
+                assertEquals(expectedMethods, methodsInDatabase);
+            }
+
+            private static Stream<Arguments> existingMethodsAndNoChangeUpdates() {
+                return Stream.of(
+                        Arguments.of(
+                                backupPriorityAuthApp,
+                                new AuthAppMfaDetail(
+                                        MFAMethodType.valueOf(
+                                                backupPriorityAuthApp.getMfaMethodType()),
+                                        backupPriorityAuthApp.getCredentialValue())),
+                        Arguments.of(
+                                backupPrioritySms,
+                                new SmsMfaDetail(
+                                        MFAMethodType.valueOf(backupPrioritySms.getMfaMethodType()),
+                                        backupPrioritySms.getDestination())));
+            }
+
+            @ParameterizedTest
+            @MethodSource("existingMethodsAndNoChangeUpdates")
+            void returnsAFailureWhenNoChangeDetected(
+                    MFAMethod existingMethod, MfaDetail requestedUpdate) {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP, requestedUpdate);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, existingMethod.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
+                        result.getLeft());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
+            }
+        }
     }
 
     @Nested

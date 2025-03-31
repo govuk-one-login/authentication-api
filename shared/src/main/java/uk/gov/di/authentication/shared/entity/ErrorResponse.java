@@ -85,7 +85,9 @@ public enum ErrorResponse {
     ERROR_1071(1071, "Account Management API encountered Unexpected Error"),
     ERROR_1072(1072, "Cannot change type of mfa method"),
     ERROR_1073(1073, "Cannot change priority of default mfa method"),
-    ERROR_1074(1074, "Cannot update primary sms number to number already in use by backup");
+    ERROR_1074(1074, "Cannot update primary sms number to number already in use by backup"),
+    ERROR_1075(1075, "Cannot update a backup sms mfa method's phone number"),
+    ERROR_1076(1076, "Cannot update a backup sms mfa method's auth app credential");
 
     private int code;
 

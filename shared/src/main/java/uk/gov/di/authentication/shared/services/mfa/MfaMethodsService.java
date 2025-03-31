@@ -218,17 +218,50 @@ public class MfaMethodsService {
 
         return maybeMethodToUpdate
                 .map(
-                        method ->
-                                switch (PriorityIdentifier.valueOf(method.getPriority())) {
+                        method -> {
+                            if (updateRequestChangesMethodType(
+                                    method.getMfaMethodType(), request.mfaMethod().method())) {
+                                return Either.<MfaUpdateFailureReason, List<MfaMethodData>>left(
+                                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
+                            } else {
+                                return switch (PriorityIdentifier.valueOf(method.getPriority())) {
                                     case DEFAULT -> handleDefaultMethodUpdate(
                                             method,
                                             request.mfaMethod(),
                                             email,
                                             mfaIdentifier,
                                             mfaMethods);
-                                    case BACKUP -> null; // will be implemented in subsequent PR
-                                })
+                                    case BACKUP -> handleBackupMethodUpdate(
+                                            method, request.mfaMethod());
+                                };
+                            }
+                        })
                 .orElse(Either.left(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
+    }
+
+    private Either<MfaUpdateFailureReason, List<MfaMethodData>> handleBackupMethodUpdate(
+            MFAMethod backupMethod, MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod) {
+        if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
+            var changesPhoneNumber =
+                    !updatedSmsDetail.phoneNumber().equals(backupMethod.getDestination());
+            if (changesPhoneNumber) {
+                return Either.left(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER);
+            }
+        } else {
+            var authAppDetail = (AuthAppMfaDetail) updatedMethod.method();
+            var changesAuthAppCredential =
+                    !authAppDetail.credential().equals(backupMethod.getCredentialValue());
+            if (changesAuthAppCredential) {
+                return Either.left(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL);
+            }
+        }
+
+        if (updatedMethod.priorityIdentifier().equals(BACKUP)) {
+            return Either.left(MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+        }
+        return Either.right(List.of());
     }
 
     private Either<MfaUpdateFailureReason, List<MfaMethodData>> handleDefaultMethodUpdate(
@@ -240,11 +273,6 @@ public class MfaMethodsService {
         var requestedPriority = updatedMethod.priorityIdentifier();
         if (requestedPriority == BACKUP) {
             return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD);
-        }
-
-        if (updateRequestChangesMethodType(
-                defaultMethod.getMfaMethodType(), updatedMethod.method())) {
-            return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
         }
 
         Either<String, List<MFAMethod>> databaseUpdateResult;
