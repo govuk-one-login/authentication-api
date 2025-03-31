@@ -71,6 +71,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         authSessionStore.addSession(sessionId);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =

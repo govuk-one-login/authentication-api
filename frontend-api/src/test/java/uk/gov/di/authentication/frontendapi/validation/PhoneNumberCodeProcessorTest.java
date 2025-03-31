@@ -53,7 +53,7 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 class PhoneNumberCodeProcessorTest {
 
     private PhoneNumberCodeProcessor phoneNumberCodeProcessor;
-    private final Session session = new Session();
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)

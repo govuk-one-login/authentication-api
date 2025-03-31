@@ -127,7 +127,7 @@ class VerifyMfaCodeHandlerTest {
     private final String expectedRpPairwiseSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
-    private final Session session = new Session();
+    private final Session session = new Session().setEmailAddress(EMAIL);
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)

@@ -68,6 +68,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionExtension.addSession(sessionId);
         dynamoEmailCheckResultService.saveEmailCheckResult(
                 EMAIL, EmailCheckResultStatus.ALLOW, unixTimePlusNDays(), "test-reference");
+        redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
