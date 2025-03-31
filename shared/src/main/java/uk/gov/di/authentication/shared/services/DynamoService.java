@@ -738,7 +738,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, MFAMethod> updateMigratedMethodPhoneNumber(
+    public Either<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
             String email, String updatedPhoneNumber, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -752,14 +752,15 @@ public class DynamoService implements AuthenticationService {
                                         "Attempted to update phone number for non sms method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    return updateMigratedMfaMethod(
-                            existingMethod.withDestination(updatedPhoneNumber),
-                            mfaMethodIdentifier,
-                            userCredentials);
+                    return Either.right(
+                            updateMigratedMfaMethod(
+                                    existingMethod.withDestination(updatedPhoneNumber),
+                                    mfaMethodIdentifier,
+                                    userCredentials));
                 });
     }
 
-    private Either<String, MFAMethod> updateMigratedMfaMethod(
+    private List<MFAMethod> updateMigratedMfaMethod(
             MFAMethod updatedMFAMethod,
             String mfaMethodIdentifier,
             UserCredentials userCredentials) {
@@ -770,12 +771,7 @@ public class DynamoService implements AuthenticationService {
                                 .withUpdated(dateTime)
                                 .withUpdatedMfaMethod(mfaMethodIdentifier, updatedMFAMethod));
 
-        return getMfaMethodByIdentifier(updatedUserCredentials, mfaMethodIdentifier)
-                .mapLeft(
-                        err ->
-                                format(
-                                        "Error when retrieving updated mfa method with identifier: %s no such identifier exists",
-                                        mfaMethodIdentifier));
+        return updatedUserCredentials.getMfaMethods();
     }
 
     private Either<String, MFAMethod> getMfaMethodByIdentifier(
@@ -797,7 +793,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, MFAMethod> updateMigratedAuthAppCredential(
+    public Either<String, List<MFAMethod>> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -813,10 +809,11 @@ public class DynamoService implements AuthenticationService {
                                         "Attempted to update auth app credential for non auth app method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    return updateMigratedMfaMethod(
-                            existingMethod.withCredentialValue(updatedCredential),
-                            mfaMethodIdentifier,
-                            userCredentials);
+                    return Either.right(
+                            updateMigratedMfaMethod(
+                                    existingMethod.withCredentialValue(updatedCredential),
+                                    mfaMethodIdentifier,
+                                    userCredentials));
                 });
     }
 

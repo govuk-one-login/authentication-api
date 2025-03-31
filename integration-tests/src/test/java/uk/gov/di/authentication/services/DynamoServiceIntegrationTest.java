@@ -296,7 +296,20 @@ class DynamoServiceIntegrationTest {
                             PriorityIdentifier.valueOf(defaultPrioritySmsData.getPriority()),
                             defaultPrioritySmsData.getMfaIdentifier());
 
-            assertRetrievedMethodHasData(expectedUpdatedDefaultSmsMethod, result.get());
+            var returnedMethods = result.get();
+            var updatedDefaultMethod =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
+                            .findFirst()
+                            .get();
+            var backupMethod =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+
+            assertRetrievedMethodHasData(expectedUpdatedDefaultSmsMethod, updatedDefaultMethod);
+            assertRetrievedMethodHasData(backupPrioritySmsData, backupMethod);
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
@@ -325,7 +338,21 @@ class DynamoServiceIntegrationTest {
                             PriorityIdentifier.valueOf(defaultPriorityAuthAppData.getPriority()),
                             defaultPriorityAuthAppData.getMfaIdentifier());
 
-            assertRetrievedMethodHasData(result.get(), expectedUpdatedAuthAppMethod);
+            var returnedMethods = result.get();
+            var updatedDefaultPriorityMethod =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
+                            .findFirst()
+                            .get();
+            var returnedBackupMethod =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+
+            assertRetrievedMethodHasData(
+                    updatedDefaultPriorityMethod, expectedUpdatedAuthAppMethod);
+            assertRetrievedMethodHasData(returnedBackupMethod, backupPrioritySmsData);
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 

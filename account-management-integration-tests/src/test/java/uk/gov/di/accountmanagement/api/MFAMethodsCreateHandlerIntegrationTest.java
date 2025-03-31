@@ -33,8 +33,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     private static final String TEST_EMAIL = "test@email.com";
     private static final String TEST_PASSWORD = "test-password";
-    private static final String TEST_PHONE_NUMBER = "07123123123";
-    private static final String TEST_PHONE_NUMBER_TWO = "07987987987";
+    private static final String TEST_PHONE_NUMBER = "07700900000";
+    private static final String TEST_PHONE_NUMBER_TWO = "07700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static String TEST_PUBLIC_SUBJECT;
     private static final MFAMethod defaultPrioritySms =

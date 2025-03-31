@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -82,7 +83,7 @@ class MFAMethodsPutHandlerTest {
                 MfaMethodData.smsMethodData(
                         MFA_IDENTIFIER, PriorityIdentifier.DEFAULT, true, phoneNumber);
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Either.right(updatedMfaMethod));
+                .thenReturn(Either.right(List.of(updatedMfaMethod)));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
@@ -90,7 +91,7 @@ class MFAMethodsPutHandlerTest {
         var expectedResponse =
                 format(
                         """
-                {
+                [{
                   "mfaIdentifier": "%s",
                   "priorityIdentifier": "DEFAULT",
                   "methodVerified": true,
@@ -98,11 +99,11 @@ class MFAMethodsPutHandlerTest {
                     "mfaMethodType": "SMS",
                     "phoneNumber": "%s"
                   }
-                }
+                }]
                 """,
                         MFA_IDENTIFIER, phoneNumber);
         var expectedResponseParsedToString =
-                JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
+                JsonParser.parseString(expectedResponse).getAsJsonArray().toString();
         assertEquals(expectedResponseParsedToString, result.getBody());
     }
 
