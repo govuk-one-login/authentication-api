@@ -40,13 +40,13 @@ jobs:
           distribution: "corretto"
 
       - name: 🏗️ Set Up Gradle
-        uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
         with:
           cache-read-only: false
           add-job-summary: never
 
       - name: 🏗️ Set Up Python
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
         with:
           python-version: "3.x"
           cache: "pip"
