@@ -78,6 +78,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     @Test
     void shouldReturn200AndMfaMethodDataWhenAuthAppUserAddsSmsMfa() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+
         var response =
                 makeRequest(
                         Optional.of(
@@ -121,6 +123,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     @Test
     void shouldReturn200AndMfaMethodDataWhenSmsUserAddsAuthAppMfa() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+
         var response =
                 makeRequest(
                         Optional.of(
@@ -227,6 +231,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     void shouldReturn400ErrorResponseWhenAddingMfaAfterMfaCountLimitReached() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
 
         var response =
                 makeRequest(
@@ -246,6 +251,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     @Test
     void shouldReturn400ErrorResponseWhenSmsUserAddsSmsMfaWithSamePhoneNumber() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
 
         var response =
                 makeRequest(
@@ -265,6 +271,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     @Test
     void shouldReturn400ErrorResponseWhenAuthAppAddsSecondAuthApp() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
 
         var response =
                 makeRequest(

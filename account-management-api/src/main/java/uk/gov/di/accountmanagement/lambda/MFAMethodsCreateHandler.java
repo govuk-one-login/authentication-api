@@ -64,7 +64,7 @@ public class MFAMethodsCreateHandler
                 () -> mfaMethodsHandler(input, context));
     }
 
-    public APIGatewayProxyResponseEvent mfaMethodsHandler(
+    private APIGatewayProxyResponseEvent mfaMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         if (!configurationService.isMfaMethodManagementApiEnabled()) {
             LOG.error(
@@ -130,7 +130,12 @@ public class MFAMethodsCreateHandler
                             userProfile.getEmail());
 
             if (maybeMfaMigrationFailureReason.isPresent()) {
-                switch (maybeMfaMigrationFailureReason.get()) {
+                MfaMigrationFailureReason mfaMigrationFailureReason =
+                        maybeMfaMigrationFailureReason.get();
+
+                LOG.warn("Failed to migrate SMS MFA due to {}", mfaMigrationFailureReason);
+
+                switch (mfaMigrationFailureReason) {
                     case NO_USER_FOUND_FOR_EMAIL -> {
                         return Optional.of(
                                 generateApiGatewayProxyErrorResponse(

@@ -53,7 +53,9 @@ public class MfaMethodsService {
 
     private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials)
             throws UnknownMfaTypeException {
-        return userCredentials.getMfaMethods().stream()
+        return Optional.ofNullable(userCredentials.getMfaMethods())
+                .orElse(new ArrayList<>())
+                .stream()
                 .map(
                         mfaMethod -> {
                             if (mfaMethod
@@ -378,6 +380,7 @@ public class MfaMethodsService {
                 Optional.ofNullable(persistentService.getUserCredentialsFromEmail(email));
         if (maybeUserProfile.isEmpty() || maybeUserCredentials.isEmpty())
             return Optional.of(MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL);
+
         UserProfile userProfile = maybeUserProfile.get();
         UserCredentials userCredentials = maybeUserCredentials.get();
 
@@ -385,18 +388,19 @@ public class MfaMethodsService {
         if (userProfile.getMfaMethodsMigrated())
             return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_ALREADY_MIGRATED);
 
-        // Set migrated=true and bail if no phoneNumber on UserProfile or UserCredential already has
-        // active DEFAULT
+        // Set migrated=true and bail
+        // if no phoneNumber on UserProfile or UserCredential already has active DEFAULT
         Optional<String> maybePhoneNumber = Optional.ofNullable(userProfile.getPhoneNumber());
-        var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
         var userHasActiveDefaultMfaMethod =
-                mfaMethods.stream()
+                Optional.ofNullable(userCredentials.getMfaMethods())
+                        .orElse(new ArrayList<>())
+                        .stream()
                         .anyMatch(
                                 mfaMethod ->
-                                        mfaMethod
-                                                        .priorityIdentifier()
+                                        PriorityIdentifier.valueOf(mfaMethod.getPriority())
                                                         .equals(PriorityIdentifier.DEFAULT)
-                                                && mfaMethod.methodVerified());
+                                                && mfaMethod.isMethodVerified()
+                                                && mfaMethod.isEnabled());
         if (maybePhoneNumber.isEmpty() || userHasActiveDefaultMfaMethod) {
             persistentService.setMfaMethodsMigrated(email, true);
             return Optional.empty();
