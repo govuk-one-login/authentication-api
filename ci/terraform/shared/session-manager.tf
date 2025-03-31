@@ -1,6 +1,5 @@
 locals {
-  # session_manager_resource_count = module.primary_environment.is_primary_environment ? 1 : 0
-  session_manager_resource_count = 1
+  session_manager_resource_count = module.primary_environment.is_primary_environment ? 1 : 0
 }
 data "aws_iam_policy_document" "ssm_kms_access" {
   count = local.session_manager_resource_count
@@ -117,7 +116,7 @@ resource "aws_kms_key" "ssm_access_key" {
 resource "aws_kms_alias" "ssm_key_alias" {
   count = local.session_manager_resource_count
 
-  name          = "alias/kms/${var.aws_region}-session-manager-key"
+  name          = "alias/kms/${var.aws_region}-session-manager-logs-key"
   target_key_id = aws_kms_key.ssm_access_key[count.index].id
 }
 
