@@ -17,12 +17,15 @@ import java.util.UUID;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "test@email.com";
     private static final String TEST_PASSWORD = "test-password";
-    private static final String TEST_PHONE_NUMBER = "07123123123";
+    private static final String TEST_PHONE_NUMBER = "07700900000";
+    private static final String TEST_PHONE_NUMBER_TWO = "07700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static String testPublicSubject;
     private static final MFAMethod defaultPrioritySms =
@@ -32,6 +35,9 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     TEST_PHONE_NUMBER,
                     PriorityIdentifier.DEFAULT,
                     UUID.randomUUID().toString());
+    private static final MFAMethod backupPrioritySms =
+            MFAMethod.smsMfaMethod(
+                    true, true, TEST_PHONE_NUMBER_TWO, BACKUP, UUID.randomUUID().toString());
     private static final MFAMethod defaultPriorityAuthApp =
             MFAMethod.authAppMfaMethod(
                     TEST_CREDENTIAL,
@@ -64,16 +70,16 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var updateRequest =
                 format(
                         """
-                        {
-                          "mfaMethod": {
-                            "priorityIdentifier": "DEFAULT",
-                            "method": {
-                                "mfaMethodType": "AUTH_APP",
-                                "credential": "%s"
-                            }
-                          }
-                        }
-                        """,
+                                {
+                                  "mfaMethod": {
+                                    "priorityIdentifier": "DEFAULT",
+                                    "method": {
+                                        "mfaMethodType": "AUTH_APP",
+                                        "credential": "%s"
+                                    }
+                                  }
+                                }
+                                """,
                         updatedCredential);
 
         var response =
@@ -90,21 +96,21 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var expectedResponseBody =
                 format(
                         """
-            {
-                "mfaIdentifier":"%s",
-                "priorityIdentifier":"DEFAULT",
-                "methodVerified":true,
-                "method": {
-                  "mfaMethodType":"AUTH_APP",
-                  "credential":"%s"
-                }
-            }
-            """,
+                                [{
+                                    "mfaIdentifier":"%s",
+                                    "priorityIdentifier":"DEFAULT",
+                                    "methodVerified":true,
+                                    "method": {
+                                      "mfaMethodType":"AUTH_APP",
+                                      "credential":"%s"
+                                    }
+                                }]
+                                """,
                         mfaIdentifier, updatedCredential);
         assertEquals(200, response.getStatusCode());
 
         var expectedResponse =
-                JsonParser.parseString(expectedResponseBody).getAsJsonObject().toString();
+                JsonParser.parseString(expectedResponseBody).getAsJsonArray().toString();
         assertEquals(expectedResponse, response.getBody());
 
         var retrievedMfaMethods = userStore.getMfaMethod(TEST_EMAIL);
@@ -120,21 +126,22 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldReturn200AndMfaMethodDataWhenSmsUserUpdatesTheirPhoneNumber() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
         var mfaIdentifier = defaultPrioritySms.getMfaIdentifier();
         var updatedPhoneNumber = "111222333";
         var updateRequest =
                 format(
                         """
-                        {
-                          "mfaMethod": {
-                            "priorityIdentifier": "DEFAULT",
-                            "method": {
-                                "mfaMethodType": "SMS",
-                                "phoneNumber": "%s"
-                            }
-                          }
-                        }
-                        """,
+                                {
+                                  "mfaMethod": {
+                                    "priorityIdentifier": "DEFAULT",
+                                    "method": {
+                                        "mfaMethodType": "SMS",
+                                        "phoneNumber": "%s"
+                                    }
+                                  }
+                                }
+                                """,
                         updatedPhoneNumber);
 
         var response =
@@ -148,34 +155,58 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                 "mfaIdentifier",
                                 mfaIdentifier));
 
-        var expectedResponseBody =
+        var expectedUpdatedDefault =
                 format(
                         """
-            {
-                "mfaIdentifier":"%s",
-                "priorityIdentifier":"DEFAULT",
-                "methodVerified":true,
-                "method": {
-                  "mfaMethodType":"SMS",
-                  "phoneNumber":"%s"
-                }
-            }
-            """,
+                        {
+                             "mfaIdentifier":"%s",
+                             "priorityIdentifier":"DEFAULT",
+                             "methodVerified":true,
+                             "method": {
+                               "mfaMethodType":"SMS",
+                               "phoneNumber":"%s"
+                             }
+                         }
+                        """,
                         mfaIdentifier, updatedPhoneNumber);
+        var expectedUnchangedBackup =
+                format(
+                        """
+                        {
+                           "mfaIdentifier":"%s",
+                           "priorityIdentifier":"BACKUP",
+                           "methodVerified":true,
+                           "method": {
+                           "mfaMethodType":"SMS",
+                             "phoneNumber":"%s"
+                           }
+                        }
+                        """,
+                        backupPrioritySms.getMfaIdentifier(), TEST_PHONE_NUMBER_TWO);
+
+        var expectedResponseBody =
+                backupPrioritySms.getMfaIdentifier().compareTo(mfaIdentifier) < 0
+                        ? format("[%s,%s]", expectedUnchangedBackup, expectedUpdatedDefault)
+                        : format("[%s,%s]", expectedUpdatedDefault, expectedUnchangedBackup);
+
         assertEquals(200, response.getStatusCode());
 
         var expectedResponse =
-                JsonParser.parseString(expectedResponseBody).getAsJsonObject().toString();
+                JsonParser.parseString(expectedResponseBody).getAsJsonArray().toString();
         assertEquals(expectedResponse, response.getBody());
 
         var retrievedMfaMethods = userStore.getMfaMethod(TEST_EMAIL);
 
-        assertEquals(1, retrievedMfaMethods.size());
+        assertEquals(2, retrievedMfaMethods.size());
 
-        var retrievedMethod = retrievedMfaMethods.get(0);
+        var retrievedDefault =
+                retrievedMfaMethods.stream()
+                        .filter(mfaMethod -> mfaMethod.getPriority().equals(DEFAULT.name()))
+                        .findFirst()
+                        .get();
 
-        assertRetrievedMethodHasSameBasicFields(defaultPrioritySms, retrievedMethod);
-        assertMfaPhoneNumberUpdated(retrievedMethod, updatedPhoneNumber);
+        assertRetrievedMethodHasSameBasicFields(defaultPrioritySms, retrievedDefault);
+        assertMfaPhoneNumberUpdated(retrievedDefault, updatedPhoneNumber);
     }
 
     @Test
@@ -186,16 +217,16 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var updateRequest =
                 format(
                         """
-                        {
-                          "mfaMethod": {
-                            "priorityIdentifier": "DEFAULT",
-                            "method": {
-                                "mfaMethodType": "AUTH_APP",
-                                "credential": "%s"
-                            }
-                          }
-                        }
-                        """,
+                                {
+                                  "mfaMethod": {
+                                    "priorityIdentifier": "DEFAULT",
+                                    "method": {
+                                        "mfaMethodType": "AUTH_APP",
+                                        "credential": "%s"
+                                    }
+                                  }
+                                }
+                                """,
                         updatedCredential);
 
         var firstResponse =

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services.mfa;
 
+import io.vavr.Value;
 import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -206,7 +207,7 @@ public class MfaMethodsService {
         }
     }
 
-    public Either<MfaUpdateFailureReason, MfaMethodData> updateMfaMethod(
+    public Either<MfaUpdateFailureReason, List<MfaMethodData>> updateMfaMethod(
             String email, String mfaIdentifier, MfaMethodCreateOrUpdateRequest request) {
         var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
 
@@ -230,7 +231,7 @@ public class MfaMethodsService {
                 .orElse(Either.left(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
     }
 
-    private Either<MfaUpdateFailureReason, MfaMethodData> handleDefaultMethodUpdate(
+    private Either<MfaUpdateFailureReason, List<MfaMethodData>> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
             MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
             String email,
@@ -246,7 +247,7 @@ public class MfaMethodsService {
             return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
         }
 
-        Either<String, MFAMethod> databaseUpdateResult;
+        Either<String, List<MFAMethod>> databaseUpdateResult;
 
         if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
             var isExistingDefaultPhoneNumber =
@@ -284,13 +285,20 @@ public class MfaMethodsService {
             }
         }
 
-        return databaseUpdateResult
-                .flatMap(MfaMethodData::from)
-                .mapLeft(
-                        errorString -> {
-                            LOG.error(errorString);
-                            return MfaUpdateFailureReason.UNEXPECTED_ERROR;
-                        });
+        Either<String, List<MfaMethodData>> returnedMfaMethods =
+                databaseUpdateResult.flatMap(
+                        mfaMethods ->
+                                Either.sequenceRight(
+                                                io.vavr.collection.List.ofAll(mfaMethods.stream())
+                                                        .map(MfaMethodData::from))
+                                        .map(Value::toJavaList)
+                                        .map(list -> list.stream().sorted().toList()));
+
+        return returnedMfaMethods.mapLeft(
+                errorString -> {
+                    LOG.error(errorString);
+                    return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                });
     }
 
     private boolean updateRequestChangesMethodType(

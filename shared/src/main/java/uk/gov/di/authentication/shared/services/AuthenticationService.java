@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface AuthenticationService {
@@ -84,9 +85,9 @@ public interface AuthenticationService {
 
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 
-    Either<String, MFAMethod> updateMigratedMethodPhoneNumber(
+    Either<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
             String email, String updatedPhoneNumber, String mfaMethodIdentifier);
 
-    Either<String, MFAMethod> updateMigratedAuthAppCredential(
+    Either<String, List<MFAMethod>> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier);
 }

@@ -398,18 +398,25 @@ class MfaMethodsServiceIntegrationTest {
                         mfaMethodsService.updateMfaMethod(
                                 EMAIL, defaultPriorityAuthApp.getMfaIdentifier(), request);
 
-                var expectedMfaData =
+                var expectedUpdatedDefaultMethod =
                         MfaMethodData.authAppMfaData(
                                 defaultPriorityAuthApp.getMfaIdentifier(),
                                 PriorityIdentifier.DEFAULT,
                                 true,
                                 AUTH_APP_CREDENTIAL_TWO);
 
-                assertEquals(expectedMfaData, result.get());
+                var expectedUnchangedBackupMethod = MfaMethodData.from(backupPrioritySms).get();
+
+                assertEquals(
+                        List.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod)
+                                .stream()
+                                .sorted()
+                                .toList(),
+                        result.get());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
                 var expectedRemainingMethods =
-                        List.of(expectedMfaData, mfaMethodDataFrom(backupPrioritySms));
+                        List.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod);
                 assertEquals(
                         expectedRemainingMethods.stream().sorted().toList(),
                         remainingMfaMethods.stream().sorted().toList());
@@ -432,19 +439,27 @@ class MfaMethodsServiceIntegrationTest {
                         mfaMethodsService.updateMfaMethod(
                                 EMAIL, defaultPrioritySms.getMfaIdentifier(), request);
 
-                var expectedMfaData =
+                var expectedUpdatedDefaultMethod =
                         MfaMethodData.smsMethodData(
                                 defaultPrioritySms.getMfaIdentifier(),
                                 PriorityIdentifier.DEFAULT,
                                 true,
                                 aThirdPhoneNumber);
 
-                assertEquals(expectedMfaData, result.get());
+                var expectedUnchangedBackupMethod = MfaMethodData.from(backupPrioritySms).get();
+
+                assertEquals(
+                        List.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod)
+                                .stream()
+                                .sorted()
+                                .toList(),
+                        result.get());
 
                 var methodsInDatabase =
                         mfaMethodsService.getMfaMethods(EMAIL).stream().sorted().toList();
                 var expectedMethods =
-                        List.of(mfaMethodDataFrom(backupPrioritySms), expectedMfaData).stream()
+                        List.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod)
+                                .stream()
                                 .sorted()
                                 .toList();
                 assertEquals(expectedMethods, methodsInDatabase);
