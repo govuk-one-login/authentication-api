@@ -302,7 +302,11 @@ class VerifyCodeHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(authSession.withClientId(CLIENT_ID)));
+                .thenReturn(
+                        Optional.of(
+                                authSession
+                                        .withClientId(CLIENT_ID)
+                                        .withVtrList(List.of(VectorOfTrust.getDefaults()))));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
@@ -310,7 +314,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(clientSession));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
 
         var result = handler.handleRequest(event, context);
 
@@ -939,7 +942,11 @@ class VerifyCodeHandlerTest {
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders())).thenReturn(session);
         when(authSessionService.getSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(authSession.withClientId(clientId)));
+                .thenReturn(
+                        Optional.of(
+                                authSession
+                                        .withClientId(clientId)
+                                        .withVtrList(List.of(VectorOfTrust.getDefaults()))));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
@@ -948,7 +955,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(clientSession));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
 
         return handler.handleRequest(event, context);
     }
