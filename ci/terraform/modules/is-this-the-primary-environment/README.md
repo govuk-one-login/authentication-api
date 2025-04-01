@@ -38,5 +38,6 @@ which could lead to inconsistencies.
 | Name | Description |
 |------|-------------|
 | <a name="output_is_primary_environment"></a> [is\_primary\_environment](#output\_is\_primary\_environment) | true if this environment is the primary environment in this account:region else false |
+| <a name="output_is_primary_environment_with_coresident_dev"></a> [is\_primary\_environment\_with\_coresident\_dev](#output\_is\_primary\_environment\_with\_coresident\_dev) | true if this environment is a primary environment with a coresident dev environment in this account:region else false |
 <!-- END_TF_DOCS -->
 <!-- prettier-ignore-end -->

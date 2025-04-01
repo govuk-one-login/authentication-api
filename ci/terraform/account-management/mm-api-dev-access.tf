@@ -140,7 +140,14 @@ resource "aws_instance" "developer_proxy" {
   iam_instance_profile = aws_iam_instance_profile.developer_proxy_profile[count.index].name
 
   user_data_replace_on_change = true
-  user_data                   = <<-EOT
+
+  # TL;DR of user data:
+  # - Update and upgrade packages
+  # - Install nginx
+  # - Write nginx proxy config to /etc/nginx/conf.d/api-proxy.conf
+  # - Remove `ssm-user` user's sudo access
+  # - Enable and start nginx
+  user_data = <<-EOT
     #cloud-config
     package_update: true
     package_upgrade: true
@@ -208,6 +215,9 @@ resource "aws_instance" "developer_proxy" {
 }
 
 locals {
+  # ssm, ssmmessages, ec2messages, logs are required for SSM session manager
+  # execute-api is required for nginx to connect to the API Gateway
+  # s3 is required for `dnf` to access the package repositories
   required_vpc_interface_endpoints = local.is_dev ? ["ssm", "ssmmessages", "ec2messages", "execute-api", "logs"] : []
   required_vpc_gateway_endpoints   = local.is_dev ? ["s3"] : []
 }

@@ -1,5 +1,5 @@
 locals {
-  session_manager_resource_count = module.primary_environment.is_primary_environment ? 1 : 0
+  session_manager_resource_count = module.primary_environment.is_primary_environment_with_coresident_dev ? 1 : 0
 }
 data "aws_iam_policy_document" "ssm_kms_access" {
   count = local.session_manager_resource_count
