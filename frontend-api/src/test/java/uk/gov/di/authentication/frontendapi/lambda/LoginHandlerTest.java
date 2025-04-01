@@ -2,14 +2,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +48,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -186,7 +179,6 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         handler =
                 new LoginHandler(
                         configurationService,
@@ -209,7 +201,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var vtrList = List.of(VTR_P0_CL);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vtrList.get(0));
 
@@ -258,7 +249,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var vtrList = List.of(VTR_P0_CL);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vtrList.get(0));
 
@@ -408,7 +398,6 @@ class LoginHandlerTest {
         when(userMigrationService.processMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidAuthSession();
         usingDefaultVectorOfTrust();
@@ -432,7 +421,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
@@ -472,7 +460,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
                 .thenReturn(maxRetriesAllowed - 1);
@@ -516,7 +503,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL))
                 .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
@@ -752,7 +738,6 @@ class LoginHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                                 Collections.singletonList(jsonArrayOf("P0.Cl")))
@@ -777,7 +762,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                                 Collections.singletonList(jsonArrayOf("P0.Cl")))
@@ -794,20 +778,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
         verifyAuthSessionIsSaved();
-    }
-
-    private AuthenticationRequest generateAuthRequest() {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                CLIENT_ID,
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce());
-        return builder.build();
     }
 
     private void usingValidSession() {

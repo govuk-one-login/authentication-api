@@ -207,9 +207,6 @@ class MfaHelperTest {
     private static UserContext userContextWithLevelOfTrustRequested(
             CredentialTrustLevel trustLevel) {
         var clientSession = mock(ClientSession.class);
-        var authRequestParams = generateAuthRequest(trustLevel).toParameters();
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
-
         var userContext = mock(UserContext.class);
         when(userContext.getClientSession()).thenReturn(clientSession);
 
