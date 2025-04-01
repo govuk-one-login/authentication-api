@@ -470,7 +470,7 @@ public class AuthenticationCallbackHandler
                 CredentialTrustLevel requestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
                 CredentialTrustLevel credentialTrustLevel =
-                        Optional.ofNullable(session.getCurrentCredentialStrength())
+                        Optional.ofNullable(orchSession.getCurrentCredentialStrength())
                                 .map(
                                         sessionValue ->
                                                 CredentialTrustLevel.max(

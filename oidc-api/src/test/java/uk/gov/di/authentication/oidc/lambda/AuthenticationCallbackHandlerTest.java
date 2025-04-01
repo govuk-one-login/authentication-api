@@ -671,11 +671,11 @@ class AuthenticationCallbackHandlerTest {
     @Test
     void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
             throws UnsuccessfulCredentialResponseException {
-        Session mediumLevelSession =
-                new Session().setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
-        when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+        var mediumLevelSession =
+                new OrchSessionItem(SESSION_ID)
+                        .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(new Session()));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
         usingValidClientSession();
         usingValidClient();
 
