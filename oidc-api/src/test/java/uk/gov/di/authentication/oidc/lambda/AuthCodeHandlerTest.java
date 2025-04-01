@@ -196,6 +196,8 @@ class AuthCodeHandlerTest {
         doAnswer(
                         (i) -> {
                             session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
+                            orchSession.withAccountState(
+                                    OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY);
                             return null;
                         })
                 .when(authCodeResponseService)
@@ -204,6 +206,9 @@ class AuthCodeHandlerTest {
         doAnswer(
                         (i) -> {
                             session.setAuthenticated(true).setNewAccount(EXISTING);
+                            orchSession
+                                    .withAuthenticated(true)
+                                    .withAccountState(OrchSessionItem.AccountState.EXISTING);
                             return null;
                         })
                 .when(authCodeResponseService)
@@ -264,7 +269,7 @@ class AuthCodeHandlerTest {
                 .processVectorOfTrust(eq(clientSession), any());
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
-        session.setCurrentCredentialStrength(initialLevel).setNewAccount(AccountState.NEW);
+        session.setNewAccount(AccountState.NEW);
         orchSession.setCurrentCredentialStrength(initialLevel);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -302,9 +307,8 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        assertTrue(session.isAuthenticated());
+        assertThat(orchSession.getCurrentCredentialStrength(), equalTo(finalLevel));
+        assertTrue(orchSession.getAuthenticated());
 
         verify(authCodeResponseService, times(1))
                 .saveSession(
@@ -429,9 +433,8 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertThat(orchSession.getCurrentCredentialStrength(), equalTo(requestedLevel));
-        assertFalse(session.isAuthenticated());
+        assertFalse(orchSession.getAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(
                         anyBoolean(),
