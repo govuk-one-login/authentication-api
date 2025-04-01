@@ -151,7 +151,6 @@ class AuthenticationCallbackHandlerTest {
 
     private static final Session session =
             new Session()
-                    .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
                     .setAuthenticated(false)
                     .setCurrentCredentialStrength(null)
                     .setEmailAddress(TEST_EMAIL_ADDRESS);
@@ -653,9 +652,7 @@ class AuthenticationCallbackHandlerTest {
     void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
             throws UnsuccessfulCredentialResponseException {
         Session mediumLevelSession =
-                new Session()
-                        .setVerifiedMfaMethodType(MFAMethodType.EMAIL)
-                        .setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+                new Session().setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
         when(orchSessionService.getSession(SESSION_ID))
                 .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
