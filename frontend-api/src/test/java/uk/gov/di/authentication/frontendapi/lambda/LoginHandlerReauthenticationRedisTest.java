@@ -42,6 +42,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -192,7 +193,6 @@ class LoginHandlerReauthenticationRedisTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-        usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -232,7 +232,6 @@ class LoginHandlerReauthenticationRedisTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
 
@@ -260,7 +259,8 @@ class LoginHandlerReauthenticationRedisTest {
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                        .withClientId(CLIENT_ID.getValue())));
+                                        .withClientId(CLIENT_ID.getValue())
+                                        .withVtrList(List.of(VectorOfTrust.getDefaults()))));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
@@ -298,11 +298,6 @@ class LoginHandlerReauthenticationRedisTest {
                 .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
-    }
-
-    private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
