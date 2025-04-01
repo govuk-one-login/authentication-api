@@ -158,10 +158,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String SESSION_ID = "a-session-id";
 
     private static final Session session =
-            new Session()
-                    .setAuthenticated(false)
-                    .setCurrentCredentialStrength(null)
-                    .setEmailAddress(TEST_EMAIL_ADDRESS);
+            new Session().setAuthenticated(false).setEmailAddress(TEST_EMAIL_ADDRESS);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -1546,9 +1543,6 @@ class AuthenticationCallbackHandlerTest {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         verify(sessionService, times(2))
                 .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
-        assertThat(
-                sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                equalTo(lowestCredentialTrustLevel));
         assertThat(
                 Session.AccountState.NEW,
                 equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
