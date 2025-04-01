@@ -138,14 +138,11 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     private Map<String, String> getHeadersForAuthenticatedSession() throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
         var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL_ADDRESS);
-        authSessionServiceExtension.addSession(sessionId);
+        var vtr = new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL);
+        authSessionServiceExtension.addSession(
+                sessionId, authSessionItem -> authSessionItem.withVtrList(List.of(vtr)));
 
-        var clientSession =
-                new ClientSession(
-                        null,
-                        LocalDateTime.now(),
-                        new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                        "clientName");
+        var clientSession = new ClientSession(null, LocalDateTime.now(), vtr, "clientName");
 
         redis.createClientSession("client-session-id", clientSession);
 

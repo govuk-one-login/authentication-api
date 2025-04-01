@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -39,7 +40,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.valueOf;
@@ -196,6 +197,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 AuthSessionItem authSession = userContext.getAuthSession();
                 sendTICF(
                         userContext,
+                        authSession.getVtrList(),
                         internalPairwiseId,
                         request.authenticated(),
                         authSession.getIsNewAccount(),
@@ -217,27 +219,15 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     private void sendTICF(
             UserContext userContext,
+            List<VectorOfTrust> vtrList,
             String internalPairwiseId,
             boolean authenticated,
             AuthSessionItem.AccountState accountState,
             AuthSessionItem.ResetPasswordState resetPasswordState,
             AuthSessionItem.ResetMfaState resetMfaState,
             MFAMethodType verifiedMfaMethodType) {
-        var vtr = new ArrayList<String>();
 
-        try {
-            vtr.add(
-                    userContext
-                            .getClientSession()
-                            .getEffectiveVectorOfTrust()
-                            .getCredentialTrustLevel()
-                            .getValue());
-        } catch (Exception e) {
-            LOG.warn(
-                    "Error retrieving effective vector of trust for TICF CRI Request: {}",
-                    e.getMessage(),
-                    e);
-        }
+        var vtr = vtrList.stream().map(v -> v.getCredentialTrustLevel().getValue()).toList();
 
         String journeyId = userContext.getClientSessionId();
 
