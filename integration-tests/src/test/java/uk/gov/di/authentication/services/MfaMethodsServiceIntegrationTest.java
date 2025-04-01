@@ -748,6 +748,26 @@ class MfaMethodsServiceIntegrationTest {
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
             }
+
+            @Test
+            void returnsAFailureWhenAttemptingToUpdateABackupWithoutADefault() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT,
+                                new SmsMfaDetail(backupPrioritySms.getDestination()));
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, backupPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD,
+                        result.getLeft());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+                assertEquals(List.of(mfaMethodDataFrom(backupPrioritySms)), remainingMfaMethods);
+            }
         }
     }
 

@@ -138,7 +138,11 @@ class MFAMethodsPutHandlerTest {
                 Arguments.of(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER,
                         400,
-                        Optional.of(ErrorResponse.ERROR_1075)));
+                        Optional.of(ErrorResponse.ERROR_1075)),
+                Arguments.of(
+                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD,
+                        500,
+                        Optional.of(ErrorResponse.ERROR_1077)));
     }
 
     @ParameterizedTest

@@ -266,11 +266,17 @@ public class MfaMethodsService {
         if (updatedMethod.priorityIdentifier().equals(BACKUP)) {
             return Either.left(MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
         }
-        var defaultMethod =
+        var maybeDefaultMethod =
                 allMethods.stream()
                         .filter(m -> Objects.equals(m.getPriority(), DEFAULT.name()))
-                        .findFirst()
-                        .get(); // will be handled in subsequent commit
+                        .findFirst();
+
+        if (maybeDefaultMethod.isEmpty()) {
+            return Either.left(
+                    MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD);
+        }
+
+        var defaultMethod = maybeDefaultMethod.get();
         var databaseUpdateResult =
                 persistentService.updateAllMfaMethodsForUser(
                         email,
