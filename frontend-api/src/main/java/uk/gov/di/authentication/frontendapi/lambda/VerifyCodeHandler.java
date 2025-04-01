@@ -388,10 +388,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         var clientId = client.getClientID();
         var levelOfConfidence =
-                authSession.getVtrList().stream()
+                authSession
+                        .getEffectiveVectorOfTrust()
                         .filter(VectorOfTrust::containsLevelOfConfidence)
                         .map(VectorOfTrust::getLevelOfConfidence)
-                        .findFirst()
                         .orElse(NONE);
 
         if (notificationType.equals(MFA_SMS)) {

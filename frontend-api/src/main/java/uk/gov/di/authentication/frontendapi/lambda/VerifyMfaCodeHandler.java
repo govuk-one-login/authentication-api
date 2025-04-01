@@ -390,10 +390,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthSessionItem authSession,
             Session session) {
         var levelOfConfidence =
-                authSession.getVtrList().stream()
+                authSession
+                        .getEffectiveVectorOfTrust()
                         .filter(VectorOfTrust::containsLevelOfConfidence)
                         .map(VectorOfTrust::getLevelOfConfidence)
-                        .findFirst()
                         .orElse(NONE);
 
         LOG.info(

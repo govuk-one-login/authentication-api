@@ -448,7 +448,8 @@ class StartServiceTest {
 
         var upliftRequired =
                 startService.isUpliftRequired(
-                        userContext.getAuthSession().getVtrList(), credentialTrustLevel);
+                        userContext.getAuthSession().getEffectiveVectorOfTrust(),
+                        credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,

@@ -193,7 +193,8 @@ public class StartHandler
             }
             var upliftRequired =
                     startService.isUpliftRequired(
-                            authSession.getVtrList(), startRequest.currentCredentialStrength());
+                            authSession.getEffectiveVectorOfTrust(),
+                            startRequest.currentCredentialStrength());
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 

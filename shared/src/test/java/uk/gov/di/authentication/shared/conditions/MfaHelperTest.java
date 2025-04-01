@@ -29,6 +29,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -212,6 +213,8 @@ class MfaHelperTest {
 
         var authSession = mock(AuthSessionItem.class);
         when(authSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(trustLevel)));
+        when(authSession.getEffectiveVectorOfTrust())
+                .thenReturn(Optional.of(new VectorOfTrust(trustLevel)));
         when(userContext.getAuthSession()).thenReturn(authSession);
 
         return userContext;

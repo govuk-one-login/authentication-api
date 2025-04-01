@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -19,8 +18,10 @@ public class MfaHelper {
 
     private MfaHelper() {}
 
-    public static boolean mfaRequired(List<VectorOfTrust> vtrList) {
-        return !vtrList.get(0).getCredentialTrustLevel().equals(LOW_LEVEL);
+    public static boolean mfaRequired(Optional<VectorOfTrust> effectiveVectorOfTrust) {
+        return effectiveVectorOfTrust
+                .map(vtr -> !vtr.getCredentialTrustLevel().equals(LOW_LEVEL))
+                .orElse(false);
     }
 
     public static Optional<MFAMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
@@ -34,7 +35,7 @@ public class MfaHelper {
             UserCredentials userCredentials,
             String phoneNumber,
             boolean isPhoneNumberVerified) {
-        var isMfaRequired = mfaRequired(userContext.getAuthSession().getVtrList());
+        var isMfaRequired = mfaRequired(userContext.getAuthSession().getEffectiveVectorOfTrust());
 
         var enabledMethod = getPrimaryMFAMethod(userCredentials);
 

@@ -200,12 +200,9 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            List<VectorOfTrust> vtrList, CredentialTrustLevel currentCredentialStrength) {
+            Optional<VectorOfTrust> effectiveVtr, CredentialTrustLevel currentCredentialStrength) {
         return isUpliftRequired(
-                vtrList.stream()
-                        .map(VectorOfTrust::getCredentialTrustLevel)
-                        .findFirst()
-                        .orElse(null),
+                effectiveVtr.map(VectorOfTrust::getCredentialTrustLevel).orElse(null),
                 currentCredentialStrength);
     }
 
