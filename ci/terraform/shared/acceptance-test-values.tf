@@ -77,5 +77,5 @@ resource "aws_ssm_parameter" "at_client_id" {
   #checkov:skip=CKV2_AWS_34:AWS SSM Parameter should be Encrypted - not sensitive data
   name  = "/acceptance-tests/${var.environment}/CLIENT_ID"
   type  = "String"
-  value = random_string.stub_relying_party_client_id[local.stub_rp_client_name_pattern].result
+  value = random_string.stub_relying_party_client_id[var.stub_rp_clients[index(var.stub_rp_clients[*].at_client, true)].client_name].result
 }
