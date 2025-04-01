@@ -734,7 +734,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
-            session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
+            orchSession.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
