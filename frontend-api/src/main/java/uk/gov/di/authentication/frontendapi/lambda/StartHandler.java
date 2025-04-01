@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -39,9 +38,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
@@ -169,8 +166,6 @@ public class StartHandler
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-
-        logIfNewFieldsDoNotMatchClientSessionAuthParameters(startRequest, clientSession);
 
         boolean isUserAuthenticatedWithValidProfile;
         try {
@@ -366,50 +361,5 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
-    }
-
-    private static void logIfNewFieldsDoNotMatchClientSessionAuthParameters(
-            StartRequest startRequest, ClientSession clientSession) {
-        LOG.info("Checking if new fields match client session auth parameters");
-        if (!Objects.equals(
-                startRequest.cookieConsent(),
-                getAuthRequestParam(clientSession, "cookie_consent"))) {
-            LOG.warn("\"cookie_consent\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.ga(), getAuthRequestParam(clientSession, "_ga"))) {
-            LOG.warn("\"_ga\" field does match custom parameter in auth request params");
-        }
-        var authRequestVtrList =
-                Optional.ofNullable(clientSession.getAuthRequestParams().get("vtr"))
-                        .map(VectorOfTrust::parseFromAuthRequestAttribute)
-                        .orElse(null);
-        var startRequestVtrList =
-                Optional.ofNullable(startRequest.vtr())
-                        .map(VectorOfTrust::parseVtrStringList)
-                        .orElse(null);
-        if (!Objects.equals(startRequestVtrList, authRequestVtrList)) {
-            LOG.warn("\"vtr\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
-            LOG.warn("\"state\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.clientId(), getAuthRequestParam(clientSession, "client_id"))) {
-            LOG.warn("\"client_id\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.redirectUri(), getAuthRequestParam(clientSession, "redirect_uri"))) {
-            LOG.warn("\"redirect_uri\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.scope(), getAuthRequestParam(clientSession, "scope"))) {
-            LOG.warn("\"scope\" field does match custom parameter in auth request params");
-        }
-    }
-
-    private static String getAuthRequestParam(ClientSession clientSession, String parameter) {
-        return Optional.ofNullable(clientSession.getAuthRequestParams().get(parameter)).stream()
-                .flatMap(List::stream)
-                .findFirst()
-                .orElse(null);
     }
 }
