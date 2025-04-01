@@ -64,26 +64,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     public Void notificationRequestHandler(SQSEvent event, Context context) {
         for (SQSMessage msg : event.getRecords()) {
             try {
-                LOG.info("Message received from SQS queue");
-                NotifyRequest notifyRequest =
-                        objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-                try {
-                    switch (notifyRequest.getNotificationType()) {
-                        case VERIFY_EMAIL -> sendVerifyEmailNotification(notifyRequest);
-                        case VERIFY_PHONE_NUMBER -> sendVerifyPhoneNotification(notifyRequest);
-                        case EMAIL_UPDATED -> sendEmailUpdatedNotification(notifyRequest);
-                        case DELETE_ACCOUNT -> sendDeleteAccountNotification(notifyRequest);
-                        case PHONE_NUMBER_UPDATED -> sendPhoneNumberUpdatedNotification(notifyRequest);
-                        case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
-                    }
-                } catch (NotificationClientException e) {
-                    LOG.error("Error sending with Notify", e);
-                    throw new RuntimeException(
-                            String.format(
-                                    "Error sending with Notify using NotificationType: %s",
-                                    notifyRequest.getNotificationType()),
-                            e);
-                }
+                processMessage(msg);
             } catch (JsonException e) {
                 LOG.error("Error when mapping message from queue to a NotifyRequest");
                 throw new RuntimeException(
@@ -91,6 +72,33 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         }
         return null;
+    }
+
+    private void processMessage(SQSMessage msg) throws JsonException {
+        LOG.info("Message received from SQS queue");
+        NotifyRequest notifyRequest =
+                objectMapper.readValue(msg.getBody(), NotifyRequest.class);
+        try {
+            sendNotification(notifyRequest);
+        } catch (NotificationClientException e) {
+            LOG.error("Error sending with Notify", e);
+            throw new RuntimeException(
+                    String.format(
+                            "Error sending with Notify using NotificationType: %s",
+                            notifyRequest.getNotificationType()),
+                    e);
+        }
+    }
+
+    private void sendNotification(NotifyRequest notifyRequest) throws NotificationClientException {
+        switch (notifyRequest.getNotificationType()) {
+            case VERIFY_EMAIL -> sendVerifyEmailNotification(notifyRequest);
+            case VERIFY_PHONE_NUMBER -> sendVerifyPhoneNotification(notifyRequest);
+            case EMAIL_UPDATED -> sendEmailUpdatedNotification(notifyRequest);
+            case DELETE_ACCOUNT -> sendDeleteAccountNotification(notifyRequest);
+            case PHONE_NUMBER_UPDATED -> sendPhoneNumberUpdatedNotification(notifyRequest);
+            case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
+        }
     }
 
     private void sendVerifyEmailNotification(NotifyRequest notifyRequest) throws NotificationClientException {
