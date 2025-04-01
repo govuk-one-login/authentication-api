@@ -2036,10 +2036,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return sessionId;
     }
 
-    private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
-            throws Json.JsonException {
-        String sessionId = redis.createSession();
-        redis.setSessionCredentialTrustLevel(sessionId, credentialTrustLevel);
+    private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel) {
+        var sessionId = IdGenerator.generate();
+        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
         return sessionId;
     }
 
