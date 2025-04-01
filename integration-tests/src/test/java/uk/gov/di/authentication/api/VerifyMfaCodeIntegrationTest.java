@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -106,10 +107,15 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         txmaAuditQueue.clear();
 
-        this.sessionId = redis.createSession();
-        authSessionExtension.addSession(this.sessionId);
-        authSessionExtension.addInternalCommonSubjectIdToSession(
-                this.sessionId, internalCommonSubjectId);
+        sessionId = redis.createSession();
+        authSessionExtension.addSession(
+                sessionId,
+                authSessionItem ->
+                        authSessionItem
+                                .withEmailAddress(EMAIL_ADDRESS)
+                                .withClientId(CLIENT_ID)
+                                .withVtrList(List.of(VectorOfTrust.getDefaults()))
+                                .withInternalCommonSubjectId(internalCommonSubjectId));
         setUpTest(sessionId, withScope());
     }
 

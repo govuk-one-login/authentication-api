@@ -115,6 +115,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authSession ->
                         authSession
                                 .withEmailAddress(email)
+                                .withClientId(CLIENT_ID)
                                 .withVtrList(List.of(new VectorOfTrust(levelOrDefault))));
 
         userStore.signUp(email, password);
@@ -202,6 +203,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authSession ->
                         authSession
                                 .withEmailAddress(email)
+                                .withClientId(CLIENT_ID)
                                 .withVtrList(List.of(VectorOfTrust.getDefaults())));
 
         userStore.signUp(email, password);
@@ -231,8 +233,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
+        authSessionExtension.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(email)
+                                .withClientId(CLIENT_ID)
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
         var headers = validHeadersWithSessionId(sessionId);
@@ -253,8 +260,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(email, "wrong-password");
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
+        authSessionExtension.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(email)
+                                .withClientId(CLIENT_ID)
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         var headers = validHeadersWithSessionId(sessionId);
 
         redis.createClientSession(
@@ -290,8 +302,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(email, "wrong-password");
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
+        authSessionExtension.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(email)
+                                .withClientId(CLIENT_ID)
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         var headers = validHeadersWithSessionId(sessionId);
 
         redis.createClientSession(

@@ -176,9 +176,14 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     }
 
     private void addSessionToSessionStore(String internalCommonSubjectId) {
-        authSessionStore.addSession(sessionId);
-        authSessionStore.addEmailToSession(sessionId, USER_EMAIL);
-        authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+        authSessionStore.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(USER_EMAIL)
+                                .withClientId(CLIENT_ID.getValue())
+                                .withVtrList(List.of(VectorOfTrust.getDefaults()))
+                                .withInternalCommonSubjectId(internalCommonSubjectId));
     }
 
     private static void createClientSession() throws Json.JsonException {

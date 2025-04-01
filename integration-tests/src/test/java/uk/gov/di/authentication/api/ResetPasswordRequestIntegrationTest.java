@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -20,7 +21,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasLength;
 import static org.hamcrest.Matchers.hasSize;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -48,8 +49,13 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         userStore.signUp(email, password);
         userStore.addVerifiedPhoneNumber(email, phoneNumber);
         String sessionId = redis.createSession();
-        authSessionStore.addSession(sessionId);
-        authSessionStore.addEmailToSession(sessionId, email);
+        authSessionStore.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(email)
+                                .withClientId(CLIENT_ID.getValue())
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         String persistentSessionId = "test-persistent-id";
         redis.addEmailToSession(sessionId, email);
         var clientSessionId = IdGenerator.generate();

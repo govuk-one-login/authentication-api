@@ -67,7 +67,11 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = redis.createSession();
         authSessionStore.addSession(
                 sessionId,
-                authSession -> authSession.withVtrList(List.of(VectorOfTrust.getDefaults())));
+                authSession ->
+                        authSession
+                                .withEmailAddress(emailAddress)
+                                .withClientId(CLIENT_ID.getValue())
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
         var salt = userStore.addSalt(emailAddress);
@@ -125,7 +129,11 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
         authSessionStore.addSession(
                 sessionId,
-                authSession -> authSession.withVtrList(List.of(VectorOfTrust.getDefaults())));
+                authSession ->
+                        authSession
+                                .withEmailAddress(emailAddress)
+                                .withClientId(CLIENT_ID.getValue())
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 
