@@ -250,7 +250,6 @@ public class AuthCodeHandler
                             emailOptional,
                             orchClientSession.getVtrList(),
                             clientSessionId,
-                            session,
                             orchSession);
             authenticationResponse =
                     orchestrationAuthorizationService.generateSuccessfulAuthResponse(
@@ -445,7 +444,6 @@ public class AuthCodeHandler
             Optional<String> emailOptional,
             List<VectorOfTrust> vtrList,
             String clientSessionId,
-            Session session,
             OrchSessionItem orchSession)
             throws ClientNotFoundException, ProcessAuthRequestException {
         if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
@@ -453,12 +451,6 @@ public class AuthCodeHandler
         }
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                 VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
-        if (isNull(session.getCurrentCredentialStrength())
-                || lowestRequestedCredentialTrustLevel.compareTo(
-                                session.getCurrentCredentialStrength())
-                        > 0) {
-            session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
-        }
         CredentialTrustLevel currentCredentialStrength = orchSession.getCurrentCredentialStrength();
 
         if (isNull(currentCredentialStrength)
