@@ -85,15 +85,6 @@ public class Session {
         return this;
     }
 
-    public CredentialTrustLevel getCurrentCredentialStrength() {
-        return currentCredentialStrength;
-    }
-
-    public Session setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
-        return this;
-    }
-
     public AccountState isNewAccount() {
         return isNewAccount;
     }
