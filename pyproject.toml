@@ -1,3 +1,12 @@
+[project]
+name = "authentication-api"
+version = "0.1.0"
+requires-python = ">=3.9"
+
+dependencies = [
+    "boto3>=1.37.24"
+]
+
 [tool.pylint]
 max-line-length = "88"
 disable = '''missing-module-docstring,

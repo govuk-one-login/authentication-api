@@ -145,7 +145,9 @@ configured_region="$(aws configure get region --profile "${AWS_PROFILE}" 2> /dev
 export AWS_REGION="${configured_region:-eu-west-2}"
 
 echo -n "Retrieving Terraform variables from Secrets Manager ... "
-source "${DIR}/scripts/read_secrets__main.sh" "${ENVIRONMENT}"
+pushd "${DIR}" > /dev/null
+global_vars_file="$(uv run "${DIR}/scripts/secrets-to-tfvars.py" "${ENVIRONMENT}")"
+popd > /dev/null
 echo "done!"
 
 export TF_VAR_environment="${ENVIRONMENT}"
@@ -156,12 +158,14 @@ function run_terraform() {
   pushd "${DIR}/ci/terraform/${component}" > /dev/null
   terraform init -reconfigure -backend-config="${ENVIRONMENT}".hcl
 
+  tfvars_args=("-var-file" "${global_vars_file}" "-var-file" "${ENVIRONMENT}.tfvars")
   if [[ ${O_SHELL} -eq 1 ]]; then
+    echo "terraform apply ${tfvars_args[*]}"
     ${SHELL} -i
   elif [[ ${O_REFRESH} -eq 1 ]]; then
-    terraform refresh -var-file "${ENVIRONMENT}".tfvars
+    terraform refresh "${tfvars_args[@]}"
   else
-    terraform apply -var-file "${ENVIRONMENT}".tfvars "${AUTO_APPROVE}"
+    terraform apply "${tfvars_args[@]}" "${AUTO_APPROVE}"
   fi
   popd > /dev/null
 }

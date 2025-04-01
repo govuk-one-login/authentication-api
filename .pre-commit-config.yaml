@@ -128,3 +128,15 @@ repos:
           - windows_amd64
           - -r
           - ci/terraform
+
+      - id: ensure-tf-dir-scripts-updated
+        name: Ensure terraform directory scripts are updated
+        language: script
+        entry: scripts/copy_scripts_to_terraform.sh
+        files: |
+          (?x)^(
+              scripts/read_secrets__main.sh|
+              scripts/secrets-to-tfvars.py|
+              ci/terraform/.*/read_secrets.sh|
+              ci/terraform/.*/secrets-to-tfvars.py
+          )$
