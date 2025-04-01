@@ -264,9 +264,7 @@ class AuthCodeHandlerTest {
                 .processVectorOfTrust(eq(clientSession), any());
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
-        session.setCurrentCredentialStrength(initialLevel)
-                .setNewAccount(AccountState.NEW)
-                .setVerifiedMfaMethodType(mfaMethodType);
+        session.setCurrentCredentialStrength(initialLevel).setNewAccount(AccountState.NEW);
         orchSession.setCurrentCredentialStrength(initialLevel);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
