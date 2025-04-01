@@ -83,7 +83,12 @@ public interface AuthenticationService {
 
     void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated);
 
-    void migrateSmsMfaToCredentialsTableForUser(String email, MFAMethod mfaMethod);
+    /**
+     * Overwrites existing {@code MfaMethods} on the {@code UserCredentials} table with a new-style
+     * SMS/Auth-App method, and sets the {@code mfaMethodsMigrated} flag to true on the {@code
+     * UserProfile} table
+     */
+    void migrateMfaMethodsToCredentialsTableForUser(String email, MFAMethod mfaMethod);
 
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 

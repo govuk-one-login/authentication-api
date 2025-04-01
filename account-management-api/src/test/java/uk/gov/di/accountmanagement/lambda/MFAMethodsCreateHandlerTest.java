@@ -3,12 +3,13 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.JsonParser;
-import io.vavr.control.*;
+import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.*;
-import org.junit.jupiter.params.provider.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -24,11 +25,14 @@ import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.mfa.*;
+import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
+import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.util.*;
-import java.util.stream.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -76,8 +80,7 @@ class MFAMethodsCreateHandlerTest {
         handler =
                 new MFAMethodsCreateHandler(configurationService, mfaMethodsService, dynamoService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
-        when(mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(any()))
-                .thenReturn(Optional.empty());
+        when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.empty());
     }
 
     private static Stream<Arguments> shouldReturn400WhenSmsMigrationFailedArgs() {
@@ -97,8 +100,7 @@ class MFAMethodsCreateHandlerTest {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
-        when(mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(any()))
-                .thenReturn(Optional.of(reason));
+        when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.of(reason));
 
         var event =
                 generateApiGatewayEvent(

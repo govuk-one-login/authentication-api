@@ -33,6 +33,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_APP_MFA_ID;
@@ -171,7 +172,7 @@ class MfaMethodsServiceIntegrationTest {
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(email);
+                        mfaMethodsService.migrateMfaCredentialsForUser(email);
 
                 // Assert
                 assertTrue(mfaMigrationFailureReason.isEmpty());
@@ -179,11 +180,15 @@ class MfaMethodsServiceIntegrationTest {
                 var credentialsMfaMethodsAfter =
                         userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
                 assertEquals(1, credentialsMfaMethodsAfter.size());
+
                 var credentialSmsMfaMethod = credentialsMfaMethodsAfter.get(0);
+                assertTrue(credentialSmsMfaMethod.isMethodVerified());
+                assertTrue(credentialSmsMfaMethod.isEnabled());
                 assertEquals(PHONE_NUMBER, credentialSmsMfaMethod.getDestination());
                 assertEquals(
                         PriorityIdentifier.DEFAULT.toString(),
                         credentialSmsMfaMethod.getPriority());
+                assertNotNull(credentialSmsMfaMethod.getMfaIdentifier());
 
                 var isMigratedAfter =
                         userStoreExtension
@@ -195,18 +200,29 @@ class MfaMethodsServiceIntegrationTest {
 
             @ParameterizedTest
             @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
-            void shouldMarkUserAsMigratedAndIgnoreSmsIfAuthAppAlreadyExistsOnCredential(
+            void shouldMarkUserAsMigratedAndMigrateAuthAppIfAuthAppAlreadyExistsOnCredential(
                     String email) {
                 // Arrange
-                userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
-                userStoreExtension.addMfaMethodSupportingMultiple(email, defaultPriorityAuthApp);
+                userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(email);
+                        mfaMethodsService.migrateMfaCredentialsForUser(email);
 
                 // Assert
                 assertTrue(mfaMigrationFailureReason.isEmpty());
+
+                var credentialsMfaMethods =
+                        userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
+                assertEquals(1, credentialsMfaMethods.size());
+                var credentialAuthAppMfaMethod = credentialsMfaMethods.get(0);
+                assertEquals(AUTH_APP_CREDENTIAL, credentialAuthAppMfaMethod.getCredentialValue());
+                assertTrue(credentialAuthAppMfaMethod.isMethodVerified());
+                assertTrue(credentialAuthAppMfaMethod.isEnabled());
+                assertEquals(
+                        PriorityIdentifier.DEFAULT.toString(),
+                        credentialAuthAppMfaMethod.getPriority());
+                assertNotNull(credentialAuthAppMfaMethod.getMfaIdentifier());
 
                 var isMigrated =
                         userStoreExtension
@@ -214,45 +230,6 @@ class MfaMethodsServiceIntegrationTest {
                                 .get()
                                 .getMfaMethodsMigrated();
                 assertTrue(isMigrated);
-
-                var credentialsMfaMethods =
-                        userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
-                assertEquals(1, credentialsMfaMethods.size());
-                var credentialsAuthAppMfaMethod = credentialsMfaMethods.get(0);
-                assertEquals(AUTH_APP_CREDENTIAL, credentialsAuthAppMfaMethod.getCredentialValue());
-                assertEquals(
-                        PriorityIdentifier.DEFAULT.toString(),
-                        credentialsAuthAppMfaMethod.getPriority());
-            }
-
-            @ParameterizedTest
-            @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
-            void shouldMarkUserAsMigratedIfAuthAppAlreadyExistsOnCredential(String email) {
-                // Arrange
-                userStoreExtension.addMfaMethodSupportingMultiple(email, defaultPriorityAuthApp);
-
-                // Act
-                var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(email);
-
-                // Assert
-                assertTrue(mfaMigrationFailureReason.isEmpty());
-
-                var isMigrated =
-                        userStoreExtension
-                                .getUserProfileFromEmail(email)
-                                .get()
-                                .getMfaMethodsMigrated();
-                assertTrue(isMigrated);
-
-                var credentialsMfaMethods =
-                        userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
-                assertEquals(1, credentialsMfaMethods.size());
-                var credentialsAuthAppMfaMethod = credentialsMfaMethods.get(0);
-                assertEquals(AUTH_APP_CREDENTIAL, credentialsAuthAppMfaMethod.getCredentialValue());
-                assertEquals(
-                        PriorityIdentifier.DEFAULT.toString(),
-                        credentialsAuthAppMfaMethod.getPriority());
             }
 
             @Test
@@ -262,7 +239,7 @@ class MfaMethodsServiceIntegrationTest {
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(
+                        mfaMethodsService.migrateMfaCredentialsForUser(
                                 "non-existent-email@example.com");
 
                 // Assert
@@ -279,7 +256,7 @@ class MfaMethodsServiceIntegrationTest {
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(email);
+                        mfaMethodsService.migrateMfaCredentialsForUser(email);
 
                 // Assert
                 assertEquals(
@@ -499,11 +476,11 @@ class MfaMethodsServiceIntegrationTest {
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(EMAIL);
+                        mfaMethodsService.migrateMfaCredentialsForUser(EMAIL);
 
                 // Assert
                 assertEquals(
-                        MfaMigrationFailureReason.PHONE_NUMBER_ALREADY_MIGRATED,
+                        MfaMigrationFailureReason.ALREADY_MIGRATED,
                         mfaMigrationFailureReason.get());
             }
         }

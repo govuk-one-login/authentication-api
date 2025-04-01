@@ -126,8 +126,7 @@ public class MFAMethodsCreateHandler
             UserProfile userProfile) {
         if (!userProfile.getMfaMethodsMigrated()) {
             Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
-                    mfaMethodsService.migrateSmsMfaToCredentialsTableForUser(
-                            userProfile.getEmail());
+                    mfaMethodsService.migrateMfaCredentialsForUser(userProfile.getEmail());
 
             if (maybeMfaMigrationFailureReason.isPresent()) {
                 MfaMigrationFailureReason mfaMigrationFailureReason =

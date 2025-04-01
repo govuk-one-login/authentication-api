@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,7 +48,9 @@ public class MfaMethodsService {
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
             return getMfaMethodsForMigratedUser(userCredentials);
         } else {
-            return getMfaMethodsForNonMigratedUser(userProfile, userCredentials);
+            return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
+                    .map(List::of)
+                    .orElseGet(List::of);
         }
     }
 
@@ -121,26 +124,26 @@ public class MfaMethodsService {
         return Either.right(mfaIdentifier);
     }
 
-    private List<MfaMethodData> getMfaMethodsForNonMigratedUser(
+    private Optional<MfaMethodData> getMfaMethodForNonMigratedUser(
             UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();
-            return List.of(
+            return Optional.of(
                     MfaMethodData.authAppMfaData(
                             HARDCODED_APP_MFA_ID,
                             PriorityIdentifier.DEFAULT,
                             method.isMethodVerified(),
                             method.getCredentialValue()));
         } else if (userProfile.isPhoneNumberVerified()) {
-            return List.of(
+            return Optional.of(
                     MfaMethodData.smsMethodData(
                             HARDCODED_SMS_MFA_ID,
                             PriorityIdentifier.DEFAULT,
                             true,
                             userProfile.getPhoneNumber()));
         } else {
-            return List.of();
+            return Optional.empty();
         }
     }
 
@@ -372,8 +375,7 @@ public class MfaMethodsService {
                 : !MFAMethodType.SMS.name().equals(methodTypeFromExisting);
     }
 
-    public Optional<MfaMigrationFailureReason> migrateSmsMfaToCredentialsTableForUser(
-            String email) {
+    public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(String email) {
         // Bail if user doesn't exist
         Optional<UserProfile> maybeUserProfile = persistentService.getUserProfileFromEmail(email);
         Optional<UserCredentials> maybeUserCredentials =
@@ -384,41 +386,71 @@ public class MfaMethodsService {
         UserProfile userProfile = maybeUserProfile.get();
         UserCredentials userCredentials = maybeUserCredentials.get();
 
-        // Bail if phoneNumber already migrated
+        // Bail if already migrated
         if (userProfile.getMfaMethodsMigrated())
-            return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_ALREADY_MIGRATED);
+            return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
 
-        // Set migrated=true and bail
-        // if no phoneNumber on UserProfile or UserCredential already has active DEFAULT
-        Optional<String> maybePhoneNumber = Optional.ofNullable(userProfile.getPhoneNumber());
-        var userHasActiveDefaultMfaMethod =
-                Optional.ofNullable(userCredentials.getMfaMethods())
-                        .orElse(new ArrayList<>())
-                        .stream()
-                        .anyMatch(
-                                mfaMethod ->
-                                        PriorityIdentifier.valueOf(mfaMethod.getPriority())
-                                                        .equals(PriorityIdentifier.DEFAULT)
-                                                && mfaMethod.isMethodVerified()
-                                                && mfaMethod.isEnabled());
-        if (maybePhoneNumber.isEmpty() || userHasActiveDefaultMfaMethod) {
+        // TODO - AUT-2198 - This method obfuscates things a bit
+        //  It includes only enabled UserCredentials and verified phone numbers. What should we do
+        // if they aren't either of these?
+        var maybeNonMigratedMfaMethod =
+                getMfaMethodForNonMigratedUser(userProfile, userCredentials);
+
+        // Bail if no MFA methods to migrate
+        if (maybeNonMigratedMfaMethod.isEmpty()) {
             persistentService.setMfaMethodsMigrated(email, true);
             return Optional.empty();
+            // TODO - AUT-2198 - By doing this, we need to make sure that all new MFA methods are
+            // getting added the new way before running before running a bulk migration, otherwise
+            // we could end up with a situation where we think something is migrated but actually
+            // isn't.
+            // TODO - AUT-2198 - Maybe we shouldn't do this given the two TODOs below
         }
+
+        var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
+
+        return nonMigratedMfaMethod.method() instanceof AuthAppMfaDetail
+                ? migrateAuthAppToNewFormat(
+                        email,
+                        nonMigratedMfaMethod) // TODO - AUT-2198 - What should do for non-enabled
+                // auth app?
+                : migrateSmsToNewFormat(
+                        email,
+                        nonMigratedMfaMethod,
+                        userProfile); // TODO - AUT-2198 - What should do for non-verified phone?
+    }
+
+    private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
+            String email, MfaMethodData mfaMethodData) {
+        var method = (AuthAppMfaDetail) mfaMethodData.method();
+        persistentService.migrateMfaMethodsToCredentialsTableForUser(
+                email,
+                MFAMethod.authAppMfaMethod(
+                        method.credential(),
+                        true,
+                        true,
+                        mfaMethodData.priorityIdentifier(),
+                        mfaMethodData.mfaIdentifier()));
+        return Optional.empty();
+    }
+
+    private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
+            String email, MfaMethodData mfaMethodData, UserProfile userProfile) {
+        var method = (SmsMfaDetail) mfaMethodData.method();
 
         // Bail if phoneNumber isn't verified
         if (!userProfile.isPhoneNumberVerified())
             return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_NOT_VERIFIED);
 
-        // Migrate phoneNumber
-        persistentService.migrateSmsMfaToCredentialsTableForUser(
+        persistentService.migrateMfaMethodsToCredentialsTableForUser(
                 email,
                 MFAMethod.smsMfaMethod(
-                        userProfile.isPhoneNumberVerified(),
                         true,
-                        maybePhoneNumber.get(),
+                        true,
+                        method.phoneNumber(),
                         PriorityIdentifier.DEFAULT,
                         UUID.randomUUID().toString()));
+
         return Optional.empty();
     }
 }

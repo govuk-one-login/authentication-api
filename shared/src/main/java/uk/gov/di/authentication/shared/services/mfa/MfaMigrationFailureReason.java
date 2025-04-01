@@ -2,6 +2,6 @@ package uk.gov.di.authentication.shared.services.mfa;
 
 public enum MfaMigrationFailureReason {
     NO_USER_FOUND_FOR_EMAIL,
-    PHONE_NUMBER_ALREADY_MIGRATED,
+    ALREADY_MIGRATED,
     PHONE_NUMBER_NOT_VERIFIED
 }
