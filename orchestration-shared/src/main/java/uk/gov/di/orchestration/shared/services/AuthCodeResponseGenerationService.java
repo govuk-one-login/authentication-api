@@ -92,17 +92,5 @@ public class AuthCodeResponseGenerationService {
                             .withAuthenticated(true)
                             .withAccountState(OrchSessionItem.AccountState.EXISTING));
         }
-        // ATO-975 logging to make sure there are no differences in production
-        LOG.info(
-                "Shared session current credential strength: {}",
-                session.getCurrentCredentialStrength());
-        LOG.info(
-                "Orch session current credential strength: {}",
-                orchSession.getCurrentCredentialStrength());
-        LOG.info(
-                "Is shared session CCS equal to Orch session CCS: {}",
-                Objects.equals(
-                        session.getCurrentCredentialStrength(),
-                        orchSession.getCurrentCredentialStrength()));
     }
 }
