@@ -99,9 +99,12 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = new Session();
-    private final AuthSessionItem authSession =
-            new AuthSessionItem().withSessionId(SESSION_ID).withVtrList(List.of(VTR_CL_CM));
     private static final String CLIENT_ID = "test-client-id";
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withVtrList(List.of(VTR_CL_CM))
+                    .withClientId(CLIENT_ID);
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";

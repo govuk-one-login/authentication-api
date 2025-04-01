@@ -121,7 +121,8 @@ class AuthenticationAuthCodeHandlerTest {
         authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
-                        .withEmailAddress(CommonTestVariables.EMAIL);
+                        .withEmailAddress(CommonTestVariables.EMAIL)
+                        .withClientId(CLIENT_ID);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -336,6 +337,7 @@ class AuthenticationAuthCodeHandlerTest {
             // This is already the case but just to make it explicit here
             session.setPreservedReauthCountsForAudit(null);
 
+            // TODO fix all tests (run unit tests to see which ones need fixing)
             var body =
                     format(
                             "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"is-reauth-journey\": %b}",

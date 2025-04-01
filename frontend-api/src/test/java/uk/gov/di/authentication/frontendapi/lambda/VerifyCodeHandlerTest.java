@@ -224,8 +224,6 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
-        when(authSessionService.getSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(authSession));
     }
 
     @Test
@@ -235,6 +233,8 @@ class VerifyCodeHandlerTest {
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
+        when(authSessionService.getSessionFromRequestHeaders(event.getHeaders()))
+                .thenReturn(Optional.of(authSession.withClientId(CLIENT_ID)));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
@@ -308,6 +308,8 @@ class VerifyCodeHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
+        when(authSessionService.getSessionFromRequestHeaders(event.getHeaders()))
+                .thenReturn(Optional.of(authSession.withClientId(CLIENT_ID)));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getAuthRequestParams())
@@ -945,6 +947,8 @@ class VerifyCodeHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders())).thenReturn(session);
+        when(authSessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(authSession.withClientId(clientId)));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getAuthRequestParams())

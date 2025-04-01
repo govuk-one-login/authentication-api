@@ -96,7 +96,8 @@ class UpdateProfileHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withClientId(CLIENT_ID.getValue());
 
     private final AuditContext auditContextWithAllUserInfo =
             new AuditContext(

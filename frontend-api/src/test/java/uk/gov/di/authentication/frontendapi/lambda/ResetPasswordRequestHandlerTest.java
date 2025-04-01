@@ -140,7 +140,8 @@ class ResetPasswordRequestHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(CommonTestVariables.EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
-                    .withVtrList(List.of(VectorOfTrust.getDefaults()));
+                    .withVtrList(List.of(VectorOfTrust.getDefaults()))
+                    .withClientId(TEST_CLIENT_ID);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
