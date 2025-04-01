@@ -430,7 +430,7 @@ public class MfaMethodsService {
                         true,
                         true,
                         mfaMethodData.priorityIdentifier(),
-                        mfaMethodData.mfaIdentifier()));
+                        UUID.randomUUID().toString()));
         return Optional.empty();
     }
 
