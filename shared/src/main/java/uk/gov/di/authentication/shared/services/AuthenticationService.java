@@ -90,4 +90,7 @@ public interface AuthenticationService {
 
     Either<String, List<MFAMethod>> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier);
+
+    Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
+            String email, List<MFAMethod> updatedMfaMethods);
 }

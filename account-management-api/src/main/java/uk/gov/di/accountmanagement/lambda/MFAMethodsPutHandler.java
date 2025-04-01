@@ -107,7 +107,15 @@ public class MFAMethodsPutHandler
 
             if (result.isLeft()) {
                 var failureReason = result.getLeft();
-                return handleUpdateMfaFailureReason(failureReason);
+                var response = handleUpdateMfaFailureReason(failureReason);
+                if (response.getStatusCode() >= 500) {
+                    LOG.error("Update failed due to unexpected error {}", failureReason);
+                } else if (response.getStatusCode() >= 400 && response.getStatusCode() < 500) {
+                    LOG.warn("Update failed due to {}", failureReason);
+                } else {
+                    LOG.info("No update to mfa method: {}", failureReason);
+                }
+                return response;
             }
 
             var successfulUpdate = result.get();
@@ -123,6 +131,12 @@ public class MFAMethodsPutHandler
         return switch (failureReason) {
             case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.ERROR_1072);
+            case ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1075);
+            case ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1076);
+            case ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.ERROR_1077);
             case UNEXPECTED_ERROR -> generateApiGatewayProxyErrorResponse(
                     500, ErrorResponse.ERROR_1071);
             case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(

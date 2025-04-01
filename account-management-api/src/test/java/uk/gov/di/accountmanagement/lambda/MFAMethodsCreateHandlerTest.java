@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
@@ -88,12 +87,12 @@ class MFAMethodsCreateHandlerTest {
                                         TEST_SMS_MFA_ID,
                                         PriorityIdentifier.BACKUP,
                                         true,
-                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))));
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))));
 
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
+                        new SmsMfaDetail(TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -104,8 +103,7 @@ class MFAMethodsCreateHandlerTest {
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
 
-        assertEquals(
-                new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER), capturedRequest.method());
+        assertEquals(new SmsMfaDetail(TEST_PHONE_NUMBER), capturedRequest.method());
         assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
 
         assertThat(result, hasStatus(200));
@@ -140,13 +138,12 @@ class MFAMethodsCreateHandlerTest {
                                         TEST_AUTH_APP_ID,
                                         PriorityIdentifier.BACKUP,
                                         true,
-                                        new AuthAppMfaDetail(
-                                                MFAMethodType.AUTH_APP, TEST_CREDENTIAL))));
+                                        new AuthAppMfaDetail(TEST_CREDENTIAL))));
 
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                        new AuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -157,9 +154,7 @@ class MFAMethodsCreateHandlerTest {
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
 
-        assertEquals(
-                new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
-                capturedRequest.method());
+        assertEquals(new AuthAppMfaDetail(TEST_CREDENTIAL), capturedRequest.method());
         assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
 
         assertThat(result, hasStatus(200));
@@ -189,7 +184,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                        new AuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -221,7 +216,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                        new AuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -235,7 +230,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
+                        new SmsMfaDetail(TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT);
         event.setBody("Invalid JSON");
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
@@ -252,7 +247,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
+                        new SmsMfaDetail(TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
@@ -272,7 +267,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
+                        new SmsMfaDetail(TEST_PHONE_NUMBER),
                         TEST_PUBLIC_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
@@ -290,7 +285,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL),
+                        new AuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_PUBLIC_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));

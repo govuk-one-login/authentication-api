@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -199,18 +200,97 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertEquals(2, retrievedMfaMethods.size());
 
-        var retrievedDefault =
-                retrievedMfaMethods.stream()
-                        .filter(mfaMethod -> mfaMethod.getPriority().equals(DEFAULT.name()))
-                        .findFirst()
-                        .get();
+        var retrievedDefault = getMethodWithPriority(retrievedMfaMethods, DEFAULT);
 
         assertRetrievedMethodHasSameBasicFields(defaultPrioritySms, retrievedDefault);
         assertMfaPhoneNumberUpdated(retrievedDefault, updatedPhoneNumber);
     }
 
     @Test
-    void duplicateUpdatesShouldBeIdempotent() {
+    void
+            shouldReturn200AndSwitchMfaMethodPrioritiesWhenAUserSwitchesTheirBackupMethodWithTheirDefault() {
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
+
+        var backupMfaIdentifier = backupPrioritySms.getMfaIdentifier();
+        var updateRequest =
+                format(
+                        """
+                                {
+                                  "mfaMethod": {
+                                    "priorityIdentifier": "DEFAULT",
+                                    "method": {
+                                        "mfaMethodType": "SMS",
+                                        "phoneNumber": "%s"
+                                    }
+                                  }
+                                }
+                                """,
+                        backupPrioritySms.getDestination());
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of(
+                                "publicSubjectId",
+                                testPublicSubject,
+                                "mfaIdentifier",
+                                backupMfaIdentifier));
+
+        var expectedPromotedBackup =
+                format(
+                        """
+                        {
+                             "mfaIdentifier":"%s",
+                             "priorityIdentifier":"DEFAULT",
+                             "methodVerified":true,
+                             "method": {
+                               "mfaMethodType":"SMS",
+                               "phoneNumber":"%s"
+                             }
+                         }
+                        """,
+                        backupMfaIdentifier, backupPrioritySms.getDestination());
+        var expectedDemotedDefault =
+                format(
+                        """
+                        {
+                           "mfaIdentifier":"%s",
+                           "priorityIdentifier":"BACKUP",
+                           "methodVerified":true,
+                           "method": {
+                           "mfaMethodType":"SMS",
+                             "phoneNumber":"%s"
+                           }
+                        }
+                        """,
+                        defaultPrioritySms.getMfaIdentifier(), defaultPrioritySms.getDestination());
+
+        var expectedResponseBody =
+                defaultPrioritySms.getMfaIdentifier().compareTo(backupMfaIdentifier) < 0
+                        ? format("[%s,%s]", expectedDemotedDefault, expectedPromotedBackup)
+                        : format("[%s,%s]", expectedPromotedBackup, expectedDemotedDefault);
+
+        assertEquals(200, response.getStatusCode());
+
+        var expectedResponse =
+                JsonParser.parseString(expectedResponseBody).getAsJsonArray().toString();
+        assertEquals(expectedResponse, response.getBody());
+
+        var retrievedMfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+        var retrievedDefault = getMethodWithPriority(retrievedMfaMethods, DEFAULT);
+        var retrievedBackup = getMethodWithPriority(retrievedMfaMethods, BACKUP);
+
+        assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
+                backupPrioritySms, retrievedDefault, DEFAULT);
+        assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
+                defaultPrioritySms, retrievedBackup, BACKUP);
+    }
+
+    @Test
+    void duplicateUpdatesShouldBeIdempotentForUpdatesToDefaultMethod() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
         var mfaIdentifier = defaultPriorityAuthApp.getMfaIdentifier();
         var updatedCredential = "some-new-credential";
@@ -279,12 +359,100 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         }
     }
 
+    @Test
+    void duplicateUpdatesShouldBeIdempotentForUpdateToBackupMethod() {
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
+        var mfaIdentifierOfBackup = backupPrioritySms.getMfaIdentifier();
+        var updateRequest =
+                format(
+                        """
+                                {
+                                  "mfaMethod": {
+                                    "priorityIdentifier": "DEFAULT",
+                                    "method": {
+                                        "mfaMethodType": "SMS",
+                                        "phoneNumber": "%s"
+                                    }
+                                  }
+                                }
+                                """,
+                        backupPrioritySms.getDestination());
+
+        var requestPathParams =
+                Map.ofEntries(
+                        Map.entry("publicSubjectId", testPublicSubject),
+                        Map.entry("mfaIdentifier", mfaIdentifierOfBackup));
+
+        var firstResponse =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        requestPathParams);
+
+        assertEquals(200, firstResponse.getStatusCode());
+
+        var retrievedMfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+
+        assertEquals(2, retrievedMfaMethods.size());
+
+        var retrievedDefaultAfterFirstRequest = getMethodWithPriority(retrievedMfaMethods, DEFAULT);
+        var retrievedBackupAfterFirstRequest = getMethodWithPriority(retrievedMfaMethods, BACKUP);
+
+        assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
+                defaultPriorityAuthApp, retrievedBackupAfterFirstRequest, BACKUP);
+        assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
+                backupPrioritySms, retrievedDefaultAfterFirstRequest, DEFAULT);
+
+        for (int i = 0; i < 5; i++) {
+            var response =
+                    makeRequest(
+                            Optional.of(updateRequest),
+                            Collections.emptyMap(),
+                            Collections.emptyMap(),
+                            requestPathParams);
+
+            assertEquals(204, response.getStatusCode());
+
+            var retrievedMethodsAfterSubsequentUpdates = userStore.getMfaMethod(TEST_EMAIL);
+
+            assertEquals(2, retrievedMethodsAfterSubsequentUpdates.size());
+
+            var retrievedDefault =
+                    getMethodWithPriority(retrievedMethodsAfterSubsequentUpdates, DEFAULT);
+            var retrievedBackup = getMethodWithPriority(retrievedMfaMethods, BACKUP);
+
+            assertEquals(retrievedBackupAfterFirstRequest, retrievedBackup);
+            assertEquals(retrievedDefaultAfterFirstRequest, retrievedDefault);
+        }
+    }
+
+    private MFAMethod getMethodWithPriority(
+            List<MFAMethod> mfaMethods, PriorityIdentifier priority) {
+        return mfaMethods.stream()
+                .filter(mfaMethod -> mfaMethod.getPriority().equals(priority.name()))
+                .findFirst()
+                .get();
+    }
+
     private void assertRetrievedMethodHasSameBasicFields(MFAMethod expected, MFAMethod retrieved) {
         assertEquals(expected.getMfaMethodType(), retrieved.getMfaMethodType());
         assertEquals(expected.getPriority(), retrieved.getPriority());
         assertEquals(expected.getMfaIdentifier(), retrieved.getMfaIdentifier());
         assertEquals(expected.isEnabled(), retrieved.isEnabled());
         assertEquals(expected.isMethodVerified(), retrieved.isMethodVerified());
+    }
+
+    private void assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
+            MFAMethod expected, MFAMethod retrieved, PriorityIdentifier expectedPriority) {
+        assertEquals(expected.getMfaMethodType(), retrieved.getMfaMethodType());
+        assertEquals(expectedPriority.name(), retrieved.getPriority());
+        assertEquals(expected.getMfaIdentifier(), retrieved.getMfaIdentifier());
+        assertEquals(expected.isEnabled(), retrieved.isEnabled());
+        assertEquals(expected.isMethodVerified(), retrieved.isMethodVerified());
+        assertEquals(expected.getCredentialValue(), retrieved.getCredentialValue());
+        assertEquals(expected.getDestination(), retrieved.getDestination());
     }
 
     private void assertMfaCredentialUpdated(MFAMethod retrieved, String updatedCredential) {

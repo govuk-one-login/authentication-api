@@ -5,6 +5,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
@@ -28,6 +32,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DynamoServiceIntegrationTest {
 
@@ -157,7 +162,7 @@ class DynamoServiceIntegrationTest {
             userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         }
 
-        private MFAMethod defaultPrioritySmsData =
+        private static MFAMethod defaultPrioritySmsData =
                 MFAMethod.smsMfaMethod(
                         true,
                         true,
@@ -165,7 +170,7 @@ class DynamoServiceIntegrationTest {
                         PriorityIdentifier.DEFAULT,
                         "04615937-eb48-4a1f-9de2-2ff0a3dc3bc4");
 
-        private MFAMethod backupPrioritySmsData =
+        private static MFAMethod backupPrioritySmsData =
                 MFAMethod.smsMfaMethod(
                         true,
                         true,
@@ -173,7 +178,7 @@ class DynamoServiceIntegrationTest {
                         PriorityIdentifier.BACKUP,
                         "daa4b59d-4efa-4e97-8b48-e6732c953060");
 
-        private MFAMethod defaultPriorityAuthAppData =
+        private static MFAMethod defaultPriorityAuthAppData =
                 MFAMethod.authAppMfaMethod(
                         TEST_MFA_APP_CREDENTIAL,
                         true,
@@ -181,7 +186,7 @@ class DynamoServiceIntegrationTest {
                         PriorityIdentifier.DEFAULT,
                         "7968d195-7db3-45f6-b7d3-a627aad118b7");
 
-        private MFAMethod backupAuthAppData =
+        private static MFAMethod backupAuthAppData =
                 MFAMethod.authAppMfaMethod(
                         TEST_MFA_APP_CREDENTIAL,
                         true,
@@ -447,6 +452,100 @@ class DynamoServiceIntegrationTest {
                             "Attempted to update auth app credential for non auth app method with identifier %s",
                             defaultPrioritySmsData.getMfaIdentifier()),
                     result.getLeft());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        @Test
+        void shouldUpdateAllMfaMethodsForAUser() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var promotedBackupMethod =
+                    MFAMethod.smsMfaMethod(
+                            backupPrioritySmsData.isMethodVerified(),
+                            backupPrioritySmsData.isEnabled(),
+                            backupPrioritySmsData.getDestination(),
+                            PriorityIdentifier.DEFAULT,
+                            backupPrioritySmsData.getMfaIdentifier());
+            var demotedDefaultMethod =
+                    MFAMethod.smsMfaMethod(
+                            defaultPrioritySmsData.isMethodVerified(),
+                            defaultPrioritySmsData.isEnabled(),
+                            defaultPrioritySmsData.getDestination(),
+                            PriorityIdentifier.BACKUP,
+                            defaultPrioritySmsData.getMfaIdentifier());
+
+            var result =
+                    dynamoService.updateAllMfaMethodsForUser(
+                            TEST_EMAIL, List.of(promotedBackupMethod, demotedDefaultMethod));
+
+            var returnedMethods = result.get();
+            var defaultMethodAfterUpdate =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
+                            .findFirst()
+                            .get();
+            var backupMethodAfterUpdate =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+
+            assertRetrievedMethodHasData(promotedBackupMethod, defaultMethodAfterUpdate);
+            assertRetrievedMethodHasData(demotedDefaultMethod, backupMethodAfterUpdate);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, promotedBackupMethod, demotedDefaultMethod);
+        }
+
+        private static Stream<Arguments> invalidMfaMethodsToExpectedErrorStrings() {
+            return Stream.of(
+                    Arguments.of(List.of(), "Mfa methods cannot be empty"),
+                    Arguments.of(
+                            List.of(defaultPriorityAuthAppData, backupAuthAppData),
+                            "Cannot have two auth app mfa methods"),
+                    Arguments.of(
+                            List.of(defaultPriorityAuthAppData, defaultPrioritySmsData),
+                            "Cannot have two mfa methods with the same priority"),
+                    Arguments.of(
+                            List.of(
+                                    defaultPrioritySmsData,
+                                    backupPrioritySmsData,
+                                    backupAuthAppData),
+                            "Cannot have more than two mfa methods"),
+                    Arguments.of(
+                            List.of(backupAuthAppData),
+                            "Must have default priority mfa method defined"),
+                    Arguments.of(
+                            List.of(
+                                    defaultPrioritySmsData,
+                                    MFAMethod.smsMfaMethod(
+                                            true,
+                                            true,
+                                            backupPrioritySmsData.getDestination(),
+                                            PriorityIdentifier.BACKUP,
+                                            defaultPrioritySmsData.getMfaIdentifier())),
+                            "Cannot have mfa methods with the same identifier"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("invalidMfaMethodsToExpectedErrorStrings")
+        void shouldReturnErrorAndNotUpdateMfaMethodsWhenUpdateIsInvalid(
+                List<MFAMethod> invalidMethodCombination, String expectedErrorString) {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var result =
+                    dynamoService.updateAllMfaMethodsForUser(TEST_EMAIL, invalidMethodCombination);
+
+            assertTrue(result.isLeft());
+            assertEquals(expectedErrorString, result.getLeft());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 

@@ -7,4 +7,9 @@ import uk.gov.di.authentication.shared.validation.Required;
 public record SmsMfaDetail(
         @Expose @Required @SerializedName("mfaMethodType") MFAMethodType mfaMethodType,
         @Expose @Required @SerializedName("phoneNumber") String phoneNumber)
-        implements MfaDetail {}
+        implements MfaDetail {
+
+    public SmsMfaDetail(String phoneNumber) {
+        this(MFAMethodType.SMS, phoneNumber);
+    }
+}
