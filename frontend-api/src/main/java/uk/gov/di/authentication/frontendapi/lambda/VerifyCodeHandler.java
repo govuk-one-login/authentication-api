@@ -397,8 +397,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                     MFAMethodType.SMS.getValue(),
                     false);
-            sessionService.storeOrUpdateSession(
-                    session.setVerifiedMfaMethodType(MFAMethodType.SMS), sessionId);
             authSessionService.updateSession(
                     authSession.withVerifiedMfaMethodType(MFAMethodType.SMS));
             clearAccountRecoveryBlockIfPresent(authSession, auditContext);

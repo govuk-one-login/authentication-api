@@ -84,15 +84,6 @@ public class Session {
         return this;
     }
 
-    public MFAMethodType getVerifiedMfaMethodType() {
-        return verifiedMfaMethodType;
-    }
-
-    public Session setVerifiedMfaMethodType(MFAMethodType verifiedMfaMethodType) {
-        this.verifiedMfaMethodType = verifiedMfaMethodType;
-        return this;
-    }
-
     private void initializeCodeRequestMap() {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
