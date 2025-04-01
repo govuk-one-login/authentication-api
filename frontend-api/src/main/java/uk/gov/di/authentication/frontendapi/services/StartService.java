@@ -74,7 +74,7 @@ public class StartService {
                         .withAuthSession(authSession);
         UserContext userContext;
         try {
-            var clientRegistry = getClient(clientSession);
+            var clientRegistry = getClient(authSession.getClientId());
             Optional.of(authSession)
                     .map(AuthSessionItem::getEmailAddress)
                     .flatMap(dynamoService::getUserProfileByEmailMaybe)
@@ -232,10 +232,9 @@ public class StartService {
                 < 0);
     }
 
-    public ClientRegistry getClient(ClientSession clientSession) throws ClientNotFoundException {
-        return clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
-                .findFirst()
-                .flatMap(clientService::getClient)
+    public ClientRegistry getClient(String clientId) throws ClientNotFoundException {
+        return clientService
+                .getClient(clientId)
                 .orElseThrow(
                         () ->
                                 new ClientNotFoundException(
