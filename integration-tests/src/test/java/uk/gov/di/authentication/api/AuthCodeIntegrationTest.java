@@ -95,7 +95,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupOrchSession();
         var clientSessionId = "some-client-session-id";
         setupAuthUserInfo(clientSessionId);
-        redis.setVerifiedMfaMethodType(sessionID, MFAMethodType.AUTH_APP);
         var creationDate = LocalDateTime.now();
         var authRequestParams = generateAuthRequest().toParameters();
         redis.addAuthRequestToSession(
