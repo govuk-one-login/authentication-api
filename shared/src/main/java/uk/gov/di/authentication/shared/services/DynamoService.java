@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,6 +46,8 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 
 public class DynamoService implements AuthenticationService {
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
@@ -817,18 +820,63 @@ public class DynamoService implements AuthenticationService {
                 });
     }
 
+    private Either<String, Void> validateMfaMethods(List<MFAMethod> methods) {
+        if (methods.isEmpty()) {
+            return Either.left("Mfa methods cannot be empty");
+        } else if (methods.size() > 2) {
+            return Either.left("Cannot have more than two mfa methods");
+        } else if (methods.stream()
+                        .filter(
+                                m ->
+                                        Objects.equals(
+                                                m.getMfaMethodType(),
+                                                MFAMethodType.AUTH_APP.name()))
+                        .toList()
+                        .size()
+                > 1) {
+            return Either.left("Cannot have two auth app mfa methods");
+        }
+        var backupMethods =
+                methods.stream().filter(m -> BACKUP.name().equals(m.getPriority())).toList();
+        var defaultMethods =
+                methods.stream().filter(m -> DEFAULT.name().equals(m.getPriority())).toList();
+        if (defaultMethods.size() > 1 || backupMethods.size() > 1) {
+            return Either.left("Cannot have two mfa methods with the same priority");
+        }
+        if (defaultMethods.isEmpty()) {
+            return Either.left("Must have default priority mfa method defined");
+        }
+        var uniqueIdentifiers =
+                methods.stream().map(MFAMethod::getMfaIdentifier).collect(Collectors.toSet());
+        if (uniqueIdentifiers.size() < methods.size()) {
+            return Either.left("Cannot have mfa methods with the same identifier");
+        }
+
+        return Either.right(null);
+    }
+
     @Override
     public Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods) {
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-        var dateTime = NowHelper.toTimestampString(NowHelper.now());
-        var updatedUserCredentials =
-                dynamoUserCredentialsTable.updateItem(
-                        userCredentials.withUpdated(dateTime).withMfaMethods(updatedMfaMethods));
+        var validationResult = validateMfaMethods(updatedMfaMethods);
 
-        return Either.right(updatedUserCredentials.getMfaMethods());
+        return validationResult.bimap(
+                err -> err,
+                success -> {
+                    var userCredentials =
+                            dynamoUserCredentialsTable.getItem(
+                                    Key.builder()
+                                            .partitionValue(email.toLowerCase(Locale.ROOT))
+                                            .build());
+                    var dateTime = NowHelper.toTimestampString(NowHelper.now());
+                    var updatedUserCredentials =
+                            dynamoUserCredentialsTable.updateItem(
+                                    userCredentials
+                                            .withUpdated(dateTime)
+                                            .withMfaMethods(updatedMfaMethods));
+
+                    return updatedUserCredentials.getMfaMethods();
+                });
     }
 
     public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
