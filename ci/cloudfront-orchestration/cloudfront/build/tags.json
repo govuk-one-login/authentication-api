@@ -18,5 +18,9 @@
   {
     "Key": "Repository",
     "Value": "govuk-one-login/authentication-api"
+  },
+  {
+    "Key": "FMSGlobalCustomPolicy",
+    "Value": "cloudfrontoidc"
   }
 ]
