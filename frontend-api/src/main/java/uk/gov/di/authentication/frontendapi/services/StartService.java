@@ -202,13 +202,22 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            ClientSession clientSession, CredentialTrustLevel currentCredentialStrength) {
-        if (Objects.isNull(currentCredentialStrength)) {
+            List<VectorOfTrust> vtrList, CredentialTrustLevel currentCredentialStrength) {
+        return isUpliftRequired(
+                vtrList.stream()
+                        .map(VectorOfTrust::getCredentialTrustLevel)
+                        .findFirst()
+                        .orElse(null),
+                currentCredentialStrength);
+    }
+
+    public boolean isUpliftRequired(
+            CredentialTrustLevel credentialTrustLevel,
+            CredentialTrustLevel currentCredentialStrength) {
+        if (Objects.isNull(credentialTrustLevel) || Objects.isNull(currentCredentialStrength)) {
             return false;
         }
-        return (currentCredentialStrength.compareTo(
-                        clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                < 0);
+        return (currentCredentialStrength.compareTo(credentialTrustLevel) < 0);
     }
 
     public ClientRegistry getClient(String clientId) throws ClientNotFoundException {

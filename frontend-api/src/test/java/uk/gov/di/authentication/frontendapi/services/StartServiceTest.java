@@ -447,7 +447,8 @@ class StartServiceTest {
         userContext.getSession().setEmailAddress(EMAIL);
 
         var upliftRequired =
-                startService.isUpliftRequired(userContext.getClientSession(), credentialTrustLevel);
+                startService.isUpliftRequired(
+                        userContext.getAuthSession().getVtrList(), credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
@@ -648,7 +649,16 @@ class StartServiceTest {
                 .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)
                 .withUserProfile(userProfile)
+                .withAuthSession(createAuthSession(vtrList))
                 .build();
+    }
+
+    private static AuthSessionItem createAuthSession(List<VectorOfTrust> vtrList) {
+        return new AuthSessionItem()
+                .withEmailAddress(EMAIL)
+                .withSessionId(SESSION_ID)
+                .withClientId(CLIENT_ID.getValue())
+                .withVtrList(vtrList);
     }
 
     private static SignedJWT generateSignedJWT() throws NoSuchAlgorithmException, JOSEException {
