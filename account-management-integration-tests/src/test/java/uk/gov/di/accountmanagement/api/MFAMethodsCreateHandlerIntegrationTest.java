@@ -83,7 +83,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
@@ -112,7 +112,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         extractedMfaIdentifier,
                         PriorityIdentifier.BACKUP,
                         true,
-                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER));
+                        new SmsMfaDetail(TEST_PHONE_NUMBER));
         var expectedResponse = JsonParser.parseString(expectedJson).getAsJsonObject().toString();
 
         assertEquals(expectedResponse, response.getBody());
@@ -126,8 +126,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new AuthAppMfaDetail(
-                                                MFAMethodType.AUTH_APP, TEST_CREDENTIAL))),
+                                        new AuthAppMfaDetail(TEST_CREDENTIAL))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
@@ -156,7 +155,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         extractedMfaIdentifier,
                         PriorityIdentifier.BACKUP,
                         true,
-                        new AuthAppMfaDetail(MFAMethodType.AUTH_APP, TEST_CREDENTIAL));
+                        new AuthAppMfaDetail(TEST_CREDENTIAL));
 
         var expectedResponse = JsonParser.parseString(expectedJson).getAsJsonObject().toString();
 
@@ -170,7 +169,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap());
         assertEquals(400, response.getStatusCode());
@@ -184,7 +183,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", "incorrect-public-subject-id"),
@@ -199,13 +198,23 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @ParameterizedTest
     @MethodSource("invalidMfaMethodTypes")
-    void shouldReturn400AndBadRequestWhenMfaMethodTypeIsInvalid(MFAMethodType mfaMethodType) {
+    void shouldReturn400AndBadRequestWhenMfaMethodTypeIsInvalid(MFAMethodType invalidMethodType) {
         var response =
                 makeRequest(
                         Optional.of(
-                                constructRequestBody(
-                                        PriorityIdentifier.BACKUP,
-                                        new SmsMfaDetail(mfaMethodType, TEST_PHONE_NUMBER))),
+                                format(
+                                        """
+                                                {
+                                                  "mfaMethod": {
+                                                    "priorityIdentifier": "BACKUP",
+                                                    "method": {
+                                                       "mfaMethodType": "%s",
+                                                       "phoneNumber": "07900000000"
+                                                    }
+                                                  }
+                                                }
+                                                """,
+                                        invalidMethodType)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -224,7 +233,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -243,7 +252,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -263,7 +272,6 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
                                         new AuthAppMfaDetail(
-                                                MFAMethodType.AUTH_APP,
                                                 "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),

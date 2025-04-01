@@ -454,6 +454,51 @@ class DynamoServiceIntegrationTest {
                     userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
         }
 
+        @Test
+        void shouldUpdateAllMfaMethodsForAUser() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var promotedBackupMethod =
+                    MFAMethod.smsMfaMethod(
+                            backupPrioritySmsData.isMethodVerified(),
+                            backupPrioritySmsData.isEnabled(),
+                            backupPrioritySmsData.getDestination(),
+                            PriorityIdentifier.DEFAULT,
+                            backupPrioritySmsData.getMfaIdentifier());
+            var demotedDefaultMethod =
+                    MFAMethod.smsMfaMethod(
+                            defaultPrioritySmsData.isMethodVerified(),
+                            defaultPrioritySmsData.isEnabled(),
+                            defaultPrioritySmsData.getDestination(),
+                            PriorityIdentifier.BACKUP,
+                            defaultPrioritySmsData.getMfaIdentifier());
+
+            var result =
+                    dynamoService.updateAllMfaMethodsForUser(
+                            TEST_EMAIL, List.of(promotedBackupMethod, demotedDefaultMethod));
+
+            var returnedMethods = result.get();
+            var defaultMethodAfterUpdate =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
+                            .findFirst()
+                            .get();
+            var backupMethodAfterUpdate =
+                    returnedMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+
+            assertRetrievedMethodHasData(promotedBackupMethod, defaultMethodAfterUpdate);
+            assertRetrievedMethodHasData(demotedDefaultMethod, backupMethodAfterUpdate);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, promotedBackupMethod, demotedDefaultMethod);
+        }
+
         private MFAMethod findMethodWithPriority(
                 String priority, List<MFAMethod> retrievedMethods) {
             Predicate<MFAMethod> findCondition =

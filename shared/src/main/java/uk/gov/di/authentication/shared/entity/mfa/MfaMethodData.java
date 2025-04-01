@@ -39,10 +39,7 @@ public record MfaMethodData(
             boolean methodVerified,
             String phoneNumber) {
         return new MfaMethodData(
-                mfaIdentifier,
-                priorityIdentifier,
-                methodVerified,
-                new SmsMfaDetail(MFAMethodType.SMS, phoneNumber));
+                mfaIdentifier, priorityIdentifier, methodVerified, new SmsMfaDetail(phoneNumber));
     }
 
     public static MfaMethodData authAppMfaData(
@@ -54,7 +51,7 @@ public record MfaMethodData(
                 mfaIdentifier,
                 priorityIdentifier,
                 methodVerified,
-                new AuthAppMfaDetail(MFAMethodType.AUTH_APP, credential));
+                new AuthAppMfaDetail(credential));
     }
 
     @Override

@@ -12,7 +12,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
@@ -71,8 +70,7 @@ class MFAMethodsPutHandlerTest {
         var phoneNumber = "123456789";
         var updateRequest =
                 MfaMethodCreateOrUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT,
-                        new SmsMfaDetail(MFAMethodType.SMS, phoneNumber));
+                        PriorityIdentifier.DEFAULT, new SmsMfaDetail(phoneNumber));
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
 
         when(userProfile.getEmail()).thenReturn(EMAIL);
@@ -156,8 +154,7 @@ class MFAMethodsPutHandlerTest {
         var phoneNumber = "123456789";
         var updateRequest =
                 MfaMethodCreateOrUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT,
-                        new SmsMfaDetail(MFAMethodType.SMS, phoneNumber));
+                        PriorityIdentifier.DEFAULT, new SmsMfaDetail(phoneNumber));
 
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))

@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
@@ -58,7 +57,7 @@ class MFAMethodsRetrieveHandlerTest {
                         MFA_IDENTIFIER,
                         PriorityIdentifier.DEFAULT,
                         true,
-                        new SmsMfaDetail(MFAMethodType.SMS, "+44123456789"));
+                        new SmsMfaDetail("+44123456789"));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(List.of(method));
 
         var event =
