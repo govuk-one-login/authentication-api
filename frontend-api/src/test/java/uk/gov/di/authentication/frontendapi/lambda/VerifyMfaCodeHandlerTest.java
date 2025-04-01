@@ -275,6 +275,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setCurrentCredentialStrength(credentialTrustLevel);
         authSession.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setVtrList(List.of(VectorOfTrust.getDefaults()));
 
         var mfaCodeRequest =
                 new VerifyMfaCodeRequest(
@@ -288,7 +289,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(clientSession));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
 
         var result = handler.handleRequest(event, context);
 
@@ -1069,11 +1069,13 @@ class VerifyMfaCodeHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
+        when(authSessionService.getSessionFromRequestHeaders(event.getHeaders()))
+                .thenReturn(
+                        Optional.of(authSession.withVtrList(List.of(VectorOfTrust.getDefaults()))));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
         return handler.handleRequest(event, context);
     }
 
