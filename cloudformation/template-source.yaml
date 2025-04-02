@@ -2,6 +2,12 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: CloudFormation template for infrastructure for Auth
 Transform: AWS::Serverless-2016-10-31
 
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E0001 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
+
 Parameters:
   Environment:
     Description: Environment type
@@ -102,8 +108,5 @@ Globals:
               dynatraceSecretArn,
             ]
 
-Resources:
-  "Fn::Transform":
-    Name: "AWS::Include"
-    Parameters:
-      Location: "../auth-ext.yaml"
+Resources: !YAMLInclude ../auth-ext.yaml,
+  ../account-mgmt.yaml
