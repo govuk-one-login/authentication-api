@@ -21,6 +21,7 @@ logs/
 .venv/
 .aws-sam
 **/.DS_Store
+cloudformation/node_modules
 
 # Approval Tests
 *.received.txt

@@ -1,0 +1,15 @@
+
+plugins {
+    id "com.github.node-gradle.node" version "7.1.0"
+}
+
+
+apply plugin: 'com.github.node-gradle.node'
+
+node {
+    download = false
+}
+
+task buildtemplate(type: NodeTask, dependsOn: 'npmInstall') {
+    script = file('yaml-import.js')
+}
