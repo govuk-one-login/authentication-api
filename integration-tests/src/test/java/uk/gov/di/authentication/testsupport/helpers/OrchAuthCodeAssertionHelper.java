@@ -16,6 +16,12 @@ public class OrchAuthCodeAssertionHelper {
     public static void assertOrchAuthCodeSaved(
             OrchAuthCodeExtension orchAuthCodeExtension, APIGatewayProxyResponseEvent response) {
         String responseLocationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, responseLocationHeader);
+    }
+
+    public static void assertOrchAuthCodeSaved(
+            OrchAuthCodeExtension orchAuthCodeExtension, String responseLocationHeader) {
         String authCode = extractAuthCodeFromResponseLocationHeader(responseLocationHeader);
 
         Optional<AuthCodeExchangeData> exchangeData =

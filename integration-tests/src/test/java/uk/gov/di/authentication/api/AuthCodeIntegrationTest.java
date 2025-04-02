@@ -32,6 +32,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -53,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -68,6 +70,9 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final AuthenticationCallbackUserInfoStoreExtension authUserInfoExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
+
+    @RegisterExtension
+    public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI =
@@ -131,6 +136,8 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redisSession.isNewAccount(), equalTo(Session.AccountState.EXISTING));
         assertThat(orchSession.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.EXISTING));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, authCodeResponse.getLocation());
     }
 
     @Test
@@ -181,6 +188,8 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, authCodeResponse.getLocation());
     }
 
     private AuthenticationRequest generateAuthRequest() {
