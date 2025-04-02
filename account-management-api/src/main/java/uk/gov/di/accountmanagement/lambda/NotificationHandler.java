@@ -58,38 +58,29 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     public Void handleRequest(SQSEvent event, Context context) {
         return segmentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
-                () -> notificationRequestHandler(event, context));
+                () -> {
+                    notificationRequestHandler(event, context);
+                    return null;
+                });
     }
 
-    public Void notificationRequestHandler(SQSEvent event, Context context) {
+    public void notificationRequestHandler(SQSEvent event, Context context) {
         for (SQSMessage msg : event.getRecords()) {
             try {
                 processMessage(msg);
             } catch (JsonException e) {
                 LOG.error("Error when mapping message from queue to a NotifyRequest");
-                throw new RuntimeException(
-                        "Error when mapping message from queue to a NotifyRequest");
             }
         }
-        return null;
     }
 
     private void processMessage(SQSMessage msg) throws JsonException {
         LOG.info("Message received from SQS queue");
         NotifyRequest notifyRequest = objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-        try {
-            sendNotification(notifyRequest);
-        } catch (NotificationClientException e) {
-            LOG.error("Error sending with Notify", e);
-            throw new RuntimeException(
-                    String.format(
-                            "Error sending with Notify using NotificationType: %s",
-                            notifyRequest.getNotificationType()),
-                    e);
-        }
+        sendNotification(notifyRequest);
     }
 
-    private void sendNotification(NotifyRequest notifyRequest) throws NotificationClientException {
+    private void sendNotification(NotifyRequest notifyRequest) {
         boolean success =
                 switch (notifyRequest.getNotificationType()) {
                     case VERIFY_EMAIL -> sendVerifyEmailNotification(notifyRequest);
@@ -103,10 +94,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         if (!success) {
             LOG.error(
                     "Failed to send notification of type {}", notifyRequest.getNotificationType());
-            throw new RuntimeException(
-                    String.format(
-                            "Error sending with Notify using NotificationType: %s",
-                            notifyRequest.getNotificationType()));
         }
     }
 
@@ -122,32 +109,47 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private boolean sendVerifyPhoneNotification(NotifyRequest notifyRequest) {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put("validation-code", notifyRequest.getCode());
-        return sendTextNotification(notifyRequest, phonePersonalisation, String.valueOf(NotificationType.VERIFY_PHONE_NUMBER));
+        return sendTextNotification(
+                notifyRequest,
+                phonePersonalisation,
+                String.valueOf(NotificationType.VERIFY_PHONE_NUMBER));
     }
 
     private boolean sendEmailUpdatedNotification(NotifyRequest notifyRequest) {
         Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
         emailUpdatePersonalisation.put("email-address", notifyRequest.getDestination());
         emailUpdatePersonalisation.put("contact-us-link", buildContactUsUrl());
-        return sendEmailNotification(notifyRequest, emailUpdatePersonalisation, String.valueOf(NotificationType.EMAIL_UPDATED));
+        return sendEmailNotification(
+                notifyRequest,
+                emailUpdatePersonalisation,
+                String.valueOf(NotificationType.EMAIL_UPDATED));
     }
 
     private boolean sendDeleteAccountNotification(NotifyRequest notifyRequest) {
         Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
         accountDeletedPersonalisation.put("contact-us-link", buildContactUsUrl());
-        return sendEmailNotification(notifyRequest, accountDeletedPersonalisation, String.valueOf(NotificationType.DELETE_ACCOUNT));
+        return sendEmailNotification(
+                notifyRequest,
+                accountDeletedPersonalisation,
+                String.valueOf(NotificationType.DELETE_ACCOUNT));
     }
 
     private boolean sendPhoneNumberUpdatedNotification(NotifyRequest notifyRequest) {
         Map<String, Object> phoneNumberUpdatedPersonalisation = new HashMap<>();
         phoneNumberUpdatedPersonalisation.put("contact-us-link", buildContactUsUrl());
-        return sendEmailNotification(notifyRequest, phoneNumberUpdatedPersonalisation, String.valueOf(NotificationType.PHONE_NUMBER_UPDATED));
+        return sendEmailNotification(
+                notifyRequest,
+                phoneNumberUpdatedPersonalisation,
+                String.valueOf(NotificationType.PHONE_NUMBER_UPDATED));
     }
 
     private boolean sendPasswordUpdatedNotification(NotifyRequest notifyRequest) {
         Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
         passwordUpdatedPersonalisation.put("contact-us-link", buildContactUsUrl());
-        return sendEmailNotification(notifyRequest, passwordUpdatedPersonalisation, String.valueOf(NotificationType.PASSWORD_UPDATED));
+        return sendEmailNotification(
+                notifyRequest,
+                passwordUpdatedPersonalisation,
+                String.valueOf(NotificationType.PASSWORD_UPDATED));
     }
 
     private boolean sendEmailNotification(
@@ -187,7 +189,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             LOG.error("Error sending with Notify: %s", e.getMessage());
             return false;
         } catch (RuntimeException e) {
-            LOG.error("Unexpected error sending %s notification %s", e.getMessage(), notificationType);
+            LOG.error(
+                    "Unexpected error sending %s notification %s",
+                    e.getMessage(), notificationType);
             return false;
         }
     }

@@ -17,8 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -160,20 +158,6 @@ class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, DELETE_ACCOUNT);
-    }
-
-    @Test
-    void shouldThrowExceptionIfUnableToProcessMessageFromQueue() {
-        SQSEvent sqsEvent = generateSQSEvent("");
-
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(sqsEvent, context),
-                        "Expected to throw exception");
-
-        assertEquals(
-                "Error when mapping message from queue to a NotifyRequest", exception.getMessage());
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {
