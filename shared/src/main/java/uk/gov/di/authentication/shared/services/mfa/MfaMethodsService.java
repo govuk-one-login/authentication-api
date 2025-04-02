@@ -380,15 +380,17 @@ public class MfaMethodsService {
         Optional<UserProfile> maybeUserProfile = persistentService.getUserProfileFromEmail(email);
         Optional<UserCredentials> maybeUserCredentials =
                 Optional.ofNullable(persistentService.getUserCredentialsFromEmail(email));
-        if (maybeUserProfile.isEmpty() || maybeUserCredentials.isEmpty())
+        if (maybeUserProfile.isEmpty() || maybeUserCredentials.isEmpty()) {
             return Optional.of(MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL);
+        }
 
         UserProfile userProfile = maybeUserProfile.get();
         UserCredentials userCredentials = maybeUserCredentials.get();
 
         // Bail if already migrated
-        if (userProfile.getMfaMethodsMigrated())
+        if (userProfile.getMfaMethodsMigrated()) {
             return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
+        }
 
         var maybeNonMigratedMfaMethod =
                 getMfaMethodForNonMigratedUser(userProfile, userCredentials);
