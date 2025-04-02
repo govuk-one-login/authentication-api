@@ -7,7 +7,8 @@ shared_state_bucket                  = "di-auth-development-tfstate"
 
 
 # FMS Flag
-fms_enabled = true
+fms_enabled                = true
+frontend_api_fms_tag_value = "authfrontenddev"
 
 # App-specific
 test_clients_enabled = true
