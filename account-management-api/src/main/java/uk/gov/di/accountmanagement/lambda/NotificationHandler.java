@@ -111,125 +111,83 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     private boolean sendVerifyEmailNotification(NotifyRequest notifyRequest) {
-        try {
-            Map<String, Object> emailPersonalisation = new HashMap<>();
-            emailPersonalisation.put("validation-code", notifyRequest.getCode());
-            emailPersonalisation.put("email-address", notifyRequest.getDestination());
-            emailPersonalisation.put("contact-us-link", buildContactUsUrl());
-            LOG.info("Sending VERIFY_EMAIL email using Notify");
-            notificationService.sendEmail(
-                    notifyRequest.getDestination(),
-                    emailPersonalisation,
-                    NotificationType.VERIFY_EMAIL);
-            LOG.info("VERIFY_EMAIL email has been sent using Notify");
-            return true;
-        } catch (NotificationClientException e) {
-            LOG.error("Error sending VERIFY_EMAIL email with notify", e);
-            return false;
-        } catch (RuntimeException e) {
-            LOG.error("Unexpected error sending VERIFY_EMAIL email with notify", e);
-            return false;
-        }
+        Map<String, Object> emailPersonalisation = new HashMap<>();
+        emailPersonalisation.put("validation-code", notifyRequest.getCode());
+        emailPersonalisation.put("email-address", notifyRequest.getDestination());
+        emailPersonalisation.put("contact-us-link", buildContactUsUrl());
+        return sendEmailNotification(
+                notifyRequest, emailPersonalisation, String.valueOf(NotificationType.VERIFY_EMAIL));
     }
 
     private boolean sendVerifyPhoneNotification(NotifyRequest notifyRequest) {
-        try {
-            Map<String, Object> phonePersonalisation = new HashMap<>();
-            phonePersonalisation.put("validation-code", notifyRequest.getCode());
-            LOG.info("Sending VERIFY_PHONE_NUMBER email using Notify");
-            notificationService.sendText(
-                    notifyRequest.getDestination(),
-                    phonePersonalisation,
-                    NotificationType.VERIFY_PHONE_NUMBER);
-            LOG.info("VERIFY_PHONE_NUMBER text has been sent using Notify");
-            return true;
-        } catch (NotificationClientException e) {
-            LOG.error("Error sending VERIFY_PHONE_NUMBER email with notify", e);
-            return false;
-        } catch (RuntimeException e) {
-            LOG.error("Unexpected error sending VERIFY_PHONE_NUMBER email with notify", e);
-            return false;
-        }
+        Map<String, Object> phonePersonalisation = new HashMap<>();
+        phonePersonalisation.put("validation-code", notifyRequest.getCode());
+        return sendTextNotification(notifyRequest, phonePersonalisation, String.valueOf(NotificationType.VERIFY_PHONE_NUMBER));
     }
 
     private boolean sendEmailUpdatedNotification(NotifyRequest notifyRequest) {
-        try {
-            Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
-            emailUpdatePersonalisation.put("email-address", notifyRequest.getDestination());
-            emailUpdatePersonalisation.put("contact-us-link", buildContactUsUrl());
-            LOG.info("Sending EMAIL_UPDATED email using Notify");
-            notificationService.sendEmail(
-                    notifyRequest.getDestination(),
-                    emailUpdatePersonalisation,
-                    NotificationType.EMAIL_UPDATED);
-            LOG.info("EMAIL_UPDATED email has been sent using Notify");
-            return true;
-        } catch (NotificationClientException e) {
-            LOG.error("Error sending EMAIL_UPDATED email with notify", e);
-            return false;
-        } catch (RuntimeException e) {
-            LOG.error("Unexpected error sending EMAIL_UPDATED email with notify", e);
-            return false;
-        }
+        Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
+        emailUpdatePersonalisation.put("email-address", notifyRequest.getDestination());
+        emailUpdatePersonalisation.put("contact-us-link", buildContactUsUrl());
+        return sendEmailNotification(notifyRequest, emailUpdatePersonalisation, String.valueOf(NotificationType.EMAIL_UPDATED));
     }
 
     private boolean sendDeleteAccountNotification(NotifyRequest notifyRequest) {
-        try {
-            LOG.info("Sending DELETE_ACCOUNT email using Notify");
-            Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
-            accountDeletedPersonalisation.put("contact-us-link", buildContactUsUrl());
-            notificationService.sendEmail(
-                    notifyRequest.getDestination(),
-                    accountDeletedPersonalisation,
-                    NotificationType.DELETE_ACCOUNT);
-            LOG.info("DELETE_ACCOUNT email has been sent using Notify");
-            return true;
-        } catch (NotificationClientException e) {
-            LOG.error("Error sending DELETE_ACCOUNT email with notify", e);
-            return false;
-        } catch (RuntimeException e) {
-            LOG.error("Unexpected error sending DELETE_ACCOUNT email with notify", e);
-            return false;
-        }
+        Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
+        accountDeletedPersonalisation.put("contact-us-link", buildContactUsUrl());
+        return sendEmailNotification(notifyRequest, accountDeletedPersonalisation, String.valueOf(NotificationType.DELETE_ACCOUNT));
     }
 
     private boolean sendPhoneNumberUpdatedNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> phoneNumberUpdatedPersonalisation = new HashMap<>();
+        phoneNumberUpdatedPersonalisation.put("contact-us-link", buildContactUsUrl());
+        return sendEmailNotification(notifyRequest, phoneNumberUpdatedPersonalisation, String.valueOf(NotificationType.PHONE_NUMBER_UPDATED));
+    }
+
+    private boolean sendPasswordUpdatedNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
+        passwordUpdatedPersonalisation.put("contact-us-link", buildContactUsUrl());
+        return sendEmailNotification(notifyRequest, passwordUpdatedPersonalisation, String.valueOf(NotificationType.PASSWORD_UPDATED));
+    }
+
+    private boolean sendEmailNotification(
+            NotifyRequest notifyRequest,
+            Map<String, Object> personalisation,
+            String notificationType) {
         try {
-            LOG.info("Sending PHONE_NUMBER_UPDATED email using Notify");
-            Map<String, Object> phoneNumberUpdatedPersonalisation = new HashMap<>();
-            phoneNumberUpdatedPersonalisation.put("contact-us-link", buildContactUsUrl());
+            LOG.info("Sending %s email using Notify", notificationType);
             notificationService.sendEmail(
                     notifyRequest.getDestination(),
-                    phoneNumberUpdatedPersonalisation,
-                    NotificationType.PHONE_NUMBER_UPDATED);
-            LOG.info("PHONE_NUMBER_UPDATED email has been sent using Notify");
+                    personalisation,
+                    NotificationType.valueOf(notificationType));
+            LOG.info("%s email has been sent using Notify", notificationType);
             return true;
         } catch (NotificationClientException e) {
-            LOG.error("Error sending PHONE_NUMBER_UPDATED email with notify", e);
+            LOG.error("Error sending %s email with notify", e);
             return false;
         } catch (RuntimeException e) {
-            LOG.error("Unexpected error sending PHONE_NUMBER_UPDATED email with notify", e);
+            LOG.error("Unexpected error sending %s email with notify", e);
             return false;
         }
     }
 
-    private boolean sendPasswordUpdatedNotification(NotifyRequest notifyRequest)
-            throws NotificationClientException {
+    private boolean sendTextNotification(
+            NotifyRequest notifyRequest,
+            Map<String, Object> personalisation,
+            String notificationType) {
         try {
-            LOG.info("Sending PASSWORD_UPDATED email using Notify");
-            Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
-            passwordUpdatedPersonalisation.put("contact-us-link", buildContactUsUrl());
-            notificationService.sendEmail(
+            LOG.info("Sending %s text using Notify", notificationType);
+            notificationService.sendText(
                     notifyRequest.getDestination(),
-                    passwordUpdatedPersonalisation,
-                    NotificationType.PASSWORD_UPDATED);
-            LOG.info("PASSWORD_UPDATED email has been sent using Notify");
+                    personalisation,
+                    NotificationType.valueOf(notificationType));
+            LOG.info("%s text has been sent using Notify", notificationType);
             return true;
         } catch (NotificationClientException e) {
-            LOG.error("Error sending PASSWORD_UPDATED email with notify", e);
+            LOG.error("Error sending with Notify: %s", e.getMessage());
             return false;
         } catch (RuntimeException e) {
-            LOG.error("Unexpected error sending PASSWORD_UPDATED email with notify", e);
+            LOG.error("Unexpected error sending %s notification %s", e.getMessage(), notificationType);
             return false;
         }
     }
