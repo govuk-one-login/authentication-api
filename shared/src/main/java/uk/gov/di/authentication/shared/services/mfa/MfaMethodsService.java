@@ -390,9 +390,6 @@ public class MfaMethodsService {
         if (userProfile.getMfaMethodsMigrated())
             return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
 
-        // TODO - AUT-2198 - This method obfuscates things a bit
-        //  It includes only enabled UserCredentials and verified phone numbers. What should we do
-        // if they aren't either of these?
         var maybeNonMigratedMfaMethod =
                 getMfaMethodForNonMigratedUser(userProfile, userCredentials);
 
@@ -400,24 +397,13 @@ public class MfaMethodsService {
         if (maybeNonMigratedMfaMethod.isEmpty()) {
             persistentService.setMfaMethodsMigrated(email, true);
             return Optional.empty();
-            // TODO - AUT-2198 - By doing this, we need to make sure that all new MFA methods are
-            // getting added the new way before running before running a bulk migration, otherwise
-            // we could end up with a situation where we think something is migrated but actually
-            // isn't.
-            // TODO - AUT-2198 - Maybe we shouldn't do this given the two TODOs below
         }
 
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
         return nonMigratedMfaMethod.method() instanceof AuthAppMfaDetail
-                ? migrateAuthAppToNewFormat(
-                        email,
-                        nonMigratedMfaMethod) // TODO - AUT-2198 - What should do for non-enabled
-                // auth app?
-                : migrateSmsToNewFormat(
-                        email,
-                        nonMigratedMfaMethod,
-                        userProfile); // TODO - AUT-2198 - What should do for non-verified phone?
+                ? migrateAuthAppToNewFormat(email, nonMigratedMfaMethod)
+                : migrateSmsToNewFormat(email, nonMigratedMfaMethod);
     }
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
@@ -435,12 +421,8 @@ public class MfaMethodsService {
     }
 
     private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
-            String email, MfaMethodData mfaMethodData, UserProfile userProfile) {
+            String email, MfaMethodData mfaMethodData) {
         var method = (SmsMfaDetail) mfaMethodData.method();
-
-        // Bail if phoneNumber isn't verified
-        if (!userProfile.isPhoneNumberVerified())
-            return Optional.of(MfaMigrationFailureReason.PHONE_NUMBER_NOT_VERIFIED);
 
         persistentService.migrateMfaMethodsToCredentialsTableForUser(
                 email,

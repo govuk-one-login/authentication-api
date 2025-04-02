@@ -87,10 +87,7 @@ class MFAMethodsCreateHandlerTest {
         return Stream.of(
                 Arguments.of(
                         MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
-                        ErrorResponse.ERROR_1056),
-                Arguments.of(
-                        MfaMigrationFailureReason.PHONE_NUMBER_NOT_VERIFIED,
-                        ErrorResponse.ERROR_1000));
+                        ErrorResponse.ERROR_1056));
     }
 
     @ParameterizedTest

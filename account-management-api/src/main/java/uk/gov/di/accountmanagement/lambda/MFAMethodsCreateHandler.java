@@ -134,18 +134,10 @@ public class MFAMethodsCreateHandler
 
                 LOG.warn("Failed to migrate SMS MFA due to {}", mfaMigrationFailureReason);
 
-                switch (mfaMigrationFailureReason) {
-                    case NO_USER_FOUND_FOR_EMAIL -> {
-                        return Optional.of(
-                                generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1056));
-                    }
-                    case PHONE_NUMBER_NOT_VERIFIED -> {
-                        // TODO - AUT-2198 - What should we do in this case?
-                        return Optional.of(
-                                generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1000));
-                    }
+                if (mfaMigrationFailureReason
+                        == MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL) {
+                    return Optional.of(
+                            generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056));
                 }
             }
         }

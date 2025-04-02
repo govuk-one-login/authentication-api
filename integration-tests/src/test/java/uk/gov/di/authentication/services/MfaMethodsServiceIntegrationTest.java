@@ -247,22 +247,6 @@ class MfaMethodsServiceIntegrationTest {
                         MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
                         mfaMigrationFailureReason.get());
             }
-
-            @ParameterizedTest
-            @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
-            void shouldErrorIfPhoneNumberNotVerified(String email) {
-                // Arrange
-                userStoreExtension.addUnverifiedPhoneNumber(email, PHONE_NUMBER);
-
-                // Act
-                var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateMfaCredentialsForUser(email);
-
-                // Assert
-                assertEquals(
-                        MfaMigrationFailureReason.PHONE_NUMBER_NOT_VERIFIED,
-                        mfaMigrationFailureReason.get());
-            }
         }
     }
 
