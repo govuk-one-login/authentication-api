@@ -207,6 +207,17 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                 email, MFAMethodType.AUTH_APP, isVerified, isEnabled, credentialValue);
     }
 
+    public void addAuthAppMethodWithIdentifier(
+            String email,
+            boolean isVerified,
+            boolean isEnabled,
+            String credentialValue,
+            String identifier) {
+        dynamoService.updateMFAMethod(
+                email, MFAMethodType.AUTH_APP, isVerified, isEnabled, credentialValue);
+        dynamoService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(email, identifier);
+    }
+
     public void addMfaMethod(
             String email,
             MFAMethodType mfaMethodType,

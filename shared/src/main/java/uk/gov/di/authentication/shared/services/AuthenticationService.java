@@ -101,4 +101,7 @@ public interface AuthenticationService {
 
     Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods);
+
+    Either<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+            String email, String mfaMethodIdentifier);
 }

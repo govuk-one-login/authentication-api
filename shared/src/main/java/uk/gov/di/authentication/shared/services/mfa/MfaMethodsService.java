@@ -35,7 +35,6 @@ public class MfaMethodsService {
     private final AuthenticationService persistentService;
 
     // TODO generate and store UUID (AUT-4122)
-    public static final String HARDCODED_APP_MFA_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
     public static final String HARDCODED_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
 
     public MfaMethodsService(ConfigurationService configurationService) {
@@ -129,9 +128,17 @@ public class MfaMethodsService {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();
+            String mfaIdentifier;
+            if (Objects.nonNull(method.getMfaIdentifier())) {
+                mfaIdentifier = method.getMfaIdentifier();
+            } else {
+                mfaIdentifier = UUID.randomUUID().toString();
+                persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+                        userProfile.getEmail(), mfaIdentifier);
+            }
             return Optional.of(
                     MfaMethodData.authAppMfaData(
-                            HARDCODED_APP_MFA_ID,
+                            mfaIdentifier,
                             PriorityIdentifier.DEFAULT,
                             method.isMethodVerified(),
                             method.getCredentialValue()));

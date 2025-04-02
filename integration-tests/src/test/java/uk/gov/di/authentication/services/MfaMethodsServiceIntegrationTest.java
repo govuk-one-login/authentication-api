@@ -36,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_APP_MFA_ID;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_SMS_MFA_ID;
 
 class MfaMethodsServiceIntegrationTest {
@@ -104,14 +103,39 @@ class MfaMethodsServiceIntegrationTest {
         @ParameterizedTest
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void shouldReturnSingleAuthAppMethodWhenEnabled(String email) {
-            userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
+            var mfaIdentifier = UUID.randomUUID().toString();
+            userStoreExtension.addAuthAppMethodWithIdentifier(
+                    email, true, true, AUTH_APP_CREDENTIAL, mfaIdentifier);
 
             var result = mfaMethodsService.getMfaMethods(email);
 
             var authAppDetail = new AuthAppMfaDetail(AUTH_APP_CREDENTIAL);
             var expectedData =
                     new MfaMethodData(
-                            HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
+                            mfaIdentifier, PriorityIdentifier.DEFAULT, true, authAppDetail);
+            assertEquals(result, List.of(expectedData));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void shouldStoreAnMfaIdentifierForANonMigratedAuthAppOnRead(String email) {
+            userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
+
+            var result = mfaMethodsService.getMfaMethods(email);
+
+            var retrievedMethodsFromDatabase = userStoreExtension.getMfaMethod(email);
+            assertEquals(1, retrievedMethodsFromDatabase.size());
+
+            var retrievedAuthApp = retrievedMethodsFromDatabase.get(0);
+            assertEquals(MFAMethodType.AUTH_APP.getValue(), retrievedAuthApp.getMfaMethodType());
+            assertNotNull(retrievedAuthApp.getMfaIdentifier());
+
+            var mfaIdentifier = retrievedAuthApp.getMfaIdentifier();
+
+            var authAppDetail = new AuthAppMfaDetail(AUTH_APP_CREDENTIAL);
+            var expectedData =
+                    new MfaMethodData(
+                            mfaIdentifier, PriorityIdentifier.DEFAULT, true, authAppDetail);
             assertEquals(result, List.of(expectedData));
         }
 
@@ -119,14 +143,16 @@ class MfaMethodsServiceIntegrationTest {
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void authAppShouldTakePrecedenceOverSmsMethodForNonMigratedUser(String email) {
             userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
-            userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
+            var mfaIdentifier = UUID.randomUUID().toString();
+            userStoreExtension.addAuthAppMethodWithIdentifier(
+                    email, true, true, AUTH_APP_CREDENTIAL, mfaIdentifier);
 
             var result = mfaMethodsService.getMfaMethods(email);
 
             var authAppDetail = new AuthAppMfaDetail(AUTH_APP_CREDENTIAL);
             var expectedData =
                     new MfaMethodData(
-                            HARDCODED_APP_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
+                            mfaIdentifier, PriorityIdentifier.DEFAULT, true, authAppDetail);
             assertEquals(List.of(expectedData), result);
         }
 
@@ -980,31 +1006,26 @@ class MfaMethodsServiceIntegrationTest {
 
         @Test
         void shouldNotDeleteAnyMethodsAndReturnAnAppropriateResultWhenUserIsNotMigrated() {
-            userStoreExtension.addMfaMethod(
-                    EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
+            var mfaIdentifier = UUID.randomUUID().toString();
+            userStoreExtension.addAuthAppMethodWithIdentifier(
+                    EMAIL, true, true, "some-credential", mfaIdentifier);
+            var methodsBeforeDelete = userStoreExtension.getMfaMethod(EMAIL);
 
-            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, HARDCODED_APP_MFA_ID);
+            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, mfaIdentifier);
 
             assertEquals(
                     Either.left(
                             MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER),
                     result);
 
-            var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL);
+            var methodsAfterDelete = userStoreExtension.getMfaMethod(EMAIL);
 
-            var expectedRemainingMfaMethod =
-                    new MfaMethodData(
-                            HARDCODED_APP_MFA_ID,
-                            PriorityIdentifier.DEFAULT,
-                            true,
-                            new AuthAppMfaDetail("some-credential"));
-
-            assertEquals(List.of(expectedRemainingMfaMethod), remainingMfaMethods);
+            assertEquals(methodsBeforeDelete, methodsAfterDelete);
         }
 
         @Test
         void shouldReturnAnErrorWhenUserProfileNotFoundForPublicSubjectId() {
-            var result = mfaMethodsService.deleteMfaMethod("some-other-id", HARDCODED_APP_MFA_ID);
+            var result = mfaMethodsService.deleteMfaMethod("some-other-id", "some-auth-app-id");
 
             assertEquals(
                     Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID),
