@@ -402,17 +402,16 @@ public class MfaMethodsService {
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
         return nonMigratedMfaMethod.method() instanceof AuthAppMfaDetail
-                ? migrateAuthAppToNewFormat(email, nonMigratedMfaMethod)
-                : migrateSmsToNewFormat(email, nonMigratedMfaMethod);
+                ? migrateAuthAppToNewFormat(email, (AuthAppMfaDetail) nonMigratedMfaMethod.method())
+                : migrateSmsToNewFormat(email, (SmsMfaDetail) nonMigratedMfaMethod.method());
     }
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
-            String email, MfaMethodData mfaMethodData) {
-        var method = (AuthAppMfaDetail) mfaMethodData.method();
+            String email, AuthAppMfaDetail authAppMfaDetail) {
         persistentService.migrateMfaMethodsToCredentialsTableForUser(
                 email,
                 MFAMethod.authAppMfaMethod(
-                        method.credential(),
+                        authAppMfaDetail.credential(),
                         true,
                         true,
                         PriorityIdentifier.DEFAULT,
@@ -421,15 +420,13 @@ public class MfaMethodsService {
     }
 
     private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
-            String email, MfaMethodData mfaMethodData) {
-        var method = (SmsMfaDetail) mfaMethodData.method();
-
+            String email, SmsMfaDetail smsMfaDetail) {
         persistentService.migrateMfaMethodsToCredentialsTableForUser(
                 email,
                 MFAMethod.smsMfaMethod(
                         true,
                         true,
-                        method.phoneNumber(),
+                        smsMfaDetail.phoneNumber(),
                         PriorityIdentifier.DEFAULT,
                         UUID.randomUUID().toString()));
 
