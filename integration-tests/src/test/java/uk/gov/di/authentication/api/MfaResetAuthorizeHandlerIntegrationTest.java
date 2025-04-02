@@ -172,7 +172,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     }
 
     private void setUpSession() throws Json.JsonException {
-        sessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        sessionId = redis.createSession();
     }
 
     private void addSessionToSessionStore(String internalCommonSubjectId) {

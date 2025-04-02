@@ -65,12 +65,9 @@ class LogoutRequestTest {
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
     private static final String PERSISTENT_SESSION_ID =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
-    private static final URI DEFAULT_LOGOUT_URI =
-            URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
     private SignedJWT signedIDToken;
     private static final Subject SUBJECT = new Subject();
-    private static final String EMAIL = "joe.bloggs@test.com";
     private final ClientRegistry clientRegistry = createClientRegistry();
     private String idTokenHint;
     private String rpPairwiseId;
@@ -107,7 +104,7 @@ class LogoutRequestTest {
 
     @BeforeEach
     void sessionExistsSetup() throws ParseException {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         orchSession =
                 new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(SUBJECT.getValue());
         idTokenHint = signedIDToken.serialize();
@@ -222,7 +219,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWithNoTokenHint() {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -260,7 +257,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWhenSignatureIdTokenIsInvalid() throws JOSEException {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -310,7 +307,7 @@ class LogoutRequestTest {
     @Test
     void shouldCorrectlyParseALogoutRequestWhenClientIsNotFoundInClientRegistry()
             throws JOSEException {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -360,7 +357,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenRedirectUriIsMissing() {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session, orchSession);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
@@ -398,7 +395,7 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));

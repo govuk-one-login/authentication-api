@@ -548,7 +548,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -592,7 +591,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity() throws Exception {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -635,7 +633,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUser();
 
         var response =
@@ -687,7 +684,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -733,7 +729,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -781,7 +776,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(LOW_LEVEL);
-        redis.addEmailToSession(previousSessionId, TEST_EMAIL_ADDRESS);
         registerUser();
         withExistingOrchSessionAndBsid(previousSessionId);
 

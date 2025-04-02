@@ -107,7 +107,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var password = "password-1";
         var sessionId = IdGenerator.generate();
-        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        redis.createSession(sessionId);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
 
@@ -190,7 +190,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var password = "password-1";
         var sessionId = IdGenerator.generate();
-        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        redis.createSession(sessionId);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
 
@@ -220,7 +220,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(email, "wrong-password");
 
         var sessionId = IdGenerator.generate();
-        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        redis.createSession(sessionId);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         redis.createClientSession(
@@ -242,7 +242,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
         var sessionId = IdGenerator.generate();
-        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        redis.createSession(sessionId);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         var headers = validHeadersWithSessionId(sessionId);
@@ -279,7 +279,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
         var sessionId = IdGenerator.generate();
-        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        redis.createSession(sessionId);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         var headers = validHeadersWithSessionId(sessionId);
