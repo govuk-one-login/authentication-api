@@ -272,10 +272,6 @@ class AuthenticationAuthCodeHandlerTest {
                     .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
             var existingPasswordCount = 1;
             var existingEmailCount = 2;
-            session.setPreservedReauthCountsForAudit(
-                    Map.ofEntries(
-                            Map.entry(CountType.ENTER_PASSWORD, existingPasswordCount),
-                            Map.entry(CountType.ENTER_EMAIL, existingEmailCount)));
             authSession.setPreservedReauthCountsForAuditMap(
                     Map.ofEntries(
                             Map.entry(CountType.ENTER_PASSWORD, existingPasswordCount),
@@ -310,10 +306,6 @@ class AuthenticationAuthCodeHandlerTest {
                     .incrementCounter(
                             CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
                             Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
-            verify(sessionService, atLeastOnce())
-                    .storeOrUpdateSession(
-                            argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAudit())),
-                            eq(SESSION_ID));
             verify(authSessionService, atLeastOnce())
                     .updateSession(
                             argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAuditMap())));
@@ -338,7 +330,6 @@ class AuthenticationAuthCodeHandlerTest {
                                             eq(userProfile), any(), any(), any()))
                     .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
             // This is already the case but just to make it explicit here
-            session.setPreservedReauthCountsForAudit(null);
             authSession.setPreservedReauthCountsForAuditMap(null);
 
             var body =

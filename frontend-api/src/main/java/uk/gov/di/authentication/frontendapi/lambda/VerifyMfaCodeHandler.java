@@ -509,8 +509,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                             JourneyType.REAUTHENTICATION)
                             : authenticationAttemptsService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
-            var updatedSession = session.setPreservedReauthCountsForAudit(counts);
-            sessionService.storeOrUpdateSession(updatedSession, sessionId);
             var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
             authSessionService.updateSession(updatedAuthSession);
         }

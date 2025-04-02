@@ -786,13 +786,6 @@ class VerifyCodeHandlerTest {
                                                 any()));
 
         if (journeyType == REAUTHENTICATION) {
-            verify(sessionService, atLeastOnce())
-                    .storeOrUpdateSession(
-                            argThat(
-                                    s ->
-                                            s.getPreservedReauthCountsForAudit()
-                                                    .equals(existingCounts)),
-                            eq(SESSION_ID));
             verify(authSessionService, atLeastOnce())
                     .updateSession(
                             argThat(
@@ -800,14 +793,6 @@ class VerifyCodeHandlerTest {
                                             s.getPreservedReauthCountsForAuditMap()
                                                     .equals(existingCounts)));
         } else {
-            verify(sessionService, never())
-                    .storeOrUpdateSession(
-                            argThat(
-                                    s ->
-                                            Objects.equals(
-                                                    s.getPreservedReauthCountsForAudit(),
-                                                    existingCounts)),
-                            eq(SESSION_ID));
             verify(authSessionService, never())
                     .updateSession(
                             argThat(

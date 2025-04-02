@@ -910,10 +910,6 @@ class VerifyMfaCodeHandlerTest {
                                                 eq(JourneyType.REAUTHENTICATION),
                                                 any()));
 
-        verify(sessionService, atLeastOnce())
-                .storeOrUpdateSession(
-                        argThat(s -> s.getPreservedReauthCountsForAudit().equals(existingCounts)),
-                        eq(SESSION_ID));
         verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(
@@ -946,14 +942,6 @@ class VerifyMfaCodeHandlerTest {
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_AUTH_APP_CODE);
 
-        verify(sessionService, never())
-                .storeOrUpdateSession(
-                        argThat(
-                                s ->
-                                        Objects.equals(
-                                                s.getPreservedReauthCountsForAudit(),
-                                                existingCounts)),
-                        eq(SESSION_ID));
         verify(authSessionService, never())
                 .updateSession(
                         argThat(

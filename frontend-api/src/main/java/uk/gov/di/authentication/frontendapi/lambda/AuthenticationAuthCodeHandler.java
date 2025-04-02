@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.util.Map;
-import java.util.Objects;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
@@ -151,14 +150,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                                 .getValue();
                 var metadataBuilder = ReauthMetadataBuilder.builder(rpPairwiseId);
 
-                LOG.info(
-                        "Preserved reauth counts for audit migration check {}",
-                        Objects.equals(
-                                userContext.getSession().getPreservedReauthCountsForAudit(),
-                                userContext
-                                        .getAuthSession()
-                                        .getPreservedReauthCountsForAuditMap()));
-
                 if (userContext.getAuthSession().getPreservedReauthCountsForAuditMap() != null) {
                     metadataBuilder.withAllIncorrectAttemptCounts(
                             userContext.getAuthSession().getPreservedReauthCountsForAuditMap());
@@ -171,9 +162,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                         CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
                         Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
                 LOG.info("reauthentication successful");
-                sessionService.storeOrUpdateSession(
-                        userContext.getSession().setPreservedReauthCountsForAudit(null),
-                        userContext.getAuthSession().getSessionId());
                 authSessionService.updateSession(
                         userContext.getAuthSession().withPreservedReauthCountsForAuditMap(null));
             }
