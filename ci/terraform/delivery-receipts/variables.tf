@@ -5,7 +5,7 @@ variable "deployer_role_arn" {
 }
 
 variable "lambda_zip_file" {
-  default     = "../../../delivery-receipts-api/build/distributions/delivery-receipts-api.zip"
+  default     = "./artifacts/delivery-receipts-api.zip"
   description = "Location of the Lambda ZIP file"
   type        = string
 }

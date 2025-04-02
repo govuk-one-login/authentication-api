@@ -6,6 +6,8 @@ plugins {
 group "uk.gov.di.authentication.accountmanagement"
 version "unspecified"
 
+File terraformDir = new File(project.rootDir, "ci/terraform/account-management")
+
 dependencies {
     compileOnly configurations.lambda,
             configurations.sqs,
@@ -40,6 +42,9 @@ test {
 }
 
 task buildZip(type: Zip) {
+    if (isDevDeployBuild) {
+        destinationDirectory = new File(terraformDir, "artifacts")
+    }
     from compileJava
     from processResources
     into("lib") {

@@ -58,7 +58,7 @@ variable "enable_api_gateway_execution_request_tracing" {
 }
 
 variable "lambda_zip_file" {
-  default     = "../../../account-management-api/build/distributions/account-management-api.zip"
+  default     = "./artifacts/account-management-api.zip"
   description = "Location of the Lambda ZIP file"
   type        = string
 }

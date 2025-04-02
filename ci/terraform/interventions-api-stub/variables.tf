@@ -58,7 +58,7 @@ variable "endpoint_memory_size" {
 }
 
 variable "interventions_api_stub_release_zip_file" {
-  default     = "../../../interventions-api-stub/build/distributions/interventions-api-stub.zip"
+  default     = "./artifacts/interventions-api-stub.zip"
   description = "Location of the Lambda ZIP file - defaults to build output folder when built locally"
   type        = string
 }
