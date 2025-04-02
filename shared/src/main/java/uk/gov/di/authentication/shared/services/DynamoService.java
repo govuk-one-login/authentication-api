@@ -585,11 +585,14 @@ public class DynamoService implements AuthenticationService {
     private UserProfile buildSetMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
         return dynamoUserProfileTable
                 .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
-                .withMfaMethodsMigrated(mfaMethodsMigrated);
+                .withMfaMethodsMigrated(mfaMethodsMigrated)
+                .withPhoneNumber(null)
+                .withPhoneNumberVerified(false);
     }
 
     @Override
-    public void migrateMfaMethodsToCredentialsTableForUser(String email, MFAMethod mfaMethod) {
+    public void overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
+            String email, MFAMethod mfaMethod) {
         dynamoDbEnhancedClient.transactWriteItems(
                 TransactWriteItemsEnhancedRequest.builder()
                         .addUpdateItem(

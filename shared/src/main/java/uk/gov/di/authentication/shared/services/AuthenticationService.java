@@ -88,7 +88,8 @@ public interface AuthenticationService {
      * SMS/Auth-App method, and sets the {@code mfaMethodsMigrated} flag to true on the {@code
      * UserProfile} table
      */
-    void migrateMfaMethodsToCredentialsTableForUser(String email, MFAMethod mfaMethod);
+    void overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
+            String email, MFAMethod mfaMethod);
 
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 

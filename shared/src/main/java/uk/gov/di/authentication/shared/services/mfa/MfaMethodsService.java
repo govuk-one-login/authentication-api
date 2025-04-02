@@ -410,7 +410,7 @@ public class MfaMethodsService {
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
             String email, AuthAppMfaDetail authAppMfaDetail) {
-        persistentService.migrateMfaMethodsToCredentialsTableForUser(
+        persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.authAppMfaMethod(
                         authAppMfaDetail.credential(),
@@ -423,7 +423,7 @@ public class MfaMethodsService {
 
     private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
             String email, SmsMfaDetail smsMfaDetail) {
-        persistentService.migrateMfaMethodsToCredentialsTableForUser(
+        persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.smsMfaMethod(
                         true,

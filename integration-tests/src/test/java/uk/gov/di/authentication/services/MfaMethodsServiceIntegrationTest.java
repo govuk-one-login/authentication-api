@@ -10,7 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -163,12 +163,12 @@ class MfaMethodsServiceIntegrationTest {
                         userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
                 assertNull(credentialsMfaMethodsBefore);
 
-                var isMigratedBefore =
-                        userStoreExtension
-                                .getUserProfileFromEmail(email)
-                                .get()
-                                .getMfaMethodsMigrated();
-                assertFalse(isMigratedBefore);
+                UserProfile userProfileBefore =
+                        userStoreExtension.getUserProfileFromEmail(email).get();
+
+                assertFalse(userProfileBefore.getMfaMethodsMigrated());
+                assertEquals(PHONE_NUMBER, userProfileBefore.getPhoneNumber());
+                assertTrue(userProfileBefore.isPhoneNumberVerified());
 
                 // Act
                 var mfaMigrationFailureReason =
@@ -190,12 +190,12 @@ class MfaMethodsServiceIntegrationTest {
                         credentialSmsMfaMethod.getPriority());
                 assertNotNull(credentialSmsMfaMethod.getMfaIdentifier());
 
-                var isMigratedAfter =
-                        userStoreExtension
-                                .getUserProfileFromEmail(email)
-                                .get()
-                                .getMfaMethodsMigrated();
-                assertTrue(isMigratedAfter);
+                UserProfile userProfileAfter =
+                        userStoreExtension.getUserProfileFromEmail(email).get();
+
+                assertTrue(userProfileAfter.getMfaMethodsMigrated());
+                assertNull(userProfileAfter.getPhoneNumber());
+                assertFalse(userProfileAfter.isPhoneNumberVerified());
             }
 
             @ParameterizedTest
