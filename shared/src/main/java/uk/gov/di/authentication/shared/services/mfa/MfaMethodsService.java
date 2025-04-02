@@ -415,7 +415,7 @@ public class MfaMethodsService {
                         method.credential(),
                         true,
                         true,
-                        mfaMethodData.priorityIdentifier(),
+                        PriorityIdentifier.DEFAULT,
                         UUID.randomUUID().toString()));
         return Optional.empty();
     }
