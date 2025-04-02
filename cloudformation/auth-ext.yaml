@@ -10,7 +10,7 @@ Resources:
     Properties:
       FunctionName: test1Function
       AutoPublishAlias: latest
-      CodeUri: ../account-management-api/build/distributions/account-management-api.zip
+      CodeUri: ../auth-external-api/build/distributions/account-management-api.zip
       Runtime: java17
       Handler: "uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler::handleRequest"
       LoggingConfig:
