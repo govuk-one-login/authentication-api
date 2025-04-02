@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.CriStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
@@ -65,6 +66,7 @@ import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_S
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -99,6 +101,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     @RegisterExtension
     protected static final OrchClientSessionExtension orchClientSessionExtension =
             new OrchClientSessionExtension();
+
+    @RegisterExtension
+    public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
 
     protected static final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
@@ -166,6 +171,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
@@ -195,6 +202,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
