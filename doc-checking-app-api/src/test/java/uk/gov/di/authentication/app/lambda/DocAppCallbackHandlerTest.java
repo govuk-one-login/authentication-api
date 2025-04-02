@@ -67,6 +67,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -230,6 +231,8 @@ class DocAppCallbackHandlerTest {
                 .incrementCounter(
                         "DocAppCallback",
                         Map.of("Environment", ENVIRONMENT, "Successful", Boolean.toString(true)));
+
+        assertAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -247,6 +250,8 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
         verifyNoInteractions(cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -266,6 +271,8 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
         verifyNoInteractions(cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -285,6 +292,8 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
         verifyNoInteractions(cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -338,6 +347,8 @@ class DocAppCallbackHandlerTest {
                                 Boolean.toString(false),
                                 "Error",
                                 OAuth2Error.ACCESS_DENIED_CODE));
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -385,6 +396,8 @@ class DocAppCallbackHandlerTest {
                                 Boolean.toString(false),
                                 "Error",
                                 "UnsuccessfulTokenResponse"));
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -437,6 +450,8 @@ class DocAppCallbackHandlerTest {
                                 Boolean.toString(false),
                                 "Error",
                                 "UnsuccessfulCredentialResponse"));
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -491,6 +506,8 @@ class DocAppCallbackHandlerTest {
                                 Boolean.toString(true),
                                 "Error",
                                 "access_denied"));
+
+        assertAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -528,6 +545,8 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
+
+        assertAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -583,6 +602,8 @@ class DocAppCallbackHandlerTest {
                                 Boolean.toString(false),
                                 "Error",
                                 "access_denied"));
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
@@ -627,5 +648,27 @@ class DocAppCallbackHandlerTest {
     private void verifyAuditServiceEvent(DocAppAuditableEvent docAppAuditableEvent) {
         verify(auditService)
                 .submitAuditEvent(docAppAuditableEvent, CLIENT_ID.getValue(), BASE_AUDIT_USER);
+    }
+
+    private void assertAuthorisationCodeGeneratedAndSaved() {
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null));
+
+        verify(orchAuthCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(AUTH_CODE),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        eq(null));
+    }
+
+    private void assertNoAuthorisationCodeGeneratedAndSaved() {
+        verify(authorisationCodeService, times(0))
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
+
+        verify(orchAuthCodeService, times(0))
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any(), any());
     }
 }
