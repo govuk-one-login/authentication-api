@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  test4Function:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_117: Lambda needs to exist outside our VPC so default AWS Lambda service VPC is OK
+    Properties:
+      FunctionName: test4Function
+      AutoPublishAlias: latest
+      CodeUri: ../test-services-api/build/distributions/test-services-api.zip
+      Runtime: java17
+      Handler: "uk.gov.di::handleRequest"
+      LoggingConfig:
+        LogGroup: !Ref test4FunctionLogGroup
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117
+
+  test4FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/test4-lambda
+      RetentionInDays: 30

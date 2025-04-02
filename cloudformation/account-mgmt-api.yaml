@@ -4,15 +4,13 @@ Transform: AWS::Serverless-2016-10-31
 Resources:
   test2Function:
     Type: AWS::Serverless::Function
-    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
-    # checkov:skip=CKV_AWS_116: DLQ is not required
     # checkov:skip=CKV_AWS_117: Lambda needs to exist outside our VPC so default AWS Lambda service VPC is OK
     Properties:
       FunctionName: test2Function
       AutoPublishAlias: latest
       CodeUri: ../account-management-api/build/distributions/account-management-api.zip
       Runtime: java17
-      Handler: "uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler::handleRequest"
+      Handler: "uk.gov.di::handleRequest"
       LoggingConfig:
         LogGroup: !Ref test2FunctionLogGroup
       SnapStart:

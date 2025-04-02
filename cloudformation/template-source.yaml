@@ -108,5 +108,7 @@ Globals:
               dynatraceSecretArn,
             ]
 
-Resources: !YAMLInclude ../auth-ext.yaml,
-  ../account-mgmt.yaml
+Resources: !YAMLInclude ../auth-external-api.yaml,
+  ../account-mgmt-api.yaml,
+  ../frontend-api.yaml,
+  ../test-services-api.yaml
