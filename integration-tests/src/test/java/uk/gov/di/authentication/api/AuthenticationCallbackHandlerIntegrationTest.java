@@ -55,6 +55,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
@@ -94,6 +95,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -132,6 +134,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @RegisterExtension
     public static final SqsQueueExtension backChannelLogoutQueueExtension =
             new SqsQueueExtension("back-channel-logout-");
+
+    @RegisterExtension
+    public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
 
     protected static ConfigurationService configurationService;
 
@@ -185,6 +190,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
@@ -355,6 +362,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
@@ -451,6 +460,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
@@ -502,6 +513,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
@@ -528,6 +541,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
@@ -595,6 +610,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertUserInfoStoredAndRedirectedToRp(response);
         assertOrchSessionIsUpdatedWithUserInfoClaims();
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     void accountInterventionSetupWithIdentity() throws Json.JsonException {

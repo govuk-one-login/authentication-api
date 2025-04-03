@@ -60,6 +60,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -71,6 +72,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -90,16 +92,19 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -131,8 +136,11 @@ class AuthenticationCallbackHandlerTest {
             mock(AuthenticationUserInfoStorageService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+
+    // TODO: ATO-1218: Remove the following mock for the auth code service.
     private static final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
@@ -206,12 +214,22 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(
                         new AccountIntervention(
                                 new AccountInterventionState(false, false, false, false)));
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
                         any(Long.class)))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        any(Long.class)))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+
         when(UNSUCCESSFUL_TOKEN_RESPONSE.indicatesSuccess()).thenReturn(false);
         when(UNSUCCESSFUL_TOKEN_RESPONSE.toErrorResponse())
                 .thenReturn(new TokenErrorResponse(new ErrorObject("1", TEST_ERROR_MESSAGE)));
@@ -236,6 +254,10 @@ class AuthenticationCallbackHandlerTest {
         reset(logoutService);
         reset(authorizationService);
         reset(noSessionOrchestrationService);
+
+        clearInvocations(authorisationCodeService);
+        clearInvocations(orchAuthCodeService);
+
         session.setCurrentCredentialStrength(null);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
@@ -264,6 +286,7 @@ class AuthenticationCallbackHandlerTest {
                         userInfoStorageService,
                         cloudwatchMetricsService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         clientService,
                         initiateIPVAuthorisationService,
                         accountInterventionService,
@@ -350,6 +373,8 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("nonce", RP_NONCE.getValue())));
         assertOrchSessionUpdated();
         assertClientSessionUpdated();
+
+        assertAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -378,6 +403,8 @@ class AuthenticationCallbackHandlerTest {
 
         verifyNoInteractions(
                 tokenService, userInfoStorageService, cloudwatchMetricsService, logoutService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -417,6 +444,8 @@ class AuthenticationCallbackHandlerTest {
                         TxmaAuditUser.user().withGovukSigninJourneyId(CLIENT_SESSION_ID));
 
         verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -444,6 +473,8 @@ class AuthenticationCallbackHandlerTest {
 
         verifyNoInteractions(
                 tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -483,6 +514,8 @@ class AuthenticationCallbackHandlerTest {
                         any());
 
         verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -505,6 +538,8 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED),
                 auditService);
         verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -531,6 +566,8 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
         verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -614,12 +651,6 @@ class AuthenticationCallbackHandlerTest {
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(mediumRequestOrchSession));
 
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(TEST_EMAIL_ADDRESS),
-                        any(Long.class)))
-                .thenReturn(AUTH_CODE_RP_TO_ORCH);
         usingValidClient();
 
         var event = new APIGatewayProxyRequestEvent();
@@ -729,6 +760,41 @@ class AuthenticationCallbackHandlerTest {
         assertCurrentCredentialSetCorrectly(correctCurrentCredentialStrengthSet);
     }
 
+    // TODO: ATO-1218: Following the handler changes, update this method to test
+    // shouldRedirectToFrontendErrorPageWhenCallToOrchAuthCodeServiceThrowsException.
+    @Test
+    void shouldCatchWhenCallToOrchAuthCodeServiceThrowsException()
+            throws UnsuccessfulCredentialResponseException {
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        anyLong()))
+                .thenThrow(OrchAuthCodeException.class);
+
+        assertDoesNotThrow(() -> handler.handleRequest(event, CONTEXT));
+
+        verify(orchAuthCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        anyLong());
+    }
+
     @Nested
     class AuthTime {
 
@@ -826,6 +892,8 @@ class AuthenticationCallbackHandlerTest {
                                         + "&state="
                                         + RP_STATE));
                 assertOrchSessionUpdated();
+
+                assertAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -845,6 +913,8 @@ class AuthenticationCallbackHandlerTest {
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -864,6 +934,8 @@ class AuthenticationCallbackHandlerTest {
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -883,6 +955,8 @@ class AuthenticationCallbackHandlerTest {
                                 event,
                                 CLIENT_ID.toString(),
                                 intervention);
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -904,6 +978,8 @@ class AuthenticationCallbackHandlerTest {
                                         + AUTH_CODE_RP_TO_ORCH
                                         + "&state="
                                         + RP_STATE));
+
+                assertAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -923,6 +999,8 @@ class AuthenticationCallbackHandlerTest {
                                 event,
                                 CLIENT_ID.getValue(),
                                 intervention);
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
         }
 
@@ -962,6 +1040,8 @@ class AuthenticationCallbackHandlerTest {
                         .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -986,6 +1066,8 @@ class AuthenticationCallbackHandlerTest {
                         .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -1015,6 +1097,8 @@ class AuthenticationCallbackHandlerTest {
                         .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -1037,6 +1121,8 @@ class AuthenticationCallbackHandlerTest {
                 verifyNoInteractions(initiateIPVAuthorisationService);
                 verify(sessionService)
                         .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -1066,6 +1152,8 @@ class AuthenticationCallbackHandlerTest {
                         .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
 
             @Test
@@ -1086,6 +1174,8 @@ class AuthenticationCallbackHandlerTest {
                                 CLIENT_ID.toString(),
                                 intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
+
+                assertNoAuthorisationCodeGeneratedAndSaved();
             }
         }
     }
@@ -1419,6 +1509,36 @@ class AuthenticationCallbackHandlerTest {
                 expectedUserInfoRequest.getHeaderMap(), userInfoRequest.getValue().getHeaderMap());
     }
 
+    private void assertAuthorisationCodeGeneratedAndSaved() {
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        anyLong());
+
+        verify(orchAuthCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(AUTH_CODE_RP_TO_ORCH),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        anyLong());
+    }
+
+    private void assertNoAuthorisationCodeGeneratedAndSaved() {
+        verify(authorisationCodeService, times(0))
+                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
+
+        verify(orchAuthCodeService, times(0))
+                .generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyLong());
+    }
+
     private void assertSessionUpdatedAuthJourney() {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         verify(sessionService, times(2))
@@ -1456,12 +1576,7 @@ class AuthenticationCallbackHandlerTest {
     private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {
         ClientSession clientSessionWithCredentialTrustLevel =
                 createClientSession(credentialTrustLevel);
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(TEST_EMAIL_ADDRESS),
-                        any(Long.class)))
-                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSessionWithCredentialTrustLevel));
         var orchClientSessionWithCredentialTrustLevel =
