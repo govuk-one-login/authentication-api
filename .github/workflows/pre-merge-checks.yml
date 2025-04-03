@@ -64,6 +64,8 @@ jobs:
             !*/build/reports
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build
       - name: Run Build
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
