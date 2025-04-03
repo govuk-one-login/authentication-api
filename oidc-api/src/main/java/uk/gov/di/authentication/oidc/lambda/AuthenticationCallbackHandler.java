@@ -472,7 +472,7 @@ public class AuthenticationCallbackHandler
                 CredentialTrustLevel requestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
                 CredentialTrustLevel credentialTrustLevel =
-                        Optional.ofNullable(session.getCurrentCredentialStrength())
+                        Optional.ofNullable(orchSession.getCurrentCredentialStrength())
                                 .map(
                                         sessionValue ->
                                                 CredentialTrustLevel.max(
@@ -568,12 +568,6 @@ public class AuthenticationCallbackHandler
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
-                if (isNull(session.getCurrentCredentialStrength())
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        session.getCurrentCredentialStrength())
-                                > 0) {
-                    session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
-                }
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
@@ -602,18 +596,7 @@ public class AuthenticationCallbackHandler
                             orchSession.withCurrentCredentialStrength(
                                     CredentialTrustLevel.valueOf(currentCredentialStrength)));
                 }
-                // ATO-975 logging to make sure there are no differences in production
-                LOG.info(
-                        "Shared session current credential strength: {}",
-                        session.getCurrentCredentialStrength());
-                LOG.info(
-                        "Orch session current credential strength: {}",
-                        orchSession.getCurrentCredentialStrength());
-                LOG.info(
-                        "Is shared session CCS equal to Orch session CCS: {}",
-                        Objects.equals(
-                                session.getCurrentCredentialStrength(),
-                                orchSession.getCurrentCredentialStrength()));
+
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         orchAccountState, clientId, clientSession.getClientName(), isTestJourney);
