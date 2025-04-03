@@ -67,7 +67,7 @@ class NotificationHandlerTest {
     void setUp() {
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
-        handler = new NotificationHandler(notificationService, configService);
+        handler = new NotificationHandler(notificationService, configService, null);
     }
 
     @Test

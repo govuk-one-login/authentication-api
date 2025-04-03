@@ -43,6 +43,7 @@ module "send_otp_notification" {
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP    = var.test_client_verify_phone_number_otp
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
     SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
+    NOTIFY_ALTERNATIVE_DESTINATION         = var.notify_alternative_destination
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 

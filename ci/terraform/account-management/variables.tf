@@ -226,3 +226,9 @@ variable "am_api_fms_tag_value" {
   type        = string
   default     = "accountmanagement"
 }
+
+variable "notify_alternative_destination" {
+  description = "The name of the alternative destination for messages sent via notify, an s3 bucket"
+  type        = string
+  default     = ""
+}
