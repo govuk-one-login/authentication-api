@@ -116,12 +116,13 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
             httpRequestService.post(URI.create(payload.getLogoutUri()), "logout_token=" + body);
 
+            throw new BackChannelLogoutPostRequestException("Post request failed");
+
         } catch (JsonException e) {
             LOG.error("Could not parse logout request payload");
         } catch (Exception e) {
             LOG.warn("Post request failed");
-            throw new BackChannelLogoutPostRequestException(
-                    "Could not parse logout request payload");
+            throw new BackChannelLogoutPostRequestException("Post request failed");
         }
     }
 
