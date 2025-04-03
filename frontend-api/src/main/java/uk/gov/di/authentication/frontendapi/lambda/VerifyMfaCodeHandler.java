@@ -341,9 +341,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         } else {
             auditSuccess(codeRequest, authSession, auditContext);
             processSuccessfulCodeSession(
-                    session,
                     userContext.getAuthSession(),
-                    sessionId,
                     input,
                     subjectId,
                     codeRequest,
@@ -435,9 +433,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private void processSuccessfulCodeSession(
-            Session session,
             AuthSessionItem authSession,
-            String sessionId,
             APIGatewayProxyRequestEvent input,
             String subjectId,
             VerifyMfaCodeRequest codeRequest,
@@ -448,12 +444,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                 && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    codeRequest.getJourneyType(),
-                    subjectId,
-                    session,
-                    authSession,
-                    sessionId,
-                    maybeRpPairwiseId);
+                    codeRequest.getJourneyType(), subjectId, authSession, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -493,9 +484,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     void preserveReauthCountsForAuditIfJourneyIsReauth(
             JourneyType journeyType,
             String subjectId,
-            Session session,
             AuthSessionItem authSession,
-            String sessionId,
             Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
