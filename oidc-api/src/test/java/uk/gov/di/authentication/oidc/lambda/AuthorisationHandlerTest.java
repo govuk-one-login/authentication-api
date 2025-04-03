@@ -2990,7 +2990,7 @@ class AuthorisationHandlerTest {
                 .withRedirectUrls(List.of(REDIRECT_URI))
                 .withOneLoginService(IS_ONE_LOGIN)
                 .withServiceType(RP_SERVICE_TYPE)
-                .withSubjectType("public")
+                .withSubjectType("pairwise")
                 .withIdentityVerificationSupported(true)
                 .withMaxAgeEnabled(false);
     }
