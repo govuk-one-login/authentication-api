@@ -1,6 +1,10 @@
 lambda_zip_file     = "./artifacts/account-management-api.zip"
 common_state_bucket = "digital-identity-dev-tfstate"
 
+# FMS Flag
+fms_enabled          = true
+am_api_fms_tag_value = "accountmanagementint"
+
 # URIs
 internal_sector_uri = "https://identity.integration.account.gov.uk"
 
