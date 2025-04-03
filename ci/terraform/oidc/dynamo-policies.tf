@@ -682,6 +682,22 @@ data "aws_iam_policy_document" "dynamo_orch_session_encryption_key_cross_account
 }
 
 
+data "aws_iam_policy_document" "dynamo_orch_session_encryption_key_cross_account_encrypt_decrypt_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+  statement {
+    sid    = "AllowOrchSessionEncryptionKeyCrossAccountEncryptAccess"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+    ]
+    resources = [
+      var.orch_session_table_encryption_key_arn,
+    ]
+  }
+}
+
+
 data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_and_delete_access_policy_document" {
   count = var.is_orch_stubbed ? 0 : 1
   statement {
@@ -714,6 +730,40 @@ data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_access_po
   }
 }
 
+data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_write_delete_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  statement {
+    sid    = "AllowOrchSessionCrossAccountReadWriteDeleteAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Orch-Session",
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_orch_session_cross_account_write_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  statement {
+    sid    = "AllowOrchSessionCrossAccountWriteAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Orch-Session",
+    ]
+  }
+}
 
 data "aws_iam_policy_document" "dynamo_orch_session_cross_account_delete_access_policy_document" {
   count = var.is_orch_stubbed ? 0 : 1
@@ -1098,6 +1148,17 @@ resource "aws_iam_policy" "dynamo_orch_client_session_encryption_key_cross_accou
   policy = data.aws_iam_policy_document.dynamo_orch_client_session_encryption_key_cross_account_decrypt_policy_document[count.index].json
 }
 
+resource "aws_iam_policy" "dynamo_orch_session_encryption_key_cross_account_encrypt_decrypt_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-orch-session-encryption-key-cross-account-encrypt-decrypt-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing encrypt and decrypt permissions to the orch session table's KMS encryption key"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_session_encryption_key_cross_account_encrypt_decrypt_policy_document[count.index].json
+}
+
+
 resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_and_delete_access_policy" {
   count = var.is_orch_stubbed ? 0 : 1
 
@@ -1118,6 +1179,25 @@ resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_access_policy"
   policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_read_access_policy_document[count.index].json
 }
 
+resource "aws_iam_policy" "dynamo_orch_session_cross_account_write_access_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-orch-session-cross-account-write-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing write permissions to the orch session table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_write_access_policy_document[count.index].json
+}
+
+resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_write_delete_access_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-orch-session-cross-account-read-write-delete-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read, write and delete permissions to the orch session table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_read_write_delete_access_policy_document[count.index].json
+}
 
 resource "aws_iam_policy" "dynamo_orch_session_cross_account_delete_access_policy" {
   count = var.is_orch_stubbed ? 0 : 1
