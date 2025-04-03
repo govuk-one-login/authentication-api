@@ -15,9 +15,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.entity.UserMfaDetail;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -27,6 +29,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -205,11 +208,14 @@ class MfaHelperTest {
     private static UserContext userContextWithLevelOfTrustRequested(
             CredentialTrustLevel trustLevel) {
         var clientSession = mock(ClientSession.class);
-        var authRequestParams = generateAuthRequest(trustLevel).toParameters();
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
-
         var userContext = mock(UserContext.class);
         when(userContext.getClientSession()).thenReturn(clientSession);
+
+        var authSession = mock(AuthSessionItem.class);
+        when(authSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(trustLevel)));
+        when(authSession.getEffectiveVectorOfTrust())
+                .thenReturn(Optional.of(new VectorOfTrust(trustLevel)));
+        when(userContext.getAuthSession()).thenReturn(authSession);
 
         return userContext;
     }

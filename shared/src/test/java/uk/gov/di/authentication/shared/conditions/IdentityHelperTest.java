@@ -1,85 +1,61 @@
 package uk.gov.di.authentication.shared.conditions;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 
-import java.net.URI;
+import java.util.List;
 
-import static java.util.Objects.nonNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class IdentityHelperTest {
-
-    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final ClientID CLIENT_ID = new ClientID("client-id");
-    private static final Scope SCOPES =
-            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
-
     @Test
-    void shouldReturnFalseWhenVtrNotPresentInAuthRequest() {
-        var authRequest = createAuthRequest();
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+    void shouldReturnFalseWhenVtrListIsNull() {
+        assertFalse(IdentityHelper.identityRequired(null, true, true));
     }
 
     @Test
-    void shouldReturnFalseWhenNoLevelOfConfidenceIsPresentInAuthRequest() {
-        var authRequest = createAuthRequest("Cl.Cm");
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+    void shouldReturnFalseWhenVtrListIsEmpty() {
+        assertFalse(IdentityHelper.identityRequired(List.of(), true, true));
     }
 
     @Test
-    void shouldReturnFalseWhenP0LevelOfConfidenceIsPresentInAuthRequest() {
-        var authRequest = createAuthRequest("P0.Cl.Cm");
+    void shouldReturnFalseWhenNoLevelOfConfidenceIsPresentInVtrList() {
+        var vtr = new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL);
 
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+        assertFalse(IdentityHelper.identityRequired(List.of(vtr), true, true));
     }
 
     @Test
-    void shouldReturnTrueIfLevelOfConfidenceGreaterThanP0IsPresentInAuthRequest() {
-        var authRequest = createAuthRequest("P2.Cl.Cm");
+    void shouldReturnFalseWhenP0LevelOfConfidenceIsPresentInVtrList() {
+        var vtr = VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE);
 
-        assertTrue(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+        assertFalse(IdentityHelper.identityRequired(List.of(vtr), true, true));
+    }
+
+    @Test
+    void shouldReturnTrueIfLevelOfConfidenceGreaterThanP0IsPresentInVtrList() {
+        var vtr =
+                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
+
+        assertTrue(IdentityHelper.identityRequired(List.of(vtr), true, true));
     }
 
     @Test
     void shouldReturnFalseIfIdentityIsNotEnabled() {
-        var authRequest = createAuthRequest("P2.Cl.Cm");
+        var vtr =
+                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
 
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, false));
+        assertFalse(IdentityHelper.identityRequired(List.of(vtr), true, false));
     }
 
     @Test
     void shouldReturnFalseWhenRPDoesNotSupportIdentityVerification() {
-        var authRequest = createAuthRequest("P2.Cl.Cm");
+        var vtr =
+                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
 
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), false, true));
-    }
-
-    private AuthenticationRequest createAuthRequest() {
-        return createAuthRequest(null);
-    }
-
-    private AuthenticationRequest createAuthRequest(String vtrValue) {
-        var builder =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce());
-
-        if (nonNull(vtrValue)) builder.customParameter("vtr", jsonArrayOf(vtrValue));
-        return builder.build();
+        assertFalse(IdentityHelper.identityRequired(List.of(vtr), false, true));
     }
 }

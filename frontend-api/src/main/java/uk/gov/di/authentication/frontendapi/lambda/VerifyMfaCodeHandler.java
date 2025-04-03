@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -388,11 +389,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             AuthSessionItem authSession,
             Session session) {
-        var clientSession = userContext.getClientSession();
         var levelOfConfidence =
-                clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
-                        ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
-                        : NONE;
+                authSession
+                        .getEffectiveVectorOfTrust()
+                        .filter(VectorOfTrust::containsLevelOfConfidence)
+                        .map(VectorOfTrust::getLevelOfConfidence)
+                        .orElse(NONE);
 
         LOG.info(
                 "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",

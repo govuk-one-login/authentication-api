@@ -121,11 +121,11 @@ class AuthenticationAuthCodeHandlerTest {
         authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
-                        .withEmailAddress(CommonTestVariables.EMAIL);
+                        .withEmailAddress(CommonTestVariables.EMAIL)
+                        .withClientId(CLIENT_ID);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
         when(sessionService.getSessionFromRequestHeaders(anyMap()))

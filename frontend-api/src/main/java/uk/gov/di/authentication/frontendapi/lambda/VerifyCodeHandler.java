@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -385,12 +386,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
-        var clientSession = userContext.getClientSession();
         var clientId = client.getClientID();
         var levelOfConfidence =
-                clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
-                        ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
-                        : NONE;
+                authSession
+                        .getEffectiveVectorOfTrust()
+                        .filter(VectorOfTrust::containsLevelOfConfidence)
+                        .map(VectorOfTrust::getLevelOfConfidence)
+                        .orElse(NONE);
 
         if (notificationType.equals(MFA_SMS)) {
             LOG.info(

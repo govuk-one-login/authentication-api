@@ -3,14 +3,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -57,14 +50,13 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -95,7 +87,6 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -184,7 +175,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_ALLOWED_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_ALLOWED_RETRIES);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -226,8 +216,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(generateAuthRequest().toParameters());
 
             when(authenticationAttemptsService.getCount(
                             any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
@@ -241,7 +229,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             usingValidSession();
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-            usingDefaultVectorOfTrust();
 
             var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -333,8 +320,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             UserProfile userProfile = generateUserProfile(null);
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(generateAuthRequest().toParameters());
             clientSubjectHelperMockedStatic
                     .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
                     .thenReturn(subject);
@@ -350,7 +335,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             usingValidSession();
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
-            usingDefaultVectorOfTrust();
 
             var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -405,7 +389,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
-        usingDefaultVectorOfTrust();
 
         String validBodyWithJourney =
                 format(
@@ -453,7 +436,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
-        usingDefaultVectorOfTrust();
 
         String validBodyWithJourney =
                 format(
@@ -497,7 +479,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -539,7 +520,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -566,27 +546,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         eq(ENTER_PASSWORD));
     }
 
-    private AuthenticationRequest generateAuthRequest() {
-        return generateAuthRequest(null);
-    }
-
-    private AuthenticationRequest generateAuthRequest(CredentialTrustLevel credentialTrustLevel) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                CLIENT_ID,
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce());
-        if (nonNull(credentialTrustLevel)) {
-            builder.customParameter("vtr", jsonArrayOf(credentialTrustLevel.getValue()));
-        }
-        return builder.build();
-    }
-
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
@@ -599,7 +558,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withClientId(CLIENT_ID.getValue())
+                                        .withVtrList(List.of(VectorOfTrust.getDefaults()))));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
@@ -637,11 +598,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                 .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
-    }
-
-    private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(

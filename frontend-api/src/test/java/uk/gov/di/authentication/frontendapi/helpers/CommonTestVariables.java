@@ -1,5 +1,8 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 
 import java.util.Map;
@@ -37,4 +40,11 @@ public class CommonTestVariables {
                             PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
                     Map.entry(SESSION_ID_HEADER, SESSION_ID),
                     Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
+    public static final VectorOfTrust VTR_P0_CL =
+            VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.NONE);
+    public static final VectorOfTrust VTR_CL = new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL);
+    public static final VectorOfTrust VTR_CL_CM =
+            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL);
+    public static final VectorOfTrust VTR_P2_CL_CM =
+            VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
 }

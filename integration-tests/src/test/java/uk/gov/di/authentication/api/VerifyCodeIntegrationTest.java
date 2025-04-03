@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -80,7 +81,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
                         redisConnectionService);
         this.sessionId = redis.createSession();
-        authSessionExtension.addSession(this.sessionId);
+        authSessionExtension.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withClientId(CLIENT_ID)
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         txmaAuditQueue.clear();
     }
 

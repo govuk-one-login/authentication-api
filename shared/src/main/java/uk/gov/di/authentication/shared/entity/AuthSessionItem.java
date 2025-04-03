@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @DynamoDbBean
 public class AuthSessionItem {
@@ -326,6 +327,10 @@ public class AuthSessionItem {
     public AuthSessionItem withVtrList(List<VectorOfTrust> vtrList) {
         this.vtrList = vtrList;
         return this;
+    }
+
+    public Optional<VectorOfTrust> getEffectiveVectorOfTrust() {
+        return vtrList.stream().findFirst();
     }
 
     @DynamoDbAttribute(ATTRIBUTE_CLIENT_ID)

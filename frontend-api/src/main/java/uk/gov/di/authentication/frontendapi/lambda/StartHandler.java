@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -17,7 +16,6 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -39,9 +37,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
@@ -170,8 +166,6 @@ public class StartHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
-        logIfNewFieldsDoNotMatchClientSessionAuthParameters(startRequest, clientSession);
-
         boolean isUserAuthenticatedWithValidProfile;
         try {
             var authSession =
@@ -180,7 +174,8 @@ public class StartHandler
                             sessionId,
                             startRequest.currentCredentialStrength());
             authSession.setClientId(startRequest.clientId());
-            authSession.setVtrList(VectorOfTrust.parseVtrStringList(startRequest.vtr()));
+            var vtrList = VectorOfTrust.parseVtrStringList(startRequest.vtr());
+            authSession.setVtrList(vtrList);
 
             var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
 
@@ -198,7 +193,8 @@ public class StartHandler
             }
             var upliftRequired =
                     startService.isUpliftRequired(
-                            clientSession, startRequest.currentCredentialStrength());
+                            authSession.getEffectiveVectorOfTrust(),
+                            startRequest.currentCredentialStrength());
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
@@ -207,15 +203,15 @@ public class StartHandler
             attachLogFieldToLogs(
                     CLIENT_ID,
                     userContext.getClient().map(ClientRegistry::getClientID).orElse(UNKNOWN));
-            var clientStartInfo = startService.buildClientStartInfo(userContext);
+            var clientStartInfo =
+                    startService.buildClientStartInfo(
+                            userContext,
+                            startRequest.scope(),
+                            startRequest.redirectUri(),
+                            startRequest.state());
 
-            var cookieConsent =
-                    startService.getCookieConsentValue(
-                            userContext.getClientSession().getAuthRequestParams(),
-                            userContext.getClient().get().getClientID());
-            var gaTrackingId =
-                    startService.getGATrackingId(
-                            userContext.getClientSession().getAuthRequestParams());
+            var cookieConsent = startRequest.cookieConsent();
+            var gaTrackingId = startRequest.ga();
             var reauthenticateHeader =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
@@ -267,10 +263,10 @@ public class StartHandler
                         checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
                                 maybeInternalSubjectId, auditContext, startRequest);
             }
-
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
+                            vtrList,
                             cookieConsent,
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),
@@ -301,8 +297,6 @@ public class StartHandler
             var errorMessage = "Unable to serialize start response";
             LOG.error(errorMessage, e);
             return generateApiGatewayProxyResponse(400, errorMessage);
-        } catch (ParseException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
         }
     }
 
@@ -365,50 +359,5 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
-    }
-
-    private static void logIfNewFieldsDoNotMatchClientSessionAuthParameters(
-            StartRequest startRequest, ClientSession clientSession) {
-        LOG.info("Checking if new fields match client session auth parameters");
-        if (!Objects.equals(
-                startRequest.cookieConsent(),
-                getAuthRequestParam(clientSession, "cookie_consent"))) {
-            LOG.warn("\"cookie_consent\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.ga(), getAuthRequestParam(clientSession, "_ga"))) {
-            LOG.warn("\"_ga\" field does match custom parameter in auth request params");
-        }
-        var authRequestVtrList =
-                Optional.ofNullable(clientSession.getAuthRequestParams().get("vtr"))
-                        .map(VectorOfTrust::parseFromAuthRequestAttribute)
-                        .orElse(null);
-        var startRequestVtrList =
-                Optional.ofNullable(startRequest.vtr())
-                        .map(VectorOfTrust::parseVtrStringList)
-                        .orElse(null);
-        if (!Objects.equals(startRequestVtrList, authRequestVtrList)) {
-            LOG.warn("\"vtr\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
-            LOG.warn("\"state\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.clientId(), getAuthRequestParam(clientSession, "client_id"))) {
-            LOG.warn("\"client_id\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.redirectUri(), getAuthRequestParam(clientSession, "redirect_uri"))) {
-            LOG.warn("\"redirect_uri\" field does match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.scope(), getAuthRequestParam(clientSession, "scope"))) {
-            LOG.warn("\"scope\" field does match custom parameter in auth request params");
-        }
-    }
-
-    private static String getAuthRequestParam(ClientSession clientSession, String parameter) {
-        return Optional.ofNullable(clientSession.getAuthRequestParams().get(parameter)).stream()
-                .flatMap(List::stream)
-                .findFirst()
-                .orElse(null);
     }
 }

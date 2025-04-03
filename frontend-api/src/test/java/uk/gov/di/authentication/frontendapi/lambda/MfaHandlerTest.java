@@ -126,7 +126,8 @@ class MfaHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withClientId(TEST_CLIENT_ID);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -158,7 +159,7 @@ class MfaHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        usingValidClientSession(TEST_CLIENT_ID);
+        usingValidClientSession();
 
         handler =
                 new MfaHandler(
@@ -506,7 +507,7 @@ class MfaHandlerTest {
     void shouldReturn204AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(TEST_CLIENT_ID);
+        usingValidClientSession();
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -580,11 +581,9 @@ class MfaHandlerTest {
                 .thenReturn(Optional.of(authSession));
     }
 
-    private void usingValidClientSession(String clientId) {
+    private void usingValidClientSession() {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest(clientId).toParameters());
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {

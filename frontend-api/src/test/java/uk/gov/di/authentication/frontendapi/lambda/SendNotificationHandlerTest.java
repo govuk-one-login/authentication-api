@@ -2,13 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -218,7 +211,7 @@ class SendNotificationHandlerTest {
             NotificationType notificationType, JourneyType journeyType, boolean ticfHeaderPresent)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         Date mockedDate = new Date();
         UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
@@ -305,7 +298,7 @@ class SendNotificationHandlerTest {
     void shouldCorrectlyRequestEmailCheck(
             boolean cachedResultAlreadyExists, boolean expectedCheckRequested) {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         if (cachedResultAlreadyExists) {
             when(dynamoEmailCheckResultService.getEmailCheckStore(EMAIL))
@@ -354,7 +347,7 @@ class SendNotificationHandlerTest {
             NotificationType notificationType, JourneyType journeyType) throws Json.JsonException {
         when(configurationService.isEmailCheckEnabled()).thenReturn(false);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -375,7 +368,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndGenerateNewOtpCodeIfOneExistsWhenNewCodeRequested(
             NotificationType notificationType) throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -411,7 +404,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndUseExistingOtpCodeIfOneExistsForVerifyPhoneRequest()
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
 
@@ -453,8 +446,8 @@ class SendNotificationHandlerTest {
     @MethodSource("notificationTypeAndJourneyTypeArgs")
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail(
             NotificationType notificationType, JourneyType journeyType) {
-        usingValidSession();
-        usingValidClientSession(TEST_CLIENT_ID);
+        usingValidSession(TEST_CLIENT_ID);
+        usingValidClientSession();
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
         var body =
@@ -526,7 +519,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400WhenPhoneNumberFailsValidation(
             String phoneNumber, String environment, boolean isSmokeTest) {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
         clientRegistry.withSmokeTest(isSmokeTest);
         when(configurationService.getEnvironment()).thenReturn(environment);
 
@@ -547,7 +540,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{ }");
 
@@ -567,7 +560,7 @@ class SendNotificationHandlerTest {
     void shouldReturn500IfMessageCannotBeSentToQueue(NotificationType notificationType)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
         Mockito.doThrow(SdkClientException.class)
                 .when(emailSqsClient)
                 .send(
@@ -596,7 +589,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400WhenInvalidNotificationType() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -632,7 +625,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204ForValidVerifyPhoneNumberRequest(String phoneNumber)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -664,7 +657,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400ForVerifyPhoneNumberRequestWhenPhoneNumberIsMissing() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -715,7 +708,7 @@ class SendNotificationHandlerTest {
                     JourneyType journeyTypeTwo) {
         maxOutCodeRequestCount(notificationTypeOne, journeyTypeOne);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -746,7 +739,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(true);
 
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -766,7 +759,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
         maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -793,7 +786,7 @@ class SendNotificationHandlerTest {
     void checkEmailInvalidCodeRequestAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -814,7 +807,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedTheAccountRecoveryEmailOtpRequestLimit() {
         maxOutCodeRequestCount(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -846,7 +839,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
         maxOutCodeRequestCount(VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -882,7 +875,7 @@ class SendNotificationHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -905,7 +898,7 @@ class SendNotificationHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -928,7 +921,7 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -954,7 +947,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
         when(codeStorageService.isBlockedForEmail(
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
@@ -976,7 +969,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringAccountRecoveryEmailOtpCodes() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
         when(codeStorageService.isBlockedForEmail(
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
@@ -1002,7 +995,7 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
 
         var body =
                 format(
@@ -1025,7 +1018,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204WhenSendingAccountCreationEmail(NotificationType notificationType)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession();
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", SESSION_ID));
         event.setBody(
@@ -1048,8 +1041,8 @@ class SendNotificationHandlerTest {
             names = {"ACCOUNT_CREATED_CONFIRMATION", "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION"})
     void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser(
             NotificationType notificationType) {
-        usingValidSession();
-        usingValidClientSession(TEST_CLIENT_ID);
+        usingValidSession(TEST_CLIENT_ID);
+        usingValidClientSession();
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
         var body =
@@ -1076,24 +1069,18 @@ class SendNotificationHandlerTest {
     }
 
     private void usingValidSession() {
+        usingValidSession(CLIENT_ID);
+    }
+
+    private void usingValidSession(String clientId) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(authSession));
+                .thenReturn(Optional.of(authSession.withClientId(clientId)));
     }
 
-    private void usingValidClientSession(String clientId) {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(clientId),
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
+    private void usingValidClientSession() {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 }

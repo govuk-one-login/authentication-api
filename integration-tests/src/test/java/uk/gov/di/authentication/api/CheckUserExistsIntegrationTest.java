@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -64,7 +65,13 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             MFAMethodType mfaMethodType) throws JsonException, URISyntaxException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
-        authSessionStore.addSession(sessionId);
+        authSessionStore.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(emailAddress)
+                                .withClientId(CLIENT_ID.getValue())
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
         var salt = userStore.addSalt(emailAddress);
@@ -120,7 +127,13 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
 
         String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
-        authSessionStore.addSession(sessionId);
+        authSessionStore.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(emailAddress)
+                                .withClientId(CLIENT_ID.getValue())
+                                .withVtrList(List.of(VectorOfTrust.getDefaults())));
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 

@@ -60,7 +60,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VTR_CL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VTR_CL_CM;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VTR_P2_CL_CM;
 
 class StartServiceTest {
 
@@ -71,7 +73,10 @@ class StartServiceTest {
     private static final String SESSION_ID = "a-session-id";
     private static final Session SESSION = new Session().setEmailAddress(EMAIL);
     private static final AuthSessionItem AUTH_SESSION =
-            new AuthSessionItem().withEmailAddress(EMAIL).withSessionId(SESSION_ID);
+            new AuthSessionItem()
+                    .withEmailAddress(EMAIL)
+                    .withSessionId(SESSION_ID)
+                    .withClientId(CLIENT_ID.getValue());
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String AUDIENCE = "oidc-audience";
@@ -80,7 +85,7 @@ class StartServiceTest {
     private static final State STATE = new State();
     private final UserContext basicUserContext =
             buildUserContext(
-                    jsonArrayOf("P2.Cl.Cm"),
+                    List.of(VTR_P2_CL_CM),
                     true,
                     ClientType.WEB,
                     null,
@@ -165,21 +170,31 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl"), "some-cookie-consent", null, false, false),
-                Arguments.of(jsonArrayOf("Cl.Cm"), null, "ga-tracking-id", false, true));
+                Arguments.of(
+                        List.of(new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                        "some-cookie-consent",
+                        null,
+                        false,
+                        false),
+                Arguments.of(
+                        List.of(new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                        null,
+                        "ga-tracking-id",
+                        false,
+                        true));
     }
 
     @ParameterizedTest
     @MethodSource("userStartInfo")
     void shouldCreateUserStartInfo(
-            String vtr,
+            List<VectorOfTrust> vtrList,
             String cookieConsent,
             String gaTrackingId,
             boolean rpSupportsIdentity,
             boolean isAuthenticated) {
         var userContext =
                 buildUserContext(
-                        vtr,
+                        vtrList,
                         true,
                         ClientType.WEB,
                         null,
@@ -193,6 +208,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        vtrList,
                         cookieConsent,
                         gaTrackingId,
                         true,
@@ -211,24 +227,24 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartIdentityInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, true, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, false));
+                Arguments.of(List.of(VTR_P2_CL_CM), true, true, true),
+                Arguments.of(List.of(VTR_CL_CM), false, true, true),
+                Arguments.of(List.of(VTR_P2_CL_CM), false, false, true),
+                Arguments.of(List.of(VTR_P2_CL_CM), true, true, true),
+                Arguments.of(List.of(VTR_P2_CL_CM), false, true, false),
+                Arguments.of(List.of(VTR_P2_CL_CM), false, false, false));
     }
 
     @ParameterizedTest
     @MethodSource("userStartIdentityInfo")
     void shouldCreateUserStartInfoWithCorrectIdentityRequiredValue(
-            String vtr,
+            List<VectorOfTrust> vtrList,
             boolean expectedIdentityRequiredValue,
             boolean rpSupportsIdentity,
             boolean identityEnabled) {
         var userContext =
                 buildUserContext(
-                        vtr,
+                        vtrList,
                         true,
                         ClientType.WEB,
                         null,
@@ -239,6 +255,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        vtrList,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         identityEnabled,
@@ -260,6 +277,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
+                        List.of(VTR_CL_CM),
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -322,7 +340,7 @@ class StartServiceTest {
 
         return Stream.of(
                 Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
+                        List.of(VTR_CL_CM),
                         false,
                         CredentialTrustLevel.LOW_LEVEL,
                         true,
@@ -330,7 +348,7 @@ class StartServiceTest {
                         authAppUserCredentialsVerified,
                         MFAMethodType.AUTH_APP),
                 Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
+                        List.of(VTR_CL_CM),
                         false,
                         null,
                         false,
@@ -338,7 +356,7 @@ class StartServiceTest {
                         authAppUserCredentialsUnverified,
                         null),
                 Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
+                        List.of(VTR_CL_CM),
                         false,
                         CredentialTrustLevel.LOW_LEVEL,
                         true,
@@ -346,7 +364,7 @@ class StartServiceTest {
                         smsUserCredentialsVerified,
                         MFAMethodType.SMS),
                 Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
+                        List.of(VTR_CL_CM),
                         false,
                         null,
                         false,
@@ -354,7 +372,7 @@ class StartServiceTest {
                         smsUserCredentialsUnverified,
                         null),
                 Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
+                        List.of(VTR_CL_CM),
                         false,
                         null,
                         false,
@@ -362,7 +380,7 @@ class StartServiceTest {
                         unverifiedUserCredentials,
                         null),
                 Arguments.of(
-                        jsonArrayOf("Cl"),
+                        List.of(VTR_CL),
                         false,
                         CredentialTrustLevel.LOW_LEVEL,
                         false,
@@ -370,7 +388,7 @@ class StartServiceTest {
                         authAppUserCredentialsVerified,
                         MFAMethodType.AUTH_APP),
                 Arguments.of(
-                        jsonArrayOf("Cl.Cm"),
+                        List.of(VTR_CL_CM),
                         false,
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         false,
@@ -378,7 +396,7 @@ class StartServiceTest {
                         authAppUserCredentialsVerified,
                         MFAMethodType.AUTH_APP),
                 Arguments.of(
-                        jsonArrayOf("P2.Cl.Cm"),
+                        List.of(VTR_P2_CL_CM),
                         true,
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         false,
@@ -394,6 +412,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
+                        List.of(VTR_CL_CM),
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -408,7 +427,7 @@ class StartServiceTest {
     @ParameterizedTest
     @MethodSource("userStartUpliftInfo")
     void shouldCreateUserStartInfoWithCorrectUpliftRequiredValue(
-            String vtr,
+            List<VectorOfTrust> vtrList,
             boolean expectedIdentityRequiredValue,
             CredentialTrustLevel credentialTrustLevel,
             boolean expectedUpliftRequiredValue,
@@ -417,7 +436,7 @@ class StartServiceTest {
             MFAMethodType expectedMfaMethodType) {
         var userContext =
                 buildUserContext(
-                        vtr,
+                        vtrList,
                         true,
                         ClientType.WEB,
                         null,
@@ -428,10 +447,13 @@ class StartServiceTest {
         userContext.getSession().setEmailAddress(EMAIL);
 
         var upliftRequired =
-                startService.isUpliftRequired(userContext.getClientSession(), credentialTrustLevel);
+                startService.isUpliftRequired(
+                        userContext.getAuthSession().getEffectiveVectorOfTrust(),
+                        credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        vtrList,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -453,7 +475,7 @@ class StartServiceTest {
             throws ParseException {
         var userContext =
                 buildUserContext(
-                        jsonArrayOf("Cl.Cm"),
+                        List.of(VTR_CL_CM),
                         cookieConsentShared,
                         clientType,
                         signedJWT,
@@ -462,7 +484,12 @@ class StartServiceTest {
                         Optional.empty(),
                         oneLoginService);
 
-        var clientStartInfo = startService.buildClientStartInfo(userContext);
+        var clientStartInfo =
+                startService.buildClientStartInfo(
+                        userContext,
+                        Objects.nonNull(signedJWT) ? DOC_APP_SCOPES.toString() : SCOPES.toString(),
+                        REDIRECT_URI.toString(),
+                        STATE.getValue());
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
@@ -573,7 +600,7 @@ class StartServiceTest {
     }
 
     private UserContext buildUserContext(
-            String vtrValue,
+            List<VectorOfTrust> vtrList,
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT requestObject,
@@ -582,7 +609,6 @@ class StartServiceTest {
             Optional<UserCredentials> userCredentials,
             boolean oneLoginService) {
         AuthenticationRequest authRequest;
-        var clientSessionVTR = VectorOfTrust.getDefaults();
         if (Objects.nonNull(requestObject)) {
             authRequest =
                     new AuthenticationRequest.Builder(
@@ -595,8 +621,6 @@ class StartServiceTest {
                             .requestObject(requestObject)
                             .build();
         } else {
-            clientSessionVTR =
-                    VectorOfTrust.parseFromAuthRequestAttribute(List.of(vtrValue)).get(0);
             authRequest =
                     new AuthenticationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE),
@@ -605,14 +629,13 @@ class StartServiceTest {
                                     REDIRECT_URI)
                             .state(STATE)
                             .nonce(new Nonce())
-                            .customParameter("vtr", vtrValue)
                             .build();
         }
         var clientSession =
                 new ClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
-                        clientSessionVTR,
+                        vtrList.get(0),
                         CLIENT_NAME);
         var clientRegistry =
                 new ClientRegistry()
@@ -627,7 +650,16 @@ class StartServiceTest {
                 .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)
                 .withUserProfile(userProfile)
+                .withAuthSession(createAuthSession(vtrList))
                 .build();
+    }
+
+    private static AuthSessionItem createAuthSession(List<VectorOfTrust> vtrList) {
+        return new AuthSessionItem()
+                .withEmailAddress(EMAIL)
+                .withSessionId(SESSION_ID)
+                .withClientId(CLIENT_ID.getValue())
+                .withVtrList(vtrList);
     }
 
     private static SignedJWT generateSignedJWT() throws NoSuchAlgorithmException, JOSEException {

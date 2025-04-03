@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -326,6 +327,7 @@ class StartHandlerTest {
         verify(startService)
                 .buildUserStartInfo(
                         any(),
+                        anyList(),
                         any(),
                         any(),
                         anyBoolean(),
@@ -355,6 +357,7 @@ class StartHandlerTest {
         verify(startService)
                 .buildUserStartInfo(
                         any(),
+                        anyList(),
                         any(),
                         any(),
                         anyBoolean(),
@@ -510,30 +513,6 @@ class StartHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    @Test
-    void shouldReturn400WhenBuildClientStartInfoThrowsException()
-            throws ParseException, Json.JsonException {
-        when(startService.buildUserContext(
-                        eq(session), eq(clientSession), any(AuthSessionItem.class)))
-                .thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext))
-                .thenThrow(new ParseException("Unable to parse authentication request"));
-        usingValidClientSession();
-        usingValidSession();
-
-        var event =
-                apiRequestEventWithHeadersAndBody(
-                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(false));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-
-        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1038);
-        assertThat(result, hasBody(expectedResponse));
-
-        verifyNoInteractions(auditService);
-    }
-
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated)
             throws Json.JsonException {
         return makeRequestBody(null, null, null, authenticated, null);
@@ -597,11 +576,14 @@ class StartHandlerTest {
             throws ParseException {
         when(startService.buildUserContext(eq(session), any(), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
+        when(startService.buildClientStartInfo(
+                        eq(userContext), anyString(), anyString(), anyString()))
+                .thenReturn(clientStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
                         eq(userContext),
+                        anyList(),
                         any(),
                         any(),
                         anyBoolean(),

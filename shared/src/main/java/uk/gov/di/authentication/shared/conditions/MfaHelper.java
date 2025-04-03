@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.conditions;
 
-import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
@@ -11,8 +9,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -22,17 +18,10 @@ public class MfaHelper {
 
     private MfaHelper() {}
 
-    public static boolean mfaRequired(Map<String, List<String>> authRequestParams) {
-        AuthenticationRequest authRequest;
-        try {
-            authRequest = AuthenticationRequest.parse(authRequestParams);
-        } catch (ParseException e) {
-            throw new RuntimeException();
-        }
-        List<String> vtr = authRequest.getCustomParameter("vtr");
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr).get(0);
-
-        return !vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL);
+    public static boolean mfaRequired(Optional<VectorOfTrust> effectiveVectorOfTrust) {
+        return effectiveVectorOfTrust
+                .map(vtr -> !vtr.getCredentialTrustLevel().equals(LOW_LEVEL))
+                .orElse(false);
     }
 
     public static Optional<MFAMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
@@ -46,7 +35,7 @@ public class MfaHelper {
             UserCredentials userCredentials,
             String phoneNumber,
             boolean isPhoneNumberVerified) {
-        var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
+        var isMfaRequired = mfaRequired(userContext.getAuthSession().getEffectiveVectorOfTrust());
 
         var enabledMethod = getPrimaryMFAMethod(userCredentials);
 
