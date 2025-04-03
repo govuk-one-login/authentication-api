@@ -7,7 +7,7 @@ data "aws_iam_policy_document" "mfa_method_analysis_dynamo_access" {
     actions = [
       "dynamodb:DescribeTable",
       "dynamodb:Scan",
-      "dynamodb:GetItem",
+      "dynamodb:BatchGetItem",
     ]
 
     resources = [
