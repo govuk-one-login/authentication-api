@@ -24,7 +24,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -73,7 +73,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class TokenHandler
@@ -251,23 +250,24 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         var clientSession = clientSessionOpt.get();
-        var orchClientSessionOpt =
-                getOrchClientSessionWithRetryIfNotEqual(
-                        clientSession, clientSessionId, orchClientSessionService);
+        var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
         if (orchClientSessionOpt.isEmpty()) {
             LOG.warn("No orch client session found for auth code client session id");
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSessionOpt.orElse(null));
+        var orchClientSession = orchClientSessionOpt.get();
+        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
         AuthenticationRequest authRequest;
         try {
-            authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
             checkRedirectURI(authRequest, requestBody.get("redirect_uri"));
         } catch (ParseException e) {
             LOG.warn("Could not parse authentication request from clientRegistry session", e);
             throw new RuntimeException(
                     format(
                             "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
-                            clientSession.getAuthRequestParams(), e));
+                            orchClientSession.getAuthRequestParams(), e));
         } catch (InvalidRedirectUriException e) {
             return generateApiGatewayProxyResponse(
                     400, e.getErrorObject().toJSONObject().toJSONString());
@@ -297,7 +297,7 @@ public class TokenHandler
 
         var tokenResponse =
                 getTokenResponse(
-                        clientSession,
+                        orchClientSession,
                         clientRegistry,
                         authRequest,
                         getSigningAlgorithm(clientRegistry),
@@ -306,10 +306,8 @@ public class TokenHandler
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
         clientSessionService.updateStoredClientSession(
                 clientSessionId, clientSession.setIdTokenHint(idTokenHint));
-        orchClientSessionOpt.ifPresent(
-                orchClientSession ->
-                        orchClientSessionService.updateStoredClientSession(
-                                orchClientSession.withIdTokenHint(idTokenHint)));
+        orchClientSessionService.updateStoredClientSession(
+                orchClientSession.withIdTokenHint(idTokenHint));
 
         var dimensions =
                 new HashMap<>(
@@ -478,7 +476,7 @@ public class TokenHandler
     }
 
     private OIDCTokenResponse getTokenResponse(
-            ClientSession clientSession,
+            OrchClientSessionItem orchClientSessionItem,
             ClientRegistry clientRegistry,
             AuthenticationRequest authRequest,
             JWSAlgorithm signingAlgorithm,
@@ -488,24 +486,25 @@ public class TokenHandler
             additionalTokenClaims.put("nonce", authRequest.getNonce());
         }
 
-        VectorOfTrust vtr = VectorOfTrust.orderVtrList(clientSession.getVtrList()).get(0);
+        VectorOfTrust vtr = VectorOfTrust.orderVtrList(orchClientSessionItem.getVtrList()).get(0);
         String vot = vtr.retrieveVectorOfTrustForToken();
 
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);
 
         OIDCTokenResponse tokenResponse;
-        if (isDocCheckingAppUserWithSubjectId(clientSession)) {
+        if (isDocCheckingAppUserWithSubjectId(orchClientSessionItem)) {
+            var clientDocAppSubjectId = new Subject(orchClientSessionItem.getDocAppSubjectId());
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",
                             () ->
                                     tokenService.generateTokenResponse(
                                             clientRegistry.getClientID(),
-                                            clientSession.getDocAppSubjectId(),
+                                            clientDocAppSubjectId,
                                             authRequest.getScope(),
                                             additionalTokenClaims,
-                                            clientSession.getDocAppSubjectId(),
-                                            clientSession.getDocAppSubjectId(),
+                                            clientDocAppSubjectId,
+                                            clientDocAppSubjectId,
                                             finalClaimsRequest,
                                             true,
                                             signingAlgorithm,

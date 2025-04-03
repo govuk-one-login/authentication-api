@@ -45,7 +45,6 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -80,8 +79,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class IPVCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -94,7 +91,6 @@ public class IPVCallbackHandler
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final DynamoService dynamoService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
@@ -117,7 +113,6 @@ public class IPVCallbackHandler
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             DynamoService dynamoService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
@@ -133,7 +128,6 @@ public class IPVCallbackHandler
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.dynamoService = dynamoService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
@@ -158,7 +152,6 @@ public class IPVCallbackHandler
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -186,7 +179,6 @@ public class IPVCallbackHandler
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -256,20 +248,15 @@ public class IPVCallbackHandler
             var clientSessionId = sessionCookiesIds.getClientSessionId();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var clientSession =
-                    clientSessionService
+            var orchClientSession =
+                    orchClientSessionService
                             .getClientSession(clientSessionId)
                             .orElseThrow(
                                     () ->
                                             new IPVCallbackNoSessionException(
                                                     "ClientSession not found"));
-            var orchClientSession =
-                    getOrchClientSessionWithRetryIfNotEqual(
-                                    clientSession, clientSessionId, orchClientSessionService)
-                            .orElse(null);
-            logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
 
-            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
             var clientRegistry =
@@ -360,7 +347,7 @@ public class IPVCallbackHandler
             // TODO: ATO-1117: temporary logs to check values are as expected
             LOG.info(
                     "is rpPairwiseId the same on clientSession as calculated: {}",
-                    rpPairwiseSubject.getValue().equals(clientSession.getRpPairwiseId()));
+                    rpPairwiseSubject.getValue().equals(orchClientSession.getRpPairwiseId()));
             if (orchSession.getInternalCommonSubjectId() != null
                     && !orchSession.getInternalCommonSubjectId().isBlank()) {
                 Optional<UserInfo> authUserInfo =
@@ -440,7 +427,7 @@ public class IPVCallbackHandler
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId, user);
-            var vtrList = clientSession.getVtrList();
+            var vtrList = orchClientSession.getVtrList();
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
@@ -472,7 +459,7 @@ public class IPVCallbackHandler
                                         session,
                                         sessionId,
                                         orchSession,
-                                        clientSession,
+                                        orchClientSession.getClientName(),
                                         rpPairwiseSubject,
                                         internalPairwiseSubjectId,
                                         userIdentityUserInfo,

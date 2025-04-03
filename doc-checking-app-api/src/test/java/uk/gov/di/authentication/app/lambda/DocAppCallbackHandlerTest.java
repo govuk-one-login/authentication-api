@@ -32,7 +32,6 @@ import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -41,7 +40,6 @@ import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -87,7 +85,6 @@ class DocAppCallbackHandlerTest {
     private final DocAppCriService tokenService = mock(DocAppCriService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -128,8 +125,6 @@ class DocAppCallbackHandlerTest {
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY);
 
-    private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, emptyList(), null);
     private final OrchClientSessionItem orchClientSession =
             new OrchClientSessionItem(
                     CLIENT_SESSION_ID,
@@ -161,7 +156,6 @@ class DocAppCallbackHandlerTest {
                         configService,
                         responseService,
                         tokenService,
-                        clientSessionService,
                         orchClientSessionService,
                         auditService,
                         dynamoDocAppService,
@@ -280,8 +274,8 @@ class DocAppCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(orchClientSession));
 
         var response = handler.handleRequest(event, context);
         assertThat(response, hasStatus(302));
@@ -468,7 +462,7 @@ class DocAppCallbackHandlerTest {
         when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
                 .thenReturn(
                         new NoSessionEntity(
-                                CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, clientSession));
+                                CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
 
         var response =
                 handler.handleRequest(
@@ -626,9 +620,6 @@ class DocAppCallbackHandlerTest {
     }
 
     private void usingValidClientSession() {
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
-        clientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID);
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSession));
         orchClientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID.getValue());

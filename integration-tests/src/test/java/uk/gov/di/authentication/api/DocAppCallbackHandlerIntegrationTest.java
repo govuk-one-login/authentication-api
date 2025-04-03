@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.lambda.DocAppCallbackHandler;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -367,14 +366,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var clientSessionCreationDate =
                 LocalDateTime.ofInstant(
                         Instant.parse("2025-02-19T15:00:00Z"), ZoneId.systemDefault());
-        var clientSession =
-                new ClientSession(
-                        authRequestBuilder.build().toParameters(),
-                        clientSessionCreationDate,
-                        List.of(VectorOfTrust.getDefaults()),
-                        CLIENT_NAME);
-        clientSession.setDocAppSubjectId(docAppSubjectId);
-        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         var orchClientSession =
                 new OrchClientSessionItem(
                         CLIENT_SESSION_ID,

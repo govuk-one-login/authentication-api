@@ -32,7 +32,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -51,7 +50,6 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -111,8 +109,6 @@ class AuthCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -184,7 +180,6 @@ class AuthCodeHandlerTest {
                         authCodeResponseService,
                         authorisationCodeService,
                         orchestrationAuthorizationService,
-                        clientSessionService,
                         orchClientSessionService,
                         auditService,
                         cloudwatchMetricsService,
@@ -237,7 +232,7 @@ class AuthCodeHandlerTest {
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
                             eq(orchSession),
-                            eq(clientSession),
+                            eq(CLIENT_NAME),
                             eq(CLIENT_ID.getValue()),
                             anyBoolean(),
                             anyBoolean()))
@@ -261,7 +256,7 @@ class AuthCodeHandlerTest {
         }
         doCallRealMethod()
                 .when(authCodeResponseService)
-                .processVectorOfTrust(eq(clientSession), any());
+                .processVectorOfTrust(any(OrchClientSessionItem.class), any());
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
         session.setCurrentCredentialStrength(initialLevel).setNewAccount(AccountState.NEW);
@@ -289,10 +284,9 @@ class AuthCodeHandlerTest {
                         any(URI.class),
                         any(State.class)))
                 .thenReturn(authSuccessResponse);
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
-        when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
-        when(clientSession.getRpPairwiseId())
+        when(orchClientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
+        when(orchClientSession.getRpPairwiseId())
                 .thenReturn(
                         ClientSubjectHelper.calculatePairwiseIdentifier(
                                 SUBJECT.getValue(), "rp-sector-uri", SALT));
@@ -388,8 +382,6 @@ class AuthCodeHandlerTest {
                         null,
                         authRequest.getResponseMode());
 
-        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(orchClientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
@@ -399,7 +391,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
-                        eq(clientSession),
+                        eq(CLIENT_NAME),
                         eq(CLIENT_ID.getValue()),
                         anyBoolean(),
                         eq(true)))
@@ -490,9 +482,6 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenOrchSessionIsNotFound() {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
         when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(orchClientSession));
         when(orchClientSession.getClientName()).thenReturn(CLIENT_NAME);
@@ -556,10 +545,10 @@ class AuthCodeHandlerTest {
             throws Json.JsonException, JOSEException, ClientNotFoundException {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchClientSession));
+        when(orchClientSession.getClientName()).thenReturn(CLIENT_NAME);
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
@@ -589,12 +578,12 @@ class AuthCodeHandlerTest {
     void shouldGenerateErrorResponseWhenOrchSessionHasNoInternalCommonSubjectId()
             throws Json.JsonException, JOSEException, ParseException, ClientNotFoundException {
         generateAuthUserInfo();
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchClientSession));
+        when(orchClientSession.getClientName()).thenReturn(CLIENT_NAME);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
         when(orchSessionService.getSession(anyString()))
                 .thenReturn(
@@ -704,8 +693,6 @@ class AuthCodeHandlerTest {
                         null,
                         authRequest.getResponseMode());
 
-        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
         when(orchClientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
@@ -718,7 +705,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
-                        eq(clientSession),
+                        eq(CLIENT_NAME),
                         eq(CLIENT_ID.getValue()),
                         anyBoolean(),
                         eq(true)))
@@ -780,13 +767,9 @@ class AuthCodeHandlerTest {
             Map<String, List<String>> authRequestParams, CredentialTrustLevel requestedLevel) {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(orchClientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
-        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
         when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
         when(orchClientSession.getClientName()).thenReturn(CLIENT_NAME);
     }

@@ -11,7 +11,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
@@ -32,7 +31,6 @@ class NoSessionOrchestrationServiceTest {
 
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -48,10 +46,7 @@ class NoSessionOrchestrationServiceTest {
     void setup() {
         noSessionOrchestrationService =
                 new NoSessionOrchestrationService(
-                        redisConnectionService,
-                        clientSessionService,
-                        orchClientSessionService,
-                        configurationService);
+                        redisConnectionService, orchClientSessionService, configurationService);
     }
 
     @Test
@@ -59,8 +54,6 @@ class NoSessionOrchestrationServiceTest {
             throws NoSessionException, ParseException {
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
                 .thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(generateClientSession()));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -91,8 +84,6 @@ class NoSessionOrchestrationServiceTest {
     void shouldThrowIfErrorIsPresentButIsNotAccessDenied() {
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
                 .thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(generateClientSession()));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -117,8 +108,6 @@ class NoSessionOrchestrationServiceTest {
     void shouldThrowIfErrorIsNotPresent() {
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
                 .thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(generateClientSession()));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -201,7 +190,6 @@ class NoSessionOrchestrationServiceTest {
     void shouldThrowIfNoClientSessionIsFoundWithClientSessionId() {
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
                 .thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(Optional.empty());
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
 
@@ -229,20 +217,6 @@ class NoSessionOrchestrationServiceTest {
 
         verify(redisConnectionService)
                 .saveWithExpiry("state:" + STATE.getValue(), CLIENT_SESSION_ID, 7200);
-    }
-
-    private static ClientSession generateClientSession() {
-        var responseType = new ResponseType(ResponseType.Value.CODE);
-        var scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add("phone");
-        scope.add("email");
-        var authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(STATE)
-                        .nonce(NONCE)
-                        .build();
-        return new ClientSession(authRequest.toParameters(), null, emptyList(), null);
     }
 
     private static OrchClientSessionItem generateOrchClientSession() {
