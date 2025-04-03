@@ -56,5 +56,5 @@ data "aws_iam_policy_document" "s3_am_api_acceptance_tests_otp_bucket_policy_doc
 
 resource "aws_iam_role_policy_attachment" "notification_lambda_smoketest_s3" {
   role       = module.account_management_api_send_notification_role.name
-  policy_arn = aws_iam_policy.account_management_api_acceptance_tests_otp_bucket_policy.arn
+  policy_arn = aws_iam_policy.am_api_acceptance_tests_otp_bucket_policy.arn
 }
