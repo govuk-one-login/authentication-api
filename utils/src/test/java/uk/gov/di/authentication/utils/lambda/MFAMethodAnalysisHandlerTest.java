@@ -29,9 +29,6 @@ class MFAMethodAnalysisHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoDbClient client = mock(DynamoDbClient.class);
 
-    private final MFAMethodAnalysisHandler handler =
-            new MFAMethodAnalysisHandler(configurationService, client);
-
     @Test
     void shouldFindTheNumberOfMatches() {
         when(configurationService.getEnvironment()).thenReturn("test");
@@ -46,6 +43,7 @@ class MFAMethodAnalysisHandlerTest {
                                 .tableName("test-user-credentials")
                                 .filterExpression("attribute_exists(#mfa_methods)")
                                 .expressionAttributeNames(expressionAttributeNames)
+                                .exclusiveStartKey(null)
                                 .build()))
                 .thenReturn(
                         ScanResponse.builder()
@@ -66,6 +64,7 @@ class MFAMethodAnalysisHandlerTest {
         when(client.batchGetItem(BatchGetItemRequest.builder().requestItems(requestItems).build()))
                 .thenReturn(BatchGetItemResponse.builder().responses(responses).build());
 
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(1, handler.handleRequest("", mock(Context.class)));
     }
 }
