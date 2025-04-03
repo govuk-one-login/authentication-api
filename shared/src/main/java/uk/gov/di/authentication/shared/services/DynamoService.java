@@ -936,6 +936,19 @@ public class DynamoService implements AuthenticationService {
         }
     }
 
+    public void setMfaIdentifierForNonMigratedSmsMethod(String email, String smsMethodIdentifier) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        dynamoUserProfileTable
+                .updateItem(
+                        dynamoUserProfileTable
+                                .getItem(
+                                        Key.builder()
+                                                .partitionValue(email.toLowerCase(Locale.ROOT))
+                                                .build())
+                                .withMfaIdentifier(smsMethodIdentifier))
+                .withUpdated(dateTime);
+    }
+
     public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
             Map<String, AttributeValue> exclusiveStartKey, List<String> termsAndConditionsVersion) {
 

@@ -20,7 +20,6 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_SMS_MFA_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -57,6 +56,9 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Map.of("publicSubjectId", publicSubjectId),
                         Collections.emptyMap());
 
+        var mfaIdentifier =
+                userStoreExtension.getUserProfileFromEmail(EMAIL).get().getMfaIdentifier();
+
         assertEquals(200, response.getStatusCode());
         var expectedResponse =
                 format(
@@ -71,7 +73,41 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                      }
                    }]
                 """,
-                        HARDCODED_SMS_MFA_ID, PHONE_NUMBER);
+                        mfaIdentifier, PHONE_NUMBER);
+        var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
+        assertThat(response, hasJsonBody(expectedResponseAsJson));
+    }
+
+    @Test
+    void shouldReturn200WithSmsAndExistingMfaIdWhenUserExists() {
+        var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
+        userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
+        var mfaIdentifier = "some-identifier";
+        userStoreExtension.setPhoneNumberMfaIdentifer(EMAIL, mfaIdentifier);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("publicSubjectId", publicSubjectId),
+                        Collections.emptyMap());
+
+        assertEquals(200, response.getStatusCode());
+        var expectedResponse =
+                format(
+                        """
+                [{
+                     "mfaIdentifier": "%s",
+                     "priorityIdentifier": "DEFAULT",
+                     "methodVerified": true,
+                     "method": {
+                       "mfaMethodType": "SMS",
+                       "phoneNumber": "%s"
+                     }
+                   }]
+                """,
+                        mfaIdentifier, PHONE_NUMBER);
         var expectedResponseAsJson = JsonParser.parseString(expectedResponse).getAsJsonArray();
         assertThat(response, hasJsonBody(expectedResponseAsJson));
     }
@@ -115,7 +151,8 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
     void shouldReturn200WithAuthAppMethodAndExistingMfaIdWhenUserExists() {
         var publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
         var identifier = "some-identifier";
-        userStoreExtension.addAuthAppMethodWithIdentifier(EMAIL, true, true, "some-credential", identifier);
+        userStoreExtension.addAuthAppMethodWithIdentifier(
+                EMAIL, true, true, "some-credential", identifier);
 
         var response =
                 makeRequest(

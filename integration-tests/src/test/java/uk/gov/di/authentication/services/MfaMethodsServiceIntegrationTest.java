@@ -36,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.shared.services.mfa.MfaMethodsService.HARDCODED_SMS_MFA_ID;
 
 class MfaMethodsServiceIntegrationTest {
 
@@ -90,13 +89,33 @@ class MfaMethodsServiceIntegrationTest {
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void shouldReturnSingleSmsMethodWhenVerified(String email) {
             userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+            var mfaIdentifier = UUID.randomUUID().toString();
+            userStoreExtension.setPhoneNumberMfaIdentifer(email, mfaIdentifier);
 
             var result = mfaMethodsService.getMfaMethods(email);
 
-            var authAppDetail = new SmsMfaDetail(PHONE_NUMBER);
+            var smsMfaDetail = new SmsMfaDetail(PHONE_NUMBER);
             var expectedData =
                     new MfaMethodData(
-                            HARDCODED_SMS_MFA_ID, PriorityIdentifier.DEFAULT, true, authAppDetail);
+                            mfaIdentifier, PriorityIdentifier.DEFAULT, true, smsMfaDetail);
+            assertEquals(result, List.of(expectedData));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void shouldStoreAnMfaIdentifierForANonMigratedSmsMethodOnRead(String email) {
+            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+
+            var result = mfaMethodsService.getMfaMethods(email);
+
+            var userProfile = userStoreExtension.getUserProfileFromEmail(email).get();
+            var mfaIdentifier = userProfile.getMfaIdentifier();
+            assertFalse(mfaIdentifier.isEmpty());
+
+            var smsMfaDetail = new SmsMfaDetail(PHONE_NUMBER);
+            var expectedData =
+                    new MfaMethodData(
+                            mfaIdentifier, PriorityIdentifier.DEFAULT, true, smsMfaDetail);
             assertEquals(result, List.of(expectedData));
         }
 

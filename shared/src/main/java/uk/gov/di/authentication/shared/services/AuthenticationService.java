@@ -104,4 +104,6 @@ public interface AuthenticationService {
 
     Either<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
             String email, String mfaMethodIdentifier);
+
+    void setMfaIdentifierForNonMigratedSmsMethod(String email, String smsMfaIdentifier);
 }

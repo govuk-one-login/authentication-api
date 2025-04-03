@@ -34,9 +34,6 @@ public class MfaMethodsService {
 
     private final AuthenticationService persistentService;
 
-    // TODO generate and store UUID (AUT-4122)
-    public static final String HARDCODED_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
-
     public MfaMethodsService(ConfigurationService configurationService) {
         this.persistentService = new DynamoService(configurationService);
     }
@@ -134,7 +131,7 @@ public class MfaMethodsService {
             } else {
                 mfaIdentifier = UUID.randomUUID().toString();
                 persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
-                        userProfile.getEmail(), mfaIdentifier);
+                        userProfile.getEmail(), mfaIdentifier); // TODO what if left
             }
             return Optional.of(
                     MfaMethodData.authAppMfaData(
@@ -143,9 +140,17 @@ public class MfaMethodsService {
                             method.isMethodVerified(),
                             method.getCredentialValue()));
         } else if (userProfile.isPhoneNumberVerified()) {
+            String mfaIdentifier;
+            if (Objects.nonNull(userProfile.getMfaIdentifier())) {
+                mfaIdentifier = userProfile.getMfaIdentifier();
+            } else {
+                mfaIdentifier = UUID.randomUUID().toString();
+                persistentService.setMfaIdentifierForNonMigratedSmsMethod(
+                        userProfile.getEmail(), mfaIdentifier);
+            }
             return Optional.of(
                     MfaMethodData.smsMethodData(
-                            HARDCODED_SMS_MFA_ID,
+                            mfaIdentifier,
                             PriorityIdentifier.DEFAULT,
                             true,
                             userProfile.getPhoneNumber()));

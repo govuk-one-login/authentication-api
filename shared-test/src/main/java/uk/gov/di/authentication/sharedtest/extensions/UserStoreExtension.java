@@ -139,6 +139,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         setPhoneNumberAndVerificationStatus(email, phoneNumber, false, true);
     }
 
+    public void setPhoneNumberMfaIdentifer(String email, String mfaIdentifier) {
+        dynamoService.setMfaIdentifierForNonMigratedSmsMethod(email, mfaIdentifier);
+    }
+
     public void setPhoneNumberAndVerificationStatus(
             String email,
             String phoneNumber,

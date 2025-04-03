@@ -26,6 +26,7 @@ public class UserProfile {
     public static final String ATTRIBUTE_ACCOUNT_VERIFIED = "accountVerified";
     public static final String ATTRIBUTE_TEST_USER = "testUser";
     public static final String ATTRIBUTE_MFA_METHODS_MIGRATED = "mfaMethodsMigrated";
+    public static final String ATTRIBUTE_MFA_IDENTIFIER = "MFAIdentifier";
 
     private String email;
     private String subjectID;
@@ -41,6 +42,7 @@ public class UserProfile {
     private int accountVerified;
     private int testUser;
     private boolean mfaMethodsMigrated;
+    private String mfaIdentifier;
 
     public UserProfile() {}
 
@@ -242,6 +244,20 @@ public class UserProfile {
 
     public UserProfile withMfaMethodsMigrated(boolean mfaMethodsMigrated) {
         this.mfaMethodsMigrated = mfaMethodsMigrated;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_MFA_IDENTIFIER)
+    public String getMfaIdentifier() {
+        return mfaIdentifier;
+    }
+
+    public void setMfaIdentifier(String mfaIdentifier) {
+        this.mfaIdentifier = mfaIdentifier;
+    }
+
+    public UserProfile withMfaIdentifier(String mfaIdentifier) {
+        this.mfaIdentifier = mfaIdentifier;
         return this;
     }
 }
