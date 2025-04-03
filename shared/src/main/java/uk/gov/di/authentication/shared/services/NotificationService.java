@@ -29,6 +29,7 @@ public class NotificationService {
     public void sendEmail(
             String email, Map<String, Object> personalisation, TemplateAware type, String reference)
             throws NotificationClientException {
+        LOG.info("Sending EMAIL using Notify, reference: {}", reference);
         notifyClient.sendEmail(
                 type.getTemplateId(configurationService), email, personalisation, reference);
     }
@@ -45,6 +46,7 @@ public class NotificationService {
             TemplateAware type,
             String reference)
             throws NotificationClientException {
+        LOG.info("Sending SMS using Notify, reference: {}", reference);
         notifyClient.sendSms(
                 type.getTemplateId(configurationService), phoneNumber, personalisation, reference);
     }
