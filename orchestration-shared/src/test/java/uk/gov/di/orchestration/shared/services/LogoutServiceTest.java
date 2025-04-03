@@ -182,7 +182,7 @@ class LogoutServiceTest {
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
         rpPairwiseId = Optional.of(idToken.getJWTClaimsSet().getSubject());
 
-        session = new Session().setEmailAddress(EMAIL);
+        session = new Session();
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID, rpPairwiseId.get());
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         destroySessionsRequest =

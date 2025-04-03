@@ -49,32 +49,13 @@ public class RedisExtension
     }
 
     public String createSession(String sessionId) throws Json.JsonException {
-        return createSession(sessionId, Optional.empty());
-    }
-
-    private String createSession(String sessionId, Optional<String> email)
-            throws Json.JsonException {
         Session session = new Session();
-        email.ifPresent(session::setEmailAddress);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         return sessionId;
     }
 
     public String createSession() throws Json.JsonException {
         return createSession(IdGenerator.generate());
-    }
-
-    public String createUnauthenticatedSessionWithEmail(String email) throws Json.JsonException {
-        return createSession(IdGenerator.generate(), Optional.of(email));
-    }
-
-    public void createUnauthenticatedSessionWithIdAndEmail(String sessionId, String email)
-            throws Json.JsonException {
-        createSession(sessionId, Optional.of(email));
-    }
-
-    public String createAuthenticatedSessionWithEmail(String email) throws Json.JsonException {
-        return createSession(IdGenerator.generate(), Optional.of(email));
     }
 
     public void addStateToRedis(State state, String sessionId) throws Json.JsonException {
@@ -127,12 +108,6 @@ public class RedisExtension
                                 VectorOfTrust.getDefaults(),
                                 clientName)),
                 3600);
-    }
-
-    public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setEmailAddress(emailAddress);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public void setSessionCredentialTrustLevel(

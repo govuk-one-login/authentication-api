@@ -89,7 +89,7 @@ class CheckReAuthUserHandlerTest {
     private static final APIGatewayProxyRequestEvent API_REQUEST_EVENT_WITH_VALID_HEADERS =
             apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
 
-    private final Session session = new Session().setEmailAddress(EMAIL_USED_TO_SIGN_IN);
+    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL_USED_TO_SIGN_IN);
 

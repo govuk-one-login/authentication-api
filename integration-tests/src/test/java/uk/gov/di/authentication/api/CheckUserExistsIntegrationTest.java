@@ -119,7 +119,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws JsonException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
 
-        String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
+        String sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
@@ -193,7 +193,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallUserExistsEndpointAndReturnErrorResponse1045WhenUserAccountIsLocked()
             throws JsonException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
-        String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
+        String sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         redis.blockMfaCodesForEmail(
                 emailAddress,

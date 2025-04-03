@@ -38,7 +38,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler =
                 new SendNotificationHandler(
                         TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
-        SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
+        SESSION_ID = redis.createSession();
         authSessionExtension.addSession(SESSION_ID);
         authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
     }

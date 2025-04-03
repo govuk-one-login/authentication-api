@@ -38,7 +38,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler = new MfaHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
         String subjectId = "new-subject";
-        SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
+        SESSION_ID = redis.createSession();
         authSessionStore.addSession(SESSION_ID);
         authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
@@ -105,7 +105,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenReauthenticating()
             throws Json.JsonException {
-        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        var authenticatedSessionId = redis.createSession();
         authSessionStore.addSession(authenticatedSessionId);
         authSessionStore.addEmailToSession(authenticatedSessionId, USER_EMAIL);
 
@@ -128,7 +128,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn400WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
             throws Json.JsonException {
-        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        var authenticatedSessionId = redis.createSession();
         authSessionStore.addSession(authenticatedSessionId);
 
         aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
@@ -158,7 +158,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
-        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        var authenticatedSessionId = redis.createSession();
         authSessionStore.addSession(authenticatedSessionId);
 
         var response =
