@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -94,8 +93,7 @@ public class StartService {
     }
 
     public ClientStartInfo buildClientStartInfo(
-            UserContext userContext, String scopesString, String redirectUriString, String state)
-            throws ParseException {
+            UserContext userContext, String scopesString, String redirectUriString, String state) {
         List<String> scopes = List.of(scopesString.split(" "));
         URI redirectURI;
         redirectURI = URI.create(redirectUriString);

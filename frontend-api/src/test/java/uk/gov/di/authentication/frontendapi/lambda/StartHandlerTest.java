@@ -513,31 +513,6 @@ class StartHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    @Test
-    void shouldReturn400WhenBuildClientStartInfoThrowsException()
-            throws ParseException, Json.JsonException {
-        when(startService.buildUserContext(
-                        eq(session), eq(clientSession), any(AuthSessionItem.class)))
-                .thenReturn(userContext);
-        when(startService.buildClientStartInfo(
-                        eq(userContext), anyString(), anyString(), anyString()))
-                .thenThrow(new ParseException("Unable to parse authentication request"));
-        usingValidClientSession();
-        usingValidSession();
-
-        var event =
-                apiRequestEventWithHeadersAndBody(
-                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(false));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-
-        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1038);
-        assertThat(result, hasBody(expectedResponse));
-
-        verifyNoInteractions(auditService);
-    }
-
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated)
             throws Json.JsonException {
         return makeRequestBody(null, null, null, authenticated, null);

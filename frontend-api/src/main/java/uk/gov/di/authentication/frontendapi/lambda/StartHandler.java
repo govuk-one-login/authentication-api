@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -297,8 +296,6 @@ public class StartHandler
             var errorMessage = "Unable to serialize start response";
             LOG.error(errorMessage, e);
             return generateApiGatewayProxyResponse(400, errorMessage);
-        } catch (ParseException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
         }
     }
 
