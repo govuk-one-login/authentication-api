@@ -32,6 +32,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -52,6 +53,7 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -117,6 +119,7 @@ class AuthCodeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -184,7 +187,8 @@ class AuthCodeHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService);
+                        dynamoService,
+                        dynamoClientService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
@@ -209,6 +213,12 @@ class AuthCodeHandlerTest {
                         SESSION_ID,
                         orchSessionService,
                         orchSession);
+        when(dynamoClientService.getClient(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withClientID(CLIENT_ID.getValue())
+                                        .withSubjectType("pairwise")));
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -604,6 +614,42 @@ class AuthCodeHandlerTest {
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
         assertThat(response, hasStatus(400));
+        AuthCodeResponse authCodeResponse =
+                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(
+                authCodeResponse.getLocation(),
+                equalTo(
+                        "http://localhost/redirect?error=access_denied&error_description=Access+denied+by+resource+owner+or+authorization+server"));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldGenerateErrorResponseWhenClientCannotBeFound()
+            throws Json.JsonException, JOSEException, ParseException, ClientNotFoundException {
+        generateAuthUserInfo();
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(orchClientSession));
+        when(orchClientSession.getClientName()).thenReturn(CLIENT_NAME);
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
+        AuthenticationErrorResponse authenticationErrorResponse =
+                new AuthenticationErrorResponse(
+                        REDIRECT_URI, OAuth2Error.ACCESS_DENIED, null, null);
+        when(orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        any(AuthenticationRequest.class),
+                        eq(OAuth2Error.INVALID_CLIENT),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authenticationErrorResponse);
+        when(dynamoClientService.getClient(anyString())).thenReturn(Optional.empty());
+
+        APIGatewayProxyResponseEvent response = generateApiRequest();
+
+        assertThat(response, hasStatus(500));
         AuthCodeResponse authCodeResponse =
                 objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(
