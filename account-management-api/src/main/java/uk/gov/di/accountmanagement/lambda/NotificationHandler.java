@@ -19,12 +19,20 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.CONTACT_US_LINK_PERSONALISATION;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.EMAIL_HAS_BEEN_SENT_USING_NOTIFY;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_SENDING_WITH_NOTIFY;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.TEXT_HAS_BEEN_SENT_USING_NOTIFY;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.UNEXPECTED_ERROR_SENDING_NOTIFICATION;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
+    public static final String VALIDATION_CODE_PERSONALISATION = "validation-code";
+    public static final String EMAIL_ADDRESS_PERSONALISATION = "email-address";
     private final NotificationService notificationService;
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService;
@@ -56,104 +64,130 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
-        return segmentedFunctionCall(
+        segmentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
-                () -> notificationRequestHandler(event, context));
+                () -> notificationRequestHandler(event));
+        return null;
     }
 
-    public Void notificationRequestHandler(SQSEvent event, Context context) {
-
+    public void notificationRequestHandler(SQSEvent event) {
         for (SQSMessage msg : event.getRecords()) {
-            try {
-                LOG.info("Message received from SQS queue");
-                NotifyRequest notifyRequest =
-                        objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-                try {
-                    switch (notifyRequest.getNotificationType()) {
-                        case VERIFY_EMAIL:
-                            Map<String, Object> emailPersonalisation = new HashMap<>();
-                            emailPersonalisation.put("validation-code", notifyRequest.getCode());
-                            emailPersonalisation.put(
-                                    "email-address", notifyRequest.getDestination());
-                            emailPersonalisation.put("contact-us-link", buildContactUsUrl());
-                            LOG.info("Sending VERIFY_EMAIL email using Notify");
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    emailPersonalisation,
-                                    NotificationType.VERIFY_EMAIL);
-                            LOG.info("VERIFY_EMAIL email has been sent using Notify");
-                            break;
-                        case VERIFY_PHONE_NUMBER:
-                            Map<String, Object> phonePersonalisation = new HashMap<>();
-                            phonePersonalisation.put("validation-code", notifyRequest.getCode());
-                            LOG.info("Sending VERIFY_PHONE_NUMBER email using Notify");
-                            notificationService.sendText(
-                                    notifyRequest.getDestination(),
-                                    phonePersonalisation,
-                                    NotificationType.VERIFY_PHONE_NUMBER);
-                            LOG.info("VERIFY_PHONE_NUMBER text has been sent using Notify");
-                            break;
-                        case EMAIL_UPDATED:
-                            Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
-                            emailUpdatePersonalisation.put(
-                                    "email-address", notifyRequest.getDestination());
-                            emailUpdatePersonalisation.put("contact-us-link", buildContactUsUrl());
-                            LOG.info("Sending EMAIL_UPDATED email using Notify");
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    emailUpdatePersonalisation,
-                                    NotificationType.EMAIL_UPDATED);
-                            LOG.info("EMAIL_UPDATED email has been sent using Notify");
-                            break;
-                        case DELETE_ACCOUNT:
-                            LOG.info("Sending DELETE_ACCOUNT email using Notify");
-                            Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
-                            accountDeletedPersonalisation.put(
-                                    "contact-us-link", buildContactUsUrl());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    accountDeletedPersonalisation,
-                                    NotificationType.DELETE_ACCOUNT);
-                            LOG.info("DELETE_ACCOUNT email has been sent using Notify");
-                            break;
-                        case PHONE_NUMBER_UPDATED:
-                            LOG.info("Sending PHONE_NUMBER_UPDATED email using Notify");
-                            Map<String, Object> phoneNumberUpdatedPersonalisation = new HashMap<>();
-                            phoneNumberUpdatedPersonalisation.put(
-                                    "contact-us-link", buildContactUsUrl());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    phoneNumberUpdatedPersonalisation,
-                                    NotificationType.PHONE_NUMBER_UPDATED);
-                            LOG.info("PHONE_NUMBER_UPDATED email has been sent using Notify");
-                            break;
-                        case PASSWORD_UPDATED:
-                            LOG.info("Sending PASSWORD_UPDATED email using Notify");
-                            Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
-                            passwordUpdatedPersonalisation.put(
-                                    "contact-us-link", buildContactUsUrl());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    passwordUpdatedPersonalisation,
-                                    NotificationType.PASSWORD_UPDATED);
-                            LOG.info("PASSWORD_UPDATED email has been sent using Notify");
-                            break;
-                    }
-                } catch (NotificationClientException e) {
-                    LOG.error("Error sending with Notify", e);
-                    throw new RuntimeException(
-                            String.format(
-                                    "Error sending with Notify using NotificationType: %s",
-                                    notifyRequest.getNotificationType()),
-                            e);
-                }
-            } catch (JsonException e) {
-                LOG.error("Error when mapping message from queue to a NotifyRequest");
-                throw new RuntimeException(
-                        "Error when mapping message from queue to a NotifyRequest");
-            }
+            processMessage(msg);
         }
-        return null;
+    }
+
+    private void processMessage(SQSMessage msg) {
+        LOG.info(LogMessageTemplates.MESSAGE_RECEIVED_FROM_SQS_QUEUE);
+        try {
+            NotifyRequest notifyRequest =
+                    objectMapper.readValue(msg.getBody(), NotifyRequest.class);
+            sendNotification(notifyRequest);
+        } catch (JsonException e) {
+            LOG.error(ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST);
+        }
+    }
+
+    private void sendNotification(NotifyRequest notifyRequest) {
+        switch (notifyRequest.getNotificationType()) {
+            case VERIFY_EMAIL -> sendVerifyEmailNotification(notifyRequest);
+            case VERIFY_PHONE_NUMBER -> sendVerifyPhoneNotification(notifyRequest);
+            case EMAIL_UPDATED -> sendEmailUpdatedNotification(notifyRequest);
+            case DELETE_ACCOUNT -> sendDeleteAccountNotification(notifyRequest);
+            case PHONE_NUMBER_UPDATED -> sendPhoneNumberUpdatedNotification(notifyRequest);
+            case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
+        }
+    }
+
+    private void sendVerifyEmailNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> emailPersonalisation = new HashMap<>();
+        emailPersonalisation.put(VALIDATION_CODE_PERSONALISATION, notifyRequest.getCode());
+        emailPersonalisation.put(EMAIL_ADDRESS_PERSONALISATION, notifyRequest.getDestination());
+        emailPersonalisation.put(CONTACT_US_LINK_PERSONALISATION, buildContactUsUrl());
+        sendEmailNotification(
+                notifyRequest, emailPersonalisation, String.valueOf(NotificationType.VERIFY_EMAIL));
+    }
+
+    private void sendVerifyPhoneNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> phonePersonalisation = new HashMap<>();
+        phonePersonalisation.put(VALIDATION_CODE_PERSONALISATION, notifyRequest.getCode());
+        sendTextNotification(
+                notifyRequest,
+                phonePersonalisation,
+                String.valueOf(NotificationType.VERIFY_PHONE_NUMBER));
+    }
+
+    private void sendEmailUpdatedNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> emailUpdatePersonalisation = new HashMap<>();
+        emailUpdatePersonalisation.put(
+                EMAIL_ADDRESS_PERSONALISATION, notifyRequest.getDestination());
+        emailUpdatePersonalisation.put(CONTACT_US_LINK_PERSONALISATION, buildContactUsUrl());
+        sendEmailNotification(
+                notifyRequest,
+                emailUpdatePersonalisation,
+                String.valueOf(NotificationType.EMAIL_UPDATED));
+    }
+
+    private void sendDeleteAccountNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> accountDeletedPersonalisation = new HashMap<>();
+        accountDeletedPersonalisation.put(CONTACT_US_LINK_PERSONALISATION, buildContactUsUrl());
+        sendEmailNotification(
+                notifyRequest,
+                accountDeletedPersonalisation,
+                String.valueOf(NotificationType.DELETE_ACCOUNT));
+    }
+
+    private void sendPhoneNumberUpdatedNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> phoneNumberUpdatedPersonalisation = new HashMap<>();
+        phoneNumberUpdatedPersonalisation.put(CONTACT_US_LINK_PERSONALISATION, buildContactUsUrl());
+        sendEmailNotification(
+                notifyRequest,
+                phoneNumberUpdatedPersonalisation,
+                String.valueOf(NotificationType.PHONE_NUMBER_UPDATED));
+    }
+
+    private void sendPasswordUpdatedNotification(NotifyRequest notifyRequest) {
+        Map<String, Object> passwordUpdatedPersonalisation = new HashMap<>();
+        passwordUpdatedPersonalisation.put(CONTACT_US_LINK_PERSONALISATION, buildContactUsUrl());
+        sendEmailNotification(
+                notifyRequest,
+                passwordUpdatedPersonalisation,
+                String.valueOf(NotificationType.PASSWORD_UPDATED));
+    }
+
+    private void sendEmailNotification(
+            NotifyRequest notifyRequest,
+            Map<String, Object> personalisation,
+            String notificationType) {
+        try {
+            LOG.info("Sending {} email using Notify", notificationType);
+            notificationService.sendEmail(
+                    notifyRequest.getDestination(),
+                    personalisation,
+                    NotificationType.valueOf(notificationType));
+            LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+        } catch (NotificationClientException e) {
+            LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+        } catch (RuntimeException e) {
+            LOG.error(UNEXPECTED_ERROR_SENDING_NOTIFICATION, notificationType, e.getMessage());
+        }
+    }
+
+    private void sendTextNotification(
+            NotifyRequest notifyRequest,
+            Map<String, Object> personalisation,
+            String notificationType) {
+        try {
+            LOG.info("Sending {} text using Notify", notificationType);
+            notificationService.sendText(
+                    notifyRequest.getDestination(),
+                    personalisation,
+                    NotificationType.valueOf(notificationType));
+            LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+        } catch (NotificationClientException e) {
+            LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+        } catch (RuntimeException e) {
+            LOG.error(UNEXPECTED_ERROR_SENDING_NOTIFICATION, notificationType, e.getMessage());
+        }
     }
 
     private String buildContactUsUrl() {
