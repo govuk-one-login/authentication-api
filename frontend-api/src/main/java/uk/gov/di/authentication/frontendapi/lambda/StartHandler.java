@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -376,16 +377,23 @@ public class StartHandler
         if (!Objects.equals(startRequest.ga(), getAuthRequestParam(clientSession, "_ga"))) {
             LOG.warn("\"_ga\" field does match custom parameter in auth request params");
         }
-        var authRequestVtrList =
-                Optional.ofNullable(clientSession.getAuthRequestParams().get("vtr"))
-                        .map(vtr -> List.of(VectorOfTrust.parseFromAuthRequestAttribute(vtr)))
-                        .orElse(null);
-        var startRequestVtrList =
-                Optional.ofNullable(startRequest.vtr())
-                        .map(vtr -> List.of(VectorOfTrust.parseVtrStringList(vtr)))
-                        .orElse(null);
-        if (!Objects.equals(startRequestVtrList, authRequestVtrList)) {
-            LOG.warn("\"vtr\" field does match custom parameter in auth request params");
+        var requestedVtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        clientSession.getAuthRequestParams().get("vtr"));
+        var requestedLevelOfConfidence =
+                requestedVtr.containsLevelOfConfidence()
+                        ? requestedVtr.getLevelOfConfidence().getValue()
+                        : LevelOfConfidence.NONE.getValue();
+        if (!Objects.equals(
+                startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence)) {
+            LOG.warn(
+                    "\"requested_level_of_confidence\" field does match field calculated from auth request params");
+        }
+        if (!Objects.equals(
+                startRequest.requestedCredentialStrength(),
+                requestedVtr.getCredentialTrustLevel().getValue())) {
+            LOG.warn(
+                    "\"requested_credential_strength\" field does match field calculated from auth request params");
         }
         if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
             LOG.warn("\"state\" field does match custom parameter in auth request params");
