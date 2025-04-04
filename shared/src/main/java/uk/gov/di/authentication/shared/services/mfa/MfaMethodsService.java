@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -38,50 +37,45 @@ public class MfaMethodsService {
         this.persistentService = new DynamoService(configurationService);
     }
 
-    public List<MfaMethodData> getMfaMethods(String email) {
+    public Either<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
             return getMfaMethodsForMigratedUser(userCredentials);
         } else {
-            return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
-                    .map(List::of)
-                    .orElseGet(List::of);
+            return Either.right(
+                    getMfaMethodForNonMigratedUser(userProfile, userCredentials)
+                            .map(List::of)
+                            .orElseGet(List::of));
         }
     }
 
-    private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials)
-            throws UnknownMfaTypeException {
-        return Optional.ofNullable(userCredentials.getMfaMethods())
-                .orElse(new ArrayList<>())
-                .stream()
-                .map(
-                        mfaMethod -> {
-                            if (mfaMethod
-                                    .getMfaMethodType()
-                                    .equals(MFAMethodType.AUTH_APP.getValue())) {
-                                return MfaMethodData.authAppMfaData(
-                                        mfaMethod.getMfaIdentifier(),
-                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
-                                        mfaMethod.isMethodVerified(),
-                                        mfaMethod.getCredentialValue());
-                            } else if (mfaMethod
-                                    .getMfaMethodType()
-                                    .equals(MFAMethodType.SMS.getValue())) {
-                                return MfaMethodData.smsMethodData(
-                                        mfaMethod.getMfaIdentifier(),
-                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
-                                        mfaMethod.isMethodVerified(),
-                                        mfaMethod.getDestination());
-                            } else {
-                                LOG.error(
-                                        "Unknown mfa method type: {}",
-                                        mfaMethod.getMfaMethodType());
-                                throw new UnknownMfaTypeException(
-                                        "Unknown mfa method type: " + mfaMethod.getMfaMethodType());
-                            }
-                        })
-                .toList();
+    private Either<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethodsForMigratedUser(
+            UserCredentials userCredentials) {
+        List<Either<MfaRetrieveFailureReason, MfaMethodData>> mfaMethodDataResults =
+                Optional.ofNullable(userCredentials.getMfaMethods())
+                        .orElse(new ArrayList<>())
+                        .stream()
+                        .map(
+                                mfaMethod -> {
+                                    var mfaMethodData = MfaMethodData.from(mfaMethod);
+                                    if (mfaMethodData.isLeft()) {
+                                        LOG.error(
+                                                "Error converting mfa method with type {} to mfa method data: {}",
+                                                mfaMethod.getMfaMethodType(),
+                                                mfaMethodData.getLeft());
+                                        return Either.<MfaRetrieveFailureReason, MfaMethodData>left(
+                                                MfaRetrieveFailureReason
+                                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA);
+                                    } else {
+                                        return Either
+                                                .<MfaRetrieveFailureReason, MfaMethodData>right(
+                                                        mfaMethodData.get());
+                                    }
+                                })
+                        .toList();
+        return Either.sequenceRight(io.vavr.collection.List.ofAll(mfaMethodDataResults))
+                .map(Value::toJavaList);
     }
 
     public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
@@ -166,7 +160,13 @@ public class MfaMethodsService {
         }
 
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
-        List<MfaMethodData> mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
+        Either<MfaRetrieveFailureReason, List<MfaMethodData>> mfaMethodsResult =
+                getMfaMethodsForMigratedUser(userCredentials);
+        if (mfaMethodsResult.isLeft()) {
+            return Either.left(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
+        }
+
+        var mfaMethods = mfaMethodsResult.get();
 
         if (mfaMethods.size() >= 2) {
             return Either.left(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);

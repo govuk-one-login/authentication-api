@@ -99,20 +99,18 @@ public class MFAMethodsCreateHandler
                             userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
             if (addBackupMfaResult.isLeft()) {
-                switch (addBackupMfaResult.getLeft()) {
-                    case INVALID_PRIORITY_IDENTIFIER -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-                    }
-                    case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1068);
-                    }
-                    case PHONE_NUMBER_ALREADY_EXISTS -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1069);
-                    }
-                    case AUTH_APP_EXISTS -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1070);
-                    }
-                }
+                return switch (addBackupMfaResult.getLeft()) {
+                    case INVALID_PRIORITY_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1001);
+                    case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1068);
+                    case PHONE_NUMBER_ALREADY_EXISTS -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1069);
+                    case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1070);
+                    case ERROR_RETRIEVING_MFA_METHODS -> generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.ERROR_1071);
+                };
             }
 
             return generateApiGatewayProxyResponse(200, addBackupMfaResult.get(), true);

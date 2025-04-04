@@ -2,16 +2,17 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 
 import java.util.List;
 import java.util.Map;
@@ -58,7 +59,7 @@ class MFAMethodsRetrieveHandlerTest {
                         PriorityIdentifier.DEFAULT,
                         true,
                         new SmsMfaDetail("+44123456789"));
-        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(List.of(method));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Either.right(List.of(method)));
 
         var event =
                 new APIGatewayProxyRequestEvent()
@@ -118,7 +119,11 @@ class MFAMethodsRetrieveHandlerTest {
     void shouldReturn500IfDynamoServiceReturnsError() {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.getMfaMethods(EMAIL)).thenThrow(UnknownMfaTypeException.class);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Either.left(
+                                MfaRetrieveFailureReason
+                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA));
 
         var event =
                 new APIGatewayProxyRequestEvent()

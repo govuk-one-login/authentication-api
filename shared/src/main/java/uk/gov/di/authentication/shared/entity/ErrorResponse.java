@@ -75,7 +75,7 @@ public enum ErrorResponse {
     ERROR_1061(1061, "State returned from IPV does not match expected state"),
     ERROR_1062(1062, "Invalid MFAMethod"),
     ERROR_1063(1063, "New method management api not available in environment"),
-    ERROR_1064(1064, "Unknown mfa method type"),
+    ERROR_1064(1064, "Error retrieving mfa methods"),
     ERROR_1065(1065, "Mfa method not found"),
     ERROR_1066(1066, "Cannot delete default priority mfa method"),
     ERROR_1067(1067, "Cannot delete mfa method for non-migrated user"),
