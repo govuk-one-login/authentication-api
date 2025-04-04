@@ -210,13 +210,14 @@ class IPVCallbackHandlerTest {
                     CLIENT_NAME);
     private final OrchClientSessionItem orchClientSession =
             new OrchClientSessionItem(
-                    CLIENT_SESSION_ID,
-                    authRequestParams,
-                    null,
-                    List.of(
-                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
-                    CLIENT_NAME);
+                            CLIENT_SESSION_ID,
+                            authRequestParams,
+                            null,
+                            List.of(
+                                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                            CLIENT_NAME)
+                    .withPublicSubjectId(PUBLIC_SUBJECT.getValue());
     private final Json objectMapper = SerializationService.getInstance();
 
     private static Stream<Arguments> additionalClaims() {

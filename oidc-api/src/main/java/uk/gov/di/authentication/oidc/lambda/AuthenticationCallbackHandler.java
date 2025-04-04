@@ -445,6 +445,8 @@ public class AuthenticationCallbackHandler
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
                 orchClientSession.setRpPairwiseId(
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
+                orchClientSession.setPublicSubjectId(
+                        userInfo.getStringClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
 
                 sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);

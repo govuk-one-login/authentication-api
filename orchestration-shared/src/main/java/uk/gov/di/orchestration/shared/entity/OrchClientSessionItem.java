@@ -19,6 +19,7 @@ public class OrchClientSessionItem {
     private static final String ATTRIBUTE_CREATION_DATE = "CreationDate";
     private static final String ATTRIBUTE_VTR_LIST = "VtrList";
     private static final String ATTRIBUTE_RP_PAIRWISE_ID = "RpPairwiseId";
+    private static final String ATTRIBUTE_PUBLIC_SUBJECT_ID = "PublicSubjectId";
     private static final String ATTRIBUTE_DOC_APP_SUBJECT_ID = "DocAppSubjectId";
     private static final String ATTRIBUTE_CLIENT_NAME = "ClientName";
     private static final String ATTRIBUTE_TTL = "ttl";
@@ -28,6 +29,7 @@ public class OrchClientSessionItem {
     private LocalDateTime creationDate;
     private List<VectorOfTrust> vtrList;
     private String rpPairwiseId;
+    private String publicSubjectId;
     private String docAppSubjectId;
     private String clientName;
     private long timeToLive;
@@ -141,6 +143,20 @@ public class OrchClientSessionItem {
 
     public OrchClientSessionItem withRpPairwiseId(String rpPairwiseId) {
         this.rpPairwiseId = rpPairwiseId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PUBLIC_SUBJECT_ID)
+    public String getPublicSubjectId() {
+        return publicSubjectId;
+    }
+
+    public void setPublicSubjectId(String publicSubjectId) {
+        this.publicSubjectId = publicSubjectId;
+    }
+
+    public OrchClientSessionItem withPublicSubjectId(String publicSubjectId) {
+        this.publicSubjectId = publicSubjectId;
         return this;
     }
 

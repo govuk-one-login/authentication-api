@@ -167,6 +167,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String CLIENT_NAME = "client-name";
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
     private static final Subject RP_PAIRWISE_ID = new Subject();
+    private static final Subject PUBLIC_SUBJECT_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
     private static final State RP_STATE = new State();
@@ -239,6 +240,8 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(RP_PAIRWISE_ID.getValue());
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()))
                 .thenReturn(RP_PAIRWISE_ID.getValue());
+        when(USER_INFO.getStringClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()))
+                .thenReturn(PUBLIC_SUBJECT_ID.getValue());
         when(USER_INFO.getPhoneNumber()).thenReturn("1234");
         when(USER_INFO.getClaim(
                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
@@ -1571,6 +1574,9 @@ class AuthenticationCallbackHandlerTest {
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
         assertEquals(
                 RP_PAIRWISE_ID.getValue(), orchClientSessionCaptor.getValue().getRpPairwiseId());
+        assertEquals(
+                PUBLIC_SUBJECT_ID.getValue(),
+                orchClientSessionCaptor.getValue().getPublicSubjectId());
     }
 
     private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {
