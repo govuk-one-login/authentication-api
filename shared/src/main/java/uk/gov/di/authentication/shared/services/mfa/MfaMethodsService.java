@@ -416,13 +416,22 @@ public class MfaMethodsService {
 
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
+        String mfaIdentifier;
+        if (Objects.isNull(nonMigratedMfaMethod.mfaIdentifier())) {
+            mfaIdentifier = UUID.randomUUID().toString();
+        } else {
+            mfaIdentifier = nonMigratedMfaMethod.mfaIdentifier();
+        }
+
         return nonMigratedMfaMethod.method() instanceof AuthAppMfaDetail
-                ? migrateAuthAppToNewFormat(email, (AuthAppMfaDetail) nonMigratedMfaMethod.method())
-                : migrateSmsToNewFormat(email, (SmsMfaDetail) nonMigratedMfaMethod.method());
+                ? migrateAuthAppToNewFormat(
+                        email, (AuthAppMfaDetail) nonMigratedMfaMethod.method(), mfaIdentifier)
+                : migrateSmsToNewFormat(
+                        email, (SmsMfaDetail) nonMigratedMfaMethod.method(), mfaIdentifier);
     }
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
-            String email, AuthAppMfaDetail authAppMfaDetail) {
+            String email, AuthAppMfaDetail authAppMfaDetail, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.authAppMfaMethod(
@@ -430,12 +439,12 @@ public class MfaMethodsService {
                         true,
                         true,
                         PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
+                        identifier));
         return Optional.empty();
     }
 
     private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
-            String email, SmsMfaDetail smsMfaDetail) {
+            String email, SmsMfaDetail smsMfaDetail, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.smsMfaMethod(
@@ -443,7 +452,7 @@ public class MfaMethodsService {
                         true,
                         smsMfaDetail.phoneNumber(),
                         PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
+                        identifier));
 
         return Optional.empty();
     }

@@ -587,7 +587,8 @@ public class DynamoService implements AuthenticationService {
                 .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
                 .withMfaMethodsMigrated(mfaMethodsMigrated)
                 .withPhoneNumber(null)
-                .withPhoneNumberVerified(false);
+                .withPhoneNumberVerified(false)
+                .withMfaIdentifier(null);
     }
 
     @Override
