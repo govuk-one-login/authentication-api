@@ -8,7 +8,9 @@ import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -17,6 +19,9 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+
+import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -62,6 +67,7 @@ public class MFAMethodsCreateHandler
 
     public APIGatewayProxyResponseEvent mfaMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+
         if (!configurationService.isMfaMethodManagementApiEnabled()) {
             LOG.error(
                     "Request to create MFA method in {} environment but feature is switched off.",
@@ -75,11 +81,23 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
-        var maybeUserProfile = dynamoService.getOptionalUserProfileFromPublicSubject(subject);
+        Optional<UserProfile> maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(subject);
         if (maybeUserProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
-        String email = maybeUserProfile.get().getEmail();
+        UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                dynamoService,
+                authorizerParams)) {
+            //            Should we return an error instead to prevent escaped exceptions?
+            //            Or throw error exception as is done elsewhere?
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1078);
+        }
 
         try {
             MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
@@ -88,7 +106,8 @@ public class MFAMethodsCreateHandler
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
 
             Either<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
-                    mfaMethodsService.addBackupMfa(email, mfaMethodCreateRequest.mfaMethod());
+                    mfaMethodsService.addBackupMfa(
+                            userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
             if (addBackupMfaResult.isLeft()) {
                 switch (addBackupMfaResult.getLeft()) {

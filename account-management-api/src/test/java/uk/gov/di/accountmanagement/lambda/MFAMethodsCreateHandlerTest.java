@@ -3,12 +3,12 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.JsonParser;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -17,14 +17,15 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -49,20 +51,24 @@ class MFAMethodsCreateHandlerTest {
             new CaptureLoggingExtension(MFAMethodsCreateHandler.class);
 
     private final Context context = mock(Context.class);
-    private static final String PERSISTENT_ID = "some-persistent-session-id";
-    private static final String SESSION_ID = "some-session-id";
-    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final String TEST_PHONE_NUMBER = "07123123123";
     private static final String TEST_PUBLIC_SUBJECT = "test-public-subject";
     private static final String TEST_EMAIL = "test@test.com";
     private static final String TEST_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
     private static final String TEST_AUTH_APP_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
+    private static final String TEST_CLIENT_ID = "some-client-id";
+    private static final Subject TEST_INTERNAL_SUBJECT = new Subject();
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
     private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
-    private static final UserProfile userProfile = mock(UserProfile.class);
+    private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
+    private static final UserProfile userProfile =
+            new UserProfile().withSubjectID(TEST_INTERNAL_SUBJECT.getValue()).withEmail(TEST_EMAIL);
+    private static final String internalSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", TEST_SALT);
 
     private MFAMethodsCreateHandler handler;
 
@@ -72,14 +78,15 @@ class MFAMethodsCreateHandlerTest {
         handler =
                 new MFAMethodsCreateHandler(configurationService, mfaMethodsService, dynamoService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
         reset(mfaMethodsService);
     }
 
     @Test
     void shouldReturn200AndCreateMfaSmsMfaMethod() {
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Either.right(
@@ -93,7 +100,7 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT);
+                        internalSubject);
 
         var result = handler.handleRequest(event, context);
 
@@ -128,9 +135,6 @@ class MFAMethodsCreateHandlerTest {
 
     @Test
     void shouldReturn200AndCreateAuthAppMfa() {
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Either.right(
@@ -144,7 +148,7 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT);
+                        internalSubject);
 
         var result = handler.handleRequest(event, context);
 
@@ -185,7 +189,7 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT);
+                        internalSubject);
 
         var result = handler.handleRequest(event, context);
 
@@ -217,7 +221,7 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT);
+                        internalSubject);
 
         var result = handler.handleRequest(event, context);
 
@@ -231,10 +235,8 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT);
+                        internalSubject);
         event.setBody("Invalid JSON");
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
 
         var result = handler.handleRequest(event, context);
 
@@ -248,9 +250,7 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
+                        internalSubject);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Either.left(
@@ -268,9 +268,7 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new SmsMfaDetail(TEST_PHONE_NUMBER),
-                        TEST_PUBLIC_SUBJECT);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
+                        internalSubject);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
 
@@ -286,9 +284,7 @@ class MFAMethodsCreateHandlerTest {
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
                         new AuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_PUBLIC_SUBJECT);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
+                        internalSubject);
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS));
 
@@ -298,8 +294,22 @@ class MFAMethodsCreateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
     }
 
+    @Test
+    void shouldReturn400WhenPrincipalIsInvalid() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        "invalid");
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(404));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1078));
+    }
+
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
-            PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String publicSubject) {
+            PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String principal) {
 
         String body =
                 mfaDetail instanceof SmsMfaDetail
@@ -326,24 +336,18 @@ class MFAMethodsCreateHandlerTest {
                                """,
                                 priorityIdentifier, ((AuthAppMfaDetail) mfaDetail).credential());
 
-        var event = new APIGatewayProxyRequestEvent();
-
-        event.setPathParameters(Map.of("publicSubjectId", publicSubject));
-        event.setBody(body);
-
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", principal);
+        authorizerParams.put("clientId", TEST_CLIENT_ID);
+        proxyRequestContext.setAuthorizer(authorizerParams);
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
-        event.setRequestContext(proxyRequestContext);
-        event.setHeaders(
-                Map.of(
-                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        PERSISTENT_ID,
-                        ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        SESSION_ID,
-                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
-                        TXMA_ENCODED_HEADER_VALUE));
 
-        return event;
+        return new APIGatewayProxyRequestEvent()
+                .withPathParameters(Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT))
+                .withBody(body)
+                .withRequestContext(proxyRequestContext)
+                .withHeaders(VALID_HEADERS);
     }
 }

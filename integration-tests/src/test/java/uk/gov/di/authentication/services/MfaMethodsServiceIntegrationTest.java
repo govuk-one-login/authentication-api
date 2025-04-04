@@ -11,6 +11,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -67,6 +68,7 @@ class MfaMethodsServiceIntegrationTest {
             MFAMethod.smsMfaMethod(
                     true, true, PHONE_NUMBER_TWO, PriorityIdentifier.BACKUP, SMS_MFA_IDENTIFIER_2);
     MfaMethodsService mfaMethodsService = new MfaMethodsService(ConfigurationService.getInstance());
+    private UserProfile userProfile;
 
     @RegisterExtension static UserStoreExtension userStoreExtension = new UserStoreExtension();
 
@@ -777,7 +779,7 @@ class MfaMethodsServiceIntegrationTest {
 
         @BeforeEach
         void setUp() {
-            publicSubjectId = userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+            userStoreExtension.signUp(EMAIL, "password-1", new Subject());
         }
 
         @Test
@@ -785,10 +787,11 @@ class MfaMethodsServiceIntegrationTest {
             userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPriorityAuthApp);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+            userProfile = userStoreExtension.getUserProfileFromEmail(EMAIL).get();
 
             var identifierToDelete = backupPriorityAuthApp.getMfaIdentifier();
 
-            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
             assertEquals(Either.right(identifierToDelete), result);
 
@@ -802,10 +805,11 @@ class MfaMethodsServiceIntegrationTest {
             userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+            userProfile = userStoreExtension.getUserProfileFromEmail(EMAIL).get();
 
             var identifierToDelete = backupPrioritySms.getMfaIdentifier();
 
-            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
             assertEquals(Either.right(identifierToDelete), result);
 
@@ -819,10 +823,11 @@ class MfaMethodsServiceIntegrationTest {
             userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
             var mfaMethods = List.of(backupPrioritySms, defaultPriorityAuthApp);
             mfaMethods.forEach(m -> userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, m));
+            userProfile = userStoreExtension.getUserProfileFromEmail(EMAIL).get();
 
             var identifierToDelete = defaultPriorityAuthApp.getMfaIdentifier();
 
-            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
             assertEquals(Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD), result);
 
@@ -839,10 +844,11 @@ class MfaMethodsServiceIntegrationTest {
             userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
             var mfaMethods = List.of(backupPrioritySms, defaultPriorityAuthApp);
             mfaMethods.forEach(m -> userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, m));
+            userProfile = userStoreExtension.getUserProfileFromEmail(EMAIL).get();
 
             var identifierToDelete = "5f27adb6-32ae-4397-a223-4b76840ddd01";
 
-            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, identifierToDelete);
+            var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
             assertEquals(
                     Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST),
@@ -860,8 +866,9 @@ class MfaMethodsServiceIntegrationTest {
         void shouldNotDeleteAnyMethodsAndReturnAnAppropriateResultWhenUserIsNotMigrated() {
             userStoreExtension.addMfaMethod(
                     EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
+            userProfile = userStoreExtension.getUserProfileFromEmail(EMAIL).get();
 
-            var result = mfaMethodsService.deleteMfaMethod(publicSubjectId, HARDCODED_APP_MFA_ID);
+            var result = mfaMethodsService.deleteMfaMethod(HARDCODED_APP_MFA_ID, userProfile);
 
             assertEquals(
                     Either.left(
@@ -878,15 +885,6 @@ class MfaMethodsServiceIntegrationTest {
                             new AuthAppMfaDetail("some-credential"));
 
             assertEquals(List.of(expectedRemainingMfaMethod), remainingMfaMethods);
-        }
-
-        @Test
-        void shouldReturnAnErrorWhenUserProfileNotFoundForPublicSubjectId() {
-            var result = mfaMethodsService.deleteMfaMethod("some-other-id", HARDCODED_APP_MFA_ID);
-
-            assertEquals(
-                    Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID),
-                    result);
         }
     }
 
