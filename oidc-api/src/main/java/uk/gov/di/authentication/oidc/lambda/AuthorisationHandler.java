@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -402,7 +403,7 @@ public class AuthorisationHandler
                         client.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
         var vtrList = getVtrList(reauthRequested, authRequest);
-        var requestedCredentialTrustLevel = VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
+        var requestedVtr = VectorOfTrust.getLowestVtr(vtrList);
 
         var auditEventExtensions =
                 new ArrayList<>(
@@ -412,7 +413,7 @@ public class AuthorisationHandler
                                 pair("reauthRequested", reauthRequested),
                                 pair(
                                         "credential_trust_level",
-                                        requestedCredentialTrustLevel.toString())));
+                                        requestedVtr.getCredentialTrustLevel().toString())));
 
         var maxAgeParam = getMaxAge(authRequest);
         if (configurationService.supportMaxAgeEnabled()
@@ -484,7 +485,7 @@ public class AuthorisationHandler
                 clientSessionId,
                 reauthRequested,
                 newAuthenticationRequired,
-                requestedCredentialTrustLevel,
+                requestedVtr,
                 user);
     }
 
@@ -649,7 +650,7 @@ public class AuthorisationHandler
             String clientSessionId,
             boolean reauthRequested,
             boolean newAuthenticationRequired,
-            CredentialTrustLevel requestedCredentialTrustLevel,
+            VectorOfTrust requestedVtr,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
@@ -756,7 +757,7 @@ public class AuthorisationHandler
                 persistentSessionId,
                 client,
                 reauthRequested,
-                requestedCredentialTrustLevel,
+                requestedVtr,
                 user,
                 previousSessionIdFromCookie,
                 orchSession);
@@ -857,7 +858,7 @@ public class AuthorisationHandler
             String persistentSessionId,
             ClientRegistry client,
             boolean reauthRequested,
-            CredentialTrustLevel requestedCredentialTrustLevel,
+            VectorOfTrust requestedVtr,
             TxmaAuditUser user,
             Optional<String> previousSessionId,
             OrchSessionItem orchSession) {
@@ -899,10 +900,6 @@ public class AuthorisationHandler
         var state = new State();
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
-        var vtrList =
-                Optional.ofNullable(authenticationRequest.getCustomParameter(VTR_PARAM))
-                        .map(VectorOfTrust::parseVtrStringListFromAuthRequestAttribute)
-                        .orElse(null);
         String reauthSub = null;
         String reauthSid = null;
         if (reauthRequested) {
@@ -910,9 +907,6 @@ public class AuthorisationHandler
                 SignedJWT reauthIdToken = getReauthIdToken(authenticationRequest);
                 reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
                 reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
-                if (isNull(authenticationRequest.getCustomParameter(VTR_PARAM))) {
-                    vtrList = extractVoTStringListFromIdTokenHint(reauthIdToken);
-                }
             } catch (RuntimeException e) {
                 return generateErrorResponse(
                         authenticationRequest.getRedirectionURI(),
@@ -952,7 +946,15 @@ public class AuthorisationHandler
                         .claim("is_one_login_service", client.isOneLoginService())
                         .claim("service_type", client.getServiceType())
                         .claim("govuk_signin_journey_id", clientSessionId)
-                        .claim("confidence", requestedCredentialTrustLevel.getValue())
+                        .claim("confidence", requestedVtr.getCredentialTrustLevel().getValue())
+                        .claim(
+                                "requested_credential_strength",
+                                requestedVtr.getCredentialTrustLevel().getValue())
+                        .claim(
+                                "requested_level_of_confidence",
+                                requestedVtr.containsLevelOfConfidence()
+                                        ? requestedVtr.getLevelOfConfidence().getValue()
+                                        : LevelOfConfidence.NONE.getValue())
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
@@ -963,7 +965,6 @@ public class AuthorisationHandler
                         .claim(
                                 "current_credential_strength",
                                 orchSession.getCurrentCredentialStrength())
-                        .claim("vtr", vtrList)
                         .claim("scope", authenticationRequest.getScope().toString());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));

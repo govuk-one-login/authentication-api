@@ -81,25 +81,16 @@ public class VectorOfTrust {
         return vtrList;
     }
 
-    public static List<String> parseVtrStringListFromAuthRequestAttribute(List<String> vtr) {
-        if (isNull(vtr) || vtr.isEmpty()) {
-            LOG.info(
-                    "VTR attribute is not present so defaulting to {}",
-                    CredentialTrustLevel.getDefault().getValue());
-            return List.of(CredentialTrustLevel.getDefault().getValue());
-        }
-        JSONArray vtrJsonArray = parseJSONArrayFromAuthRequestAttribute(vtr);
-        List<String> vtrList = vtrJsonArray.stream().map(String::valueOf).toList();
-        LOG.info("VTR list has been processed as vtrStringList list: {}", vtrList);
-        return vtrList;
-    }
-
-    public static CredentialTrustLevel getLowestCredentialTrustLevel(List<VectorOfTrust> vtrList) {
+    public static VectorOfTrust getLowestVtr(List<VectorOfTrust> vtrList) {
         List<VectorOfTrust> orderedVtrList = orderVtrList(vtrList);
         if (orderedVtrList.isEmpty()) {
             throw new IllegalArgumentException("Invalid VTR attribute");
         }
-        return orderedVtrList.get(0).getCredentialTrustLevel();
+        return orderedVtrList.get(0);
+    }
+
+    public static CredentialTrustLevel getLowestCredentialTrustLevel(List<VectorOfTrust> vtrList) {
+        return getLowestVtr(vtrList).getCredentialTrustLevel();
     }
 
     public static List<VectorOfTrust> orderVtrList(List<VectorOfTrust> vtrList) {
