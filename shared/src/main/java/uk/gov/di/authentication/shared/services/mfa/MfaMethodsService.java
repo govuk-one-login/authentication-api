@@ -77,14 +77,7 @@ public class MfaMethodsService {
     }
 
     public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
-            String publicSubjectId, String mfaIdentifier) {
-        var maybeUserProfile =
-                persistentService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
-
-        if (maybeUserProfile.isEmpty()) {
-            return Either.left(MfaDeleteFailureReason.NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID);
-        }
-        var userProfile = maybeUserProfile.get();
+            String mfaIdentifier, UserProfile userProfile) {
         if (!userProfile.getMfaMethodsMigrated()) {
             return Either.left(
                     MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER);

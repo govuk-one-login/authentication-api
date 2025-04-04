@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -24,6 +25,8 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final String PASSWORD = "password-1";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
+    private static String testInternalSubject;
     private static final MFAMethod DEFAULT_PRIORITY_AUTH_APP =
             MFAMethod.authAppMfaMethod(
                     "some-credential",
@@ -54,6 +57,12 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 };
         handler = new MFAMethodsDeleteHandler(mfaMethodEnabledConfigurationService);
         publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
+        byte[] salt = userStore.addSalt(EMAIL);
+        testInternalSubject =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        userStore.getUserProfileFromEmail(EMAIL).get().getSubjectID(),
+                        INTERNAL_SECTOR_HOST,
+                        salt);
     }
 
     @Test
@@ -72,7 +81,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 publicSubjectId,
                                 "mfaIdentifier",
                                 BACKUP_PRIORITY_SMS.getMfaIdentifier()),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         assertEquals(204, response.getStatusCode());
 
@@ -98,7 +107,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 nonExistentPublicSubjectId,
                                 "mfaIdentifier",
                                 "mfaIdentifier"),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         assertEquals(404, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
@@ -119,7 +128,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 publicSubjectId,
                                 "mfaIdentifier",
                                 "some-other-identifier"),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         assertEquals(404, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1065));
@@ -142,7 +151,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 publicSubjectId,
                                 "mfaIdentifier",
                                 DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier()),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         assertEquals(409, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1066));
@@ -165,11 +174,47 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 publicSubjectId,
                                 "mfaIdentifier",
                                 DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier()),
-                        Collections.emptyMap());
+                        Map.of("principalId", testInternalSubject));
 
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1067));
 
         assertEquals(1, userStoreExtension.getMfaMethod(EMAIL).size());
+    }
+
+    @Test
+    void shouldReturn401WhenPrincipalIsInvalid() {
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of(
+                                "publicSubjectId",
+                                publicSubjectId,
+                                "mfaIdentifier",
+                                DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier()),
+                        Map.of("principalId", "invalid-principal"));
+
+        assertEquals(401, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+    }
+
+    @Test
+    void shouldReturn404WhenUserProfileIsNotFoundForPublicSubject() {
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of(
+                                "publicSubjectId",
+                                "invalid-public-subject-id",
+                                "mfaIdentifier",
+                                DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier()),
+                        Map.of("principalId", testInternalSubject));
+
+        assertEquals(404, response.getStatusCode());
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
     }
 }

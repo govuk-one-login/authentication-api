@@ -7,9 +7,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 
 import java.util.Map;
@@ -26,6 +29,7 @@ public class MFAMethodsDeleteHandler
     private static final Logger LOG = LogManager.getLogger(MFAMethodsDeleteHandler.class);
     private final ConfigurationService configurationService;
     private final MfaMethodsService mfaMethodsService;
+    private final DynamoService dynamoService;
 
     public MFAMethodsDeleteHandler() {
         this(ConfigurationService.getInstance());
@@ -34,12 +38,16 @@ public class MFAMethodsDeleteHandler
     public MFAMethodsDeleteHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     public MFAMethodsDeleteHandler(
-            ConfigurationService configurationService, MfaMethodsService mfaMethodsService) {
+            ConfigurationService configurationService,
+            MfaMethodsService mfaMethodsService,
+            DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
+        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -76,7 +84,24 @@ public class MFAMethodsDeleteHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
-        var deleteResult = mfaMethodsService.deleteMfaMethod(publicSubjectId, mfaIdentifier);
+        var maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+        if (maybeUserProfile.isEmpty()) {
+            LOG.error("Unknown public subject ID");
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+        }
+        UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                dynamoService,
+                authorizerParams)) {
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
+        }
+
+        var deleteResult = mfaMethodsService.deleteMfaMethod(mfaIdentifier, userProfile);
 
         if (deleteResult.isLeft()) {
             var failureReason = deleteResult.getLeft();
@@ -91,8 +116,6 @@ public class MFAMethodsDeleteHandler
                         400, ErrorResponse.ERROR_1067);
                 case MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST -> generateApiGatewayProxyErrorResponse(
                         404, ErrorResponse.ERROR_1065);
-                case NO_USER_PROFILE_FOUND_FOR_PUBLIC_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
-                        404, ErrorResponse.ERROR_1056);
             };
         }
 
