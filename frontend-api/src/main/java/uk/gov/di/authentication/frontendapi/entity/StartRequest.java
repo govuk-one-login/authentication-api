@@ -4,8 +4,6 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 
-import java.util.List;
-
 public record StartRequest(
         @Expose @SerializedName("previous-session-id") String previousSessionId,
         @Expose @SerializedName("rp-pairwise-id-for-reauth") String rpPairwiseIdForReauth,
@@ -16,7 +14,8 @@ public record StartRequest(
                 CredentialTrustLevel currentCredentialStrength,
         @Expose @SerializedName("cookie_consent") String cookieConsent,
         @Expose @SerializedName("_ga") String ga,
-        @Expose @SerializedName("vtr") List<String> vtr,
+        @Expose @SerializedName("requested_credential_strength") String requestedCredentialStrength,
+        @Expose @SerializedName("requested_level_of_confidence") String requestedLevelOfConfidence,
         @Expose @SerializedName("state") String state,
         @Expose @SerializedName("client_id") String clientId,
         @Expose @SerializedName("redirect_uri") String redirectUri,

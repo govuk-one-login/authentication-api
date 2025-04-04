@@ -20,8 +20,8 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -376,16 +376,21 @@ public class StartHandler
         if (!Objects.equals(startRequest.ga(), getAuthRequestParam(clientSession, "_ga"))) {
             LOG.warn("\"_ga\" field does match custom parameter in auth request params");
         }
-        var authRequestVtrList =
-                Optional.ofNullable(clientSession.getAuthRequestParams().get("vtr"))
-                        .map(vtr -> List.of(VectorOfTrust.parseFromAuthRequestAttribute(vtr)))
+        var requestedVtr = clientSession.getEffectiveVectorOfTrust();
+        var requestedLevelOfConfidence =
+                Optional.ofNullable(requestedVtr.getLevelOfConfidence())
+                        .map(LevelOfConfidence::getValue)
                         .orElse(null);
-        var startRequestVtrList =
-                Optional.ofNullable(startRequest.vtr())
-                        .map(vtr -> List.of(VectorOfTrust.parseVtrStringList(vtr)))
-                        .orElse(null);
-        if (!Objects.equals(startRequestVtrList, authRequestVtrList)) {
-            LOG.warn("\"vtr\" field does match custom parameter in auth request params");
+        if (!Objects.equals(
+                startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence)) {
+            LOG.warn(
+                    "\"requested_level_of_confidence\" field does match levelOfConfidence in effectiveVectorOfTrust");
+        }
+        if (!Objects.equals(
+                startRequest.requestedCredentialStrength(),
+                requestedVtr.getCredentialTrustLevel().getValue())) {
+            LOG.warn(
+                    "\"requested_credential_strength\" field does match credentialTrustLevel in effectiveVectorOfTrust");
         }
         if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
             LOG.warn("\"state\" field does match custom parameter in auth request params");
