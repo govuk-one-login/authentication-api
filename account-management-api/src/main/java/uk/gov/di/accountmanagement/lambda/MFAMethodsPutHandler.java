@@ -7,7 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -93,9 +95,19 @@ public class MFAMethodsPutHandler
         var maybeUserProfile =
                 authenticationService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
         if (maybeUserProfile.isEmpty()) {
+            LOG.error("Unknown public subject ID");
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
-        var userProfile = maybeUserProfile.get();
+        UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                authenticationService,
+                authorizerParams)) {
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
+        }
 
         try {
             var mfaMethodUpdateRequest =
