@@ -18,9 +18,9 @@ dependencies {
             configurations.lettuce,
             configurations.libphonenumber
 
-    testImplementation project(":shared"), noXray
-    testImplementation project(":account-management-api"), noXray
-    testImplementation project(":shared-test"), noXray
+    testImplementation project(":shared")
+    testImplementation project(":account-management-api")
+    testImplementation project(":shared-test")
 
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"

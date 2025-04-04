@@ -22,14 +22,13 @@ dependencies {
             configurations.s3,
             configurations.sqs,
             configurations.ssm,
-            configurations.xray,
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache,
-            "org.apache.httpcomponents.core5:httpcore5:5.3.4"
-
-    implementation configurations.otel,
+            "org.apache.httpcomponents.core5:httpcore5:5.3.4",
             configurations.otel_http_client
+
+    api configurations.otel
 
     testImplementation configurations.tests,
             configurations.lambda_tests,

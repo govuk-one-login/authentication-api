@@ -12,9 +12,9 @@ dependencies {
             configurations.lambda,
             configurations.lettuce
 
-    implementation project(":shared"), noXray
-    testImplementation project(":delivery-receipts-api"), noXray
-    testImplementation project(":shared-test"), noXray
+    implementation project(":shared")
+    testImplementation project(":delivery-receipts-api")
+    testImplementation project(":shared-test")
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }

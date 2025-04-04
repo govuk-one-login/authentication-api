@@ -38,7 +38,6 @@ ext {
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "10.0.2",
         junit: "5.11.4",
-        xray: "2.18.2",
         pact: "4.6.17",
         vavr: "0.10.6",
         opentelemetry_instrumentation: "2.12.0-alpha"
@@ -50,15 +49,6 @@ ext {
         AWS_ACCESS_KEY_ID: "mock-access-key",
         AWS_SECRET_ACCESS_KEY: "mock-secret-key",
     ] : [:]
-
-    noXray = {
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-bom"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-core"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-core"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-instrumentor"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2"
-        exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2-instrumentor"
-    }
 }
 
 subprojects {
@@ -115,7 +105,6 @@ subprojects {
         ssm
         tests
         test_runtime
-        xray
         pact_consumer
         pact_provider
         vavr
@@ -218,13 +207,6 @@ subprojects {
                 "org.reflections:reflections:0.10.2"
 
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
-
-        xray platform("com.amazonaws:aws-xray-recorder-sdk-bom:${dependencyVersions.xray}"),
-                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-instrumentor:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
         spotbugs "com.github.spotbugs:spotbugs:4.9.3"
 
