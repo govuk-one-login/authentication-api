@@ -47,7 +47,7 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -592,8 +592,7 @@ class StartServiceTest {
                             .build();
         } else {
             clientSessionVTR =
-                    VectorOfTrust.parseFromAuthRequestAttribute(
-                            Collections.singletonList(vtrValue));
+                    VectorOfTrust.parseFromAuthRequestAttribute(List.of(vtrValue)).get(0);
             authRequest =
                     new AuthenticationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE),

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.entity;
 
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -25,47 +26,106 @@ class VectorOfTrustTest {
     @Test
     void shouldParseValidStringWithSingleVector() {
         var jsonArray = jsonArrayOf("Cl.Cm");
-        VectorOfTrust vectorOfTrust =
+        List<VectorOfTrust> vectorsOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
+        assertThat(vectorsOfTrust.get(0).getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
+        assertNull(vectorsOfTrust.get(0).getLevelOfConfidence());
+        assertThat(vectorsOfTrust.size(), equalTo(1));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validListCombinations")
+    void shouldParseValidStringWithMultipleVectors(String jsonArray, List<VectorOfTrust> expected) {
+        List<VectorOfTrust> vectorsOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
+        assertThat(vectorsOfTrust, equalTo(expected));
+    }
+
+    public static Stream<Arguments> validListCombinations() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("Cl.Cm"), List.of(VectorOfTrust.of(MEDIUM_LEVEL, null))),
+                Arguments.of(
+                        jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
+                Arguments.of(
+                        jsonArrayOf("Cl", "Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, null),
+                                VectorOfTrust.of(MEDIUM_LEVEL, null))));
     }
 
     @Test
     void shouldReturnDefaultVectorWhenEmptyListIsPassedIn() {
-        VectorOfTrust vectorOfTrust =
+        List<VectorOfTrust> vectorsOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(new ArrayList<>());
-        assertThat(
-                vectorOfTrust.getCredentialTrustLevel(),
+        MatcherAssert.assertThat(
+                vectorsOfTrust.get(0).getCredentialTrustLevel(),
                 equalTo(CredentialTrustLevel.getDefault()));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
-    }
-
-    @Test
-    void shouldReturnLowestVectorWhenMultipleSetsAreIsPassedIn() {
-        var jsonArray = jsonArrayOf("Cl.Cm", "Cl");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
-    }
-
-    @Test
-    void shouldParseValidStringWithMultipleVectors() {
-        var jsonArray = jsonArrayOf("Cl");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
+        assertNull(vectorsOfTrust.get(0).getLevelOfConfidence());
     }
 
     @Test
     void shouldParseValidStringWithSingleIdentityVector() {
         var jsonArray = jsonArrayOf("P2.Cl.Cm");
-        VectorOfTrust vectorOfTrust =
+        List<VectorOfTrust> vectorsOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
+        assertThat(vectorsOfTrust.get(0).getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
+        assertThat(
+                vectorsOfTrust.get(0).getLevelOfConfidence(),
+                equalTo(LevelOfConfidence.MEDIUM_LEVEL));
+    }
+
+    private static Stream<Arguments> vtrListsWithLowestCredentialTrustVtrs() {
+        return Stream.of(
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                        LOW_LEVEL),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, null)),
+                        MEDIUM_LEVEL),
+                Arguments.of(
+                        List.of(VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)), LOW_LEVEL));
+    }
+
+    @ParameterizedTest
+    @MethodSource("vtrListsToOrder")
+    void shouldOrderVtrListsBasedOnLocThenCtl(
+            List<VectorOfTrust> vtrList, List<VectorOfTrust> expected) {
+        var orderedList = VectorOfTrust.orderVtrList(vtrList);
+        assertThat(orderedList, equalTo(expected));
+    }
+
+    private static Stream<Arguments> vtrListsToOrder() {
+        return Stream.of(
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, null),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, null),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL))),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)),
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))));
     }
 
     @ParameterizedTest
@@ -85,6 +145,9 @@ class VectorOfTrustTest {
                 Arguments.of(
                         "VTR must contain either 0 or 1 identity proofing components",
                         jsonArrayOf("P2.P0")),
+                Arguments.of(
+                        "VTR cannot contain both identity and non-identity vectors",
+                        jsonArrayOf("P2.Cl.Cm", "Cl.Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("P2")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cl.Cm.Cl")),
@@ -93,8 +156,11 @@ class VectorOfTrustTest {
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")),
                 Arguments.of(
-                        "P2 identity confidence must require at least Cl.Cm credential trust",
-                        jsonArrayOf("P2.Cl")));
+                        "Non-zero identity confidence must require at least Cl.Cm credential trust",
+                        jsonArrayOf("P2.Cl")),
+                Arguments.of(
+                        "Non-zero identity confidence must require at least Cl.Cm credential trust",
+                        jsonArrayOf("P1.Cl")));
     }
 
     @ParameterizedTest
@@ -128,6 +194,7 @@ class VectorOfTrustTest {
         return Stream.of(
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                Arguments.of(null, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(null, LevelOfConfidence.MEDIUM_LEVEL));
     }
 
@@ -137,7 +204,8 @@ class VectorOfTrustTest {
 
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo("Cl.Cm"));
     }
 
@@ -146,25 +214,18 @@ class VectorOfTrustTest {
         String vectorString = "Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
     }
 
     @Test
-    void shouldReturnTrueWhenMediumIdentityLevelOfConfidenceIsPresent() {
+    void shouldReturnTrueWhenIdentityLevelOfConfidenceIsPresent() {
         String vectorString = "P2.Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
-        assertTrue(vectorOfTrust.containsLevelOfConfidence());
-    }
-
-    @Test
-    void shouldReturnTrueWhenLowIdentityLevelOfConfidenceIsPresent() {
-        String vectorString = "P1.Cl.Cm";
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertTrue(vectorOfTrust.containsLevelOfConfidence());
     }
 
@@ -173,7 +234,8 @@ class VectorOfTrustTest {
         String vectorString = "Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
     }
 
@@ -182,7 +244,8 @@ class VectorOfTrustTest {
         String vectorString = "P0.Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
     }
 
@@ -199,10 +262,10 @@ class VectorOfTrustTest {
         return Stream.of(
                 Arguments.of("[\"P2.Cl.Cm\"]", "[\"Cl.Cm.P2\"]", true),
                 Arguments.of("[\"P2.Cm.Cl\"]", "[\"Cl.Cm.P2\"]", true),
+                Arguments.of("[\"P1.Cm.Cl\"]", "[\"Cl.Cm.P1\"]", true),
                 Arguments.of("[\"Cm.Cl\"]", "[\"Cl.Cm\"]", true),
                 Arguments.of("[\"Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
-                Arguments.of("[\"P1.Cl.Cm\"]", "[\"Cl.Cm.P1\"]", true),
-                Arguments.of("[\"P1.Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
+                Arguments.of("[\"Cl.Cm.P1\"]", "[\"Cl.Cm.P2\"]", false),
                 Arguments.of("[\"Cl.Cm\"]", "[\"P2.Cl.Cm\"]", false));
     }
 }

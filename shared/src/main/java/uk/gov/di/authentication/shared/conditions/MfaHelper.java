@@ -30,7 +30,7 @@ public class MfaHelper {
             throw new RuntimeException();
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
+        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr).get(0);
 
         return !vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL);
     }
