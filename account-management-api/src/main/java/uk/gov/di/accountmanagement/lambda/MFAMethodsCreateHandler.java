@@ -85,8 +85,8 @@ public class MFAMethodsCreateHandler
         }
         var userProfile = maybeUserProfile.get();
 
-        var maybeSmsMigrationError = migrateSmsMfaForUserIfRequired(userProfile);
-        if (maybeSmsMigrationError.isPresent()) return maybeSmsMigrationError.get();
+        var maybeMigrationErrorResponse = migrateMfaCredentialsForUserIfRequired(userProfile);
+        if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
 
         try {
             MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
@@ -120,8 +120,7 @@ public class MFAMethodsCreateHandler
         }
     }
 
-    // TODO should this be called "migrate mfa for user if required" (don't think specific to sms)
-    private Optional<APIGatewayProxyResponseEvent> migrateSmsMfaForUserIfRequired(
+    private Optional<APIGatewayProxyResponseEvent> migrateMfaCredentialsForUserIfRequired(
             UserProfile userProfile) {
         if (!userProfile.getMfaMethodsMigrated()) {
             Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
@@ -131,7 +130,9 @@ public class MFAMethodsCreateHandler
                 MfaMigrationFailureReason mfaMigrationFailureReason =
                         maybeMfaMigrationFailureReason.get();
 
-                LOG.warn("Failed to migrate SMS MFA due to {}", mfaMigrationFailureReason);
+                LOG.warn(
+                        "Failed to migrate user's MFA credentials due to {}",
+                        mfaMigrationFailureReason);
 
                 return switch (mfaMigrationFailureReason) {
                     case NO_USER_FOUND_FOR_EMAIL -> Optional.of(
