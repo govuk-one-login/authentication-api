@@ -21,6 +21,13 @@ apply plugin: "java"
 apply plugin: "application"
 apply plugin: "idea"
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+        vendor = JvmVendorSpec.AMAZON
+    }
+}
+
 ext {
     dependencyVersions = [
         aws_sdk_v2_version: "2.31.10",
