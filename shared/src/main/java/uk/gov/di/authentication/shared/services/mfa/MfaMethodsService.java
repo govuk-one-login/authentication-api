@@ -4,7 +4,9 @@ import io.vavr.Value;
 import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -17,8 +19,10 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
@@ -44,13 +48,17 @@ public class MfaMethodsService {
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
             return getMfaMethodsForMigratedUser(userCredentials);
         } else {
-            return getMfaMethodsForNonMigratedUser(userProfile, userCredentials);
+            return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
+                    .map(List::of)
+                    .orElseGet(List::of);
         }
     }
 
     private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials)
             throws UnknownMfaTypeException {
-        return userCredentials.getMfaMethods().stream()
+        return Optional.ofNullable(userCredentials.getMfaMethods())
+                .orElse(new ArrayList<>())
+                .stream()
                 .map(
                         mfaMethod -> {
                             if (mfaMethod
@@ -116,26 +124,26 @@ public class MfaMethodsService {
         return Either.right(mfaIdentifier);
     }
 
-    private List<MfaMethodData> getMfaMethodsForNonMigratedUser(
+    private Optional<MfaMethodData> getMfaMethodForNonMigratedUser(
             UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();
-            return List.of(
+            return Optional.of(
                     MfaMethodData.authAppMfaData(
                             HARDCODED_APP_MFA_ID,
                             PriorityIdentifier.DEFAULT,
                             method.isMethodVerified(),
                             method.getCredentialValue()));
         } else if (userProfile.isPhoneNumberVerified()) {
-            return List.of(
+            return Optional.of(
                     MfaMethodData.smsMethodData(
                             HARDCODED_SMS_MFA_ID,
                             PriorityIdentifier.DEFAULT,
                             true,
                             userProfile.getPhoneNumber()));
         } else {
-            return List.of();
+            return Optional.empty();
         }
     }
 
@@ -365,5 +373,65 @@ public class MfaMethodsService {
         return updatedMethodDetail instanceof AuthAppMfaDetail
                 ? !MFAMethodType.AUTH_APP.name().equals(methodTypeFromExisting)
                 : !MFAMethodType.SMS.name().equals(methodTypeFromExisting);
+    }
+
+    public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(String email) {
+        // Bail if user doesn't exist
+        Optional<UserProfile> maybeUserProfile = persistentService.getUserProfileFromEmail(email);
+        Optional<UserCredentials> maybeUserCredentials =
+                Optional.ofNullable(persistentService.getUserCredentialsFromEmail(email));
+        if (maybeUserProfile.isEmpty() || maybeUserCredentials.isEmpty()) {
+            return Optional.of(MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL);
+        }
+
+        UserProfile userProfile = maybeUserProfile.get();
+        UserCredentials userCredentials = maybeUserCredentials.get();
+
+        // Bail if already migrated
+        if (userProfile.getMfaMethodsMigrated()) {
+            return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
+        }
+
+        var maybeNonMigratedMfaMethod =
+                getMfaMethodForNonMigratedUser(userProfile, userCredentials);
+
+        // Bail if no MFA methods to migrate
+        if (maybeNonMigratedMfaMethod.isEmpty()) {
+            persistentService.setMfaMethodsMigrated(email, true);
+            return Optional.empty();
+        }
+
+        var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
+
+        return nonMigratedMfaMethod.method() instanceof AuthAppMfaDetail
+                ? migrateAuthAppToNewFormat(email, (AuthAppMfaDetail) nonMigratedMfaMethod.method())
+                : migrateSmsToNewFormat(email, (SmsMfaDetail) nonMigratedMfaMethod.method());
+    }
+
+    private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
+            String email, AuthAppMfaDetail authAppMfaDetail) {
+        persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
+                email,
+                MFAMethod.authAppMfaMethod(
+                        authAppMfaDetail.credential(),
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString()));
+        return Optional.empty();
+    }
+
+    private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
+            String email, SmsMfaDetail smsMfaDetail) {
+        persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
+                email,
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        smsMfaDetail.phoneNumber(),
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString()));
+
+        return Optional.empty();
     }
 }

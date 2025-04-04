@@ -127,8 +127,16 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return dynamoService.getUserProfileFromEmail(email);
     }
 
+    public Optional<UserCredentials> getUserCredentialsFromEmail(String email) {
+        return Optional.of(dynamoService.getUserCredentialsFromEmail(email));
+    }
+
     public void addVerifiedPhoneNumber(String email, String phoneNumber) {
         setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
+    }
+
+    public void addUnverifiedPhoneNumber(String email, String phoneNumber) {
+        setPhoneNumberAndVerificationStatus(email, phoneNumber, false, true);
     }
 
     public void setPhoneNumberAndVerificationStatus(

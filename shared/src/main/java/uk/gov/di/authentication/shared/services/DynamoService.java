@@ -467,6 +467,16 @@ public class DynamoService implements AuthenticationService {
                         .setMfaMethodBasedOnPriority(mfaMethod));
     }
 
+    private UserCredentials overwriteUserCredentialsMfaMethods(
+            String email, List<MFAMethod> mfaMethods) {
+        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        mfaMethods.forEach(mfaMethod -> mfaMethod.setUpdated(dateTime));
+
+        return dynamoUserCredentialsTable
+                .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                .withMfaMethods(mfaMethods);
+    }
+
     @Override
     public void setAuthAppAndAccountVerified(String email, String credentialValue) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
@@ -569,13 +579,28 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
-        dynamoUserProfileTable.updateItem(
-                dynamoUserProfileTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .withMfaMethodsMigrated(mfaMethodsMigrated));
+        dynamoUserProfileTable.updateItem(buildSetMfaMethodsMigrated(email, mfaMethodsMigrated));
+    }
+
+    private UserProfile buildSetMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
+        return dynamoUserProfileTable
+                .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                .withMfaMethodsMigrated(mfaMethodsMigrated)
+                .withPhoneNumber(null)
+                .withPhoneNumberVerified(false);
+    }
+
+    @Override
+    public void overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
+            String email, MFAMethod mfaMethod) {
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addUpdateItem(
+                                dynamoUserCredentialsTable,
+                                overwriteUserCredentialsMfaMethods(email, List.of(mfaMethod)))
+                        .addUpdateItem(
+                                dynamoUserProfileTable, buildSetMfaMethodsMigrated(email, true))
+                        .build());
     }
 
     public List<UserProfile> getAllBulkTestUsers() {

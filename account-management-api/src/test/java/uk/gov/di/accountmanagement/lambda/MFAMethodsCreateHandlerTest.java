@@ -7,12 +7,16 @@ import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
@@ -23,15 +27,18 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -68,11 +75,41 @@ class MFAMethodsCreateHandlerTest {
 
     @BeforeEach
     void setUp() {
+        reset(mfaMethodsService);
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsCreateHandler(configurationService, mfaMethodsService, dynamoService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
-        reset(mfaMethodsService);
+        when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.empty());
+    }
+
+    private static Stream<Arguments> shouldReturn400WhenSmsMigrationFailedArgs() {
+        return Stream.of(
+                Arguments.of(
+                        MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
+                        ErrorResponse.ERROR_1056));
+    }
+
+    @ParameterizedTest
+    @MethodSource("shouldReturn400WhenSmsMigrationFailedArgs")
+    void shouldReturn400WhenSmsMigrationFailed(
+            MfaMigrationFailureReason reason, ErrorResponse expectedError) {
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+        when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.of(reason));
+
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new SmsMfaDetail(MFAMethodType.SMS, TEST_PHONE_NUMBER),
+                        TEST_PUBLIC_SUBJECT);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertTrue(result.getBody().contains(String.valueOf(expectedError.getCode())));
+        assertTrue(result.getBody().contains(expectedError.getMessage()));
     }
 
     @Test

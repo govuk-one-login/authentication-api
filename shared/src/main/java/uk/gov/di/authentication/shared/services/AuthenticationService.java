@@ -83,6 +83,14 @@ public interface AuthenticationService {
 
     void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated);
 
+    /**
+     * Overwrites existing {@code MfaMethods} on the {@code UserCredentials} table with a new-style
+     * SMS/Auth-App method, and sets the {@code mfaMethodsMigrated} flag to true on the {@code
+     * UserProfile} table
+     */
+    void overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
+            String email, MFAMethod mfaMethod);
+
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 
     Either<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
