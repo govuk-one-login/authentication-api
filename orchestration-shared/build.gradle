@@ -1,6 +1,7 @@
 plugins {
     id "java-library"
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di"
@@ -27,6 +28,9 @@ dependencies {
             configurations.apache,
             "org.apache.httpcomponents.core5:httpcore5:5.3.4",
             configurations.otel_http_client
+
+    implementation configurations.aspectjrt
+    compileOnly configurations.aspectjweaver
 
     api configurations.otel
 

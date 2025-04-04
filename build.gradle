@@ -15,6 +15,7 @@ plugins {
     id "org.sonarqube" version "6.1.0.5360"
     id "jacoco-report-aggregation"
     id 'com.github.spotbugs' version '6.1.7'
+    id 'io.freefair.aspectj.post-compile-weaving' version '6.6.3' apply false
 }
 
 apply plugin: "java"
@@ -111,6 +112,8 @@ subprojects {
         otel
         otel_http_client
         otel_aws_auto_instrumentation
+        aspectjrt
+        aspectjweaver
     }
 
     // Check dependencies using:
@@ -224,6 +227,9 @@ subprojects {
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
         otel_http_client platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
                 "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
+
+        aspectjrt "org.aspectj:aspectjrt:1.9.20"
+        aspectjweaver "org.aspectj:aspectjweaver:1.9.20"
     }
 }
 

@@ -1,6 +1,7 @@
 plugins {
     id "java-library"
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di"
@@ -31,6 +32,9 @@ dependencies {
     api configurations.otel
     implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 
+    implementation configurations.aspectjrt
+    compileOnly configurations.aspectjweaver
+
     testImplementation configurations.tests,
             configurations.lambda_tests,
             project(":shared-test")
@@ -40,6 +44,16 @@ dependencies {
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
+
+    // Enable AspectJ weaving during test execution using runtimeClasspath to find the jar
+    doFirst {
+        def aspectjWeaverJar = configurations.runtimeClasspath.find { it.name.contains("aspectjweaver") }
+        if (aspectjWeaverJar) {
+            jvmArgs "-javaagent:${aspectjWeaverJar.absolutePath}"
+        } else {
+            logger.warn("AspectJ weaver jar not found in runtime classpath!")
+        }
+    }
 }
 
 java {
