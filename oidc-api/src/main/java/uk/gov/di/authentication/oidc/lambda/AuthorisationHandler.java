@@ -98,6 +98,7 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
+import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -1098,7 +1099,11 @@ public class AuthorisationHandler
         if (amScopePresent) {
             LOG.info("am scope is present. Adding the public_subject_id claim");
             claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
+        } else if (PUBLIC.toString().equalsIgnoreCase(clientRegistry.getSubjectType())) {
+            LOG.info("client has PUBLIC subjectType. Adding the public_subject_id claim");
+            claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
         }
+
         if (govukAccountScopePresent) {
             LOG.info("govuk-account scope is present. Adding the legacy_subject_id claim");
             claimsSet.add(AuthUserInfoClaims.LEGACY_SUBJECT_ID);

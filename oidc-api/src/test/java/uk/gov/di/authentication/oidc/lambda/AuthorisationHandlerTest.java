@@ -1754,6 +1754,31 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldAddPublicSubjectIdClaimIfClientHasPublicSubjectTypePresent()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
+            when(clientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(generateClientRegistry().withSubjectType("public")));
+
+            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+
+            var expectedClaim =
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null}}");
+            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
+            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
+        }
+
+        @Test
         void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent()
                 throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
             Map<String, String> requestParams =
@@ -2974,7 +2999,7 @@ class AuthorisationHandlerTest {
                 .withRedirectUrls(List.of(REDIRECT_URI))
                 .withOneLoginService(IS_ONE_LOGIN)
                 .withServiceType(RP_SERVICE_TYPE)
-                .withSubjectType("public")
+                .withSubjectType("pairwise")
                 .withIdentityVerificationSupported(true)
                 .withMaxAgeEnabled(false);
     }
