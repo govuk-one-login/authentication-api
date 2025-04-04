@@ -201,7 +201,8 @@ public class MfaMethodsService {
                             true,
                             smsMfaDetail.phoneNumber()));
         } else {
-            boolean authAppExists =
+            boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
+                    // auth apps?
                     mfaMethods.stream()
                             .map(MfaMethodData::method)
                             .filter(AuthAppMfaDetail.class::isInstance)
