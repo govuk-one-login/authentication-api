@@ -371,10 +371,11 @@ public class StartHandler
         if (!Objects.equals(
                 startRequest.cookieConsent(),
                 getAuthRequestParam(clientSession, "cookie_consent"))) {
-            LOG.warn("\"cookie_consent\" field does match custom parameter in auth request params");
+            LOG.warn(
+                    "\"cookie_consent\" field does not match custom parameter in auth request params");
         }
         if (!Objects.equals(startRequest.ga(), getAuthRequestParam(clientSession, "_ga"))) {
-            LOG.warn("\"_ga\" field does match custom parameter in auth request params");
+            LOG.warn("\"_ga\" field does not match custom parameter in auth request params");
         }
         var requestedVtr = clientSession.getEffectiveVectorOfTrust();
         var requestedLevelOfConfidence =
@@ -384,27 +385,28 @@ public class StartHandler
         if (!Objects.equals(
                 startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence)) {
             LOG.warn(
-                    "\"requested_level_of_confidence\" field does match levelOfConfidence in effectiveVectorOfTrust");
+                    "\"requested_level_of_confidence\" field does not match levelOfConfidence in effectiveVectorOfTrust");
         }
         if (!Objects.equals(
                 startRequest.requestedCredentialStrength(),
                 requestedVtr.getCredentialTrustLevel().getValue())) {
             LOG.warn(
-                    "\"requested_credential_strength\" field does match credentialTrustLevel in effectiveVectorOfTrust");
+                    "\"requested_credential_strength\" field does not match credentialTrustLevel in effectiveVectorOfTrust");
         }
         if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
-            LOG.warn("\"state\" field does match custom parameter in auth request params");
+            LOG.warn("\"state\" field does not match custom parameter in auth request params");
         }
         if (!Objects.equals(
                 startRequest.clientId(), getAuthRequestParam(clientSession, "client_id"))) {
-            LOG.warn("\"client_id\" field does match custom parameter in auth request params");
+            LOG.warn("\"client_id\" field does not match custom parameter in auth request params");
         }
         if (!Objects.equals(
                 startRequest.redirectUri(), getAuthRequestParam(clientSession, "redirect_uri"))) {
-            LOG.warn("\"redirect_uri\" field does match custom parameter in auth request params");
+            LOG.warn(
+                    "\"redirect_uri\" field does not match custom parameter in auth request params");
         }
         if (!Objects.equals(startRequest.scope(), getAuthRequestParam(clientSession, "scope"))) {
-            LOG.warn("\"scope\" field does match custom parameter in auth request params");
+            LOG.warn("\"scope\" field does not match custom parameter in auth request params");
         }
     }
 
