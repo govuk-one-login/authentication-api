@@ -31,9 +31,12 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -44,6 +47,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -60,12 +64,17 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.helper.Constants.CLIENT_NAME;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class IPVCallbackHelperTest {
@@ -75,8 +84,11 @@ class IPVCallbackHelperTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
+
+    // TODO: ATO-1218: Remove the following mock for the auth code service.
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -113,6 +125,7 @@ class IPVCallbackHelperTest {
     private static final Subject RP_PAIRWISE_SUBJECT = new Subject("rp-pairwise-id");
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
+    private static final Long AUTH_TIME = 1234L;
     private static final UserProfile userProfile = generateUserProfile();
     private static final UserInfo p0VotUserIdentityUserInfo =
             new UserInfo(
@@ -145,11 +158,15 @@ class IPVCallbackHelperTest {
 
     @BeforeEach
     void setUp() {
+        clearInvocations(authorisationCodeService);
+        clearInvocations(orchAuthCodeService);
+
         helper =
                 new IPVCallbackHelper(
                         auditService,
                         authCodeResponseService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         cloudwatchMetricsService,
                         dynamoClientService,
                         dynamoIdentityService,
@@ -169,8 +186,17 @@ class IPVCallbackHelperTest {
                 .thenReturn(
                         new AccountIntervention(
                                 new AccountInterventionState(false, true, false, false)));
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        anyString(), anyString(), anyString(), any(Long.class)))
+                        anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(AUTH_CODE);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        anyLong()))
                 .thenReturn(AUTH_CODE);
 
         when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
@@ -204,6 +230,8 @@ class IPVCallbackHelperTest {
                                 .withSessionId(SESSION_ID));
         assertEquals(302, response.getStatusCode());
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @ParameterizedTest
@@ -213,6 +241,8 @@ class IPVCallbackHelperTest {
         var response = helper.validateUserIdentityResponse(userInfo, vtrList);
 
         assertEquals(Optional.empty(), response);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -227,6 +257,8 @@ class IPVCallbackHelperTest {
                         missingVotUserIdentityUserInfo, VTR_LIST_P2_ONLY);
 
         assertEquals(Optional.of(OAuth2Error.ACCESS_DENIED), response);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -235,6 +267,8 @@ class IPVCallbackHelperTest {
                 helper.validateUserIdentityResponse(p0VotUserIdentityUserInfo, VTR_LIST_P2_ONLY);
 
         assertEquals(Optional.of(OAuth2Error.ACCESS_DENIED), response);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -256,6 +290,8 @@ class IPVCallbackHelperTest {
                         "Expected to throw IpvCallbackException");
 
         assertEquals("IPV trustmark is invalid", exception.getMessage());
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -288,6 +324,7 @@ class IPVCallbackHelperTest {
                         auditService,
                         authCodeResponseService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         cloudwatchMetricsService,
                         dynamoClientService,
                         dynamoIdentityService,
@@ -317,6 +354,8 @@ class IPVCallbackHelperTest {
                 hasItem(withMessageContaining("Constructing SPOT request ready to queue")));
         verifyNoInteractions(sqsClient);
         assertEquals("json-exception", exception.getMessage());
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -403,6 +442,28 @@ class IPVCallbackHelperTest {
                         "");
     }
 
+    @Test
+    void shouldGenerateAndSaveAuthorisationCode() throws UserNotFoundException {
+        OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID).withAuthTime(AUTH_TIME);
+
+        helper.generateReturnCodeAuthenticationResponse(
+                generateAuthRequest(new OIDCClaimsRequest()),
+                CLIENT_SESSION_ID,
+                userProfile,
+                new Session(),
+                SESSION_ID,
+                orchSession,
+                CLIENT_NAME,
+                RP_PAIRWISE_SUBJECT,
+                "an-internal-pairwise-subject-id",
+                new UserInfo(new Subject()),
+                "127.0.0.1",
+                "a-persistent-session-id",
+                CLIENT_ID.getValue());
+
+        assertAuthorisationCodeGeneratedAndSaved();
+    }
+
     private static UserProfile generateUserProfile() {
         return new UserProfile()
                 .withEmail(TEST_EMAIL_ADDRESS)
@@ -425,5 +486,31 @@ class IPVCallbackHelperTest {
                 .nonce(nonce)
                 .claims(oidcClaimsRequest)
                 .build();
+    }
+
+    private void assertAuthorisationCodeGeneratedAndSaved() {
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        eq(AUTH_TIME));
+
+        verify(orchAuthCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(TEST_EMAIL_ADDRESS),
+                        eq(AUTH_TIME));
+    }
+
+    private void assertNoAuthorisationCodeGeneratedAndSaved() {
+        verify(authorisationCodeService, times(0))
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
+
+        verify(orchAuthCodeService, times(0))
+                .generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class), any(), any(), any(), any());
     }
 }

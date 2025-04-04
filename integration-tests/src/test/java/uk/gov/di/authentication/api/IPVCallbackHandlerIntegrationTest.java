@@ -46,6 +46,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
@@ -77,6 +78,7 @@ import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SPOT_REQ
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
@@ -100,6 +102,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @RegisterExtension
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
+
+    @RegisterExtension
+    public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
 
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
@@ -609,6 +614,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(REDIRECT_URI + "?code"));
         assertSessionUpdatedWhenReturnCodeRequestedAndPresent();
+
+        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
     @Test
