@@ -41,6 +41,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumbe
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addPersistentSessionIdAnnotation;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addSessionIdAnnotation;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -112,6 +114,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     ValidationHelper.validateEmailAddress(emailAddress);
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            addPersistentSessionIdAnnotation(persistentSessionId);
 
             var auditContext =
                     auditContextFromUserContext(
@@ -136,6 +139,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var session = userContext.getSession();
             var sessionId = userContext.getAuthSession().getSessionId();
+            addSessionIdAnnotation(sessionId);
 
             if (codeStorageService.isBlockedForEmail(
                     emailAddress,

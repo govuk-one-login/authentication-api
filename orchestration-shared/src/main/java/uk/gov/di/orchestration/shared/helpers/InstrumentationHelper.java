@@ -9,6 +9,7 @@ import io.opentelemetry.context.Scope;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.annotations.ExcludeFromGeneratedCoverageReport;
+import uk.gov.di.orchestration.shared.tracing.AuthAttributes;
 
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -105,6 +106,26 @@ public class InstrumentationHelper {
 
     public static void addAnnotation(final String key, final Boolean value) {
         addAnnotation(AttributeKey.booleanKey(key), value);
+    }
+
+    public static void addSessionIdAnnotation(final String sessionId) {
+        addAnnotation(AuthAttributes.AUTH_SESSION_ID, sessionId);
+    }
+
+    public static void addOrchSessionIdAnnotation(final String orchSessionId) {
+        addAnnotation(AuthAttributes.ORCH_SESSION_ID, orchSessionId);
+    }
+
+    public static void addPersistentSessionIdAnnotation(final String persistentSessionId) {
+        addAnnotation(AuthAttributes.SESSION_ID, persistentSessionId);
+    }
+
+    public static void addClientSessionIdAnnotation(final String clientSessionId) {
+        addAnnotation(AuthAttributes.PERSISTENT_SESSION_ID, clientSessionId);
+    }
+
+    public static void addClientIdAnnotation(final String clientId) {
+        addAnnotation(AuthAttributes.CLIENT_ID, clientId);
     }
 
     private static Optional<Span> getCurrentSpan() {
