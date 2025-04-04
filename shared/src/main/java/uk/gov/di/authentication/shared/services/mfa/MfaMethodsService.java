@@ -43,10 +43,8 @@ public class MfaMethodsService {
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
             return getMfaMethodsForMigratedUser(userCredentials);
         } else {
-            return Either.right(
-                    getMfaMethodForNonMigratedUser(userProfile, userCredentials)
-                            .map(List::of)
-                            .orElseGet(List::of));
+            return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
+                    .map(optional -> optional.map(List::of).orElseGet(List::of));
         }
     }
 
@@ -114,8 +112,9 @@ public class MfaMethodsService {
         return Either.right(mfaIdentifier);
     }
 
-    private Optional<MfaMethodData> getMfaMethodForNonMigratedUser(
-            UserProfile userProfile, UserCredentials userCredentials) {
+    private Either<MfaRetrieveFailureReason, Optional<MfaMethodData>>
+            getMfaMethodForNonMigratedUser(
+                    UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();
@@ -124,15 +123,25 @@ public class MfaMethodsService {
                 mfaIdentifier = method.getMfaIdentifier();
             } else {
                 mfaIdentifier = UUID.randomUUID().toString();
-                persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
-                        userProfile.getEmail(), mfaIdentifier); // TODO what if left
+                var result =
+                        persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+                                userProfile.getEmail(), mfaIdentifier);
+                if (result.isLeft()) {
+                    LOG.error(
+                            "Unexpected error updating non migrated auth app mfa identifier: {}",
+                            result.getLeft());
+                    return Either.left(
+                            MfaRetrieveFailureReason
+                                    .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP);
+                }
             }
-            return Optional.of(
-                    MfaMethodData.authAppMfaData(
-                            mfaIdentifier,
-                            PriorityIdentifier.DEFAULT,
-                            method.isMethodVerified(),
-                            method.getCredentialValue()));
+            return Either.right(
+                    Optional.of(
+                            MfaMethodData.authAppMfaData(
+                                    mfaIdentifier,
+                                    PriorityIdentifier.DEFAULT,
+                                    method.isMethodVerified(),
+                                    method.getCredentialValue())));
         } else if (userProfile.isPhoneNumberVerified()) {
             String mfaIdentifier;
             if (Objects.nonNull(userProfile.getMfaIdentifier())) {
@@ -142,14 +151,15 @@ public class MfaMethodsService {
                 persistentService.setMfaIdentifierForNonMigratedSmsMethod(
                         userProfile.getEmail(), mfaIdentifier);
             }
-            return Optional.of(
-                    MfaMethodData.smsMethodData(
-                            mfaIdentifier,
-                            PriorityIdentifier.DEFAULT,
-                            true,
-                            userProfile.getPhoneNumber()));
+            return Either.right(
+                    Optional.of(
+                            MfaMethodData.smsMethodData(
+                                    mfaIdentifier,
+                                    PriorityIdentifier.DEFAULT,
+                                    true,
+                                    userProfile.getPhoneNumber())));
         } else {
-            return Optional.empty();
+            return Either.right(Optional.empty());
         }
     }
 
@@ -405,8 +415,14 @@ public class MfaMethodsService {
             return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
         }
 
-        var maybeNonMigratedMfaMethod =
+        var nonMigratedRetrieveResult =
                 getMfaMethodForNonMigratedUser(userProfile, userCredentials);
+
+        if (nonMigratedRetrieveResult.isLeft()) {
+            return Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
+        }
+
+        var maybeNonMigratedMfaMethod = nonMigratedRetrieveResult.get();
 
         // Bail if no MFA methods to migrate
         if (maybeNonMigratedMfaMethod.isEmpty()) {

@@ -5,6 +5,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
@@ -17,6 +21,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -24,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MFAMethodsRetrieveHandlerTest {
@@ -115,15 +121,28 @@ class MFAMethodsRetrieveHandlerTest {
         assertThat(result, hasStatus(404));
     }
 
-    @Test
-    void shouldReturn500IfDynamoServiceReturnsError() {
+    private static Stream<Arguments> mfaRetrieveFailureReasonsToExpectedErrors() {
+        return Stream.of(
+                Arguments.of(
+                        MfaRetrieveFailureReason.ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA,
+                        500,
+                        ErrorResponse.ERROR_1064),
+                Arguments.of(
+                        MfaRetrieveFailureReason
+                                .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP,
+                        500,
+                        ErrorResponse.ERROR_1078));
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaRetrieveFailureReasonsToExpectedErrors")
+    void shouldReturn500IfDynamoServiceReturnsError(
+            MfaRetrieveFailureReason error,
+            int expectedStatusCode,
+            ErrorResponse expectedErrorResponse) {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
                 .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(
-                        Either.left(
-                                MfaRetrieveFailureReason
-                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Either.left(error));
 
         var event =
                 new APIGatewayProxyRequestEvent()
@@ -132,6 +151,7 @@ class MFAMethodsRetrieveHandlerTest {
 
         var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(500));
+        assertThat(result, hasStatus(expectedStatusCode));
+        assertThat(result, hasJsonBody(expectedErrorResponse));
     }
 }

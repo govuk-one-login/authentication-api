@@ -120,6 +120,7 @@ public class MFAMethodsCreateHandler
         }
     }
 
+    // TODO should this be called "migrate mfa for user if required" (don't think specific to sms)
     private Optional<APIGatewayProxyResponseEvent> migrateSmsMfaForUserIfRequired(
             UserProfile userProfile) {
         if (!userProfile.getMfaMethodsMigrated()) {
@@ -132,11 +133,13 @@ public class MFAMethodsCreateHandler
 
                 LOG.warn("Failed to migrate SMS MFA due to {}", mfaMigrationFailureReason);
 
-                if (mfaMigrationFailureReason
-                        == MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL) {
-                    return Optional.of(
+                return switch (mfaMigrationFailureReason) {
+                    case NO_USER_FOUND_FOR_EMAIL -> Optional.of(
                             generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056));
-                }
+                    case UNEXPECTED_ERROR_RETRIEVING_METHODS -> Optional.of(
+                            generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064));
+                    case ALREADY_MIGRATED -> Optional.empty();
+                };
             }
         }
 
