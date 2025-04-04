@@ -39,6 +39,7 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -88,6 +89,7 @@ public class AuthCodeHandler
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
+    private final DynamoClientService dynamoClientService;
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -101,7 +103,8 @@ public class AuthCodeHandler
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
@@ -114,6 +117,7 @@ public class AuthCodeHandler
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
+        this.dynamoClientService = dynamoClientService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
@@ -131,6 +135,7 @@ public class AuthCodeHandler
         dynamoService = new DynamoService(configurationService);
         authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        dynamoClientService = new DynamoClientService(configurationService);
     }
 
     public AuthCodeHandler(
@@ -149,6 +154,7 @@ public class AuthCodeHandler
         dynamoService = new DynamoService(configurationService);
         authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        dynamoClientService = new DynamoClientService(configurationService);
     }
 
     public AuthCodeHandler() {
@@ -265,6 +271,12 @@ public class AuthCodeHandler
             return processParseException(e);
         }
 
+        var clientOptional = dynamoClientService.getClient(clientID.getValue());
+        if (clientOptional.isEmpty()) {
+            return processClientNotFoundException(authenticationRequest);
+        }
+        var client = clientOptional.get();
+
         LOG.info("Successfully processed request");
 
         try {
@@ -294,6 +306,11 @@ public class AuthCodeHandler
                 authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
                 rpPairwiseId = orchClientSession.getRpPairwiseId();
+                LOG.info(
+                        "is rpPairwiseId the same as pairwiseIdForClient: {}",
+                        Objects.equals(
+                                rpPairwiseId,
+                                orchClientSession.getCorrectPairwiseIdGivenClient(client)));
             }
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
