@@ -22,6 +22,7 @@ import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInte
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.parseException;
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.timeoutException;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.tracing.TracingHttpClient.newHttpClient;
 
 public class AccountInterventionsService {
 
@@ -33,13 +34,13 @@ public class AccountInterventionsService {
     private ConfigurationService configurationService;
 
     public AccountInterventionsService() {
-        httpClient = HttpClient.newHttpClient();
+        httpClient = newHttpClient();
         configurationService = new ConfigurationService();
     }
 
     public AccountInterventionsService(ConfigurationService configService) {
         configurationService = configService;
-        httpClient = HttpClient.newHttpClient();
+        httpClient = newHttpClient();
     }
 
     public AccountInterventionsService(HttpClient client, ConfigurationService configService) {

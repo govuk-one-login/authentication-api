@@ -112,6 +112,8 @@ subprojects {
         pact_consumer
         pact_provider
         vavr
+        otel
+        otel_http_client
         otel_aws_auto_instrumentation
     }
 
@@ -225,8 +227,12 @@ subprojects {
 
         vavr "io.vavr:vavr:${dependencyVersions.vavr}"
 
+        otel platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry:opentelemetry-api"
         otel_aws_auto_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
+        otel_http_client platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }
 }
 

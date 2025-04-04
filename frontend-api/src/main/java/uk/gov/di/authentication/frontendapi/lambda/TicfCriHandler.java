@@ -20,6 +20,7 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.tracing.TracingHttpClient.newHttpClient;
 
 public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Void> {
 
@@ -41,7 +42,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
 
     public TicfCriHandler() {
         this.configurationService = ConfigurationService.getInstance();
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = newHttpClient();
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 

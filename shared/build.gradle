@@ -29,6 +29,9 @@ dependencies {
             configurations.vavr
     implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 
+    implementation configurations.otel,
+            configurations.otel_http_client
+
     testImplementation configurations.tests,
             configurations.lambda_tests,
             project(":shared-test")
