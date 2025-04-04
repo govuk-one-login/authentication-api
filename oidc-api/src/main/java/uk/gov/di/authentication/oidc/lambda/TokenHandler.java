@@ -29,6 +29,7 @@ import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -43,6 +44,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -84,6 +86,7 @@ public class TokenHandler
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final AuthorisationCodeService authorisationCodeService;
+    private final OrchAuthCodeService orchAuthCodeService;
     private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final TokenValidationService tokenValidationService;
@@ -99,6 +102,7 @@ public class TokenHandler
             DynamoService dynamoService,
             ConfigurationService configurationService,
             AuthorisationCodeService authorisationCodeService,
+            OrchAuthCodeService orchAuthCodeService,
             ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
@@ -109,6 +113,7 @@ public class TokenHandler
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
+        this.orchAuthCodeService = orchAuthCodeService;
         this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.tokenValidationService = tokenValidationService;
@@ -129,6 +134,7 @@ public class TokenHandler
         this.authorisationCodeService =
                 new AuthorisationCodeService(
                         configurationService, redisConnectionService, objectMapper);
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
@@ -154,6 +160,7 @@ public class TokenHandler
         this.authorisationCodeService =
                 new AuthorisationCodeService(
                         configurationService, redisConnectionService, objectMapper);
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
@@ -233,6 +240,46 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         AuthCodeExchangeData authCodeExchangeData = authCodeExchangeDataMaybe.get();
+
+        try {
+            Optional<AuthCodeExchangeData> orchAuthCodeExchangeDataMaybe =
+                    segmentedFunctionCall(
+                            "orchAuthCodeService",
+                            () ->
+                                    orchAuthCodeService.getExchangeDataForCode(
+                                            requestBody.get("code")));
+
+            // TODO: ATO-1205: Remove these logs after consistency checks are complete.
+            if (orchAuthCodeExchangeDataMaybe.isEmpty()) {
+                LOG.warn(
+                        "OrchAuthCode consistency check error: Record present in Redis but not in DynamoDB. ClientId: {}. ClientSessionId: {}. NOTE: Redis is still the primary at present.",
+                        authCodeExchangeData.getClientId(),
+                        authCodeExchangeData.getClientSessionId());
+            } else {
+                AuthCodeExchangeData orchAuthCodeExchangeData = orchAuthCodeExchangeDataMaybe.get();
+
+                LOG.info(
+                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode client ID equal? {}",
+                        authCodeExchangeData
+                                .getClientId()
+                                .equals(orchAuthCodeExchangeData.getClientId()));
+                LOG.info(
+                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode client session ID equal? {}",
+                        authCodeExchangeData
+                                .getClientSessionId()
+                                .equals(orchAuthCodeExchangeData.getClientSessionId()));
+                LOG.info(
+                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode auth time equal? {}",
+                        authCodeExchangeData
+                                .getAuthTime()
+                                .equals(orchAuthCodeExchangeData.getAuthTime()));
+            }
+        } catch (OrchAuthCodeException e) {
+            LOG.warn(
+                    "Failed to retrieve authorisation code from orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
+                    e.getMessage());
+        }
+
         if (!Objects.equals(authCodeExchangeData.getClientId(), clientRegistry.getClientID())) {
             LOG.warn("Client ID from auth code does not match client ID from request body");
             return generateApiGatewayProxyResponse(
