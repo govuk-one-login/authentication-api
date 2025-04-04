@@ -163,7 +163,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
-        var baseTokenRequest = constructBaseTokenRequest(scope, vtr, Optional.empty(), clientId);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, vtr, Optional.empty(), clientId, new AuthorizationCode());
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
         assertThat(response, hasStatus(200));
@@ -204,7 +206,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 clientSecret.getValue(), ClientAuthenticationMethod.CLIENT_SECRET_POST, scope);
         var baseTokenRequest =
                 constructBaseTokenRequest(
-                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+                        scope,
+                        Optional.of("Cl.Cm"),
+                        Optional.empty(),
+                        Optional.of(CLIENT_ID),
+                        new AuthorizationCode());
         var response = makeTokenRequestWithClientSecretPost(baseTokenRequest, clientSecret);
 
         assertThat(response, hasStatus(200));
@@ -245,7 +251,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         scope,
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
-                        Optional.of(DIFFERENT_CLIENT_ID));
+                        Optional.of(DIFFERENT_CLIENT_ID),
+                        new AuthorizationCode());
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
@@ -269,7 +276,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 keyPair.getPublic(), scope, SubjectType.PUBLIC);
         var baseTokenRequest =
                 constructBaseTokenRequest(
-                        scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+                        scope,
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(CLIENT_ID),
+                        new AuthorizationCode());
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
@@ -310,7 +321,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         var baseTokenRequest =
                 constructBaseTokenRequest(
-                        scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+                        scope,
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(CLIENT_ID),
+                        new AuthorizationCode());
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
@@ -353,7 +368,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         scope,
                         Optional.of("P2.Cl.Cm"),
                         Optional.of(oidcClaimsRequest),
-                        Optional.of(CLIENT_ID));
+                        Optional.of(CLIENT_ID),
+                        new AuthorizationCode());
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
@@ -397,7 +413,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         var baseTokenRequest =
                 constructBaseTokenRequest(
-                        scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+                        scope,
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(CLIENT_ID),
+                        new AuthorizationCode());
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
@@ -553,8 +573,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ClientAuthenticationMethod.CLIENT_SECRET_POST,
                 scope);
 
+        var testClient2AuthCode = new AuthorizationCode("test-auth-code-2");
+
         createAuthCodeForClient(Optional.of("test-client-1"), "test-auth-code-1");
-        createAuthCodeForClient(Optional.of("test-client-2"), "test-auth-code-2");
+        createAuthCodeForClient(Optional.of("test-client-2"), testClient2AuthCode.getValue());
 
         var baseTokenRequest =
                 constructBaseTokenRequest(
@@ -562,7 +584,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
                         Optional.of("test-client-1"),
-                        "test-auth-code-2",
+                        testClient2AuthCode,
                         CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithClientSecretPost(
@@ -583,8 +605,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         registerClientWithPrivateKeyJwtAuthentication(
                 "test-client-1", keyPair.getPublic(), scope, SubjectType.PAIRWISE);
 
+        var testClient2AuthCode = new AuthorizationCode("test-auth-code-2");
+
         createAuthCodeForClient(Optional.of("test-client-1"), "test-auth-code-1");
-        createAuthCodeForClient(Optional.of("test-client-2"), "test-auth-code-2");
+        createAuthCodeForClient(Optional.of("test-client-2"), testClient2AuthCode.getValue());
 
         var baseTokenRequest =
                 constructBaseTokenRequest(
@@ -592,7 +616,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
                         Optional.of("test-client-1"),
-                        "test-auth-code-2",
+                        testClient2AuthCode,
                         CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithPrivateKeyJWT(
@@ -618,7 +642,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(CLIENT_ID),
-                        new AuthorizationCode().toString(),
+                        new AuthorizationCode(),
                         invalidCodeVerifier.getValue());
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
@@ -765,15 +789,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Scope scope,
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
-            Optional<String> clientId)
+            Optional<String> clientId,
+            AuthorizationCode code)
             throws Json.JsonException {
         return constructBaseTokenRequest(
-                scope,
-                vtr,
-                oidcClaimsRequest,
-                clientId,
-                new AuthorizationCode().toString(),
-                CODE_VERIFIER.getValue());
+                scope, vtr, oidcClaimsRequest, clientId, code, CODE_VERIFIER.getValue());
     }
 
     private Map<String, List<String>> constructBaseTokenRequest(
@@ -781,7 +801,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId,
-            String code,
+            AuthorizationCode code,
             String codeVerifier)
             throws Json.JsonException {
         List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
@@ -802,12 +822,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         creationDate,
                         vtrList,
                         "client-name"));
-        redis.addAuthCode(code, CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
+
+        redis.addAuthCode(code.getValue(), CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
+
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
-        customParams.put("code", Collections.singletonList(code));
+        customParams.put("code", Collections.singletonList(code.getValue()));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         customParams.put("code_verifier", Collections.singletonList(codeVerifier));
         return customParams;
