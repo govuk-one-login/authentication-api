@@ -58,6 +58,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
@@ -132,6 +133,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchClientSessionExtension orchClientSessionExtension =
             new OrchClientSessionExtension();
+
+    @RegisterExtension
+    public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
 
     @BeforeEach
     void setup() {
@@ -824,6 +828,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         "client-name"));
 
         redis.addAuthCode(code.getValue(), CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
+        orchAuthCodeExtension.generateAndSaveAuthorisationCode(
+                code, CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
 
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
