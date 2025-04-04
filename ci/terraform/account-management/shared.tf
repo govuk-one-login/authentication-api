@@ -22,4 +22,7 @@ locals {
 
   slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
   aws_account_alias         = data.terraform_remote_state.shared.outputs.aws_account_alias
+
+  sms_bucket_name = data.terraform_remote_state.shared.outputs.sms_bucket_name
+
 }

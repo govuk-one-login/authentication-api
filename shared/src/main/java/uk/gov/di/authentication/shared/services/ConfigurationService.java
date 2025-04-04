@@ -465,6 +465,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("SMOKETEST_SMS_BUCKET_NAME");
     }
 
+    public String getAccountManagementNotifyBucketDestination() {
+        return System.getenv("ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION");
+    }
+
     public Optional<String> getSqsEndpointUri() {
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
