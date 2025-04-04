@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
-import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -18,9 +17,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -42,6 +39,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -53,9 +51,6 @@ class MFAMethodsCreateHandlerTest {
             new CaptureLoggingExtension(MFAMethodsCreateHandler.class);
 
     private final Context context = mock(Context.class);
-    private static final String PERSISTENT_ID = "some-persistent-session-id";
-    private static final String SESSION_ID = "some-session-id";
-    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final String TEST_PHONE_NUMBER = "07123123123";
     private static final String TEST_PUBLIC_SUBJECT = "test-public-subject";
     private static final String TEST_EMAIL = "test@test.com";
@@ -341,11 +336,6 @@ class MFAMethodsCreateHandlerTest {
                                """,
                                 priorityIdentifier, ((AuthAppMfaDetail) mfaDetail).credential());
 
-        var event = new APIGatewayProxyRequestEvent();
-
-        event.setPathParameters(Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT));
-        event.setBody(body);
-
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
@@ -353,16 +343,11 @@ class MFAMethodsCreateHandlerTest {
         authorizerParams.put("clientId", TEST_CLIENT_ID);
         proxyRequestContext.setAuthorizer(authorizerParams);
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
-        event.setRequestContext(proxyRequestContext);
 
-        event.setHeaders(
-                Map.of(
-                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        PERSISTENT_ID,
-                        ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        SESSION_ID,
-                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
-                        TXMA_ENCODED_HEADER_VALUE));
-        return event;
+        return new APIGatewayProxyRequestEvent()
+                .withPathParameters(Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT))
+                .withBody(body)
+                .withRequestContext(proxyRequestContext)
+                .withHeaders(VALID_HEADERS);
     }
 }
