@@ -53,6 +53,7 @@ import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -79,6 +80,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -109,6 +111,7 @@ class AuthCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -179,6 +182,7 @@ class AuthCodeHandlerTest {
                         authUserInfoService,
                         authCodeResponseService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         orchestrationAuthorizationService,
                         orchClientSessionService,
                         auditService,
@@ -272,7 +276,16 @@ class AuthCodeHandlerTest {
                         authRequest.getResponseMode());
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        any(Long.class)))
+                .thenReturn(authorizationCode);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
@@ -359,6 +372,8 @@ class AuthCodeHandlerTest {
                         "P0");
 
         verify(cloudwatchMetricsService).incrementCounter("SignIn", dimensions);
+
+        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
     }
 
     private static Stream<CredentialTrustLevel> docAppTestParameters() {
@@ -386,8 +401,17 @@ class AuthCodeHandlerTest {
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
+                .thenReturn(authorizationCode);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -468,6 +492,8 @@ class AuthCodeHandlerTest {
                         CLIENT_NAME);
 
         verify(cloudwatchMetricsService).incrementCounter("SignIn", expectedDimensions);
+
+        assertAuthorisationCodeGeneratedAndSaved(null);
     }
 
     @Test
@@ -478,6 +504,8 @@ class AuthCodeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -492,6 +520,8 @@ class AuthCodeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -507,6 +537,8 @@ class AuthCodeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1016));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -538,6 +570,8 @@ class AuthCodeHandlerTest {
                         "http://localhost/redirect?error=invalid_client&error_description=Client+authentication+failed"));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -572,6 +606,8 @@ class AuthCodeHandlerTest {
                         "http://localhost/redirect?error=access_denied&error_description=Access+denied+by+resource+owner+or+authorization+server"));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -612,6 +648,8 @@ class AuthCodeHandlerTest {
                         "http://localhost/redirect?error=access_denied&error_description=Access+denied+by+resource+owner+or+authorization+server"));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -640,6 +678,8 @@ class AuthCodeHandlerTest {
                         "http://localhost/redirect?error=invalid_request&error_description=Invalid+request"));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -652,6 +692,8 @@ class AuthCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -672,6 +714,8 @@ class AuthCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1018));
 
         verifyNoInteractions(auditService);
+
+        assertNoAuthorisationCodeGeneratedAndSaved();
     }
 
     @Test
@@ -697,7 +741,16 @@ class AuthCodeHandlerTest {
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
+
+        // TODO: ATO-1218: Remove the following stub for the auth code service.
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        any(Long.class)))
+                .thenReturn(authorizationCode);
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
@@ -831,5 +884,35 @@ class AuthCodeHandlerTest {
         when(authUserInfoService.getAuthenticationUserInfo(
                         INTERNAL_COMMON_SUBJECT_ID, CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(authUserInfo));
+    }
+
+    private void assertAuthorisationCodeGeneratedAndSaved(String expectedEmail) {
+        verify(authorisationCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(expectedEmail),
+                        anyLong());
+
+        verify(orchAuthCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(expectedEmail),
+                        anyLong());
+    }
+
+    private void assertNoAuthorisationCodeGeneratedAndSaved() {
+        verify(authorisationCodeService, times(0))
+                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
+
+        verify(orchAuthCodeService, times(0))
+                .generateAndSaveAuthorisationCode(
+                        any(AuthorizationCode.class),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyLong());
     }
 }
