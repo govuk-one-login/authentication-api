@@ -119,7 +119,8 @@ class MfaHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    Optional.empty());
 
     private final Session session = new Session();
     private final AuthSessionItem authSession =

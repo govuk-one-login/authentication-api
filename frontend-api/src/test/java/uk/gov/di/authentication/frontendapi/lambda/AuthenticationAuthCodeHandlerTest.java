@@ -113,7 +113,8 @@ class AuthenticationAuthCodeHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    Optional.empty());
 
     @BeforeEach
     void setUp() throws Json.JsonException {
@@ -235,7 +236,8 @@ class AuthenticationAuthCodeHandlerTest {
                         eq(false),
                         anyString(),
                         eq(false),
-                        eq(null));
+                        eq(null),
+                        eq(CLIENT_SESSION_ID));
         assertThat(result, hasStatus(200));
         var jsonBody = new JSONObject(result.getBody());
         assertTrue(jsonBody.has(LOCATION));
@@ -421,7 +423,8 @@ class AuthenticationAuthCodeHandlerTest {
                         eq(false),
                         anyString(),
                         eq(false),
-                        eq(PASSWORD_RESET_TIME));
+                        eq(PASSWORD_RESET_TIME),
+                        eq(CLIENT_SESSION_ID));
         assertThat(result, hasStatus(200));
     }
 

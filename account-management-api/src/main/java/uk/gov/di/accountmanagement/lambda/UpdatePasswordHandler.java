@@ -182,7 +182,8 @@ public class UpdatePasswordHandler
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                            Optional.empty());
 
             auditService.submitAuditEvent(AUTH_UPDATE_PASSWORD, auditContext);
 

@@ -147,6 +147,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
+                    Optional.empty(),
                     Optional.empty());
 
     private LoginHandler handler;

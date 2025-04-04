@@ -121,7 +121,8 @@ public class AccountDeletionService {
                             ipAddress,
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
-                            txmaAuditEncoded);
+                            txmaAuditEncoded,
+                            Optional.empty());
             auditService.submitAuditEvent(
                     AUTH_DELETE_ACCOUNT, auditContext, pair("account_deletion_reason", reason));
         } catch (Exception e) {

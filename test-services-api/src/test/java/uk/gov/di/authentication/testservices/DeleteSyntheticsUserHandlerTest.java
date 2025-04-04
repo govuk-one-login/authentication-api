@@ -51,6 +51,7 @@ class DeleteSyntheticsUserHandlerTest {
                     "123.123.123.123",
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
+                    Optional.empty(),
                     Optional.empty());
 
     @BeforeEach

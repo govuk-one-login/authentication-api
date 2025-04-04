@@ -140,7 +140,8 @@ class AccountInterventionsHandlerTest {
                     CommonTestVariables.IP_ADDRESS,
                     AuditService.UNKNOWN,
                     CommonTestVariables.DI_PERSISTENT_SESSION_ID,
-                    Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS));
+                    Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS),
+                    Optional.empty());
     private static final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension

@@ -193,7 +193,8 @@ class CheckEmailFraudBlockHandlerTest {
                                     IP_ADDRESS,
                                     AuditService.UNKNOWN,
                                     DI_PERSISTENT_SESSION_ID,
-                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                                    Optional.of(ENCODED_DEVICE_DETAILS),
+                                    Optional.empty()),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.REGISTRATION.getValue()),
                             AuditService.MetadataPair.pair(
