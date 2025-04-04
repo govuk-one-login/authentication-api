@@ -587,7 +587,8 @@ public class DynamoService implements AuthenticationService {
                 .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
                 .withMfaMethodsMigrated(mfaMethodsMigrated)
                 .withPhoneNumber(null)
-                .withPhoneNumberVerified(false);
+                .withPhoneNumberVerified(false)
+                .withMfaIdentifier(null);
     }
 
     @Override
@@ -902,6 +903,51 @@ public class DynamoService implements AuthenticationService {
 
                     return updatedUserCredentials.getMfaMethods();
                 });
+    }
+
+    @Override
+    public Either<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+            String email, String mfaMethodIdentifier) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var method =
+                Optional.ofNullable(userCredentials.getMfaMethods())
+                        .flatMap(
+                                mfaMethods ->
+                                        mfaMethods.stream()
+                                                .filter(MFAMethod::isEnabled)
+                                                .findFirst());
+        if (method.isPresent()) {
+            dynamoUserCredentialsTable
+                    .updateItem(
+                            dynamoUserCredentialsTable
+                                    .getItem(
+                                            Key.builder()
+                                                    .partitionValue(email.toLowerCase(Locale.ROOT))
+                                                    .build())
+                                    .setMfaMethod(
+                                            method.get().withMfaIdentifier(mfaMethodIdentifier)))
+                    .withUpdated(dateTime);
+            return Either.right(null);
+        } else {
+            return Either.left(
+                    "Attempted to set mfa identifier for mfa method in user credentials but no enabled method found");
+        }
+    }
+
+    public void setMfaIdentifierForNonMigratedSmsMethod(String email, String smsMethodIdentifier) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        dynamoUserProfileTable
+                .updateItem(
+                        dynamoUserProfileTable
+                                .getItem(
+                                        Key.builder()
+                                                .partitionValue(email.toLowerCase(Locale.ROOT))
+                                                .build())
+                                .withMfaIdentifier(smsMethodIdentifier))
+                .withUpdated(dateTime);
     }
 
     public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(

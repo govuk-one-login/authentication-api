@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -551,6 +552,61 @@ class DynamoServiceIntegrationTest {
 
             assertBackupAndDefaultMfaMethodsWithData(
                     userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        @Test
+        void shouldSetMfaIdentifierOnExistingMFAMethod() {
+            dynamoService.updateMFAMethod(
+                    TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+            var identifier = "some-identifier";
+
+            var result =
+                    dynamoService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+                            TEST_EMAIL, identifier);
+
+            assertTrue(result.isRight());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            var mfaMethods = userCredentials.getMfaMethods();
+
+            assertEquals(1, mfaMethods.size());
+            var mfaMethod = mfaMethods.get(0);
+
+            assertEquals(identifier, mfaMethod.getMfaIdentifier());
+            assertEquals(MFAMethodType.AUTH_APP.name(), mfaMethod.getMfaMethodType());
+            assertTrue(mfaMethod.isMethodVerified());
+            assertTrue(mfaMethod.isEnabled());
+            assertEquals(TEST_MFA_APP_CREDENTIAL, mfaMethod.getCredentialValue());
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldReturnALeftWhenMFAMethodNotEnabledOrNotPresent(Boolean addDisabledMethod) {
+            if (addDisabledMethod) {
+                dynamoService.updateMFAMethod(
+                        TEST_EMAIL, MFAMethodType.AUTH_APP, true, false, TEST_MFA_APP_CREDENTIAL);
+            }
+
+            var identifier = "some-identifier";
+
+            var result =
+                    dynamoService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+                            TEST_EMAIL, identifier);
+
+            assertTrue(result.isLeft());
+            assertEquals(
+                    "Attempted to set mfa identifier for mfa method in user credentials but no enabled method found",
+                    result.getLeft());
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            var mfaMethods = userCredentials.getMfaMethods();
+
+            if (addDisabledMethod) {
+                assertEquals(1, mfaMethods.size());
+                var mfaMethod = mfaMethods.get(0);
+
+                assertNull(mfaMethod.getMfaIdentifier());
+            }
         }
 
         private MFAMethod findMethodWithPriority(
