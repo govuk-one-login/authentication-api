@@ -16,6 +16,7 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -51,7 +52,6 @@ import java.util.Optional;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class IPVCallbackHelper {
@@ -203,11 +203,7 @@ public class IPVCallbackHelper {
             String clientId)
             throws UserNotFoundException {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
-        segmentedFunctionCall(
-                "saveIdentityClaims",
-                () ->
-                        saveIdentityClaimsToDynamo(
-                                clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+        saveIdentityClaimsToDynamo(clientSessionId, rpPairwiseSubject, userIdentityUserInfo);
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
                         clientId,
@@ -305,6 +301,7 @@ public class IPVCallbackHelper {
         LOG.info("SPOT request placed on queue");
     }
 
+    @Instrumented
     public void saveIdentityClaimsToDynamo(
             String clientSessionId, Subject rpPairwiseSubject, UserInfo userIdentityUserInfo) {
         LOG.info("Checking for additional identity claims to save to dynamo");

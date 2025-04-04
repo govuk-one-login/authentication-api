@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.InstrumentationHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -181,6 +182,7 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
             attachSessionIdToLogs(sessionId.get());
+            InstrumentationHelper.addSessionIdAnnotation(sessionId.get());
         }
 
         if (authSession.isEmpty()) {
@@ -197,9 +199,10 @@ public abstract class BaseFrontendHandler<T>
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
 
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        String persistentSessionId =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+        InstrumentationHelper.addPersistentSessionIdAnnotation(persistentSessionId);
 
         Optional<String> userLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
@@ -221,6 +224,7 @@ public abstract class BaseFrontendHandler<T>
                         .flatMap(v -> v.stream().findFirst());
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+        clientID.ifPresent(InstrumentationHelper::addClientIdAnnotation);
 
         clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 

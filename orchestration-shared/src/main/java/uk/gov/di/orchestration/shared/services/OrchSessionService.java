@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -95,6 +96,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         return newItem;
     }
 
+    @Instrumented
     public Optional<OrchSessionItem> getSession(String sessionId) {
         Optional<OrchSessionItem> orchSession = Optional.empty();
         try {

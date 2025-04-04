@@ -24,7 +24,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.SessionCookieIds;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -58,9 +57,7 @@ public class LogoutRequest {
         var sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders());
         sessionId = sessionCookieIds.map(SessionCookieIds::getSessionId);
         var clientSessionIdFromCookie = sessionCookieIds.map(SessionCookieIds::getClientSessionId);
-        session =
-                segmentedFunctionCall(
-                        "getSession", () -> sessionId.flatMap(sessionService::getSession));
+        session = sessionId.flatMap(sessionService::getSession);
         orchSession = sessionId.flatMap(orchSessionService::getSession);
 
         internalCommonSubjectId = orchSession.map(OrchSessionItem::getInternalCommonSubjectId);
@@ -93,10 +90,7 @@ public class LogoutRequest {
         }
 
         LOG.info("ID token hint is present");
-        isTokenSignatureValid =
-                segmentedFunctionCall(
-                        "isTokenSignatureValid",
-                        () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
+        isTokenSignatureValid = tokenValidationService.isTokenSignatureValid(idTokenHint.get());
         if (!isTokenSignatureValid) {
             LOG.warn("Unable to validate ID token signature");
             errorObject =

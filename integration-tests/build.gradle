@@ -23,18 +23,18 @@ dependencies {
             configurations.pact_provider,
             configurations.vavr
 
-    implementation project(":shared"), noXray
-    implementation project(":orchestration-shared"), noXray
-    implementation project(":shared-test"), noXray
-    implementation project(":orchestration-shared-test"), noXray
-    implementation project(":oidc-api"), noXray
-    implementation project(":frontend-api"), noXray
-    implementation project(":auth-external-api"), noXray
-    implementation project(":client-registry-api"), noXray
-    implementation project(":ipv-api"), noXray
-    implementation project(":interventions-api-stub"), noXray
-    implementation project(":doc-checking-app-api"), noXray
-    implementation project(":utils"), noXray
+    implementation project(":shared")
+    implementation project(":orchestration-shared")
+    implementation project(":shared-test")
+    implementation project(":orchestration-shared-test")
+    implementation project(":oidc-api")
+    implementation project(":frontend-api")
+    implementation project(":auth-external-api")
+    implementation project(":client-registry-api")
+    implementation project(":ipv-api")
+    implementation project(":interventions-api-stub")
+    implementation project(":doc-checking-app-api")
+    implementation project(":utils")
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
     testImplementation("uk.org.webcompere:system-stubs-jupiter:2.1.7")

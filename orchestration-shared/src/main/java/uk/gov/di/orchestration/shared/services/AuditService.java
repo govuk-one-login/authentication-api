@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.helpers.PhoneNumberHelper;
@@ -42,8 +43,8 @@ public class AuditService {
                         configurationService.getLocalstackEndpointUri());
     }
 
+    @Instrumented
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
-
         var user =
                 TxmaAuditUser.user()
                         .withUserId(auditContext.subjectId())
@@ -57,6 +58,7 @@ public class AuditService {
         submitAuditEvent(event, auditContext.clientId(), user, auditContext.metadataPairs());
     }
 
+    @Instrumented
     public void submitAuditEvent(
             AuditableEvent event,
             String clientId,

@@ -57,6 +57,7 @@ public class ClientSignatureValidationService {
     public ClientSignatureValidationService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.rpPublicKeyCacheService = new RpPublicKeyCacheService(configurationService);
+
         this.lambdaClient =
                 LambdaClient.builder()
                         .region(Region.of(configurationService.getAwsRegion()))

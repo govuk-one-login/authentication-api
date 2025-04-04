@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.LocalDateTimeAdapter;
 import uk.gov.di.orchestration.shared.serialization.StateAdapter;
@@ -18,7 +19,6 @@ import uk.gov.di.orchestration.shared.validation.Validator;
 import java.time.LocalDateTime;
 
 import static java.util.Objects.isNull;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class SerializationService implements Json {
 
@@ -58,31 +58,45 @@ public class SerializationService implements Json {
     public <T> T readValue(String jsonString, Class<T> clazz, Validator validator)
             throws JsonException {
         try {
-            T value =
-                    segmentedFunctionCall(
-                            "SerializationService::GSON::fromJson",
-                            () -> gson.fromJson(jsonString, clazz));
-            var violations =
-                    segmentedFunctionCall(
-                            "SerializationService::validator::validate",
-                            () -> validator.validate(value));
-            if (violations.isEmpty()) {
-                return value;
-            }
-            violations.forEach(
-                    v -> LOG.warn("Json validation failed due to missing required field: {}", v));
-            throw new JsonException(
-                    "JSON validation error, missing required field(s): "
-                            + String.join(", ", violations));
+            T value = gson.fromJson(jsonString, clazz);
+            validateJson(value, validator);
+            return value;
         } catch (JsonSyntaxException | IllegalArgumentException e) {
+            LOG.error("Error during JSON deserialization", e);
             throw new JsonException(e);
         }
     }
 
+    @Instrumented("SerializationService::GSON::fromJson")
+    private <T> T deserializeJson(String jsonString, Class<T> clazz, Validator validator, Gson gson)
+            throws JsonException {
+        try {
+            T value = gson.fromJson(jsonString, clazz);
+            validateJson(value, validator);
+            return value;
+        } catch (JsonSyntaxException | IllegalArgumentException e) {
+            LOG.error("Error during JSON deserialization", e);
+            throw new JsonException(e);
+        }
+    }
+
+    @Instrumented("SerializationService::validator::validate")
+    private <T> void validateJson(T value, Validator validator) throws JsonException {
+        var violations = validator.validate(value);
+        if (!violations.isEmpty()) {
+            String violationMessage =
+                    "JSON validation error, missing required field(s): "
+                            + String.join(", ", violations);
+            violations.forEach(
+                    v -> LOG.warn("Json validation failed due to missing required field: {}", v));
+            throw new JsonException(violationMessage);
+        }
+    }
+
     @Override
+    @Instrumented("SerializationService::GSON::toJson")
     public String writeValueAsString(Object object) {
-        return segmentedFunctionCall(
-                "SerializationService::GSON::toJson", () -> gson.toJson(object));
+        return gson.toJson(object);
     }
 
     public static SerializationService getInstance() {

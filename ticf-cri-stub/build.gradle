@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group = 'uk.gov.di.authentication.ticf-cri-stub'
@@ -11,6 +12,9 @@ dependencies {
 
     implementation project(":shared"),
             configurations.gson
+
+    implementation configurations.aspectjrt
+    aspect project(":shared")
 
     testImplementation configurations.tests,
             configurations.lambda

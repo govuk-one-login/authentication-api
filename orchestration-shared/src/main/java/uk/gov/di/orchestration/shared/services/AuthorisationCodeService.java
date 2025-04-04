@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -59,6 +60,7 @@ public class AuthorisationCodeService {
         }
     }
 
+    @Instrumented
     public Optional<AuthCodeExchangeData> getExchangeDataForCode(String code) {
         return Optional.ofNullable(redisConnectionService.popValue(AUTH_CODE_PREFIX.concat(code)))
                 .map(

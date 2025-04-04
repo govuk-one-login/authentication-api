@@ -33,6 +33,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -93,53 +94,45 @@ public class TokenService {
             String vot) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
-                segmentedFunctionCall(
-                        "generateAndStoreAccessToken",
-                        () ->
-                                generateAndStoreAccessToken(
-                                        clientID,
-                                        internalSubject,
-                                        scopesForToken,
-                                        rpPairwiseSubject,
-                                        internalPairwiseSubject,
-                                        claimsRequest,
-                                        signingAlgorithm));
+                generateAndStoreAccessToken(
+                        clientID,
+                        internalSubject,
+                        scopesForToken,
+                        rpPairwiseSubject,
+                        internalPairwiseSubject,
+                        claimsRequest,
+                        signingAlgorithm);
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
                         "AccessTokenHash.compute",
                         () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
 
         SignedJWT idToken =
-                segmentedFunctionCall(
-                        "generateIDToken",
-                        () ->
-                                generateIDToken(
-                                        clientID,
-                                        rpPairwiseSubject,
-                                        additionalTokenClaims,
-                                        accessTokenHash,
-                                        vot,
-                                        isDocAppJourney,
-                                        signingAlgorithm,
-                                        journeyId));
+                generateIDToken(
+                        clientID,
+                        rpPairwiseSubject,
+                        additionalTokenClaims,
+                        accessTokenHash,
+                        vot,
+                        isDocAppJourney,
+                        signingAlgorithm,
+                        journeyId);
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
-                    segmentedFunctionCall(
-                            "generateAndStoreRefreshToken",
-                            () ->
-                                    generateAndStoreRefreshToken(
-                                            clientID,
-                                            internalSubject,
-                                            scopesForToken,
-                                            rpPairwiseSubject,
-                                            internalPairwiseSubject,
-                                            signingAlgorithm));
+                    generateAndStoreRefreshToken(
+                            clientID,
+                            internalSubject,
+                            scopesForToken,
+                            rpPairwiseSubject,
+                            internalPairwiseSubject,
+                            signingAlgorithm);
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
         }
     }
 
+    @Instrumented
     public OIDCTokenResponse generateRefreshTokenResponse(
             String clientID,
             Subject internalSubject,
@@ -167,6 +160,7 @@ public class TokenService {
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
+    @Instrumented
     public Optional<ErrorObject> validateTokenRequestParams(String tokenRequestBody) {
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(tokenRequestBody);
         if (!requestBody.containsKey("grant_type")) {
@@ -197,6 +191,7 @@ public class TokenService {
         return Optional.empty();
     }
 
+    @Instrumented
     private Optional<ErrorObject> validateRefreshRequestParams(Map<String, String> requestBody) {
         if (!requestBody.containsKey("refresh_token")) {
             return Optional.of(
@@ -213,6 +208,7 @@ public class TokenService {
         return Optional.empty();
     }
 
+    @Instrumented
     private SignedJWT generateIDToken(
             String clientId,
             Subject subject,
@@ -252,6 +248,7 @@ public class TokenService {
         }
     }
 
+    @Instrumented
     public AccessToken generateStorageTokenForMfaReset(Subject internalPairwiseSubject) {
 
         LOG.info("Generating storage token");
@@ -279,6 +276,7 @@ public class TokenService {
                 signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
     }
 
+    @Instrumented
     private AccessToken generateAndStoreAccessToken(
             String clientId,
             Subject internalSubject,
@@ -339,6 +337,7 @@ public class TokenService {
         return accessToken;
     }
 
+    @Instrumented
     private RefreshToken generateAndStoreRefreshToken(
             String clientId,
             Subject internalSubject,
@@ -381,6 +380,7 @@ public class TokenService {
         return refreshToken;
     }
 
+    @Instrumented
     private SignedJWT generateSignedJwtUsingExternalKey(
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
         String alias =
@@ -390,6 +390,7 @@ public class TokenService {
         return generateSignedJWT(claimsSet, type, algorithm, alias);
     }
 
+    @Instrumented
     private SignedJWT generateSignedJwtUsingStorageKey(
             JWTClaimsSet claimsSet, Optional<String> type) {
         return generateSignedJWT(
@@ -399,6 +400,7 @@ public class TokenService {
                 configService.getMfaResetStorageTokenSigningKeyAlias());
     }
 
+    @Instrumented
     private SignedJWT generateSignedJWT(
             JWTClaimsSet claimsSet,
             Optional<String> type,

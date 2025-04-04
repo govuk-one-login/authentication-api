@@ -58,7 +58,11 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSIO
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addClientIdAnnotation;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addClientSessionIdAnnotation;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addOrchSessionIdAnnotation;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addPersistentSessionIdAnnotation;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addSessionIdAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -193,8 +197,11 @@ public class AuthCodeHandler
         }
 
         attachSessionIdToLogs(sessionId);
+        addSessionIdAnnotation(sessionId);
         attachOrchSessionIdToLogs(orchSession.getSessionId());
+        addOrchSessionIdAnnotation(orchSession.getSessionId());
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        addClientSessionIdAnnotation(clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
         LOG.info("Processing request");
@@ -214,12 +221,12 @@ public class AuthCodeHandler
 
             clientID = authenticationRequest.getClientID();
             attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
-            attachLogFieldToLogs(
-                    PERSISTENT_SESSION_ID,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-            addAnnotation(
-                    "client_id",
-                    String.valueOf(orchClientSession.getAuthRequestParams().get("client_id")));
+            addClientIdAnnotation(String.valueOf(clientID.getValue()));
+
+            String persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+            addPersistentSessionIdAnnotation(persistentSessionId);
 
             var redirectUri = authenticationRequest.getRedirectionURI();
             var state = authenticationRequest.getState();
