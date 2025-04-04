@@ -348,6 +348,13 @@ public class IPVCallbackHandler
             LOG.info(
                     "is rpPairwiseId the same on clientSession as calculated: {}",
                     rpPairwiseSubject.getValue().equals(orchClientSession.getRpPairwiseId()));
+            LOG.info(
+                    "is correct pairwiseId for client the same on clientSession as calculated: {}",
+                    rpPairwiseSubject
+                            .getValue()
+                            .equals(
+                                    orchClientSession.getCorrectPairwiseIdGivenSubjectType(
+                                            clientRegistry.getSubjectType())));
             if (orchSession.getInternalCommonSubjectId() != null
                     && !orchSession.getInternalCommonSubjectId().isBlank()) {
                 Optional<UserInfo> authUserInfo =
