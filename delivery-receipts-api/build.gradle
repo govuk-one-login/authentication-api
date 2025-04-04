@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "jacoco"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di.authentication.deliveryreceiptsapi"
@@ -14,6 +15,9 @@ dependencies {
             configurations.cloudwatch
 
     implementation project(":shared")
+
+    implementation configurations.aspectjrt
+    aspect project(":shared")
 
     runtimeOnly configurations.logging_runtime
 

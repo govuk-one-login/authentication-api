@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
@@ -73,6 +74,7 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
     }
 
+    @Instrumented
     public void submitAuditEvent(
             AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
 

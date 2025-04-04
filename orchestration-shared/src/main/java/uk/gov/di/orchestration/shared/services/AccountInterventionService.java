@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.annotations.Instrumented;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
@@ -75,6 +76,7 @@ public class AccountInterventionService {
         return getAccountIntervention(internalPairwiseSubjectId, 0L, null);
     }
 
+    @Instrumented
     public AccountIntervention getAccountIntervention(
             String internalPairwiseSubjectId, AuditContext auditContext)
             throws AccountInterventionException {

@@ -17,6 +17,7 @@ import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
 import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
 import java.net.URL;
@@ -31,7 +32,6 @@ import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static com.nimbusds.jose.jwk.Curve.P_256;
 import static software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec.ECDSA_SHA_256;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class JwksService {
 
@@ -91,23 +91,24 @@ public class JwksService {
         }
     }
 
+    @Instrumented
     private JWK getPublicJWKWithKeyId(String keyId) {
-        var jwk =
-                segmentedFunctionCall(
-                        "createJwk", () -> KEY_CACHE.computeIfAbsent(keyId, this::createJwk));
+        var jwk = KEY_CACHE.computeIfAbsent(keyId, this::createJwk);
 
-        return segmentedFunctionCall(
-                "parseJwk",
-                () -> {
-                    try {
-                        return JWK.parse(jwk.toString());
-                    } catch (java.text.ParseException e) {
-                        LOG.error("Error parsing the public key to JWK", e);
-                        throw new RuntimeException(e);
-                    }
-                });
+        return parseJwk(jwk);
     }
 
+    @Instrumented
+    private JWK parseJwk(JWK jwk) {
+        try {
+            return JWK.parse(jwk.toString());
+        } catch (java.text.ParseException e) {
+            LOG.error("Error parsing the public key to JWK", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Instrumented
     private JWK createJwk(String keyId) {
         var getPublicKeyRequest = GetPublicKeyRequest.builder().keyId(keyId).build();
         var publicKeyResponse = kmsConnectionService.getPublicKey(getPublicKeyRequest);
@@ -129,6 +130,7 @@ public class JwksService {
         }
     }
 
+    @Instrumented
     private PublicKey createPublicKey(GetPublicKeyResponse publicKeyResponse) {
         SubjectPublicKeyInfo subjectKeyInfo =
                 SubjectPublicKeyInfo.getInstance(publicKeyResponse.publicKey().asByteArray());

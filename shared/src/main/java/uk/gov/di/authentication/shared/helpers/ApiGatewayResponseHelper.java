@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.http.HttpHeaders;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.annotations.Instrumented;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -44,6 +45,7 @@ public class ApiGatewayResponseHelper {
     private static final Logger LOG = LogManager.getLogger(ApiGatewayResponseHelper.class);
     private static final Json objectMapper = SerializationService.getInstance();
 
+    @Instrumented
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, T body) throws JsonException {
         return generateApiGatewayProxyResponse(statusCode, objectMapper.writeValueAsString(body));

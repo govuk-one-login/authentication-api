@@ -113,7 +113,6 @@ subprojects {
         otel_http_client
         otel_aws_auto_instrumentation
         aspectjrt
-        aspectjweaver
     }
 
     // Check dependencies using:
@@ -229,7 +228,6 @@ subprojects {
                 "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
 
         aspectjrt "org.aspectj:aspectjrt:1.9.20"
-        aspectjweaver "org.aspectj:aspectjweaver:1.9.20"
     }
 }
 

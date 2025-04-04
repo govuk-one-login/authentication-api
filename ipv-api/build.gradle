@@ -2,6 +2,7 @@ plugins {
     id "java"
     id "jacoco"
     id "au.com.dius.pact" version "4.6.17"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di.authentication.ipvapi"
@@ -19,6 +20,9 @@ dependencies {
             configurations.nimbus
 
     implementation project(":orchestration-shared")
+
+    implementation configurations.aspectjrt
+    aspect project(":orchestration-shared")
 
     runtimeOnly configurations.logging_runtime
 

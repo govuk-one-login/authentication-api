@@ -2,6 +2,7 @@ plugins {
     id "java"
     id "jacoco"
     id "au.com.dius.pact" version "4.6.17"
+    id 'io.freefair.aspectj.post-compile-weaving'
 }
 
 group "uk.gov.di.authentication.oidc"
@@ -24,6 +25,9 @@ dependencies {
             project(":orchestration-shared"),
             project(":client-registry-api"),
             project(":doc-checking-app-api")
+
+    implementation configurations.aspectjrt
+    aspect project(":orchestration-shared")
 
     implementation project(path: ':ipv-api')
 

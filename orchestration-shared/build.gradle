@@ -30,7 +30,6 @@ dependencies {
             configurations.otel_http_client
 
     implementation configurations.aspectjrt
-    compileOnly configurations.aspectjweaver
 
     api configurations.otel
 
