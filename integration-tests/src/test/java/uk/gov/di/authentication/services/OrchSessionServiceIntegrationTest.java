@@ -50,7 +50,7 @@ class OrchSessionServiceIntegrationTest {
 
     @Test
     void shouldUpdatePreviousSessionWithNewId() {
-        withPreviousExistingAccountSession();
+        withPreviousExistingAccountSessionWithOneIdentityAttempt();
         assertTrue(orchSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent());
 
         orchSessionExtension.addOrUpdateSessionId(Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
@@ -62,15 +62,18 @@ class OrchSessionServiceIntegrationTest {
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(OrchSessionItem.AccountState.EXISTING));
+        assertThat(retrievedSession.get().getProcessingIdentityAttempts(), equalTo(0));
     }
 
     private void withSession() {
         orchSessionExtension.addSession(new OrchSessionItem(SESSION_ID));
     }
 
-    private void withPreviousExistingAccountSession() {
-        orchSessionExtension.addSession(
+    private void withPreviousExistingAccountSessionWithOneIdentityAttempt() {
+        var session =
                 new OrchSessionItem(PREVIOUS_SESSION_ID)
-                        .withAccountState(OrchSessionItem.AccountState.EXISTING));
+                        .withAccountState(OrchSessionItem.AccountState.EXISTING);
+        session.incrementProcessingIdentityAttempts();
+        orchSessionExtension.addSession(session);
     }
 }
