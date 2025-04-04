@@ -195,3 +195,9 @@ variable "runbook_link" {
   type        = string
   default     = null
 }
+
+variable "dt_logging" {
+  description = "enable extended dynatrace logging"
+  type        = bool
+  default     = false
+}

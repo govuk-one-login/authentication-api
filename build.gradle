@@ -33,7 +33,8 @@ ext {
         junit: "5.11.4",
         xray: "2.18.2",
         pact: "4.6.17",
-        vavr: "0.10.6"
+        vavr: "0.10.6",
+        opentelemetry_instrumentation: "2.12.0-alpha"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -111,6 +112,7 @@ subprojects {
         pact_consumer
         pact_provider
         vavr
+        otel_aws_auto_instrumentation
     }
 
     // Check dependencies using:
@@ -222,6 +224,19 @@ subprojects {
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
 
         vavr "io.vavr:vavr:${dependencyVersions.vavr}"
+
+        otel_aws_auto_instrumentation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure"
+    }
+}
+
+subprojects {
+    afterEvaluate { subproject ->
+        if (subproject.plugins.hasPlugin('java')) {
+            dependencies {
+                runtimeOnly configurations.otel_aws_auto_instrumentation
+            }
+        }
     }
 }
 
