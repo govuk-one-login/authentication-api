@@ -1757,6 +1757,33 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertResponseJarHasClaims(response, List.of("state"));
     }
 
+    @Test
+    void shouldUseDefaultVtrWhenNoVtrProvidedInRequest() {
+        setupForAuthJourney();
+        var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "");
+        Map<String, String> queryParams = new HashMap<>(baseParams);
+        queryParams.remove("vtr");
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        queryParams,
+                        Optional.of("GET"));
+        assertThat(response, hasStatus(302));
+        assertResponseJarHasClaimsWithValues(
+                response,
+                Map.of(
+                        "vtr",
+                        List.of("Cl.Cm"),
+                        "client_id",
+                        configuration.getOrchestrationClientId(),
+                        "scope",
+                        "openid",
+                        "redirect_uri",
+                        configuration.getOrchestrationRedirectURI()));
+        assertResponseJarHasClaims(response, List.of("state"));
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
         return constructQueryStringParameters(

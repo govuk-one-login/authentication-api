@@ -900,9 +900,8 @@ public class AuthorisationHandler
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
         var vtrList =
-                Optional.ofNullable(authenticationRequest.getCustomParameter(VTR_PARAM))
-                        .map(VectorOfTrust::parseVtrStringListFromAuthRequestAttribute)
-                        .orElse(null);
+                VectorOfTrust.parseVtrStringListFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter(VTR_PARAM));
         String reauthSub = null;
         String reauthSid = null;
         if (reauthRequested) {
