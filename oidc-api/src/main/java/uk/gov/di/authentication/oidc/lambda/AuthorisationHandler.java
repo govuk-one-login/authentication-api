@@ -1190,13 +1190,8 @@ public class AuthorisationHandler
 
     private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
         boolean isTokenSignatureValid =
-                segmentedFunctionCall(
-                        "isTokenSignatureValid",
-                        () ->
-                                tokenValidationService.isTokenSignatureValid(
-                                        authenticationRequest
-                                                .getCustomParameter("id_token_hint")
-                                                .get(0)));
+                tokenValidationService.isTokenSignatureValid(
+                        authenticationRequest.getCustomParameter("id_token_hint").get(0));
         if (!isTokenSignatureValid) {
             LOG.warn("Unable to validate ID token signature");
             throw new RuntimeException("Unable to validate id_token_hint");
