@@ -187,7 +187,9 @@ subprojects {
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
 
         lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.5.5.RELEASE"
+                "io.lettuce:lettuce-core:6.5.5.RELEASE",
+                platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${dependencyVersions.opentelemetry_instrumentation}"),
+                "io.opentelemetry.instrumentation:opentelemetry-lettuce-5.1"
 
         libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.2"
 

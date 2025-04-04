@@ -6,6 +6,9 @@ import io.lettuce.core.TransactionResult;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisServerCommands;
+import io.lettuce.core.resource.ClientResources;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.instrumentation.lettuce.v5_1.LettuceTelemetry;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
@@ -18,15 +21,20 @@ public class RedisConnectionService implements AutoCloseable {
 
     public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
     private final RedisClient client;
+    private final ClientResources clientResources;
 
     private final GenericObjectPool<StatefulRedisConnection<String, String>> pool;
 
     public RedisConnectionService(
             String host, int port, boolean useSsl, Optional<String> password, boolean warmup) {
+        clientResources =
+                ClientResources.builder()
+                        .tracing(LettuceTelemetry.create(GlobalOpenTelemetry.get()).newTracing())
+                        .build();
         RedisURI.Builder builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
         password.ifPresent(s -> builder.withPassword(s.toCharArray()));
         RedisURI redisURI = builder.build();
-        this.client = RedisClient.create(redisURI);
+        this.client = RedisClient.create(clientResources, redisURI);
         this.pool = createGenericObjectPool(client::connect, new GenericObjectPoolConfig<>());
         if (warmup) warmUp();
     }
@@ -107,6 +115,7 @@ public class RedisConnectionService implements AutoCloseable {
     public void close() {
         pool.close();
         client.shutdown();
+        clientResources.shutdown();
     }
 
     public static class RedisConnectionException extends RuntimeException {
