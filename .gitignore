@@ -31,3 +31,6 @@ logs/
 /*/src/test/pact/
 node_modules
 .infracost
+
+# REST client private env variables
+*.private.env.json
