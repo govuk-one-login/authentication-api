@@ -1,5 +1,4 @@
-utils_release_zip_file = "./artifacts/utils.zip"
-shared_state_bucket    = "digital-identity-dev-tfstate"
+shared_state_bucket = "digital-identity-dev-tfstate"
 
 internal_sector_uri                           = "https://identity.integration.account.gov.uk"
 allow_bulk_test_users                         = true

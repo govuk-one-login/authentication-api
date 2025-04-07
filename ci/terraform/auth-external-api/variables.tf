@@ -14,7 +14,7 @@ variable "deployer_role_arn" {
 }
 
 variable "auth_ext_lambda_zip_file" {
-  default     = "../../../auth-external-api/build/distributions/auth-external-api.zip"
+  default     = "./artifacts/auth-external-api.zip"
   description = "Location of the Lambda ZIP file"
   type        = string
 }

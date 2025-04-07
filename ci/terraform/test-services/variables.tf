@@ -5,7 +5,7 @@ variable "deployer_role_arn" {
 }
 
 variable "test_services-api-lambda_zip_file" {
-  default     = "../../../test-services-api/build/distributions/test-services-api.zip"
+  default     = "./artifacts/test-services-api.zip"
   description = "Location of the Lambda ZIP file"
   type        = string
 }

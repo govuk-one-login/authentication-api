@@ -6,6 +6,8 @@ plugins {
 group "uk.gov.di.authentication.external.api"
 version "unspecified"
 
+File terraformDir = new File(project.rootDir, "ci/terraform/auth-external-api")
+
 dependencies {
     compileOnly configurations.lambda,
             configurations.sqs,
@@ -39,6 +41,9 @@ test {
 }
 
 task buildZip(type: Zip) {
+    if (isDevDeployBuild) {
+        destinationDirectory = new File(terraformDir, "artifacts")
+    }
     from compileJava
     from processResources
     into("lib") {
