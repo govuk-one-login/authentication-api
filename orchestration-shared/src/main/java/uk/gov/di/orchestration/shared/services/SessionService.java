@@ -38,6 +38,7 @@ public class SessionService {
         var copiedSession = new Session(previousSession);
         copiedSession.setAuthenticated(false).setCurrentCredentialStrength(null);
         copiedSession.resetClientSessions();
+        copiedSession.resetProcessingIdentityAttempts();
         return copiedSession;
     }
 

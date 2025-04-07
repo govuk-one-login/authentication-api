@@ -2636,6 +2636,7 @@ class AuthorisationHandlerTest {
         void setup() {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
+            session.incrementProcessingIdentityAttempts();
             withExistingSession(session);
             when(sessionService.copySessionForMaxAge(any(Session.class))).thenCallRealMethod();
         }
@@ -2825,10 +2826,14 @@ class AuthorisationHandlerTest {
 
             ArgumentCaptor<OrchSessionItem> addSessionCaptor =
                     ArgumentCaptor.forClass(OrchSessionItem.class);
+            ArgumentCaptor<Session> newSharedSesisonCaptor = ArgumentCaptor.forClass(Session.class);
             if (maxAgeExpired) {
                 verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
+                verify(sessionService, times(2))
+                        .storeOrUpdateSession(newSharedSesisonCaptor.capture(), anyString());
                 OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
                 OrchSessionItem newOrchSession = addSessionCaptor.getAllValues().get(1);
+                Session newSharedSession = newSharedSesisonCaptor.getValue();
 
                 assertNotEquals(updatedPreviousSession.getSessionId(), orchSession.getSessionId());
                 assertNotEquals(
@@ -2841,6 +2846,7 @@ class AuthorisationHandlerTest {
                                 > timeNow + configService.getSessionExpiry() - 100);
                 assertTrue(updatedPreviousSession.getAuthenticated());
                 assertEquals(updatedPreviousSession.getAuthTime(), authTime);
+                assertEquals(0, newSharedSession.getProcessingIdentityAttempts());
 
                 verify(orchSessionService).deleteSession(orchSession.getSessionId());
 
