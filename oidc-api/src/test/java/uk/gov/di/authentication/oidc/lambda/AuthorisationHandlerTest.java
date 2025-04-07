@@ -2719,6 +2719,7 @@ class AuthorisationHandlerTest {
             when(clientService.getClient(anyString()))
                     .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            orchSession.incrementProcessingIdentityAttempts();
             withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
             var requestParams =
                     buildRequestParams(
@@ -2861,6 +2862,8 @@ class AuthorisationHandlerTest {
                 assertEquals(
                         newOrchSession.getPreviousSessionId(),
                         updatedPreviousSession.getSessionId());
+                assertEquals(0, newOrchSession.getProcessingIdentityAttempts());
+
             } else {
                 verify(orchSessionService, times(1)).addSession(addSessionCaptor.capture());
                 OrchSessionItem updatedSession = addSessionCaptor.getAllValues().get(0);
@@ -2875,6 +2878,7 @@ class AuthorisationHandlerTest {
                 assertTrue(
                         updatedSession.getTimeToLive()
                                 > timeNow + configService.getSessionExpiry() - 100);
+                assertEquals(0, updatedSession.getProcessingIdentityAttempts());
 
                 verify(orchSessionService).deleteSession(orchSession.getSessionId());
             }

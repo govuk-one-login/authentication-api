@@ -806,6 +806,7 @@ public class AuthorisationHandler
                         .withCurrentCredentialStrength(null)
                         .withAuthenticated(false)
                         .withPreviousSessionId(newSessionIdForPreviousSession);
+        newSession.resetProcessingIdentityAttempts();
         orchSessionService.addSession(newSession);
 
         return newSession;
