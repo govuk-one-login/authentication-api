@@ -19,6 +19,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.TimeUnit;
 
 import static java.text.MessageFormat.format;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
@@ -26,73 +29,116 @@ import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.create
 public class MFAMethodAnalysisHandler implements RequestHandler<String, Long> {
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodAnalysisHandler.class);
-    private final ConfigurationService configurationService;
     private final DynamoDbClient client;
+    private final String userCredentialsTableName;
+    private final String userProfileTableName;
 
     public MFAMethodAnalysisHandler(
             ConfigurationService configurationService, DynamoDbClient client) {
-        this.configurationService = configurationService;
         this.client = client;
+        userCredentialsTableName =
+                format("{0}-user-credentials", configurationService.getEnvironment());
+        userProfileTableName = format("{0}-user-profile", configurationService.getEnvironment());
     }
 
     public MFAMethodAnalysisHandler() {
-        this.configurationService = ConfigurationService.getInstance();
-        client = createDynamoClient(configurationService);
+        this(
+                ConfigurationService.getInstance(),
+                createDynamoClient(ConfigurationService.getInstance()));
     }
 
     @Override
     public Long handleRequest(String input, Context context) {
-        Map<String, String> expressionAttributeNames = new HashMap<>();
-        Map<String, AttributeValue> lastKey = null;
-        expressionAttributeNames.put("#mfa_methods", UserCredentials.ATTRIBUTE_MFA_METHODS);
+        long totalBatches = 0;
+        long totalMatches = 0;
+        long totalUserCredentialsFetched = 0;
+        List<ForkJoinTask<Long>> batchTasks = new ArrayList<>();
+        ForkJoinPool forkJoinPool = new ForkJoinPool(100);
 
-        long matches = 0;
-        long recordsProcessed = 0;
+        try {
+            Map<String, AttributeValue> lastKey = null;
+            do {
+                Map<String, String> expressionAttributeNames = new HashMap<>();
+                expressionAttributeNames.put("#mfa_methods", UserCredentials.ATTRIBUTE_MFA_METHODS);
+                ScanRequest scanRequest =
+                        ScanRequest.builder()
+                                .tableName(userCredentialsTableName)
+                                .filterExpression("attribute_exists(#mfa_methods)")
+                                .expressionAttributeNames(expressionAttributeNames)
+                                .exclusiveStartKey(lastKey)
+                                .build();
 
-        String userCredentialsTableName =
-                format("{0}-user-credentials", configurationService.getEnvironment());
-        String userProfileTableName =
-                format("{0}-user-profile", configurationService.getEnvironment());
+                ScanResponse scanResponse = client.scan(scanRequest);
 
-        do {
-            ScanRequest scanRequest =
-                    ScanRequest.builder()
-                            .tableName(userCredentialsTableName)
-                            .filterExpression("attribute_exists(#mfa_methods)")
-                            .expressionAttributeNames(expressionAttributeNames)
-                            .exclusiveStartKey(lastKey)
-                            .build();
+                List<String> currentBatchEmails = new ArrayList<>();
+                for (Map<String, AttributeValue> userCredentialsItem : scanResponse.items()) {
+                    totalUserCredentialsFetched++;
+                    if (totalUserCredentialsFetched % 100000 == 0) {
+                        LOG.info(
+                                "Fetched {} user credentials records", totalUserCredentialsFetched);
+                    }
+                    String email = userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).s();
+                    currentBatchEmails.add(email);
 
-            ScanResponse scanResponse = client.scan(scanRequest);
-
-            List<String> emailsToGet = new ArrayList<>();
-            for (Map<String, AttributeValue> userCredentialsItem : scanResponse.items()) {
-                recordsProcessed++;
-                if (recordsProcessed % 100000 == 0) {
-                    LOG.info("Processed {} user credentials records", recordsProcessed);
+                    if (currentBatchEmails.size() >= 100) {
+                        totalBatches++;
+                        queueBatch(forkJoinPool, currentBatchEmails, totalBatches, batchTasks);
+                        currentBatchEmails = new ArrayList<>();
+                    }
                 }
-                String email = userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).s();
-                emailsToGet.add(email);
 
-                if (emailsToGet.size() >= 100) {
-                    matches += batchGetUserProfiles(emailsToGet, userProfileTableName);
-                    emailsToGet.clear();
+                if (!currentBatchEmails.isEmpty()) {
+                    totalBatches++;
+                    queueBatch(forkJoinPool, currentBatchEmails, totalBatches, batchTasks);
                 }
+
+                lastKey = scanResponse.lastEvaluatedKey();
+            } while (lastKey != null && !lastKey.isEmpty());
+
+            for (ForkJoinTask<Long> task : batchTasks) {
+                totalMatches += task.join();
             }
 
-            if (!emailsToGet.isEmpty()) {
-                matches += batchGetUserProfiles(emailsToGet, userProfileTableName);
-            }
+            gracefulPoolShutdown(forkJoinPool);
+        } finally {
+            forcePoolShutdown(forkJoinPool);
+        }
 
-            lastKey = scanResponse.lastEvaluatedKey();
-        } while (lastKey != null && !lastKey.isEmpty());
-
-        LOG.info("Found {} credentials/profile matches with AUTH_APP", matches);
-
-        return matches;
+        LOG.info("Found {} credentials/profile matches with AUTH_APP", totalMatches);
+        return totalMatches;
     }
 
-    private long batchGetUserProfiles(List<String> emails, String userProfileTableName) {
+    private void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
+        forkJoinPool.shutdown();
+        try {
+            if (!forkJoinPool.awaitTermination(15, TimeUnit.SECONDS)) {
+                LOG.warn("ForkJoinPool did not terminate normally");
+            }
+        } catch (InterruptedException e) {
+            LOG.error("ForkJoinPool termination interrupted", e);
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void forcePoolShutdown(ForkJoinPool forkJoinPool) {
+        if (!forkJoinPool.isShutdown()) {
+            forkJoinPool.shutdownNow();
+        }
+    }
+
+    private void queueBatch(
+            ForkJoinPool forkJoinPool,
+            List<String> emails,
+            long batch,
+            List<ForkJoinTask<Long>> batchTasks) {
+        batchTasks.add(forkJoinPool.submit(() -> batchGetUserProfiles(batch, emails)));
+    }
+
+    private long batchGetUserProfiles(long batch, List<String> emails) {
+        if (batch % 1000 == 0) {
+            LOG.info("Executing user profile batch {}", batch);
+        }
+
         if (emails.isEmpty()) {
             return 0;
         }
