@@ -2,8 +2,8 @@ package uk.gov.di.accountmanagement.queuehandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.NotificationHandler;
-import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
@@ -14,8 +14,8 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasField;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 
