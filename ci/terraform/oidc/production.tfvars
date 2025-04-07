@@ -1,5 +1,9 @@
 shared_state_bucket = "digital-identity-prod-tfstate"
 
+# FMS Flag
+fms_enabled                = true
+frontend_api_fms_tag_value = "authfrontendprod"
+
 # App-specific
 internal_sector_uri  = "https://identity.account.gov.uk"
 test_clients_enabled = false
