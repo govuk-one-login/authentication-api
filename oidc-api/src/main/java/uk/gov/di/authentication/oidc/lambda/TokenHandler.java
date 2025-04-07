@@ -291,6 +291,7 @@ public class TokenHandler
         if (configurationService.isPkceEnabled()) {
             if (!isPKCEValid(
                     Optional.ofNullable(codeChallenge), Optional.ofNullable(codeVerifierString))) {
+                LOG.warn("PKCE validation failed, returning invalid_grant");
                 return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
             }
         }
