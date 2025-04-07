@@ -75,19 +75,10 @@ public class OrchClientSessionService extends BaseDynamoService<OrchClientSessio
         }
     }
 
-    public Optional<OrchClientSessionItem> forceGetClientSession(String clientSessionId) {
-        return getClientSession(clientSessionId, true);
-    }
-
     public Optional<OrchClientSessionItem> getClientSession(String clientSessionId) {
-        return getClientSession(clientSessionId, false);
-    }
-
-    private Optional<OrchClientSessionItem> getClientSession(
-            String clientSessionId, boolean consistentRead) {
         Optional<OrchClientSessionItem> clientSession = Optional.empty();
         try {
-            clientSession = getWithConsistentRead(clientSessionId, consistentRead);
+            clientSession = get(clientSessionId);
         } catch (Exception e) {
             logAndThrowOrchClientSessionException(
                     "Failed to get Orch client session item", clientSessionId, e);

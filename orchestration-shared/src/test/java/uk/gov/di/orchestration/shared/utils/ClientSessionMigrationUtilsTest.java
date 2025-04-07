@@ -7,25 +7,16 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.areClientSessionsEqual;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.getOrchClientSessionWithRetryIfNotEqual;
-import static uk.gov.di.orchestration.sharedtest.helper.Constants.CLIENT_SESSION_ID;
 
 class ClientSessionMigrationUtilsTest {
     private static final Map<String, List<String>> AUTH_REQUEST_PARAMS =
@@ -36,8 +27,6 @@ class ClientSessionMigrationUtilsTest {
     private static final List<VectorOfTrust> VTR_LIST =
             List.of(VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL));
     private static final String CLIENT_NAME = "test-client-name";
-    private final OrchClientSessionService orchClientSessionService =
-            mock(OrchClientSessionService.class);
 
     @Nested
     class AreClientSessionsEqual {
@@ -125,58 +114,6 @@ class ClientSessionMigrationUtilsTest {
                             "different-client-name");
 
             assertFalse(areClientSessionsEqual(clientSession, orchClientSession));
-        }
-    }
-
-    @Nested
-    class RetryGetClientSession {
-        LocalDateTime creationDate = LocalDateTime.now();
-        ClientSession clientSession =
-                new ClientSession(Map.of(), creationDate, List.of(), CLIENT_NAME);
-
-        @Test
-        void shouldRetryGetFromDynamoIfClientSessionsAreNotEqual() {
-            OrchClientSessionItem oldClientSession =
-                    new OrchClientSessionItem(
-                            CLIENT_SESSION_ID,
-                            Map.of(),
-                            creationDate,
-                            List.of(),
-                            "a-different-client-name");
-            OrchClientSessionItem latestClientSession =
-                    new OrchClientSessionItem(
-                            CLIENT_SESSION_ID, Map.of(), creationDate, List.of(), CLIENT_NAME);
-            when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                    .thenReturn(Optional.of(oldClientSession));
-            when(orchClientSessionService.forceGetClientSession(CLIENT_SESSION_ID))
-                    .thenReturn(Optional.of(latestClientSession));
-
-            var actualOrchClientSession =
-                    getOrchClientSessionWithRetryIfNotEqual(
-                            clientSession, CLIENT_SESSION_ID, orchClientSessionService);
-
-            assertTrue(actualOrchClientSession.isPresent());
-            assertEquals(latestClientSession, actualOrchClientSession.get());
-            verify(orchClientSessionService).getClientSession(CLIENT_SESSION_ID);
-            verify(orchClientSessionService).forceGetClientSession(CLIENT_SESSION_ID);
-        }
-
-        @Test
-        void shouldNotRetryGetFromDynamoIfClientSessionsAreEqual() {
-            OrchClientSessionItem orchClientSession =
-                    new OrchClientSessionItem(
-                            CLIENT_SESSION_ID, Map.of(), creationDate, List.of(), CLIENT_NAME);
-            when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                    .thenReturn(Optional.of(orchClientSession));
-
-            var actualOrchClientSession =
-                    getOrchClientSessionWithRetryIfNotEqual(
-                            clientSession, CLIENT_SESSION_ID, orchClientSessionService);
-
-            assertTrue(actualOrchClientSession.isPresent());
-            assertEquals(orchClientSession, actualOrchClientSession.get());
-            verify(orchClientSessionService).getClientSession(CLIENT_SESSION_ID);
-            verify(orchClientSessionService, never()).forceGetClientSession(CLIENT_SESSION_ID);
         }
     }
 }

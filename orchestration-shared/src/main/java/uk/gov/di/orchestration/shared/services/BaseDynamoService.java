@@ -71,15 +71,6 @@ public class BaseDynamoService<T> {
         return get(Key.builder().partitionValue(partition).sortValue(sort).build());
     }
 
-    public Optional<T> getWithConsistentRead(String partition, boolean consistentRead) {
-        return Optional.ofNullable(
-                dynamoTable.getItem(
-                        GetItemEnhancedRequest.builder()
-                                .consistentRead(consistentRead)
-                                .key(Key.builder().partitionValue(partition).build())
-                                .build()));
-    }
-
     private Optional<T> get(Key key) {
         return Optional.ofNullable(
                 dynamoTable.getItem(
