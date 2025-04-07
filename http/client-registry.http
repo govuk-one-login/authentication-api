@@ -1,0 +1,27 @@
+POST {{oidcBaseUrl}}/connect/register
+Content-Type: application/json
+X-API-Key: {{API-KEY}}
+
+# These are the required fields - feel free to add further fields when running it yourself
+{
+  "client_name":"Enter client name",
+  "redirect_uris":["http://test"],
+  "contacts":["test@gmail.com"],
+  "scopes":["openid"],
+  "sector_identifier_uri":"http://test",
+  "subject_type":"pairwise",
+  "public_key": {{publicKey}}
+}
+
+###
+
+PUT {{oidcBaseUrl}}/connect/register/{{clientId}}
+Content-Type: application/json
+X-API-Key: {{API-KEY}}
+
+# Add the changes you would like in here
+{
+  "client_name":"NEW NAME"
+}
+
+###
