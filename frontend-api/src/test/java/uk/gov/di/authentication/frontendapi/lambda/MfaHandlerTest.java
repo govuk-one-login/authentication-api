@@ -84,6 +84,7 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_R
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.partiallyContainsJsonString;
 
 class MfaHandlerTest {
 
@@ -184,7 +185,12 @@ class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient)
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(notifyRequest),
+                                        "unique_notification_reference")));
         verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(204));
 
@@ -236,7 +242,13 @@ class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(sqsClient).send(objectMapper.writeValueAsString(verifyPhoneNumberNotifyRequest));
+        verify(sqsClient)
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(
+                                                verifyPhoneNumberNotifyRequest),
+                                        "unique_notification_reference")));
         verify(codeGeneratorService, never()).sixDigitCode();
         verify(codeStorageService, never())
                 .saveOtpCode(
@@ -513,7 +525,12 @@ class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient, never())
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(notifyRequest),
+                                        "unique_notification_reference")));
         verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(204));
 
@@ -544,7 +561,13 @@ class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+
+        verify(sqsClient)
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(notifyRequest),
+                                        "unique_notification_reference")));
         assertThat(result, hasStatus(204));
     }
 
@@ -560,8 +583,6 @@ class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-
         verify(codeGeneratorService).sixDigitCode();
         verify(codeStorageService)
                 .saveOtpCode(
@@ -569,7 +590,12 @@ class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(sqsClient).send(serialisedRequest);
+        verify(sqsClient)
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(notifyRequest),
+                                        "unique_notification_reference")));
         assertThat(result, hasStatus(204));
     }
 
