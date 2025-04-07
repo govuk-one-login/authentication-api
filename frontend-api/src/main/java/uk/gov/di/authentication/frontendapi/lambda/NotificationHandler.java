@@ -135,19 +135,23 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
         try {
             var personalisation = getPersonalisation(request);
+            var reference =
+                    String.format(
+                            "%s/%s",
+                            request.getUniqueNotificationReference(), request.getClientSessionId());
 
             if (request.getNotificationType().isEmail()) {
                 notificationService.sendEmail(
                         request.getDestination(),
                         personalisation,
                         request.getNotificationType(),
-                        request.getClientSessionId());
+                        reference);
             } else {
                 notificationService.sendText(
                         request.getDestination(),
                         personalisation,
                         request.getNotificationType(),
-                        request.getClientSessionId());
+                        reference);
             }
             writeTestClientOtpToS3(
                     request.getNotificationType(), request.getCode(), request.getDestination());

@@ -3,6 +3,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -51,12 +53,19 @@ public class NotificationHandlerTest {
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CONTACT_US_LINK_ROUTE = "contact-us";
     private static final URI GOV_UK_ACCOUNTS_URL = URI.create("gov-uk-accounts-url");
+    private static final String TEST_UNIQUE_NOTIFICATION_REFERENCE =
+            "known-unique-notification-reference";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final S3Client s3Client = mock(S3Client.class);
     private NotificationHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
+
+    private static final String EXPECTED_REFERENCE =
+            String.format(
+                    "%s/%s",
+                    TEST_UNIQUE_NOTIFICATION_REFERENCE, CommonTestVariables.CLIENT_SESSION_ID);
 
     @BeforeEach
     void setUp() {
@@ -88,7 +97,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         VERIFY_EMAIL,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     @Test
@@ -108,7 +117,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     @Test
@@ -130,7 +139,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION_SMS,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     @Test
@@ -156,7 +165,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         ACCOUNT_CREATED_CONFIRMATION,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     @Test
@@ -176,7 +185,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         VERIFY_PHONE_NUMBER,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     @Test
@@ -219,7 +228,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         VERIFY_EMAIL,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
 
         RuntimeException exception =
                 assertThrows(
@@ -247,7 +256,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         VERIFY_PHONE_NUMBER,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
 
         RuntimeException exception =
                 assertThrows(
@@ -277,7 +286,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         VERIFY_PHONE_NUMBER,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
         var putObjectRequest =
                 PutObjectRequest.builder()
                         .bucket(BUCKET_NAME)
@@ -302,7 +311,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         MFA_SMS,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     @Test
@@ -321,7 +330,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         MFA_SMS,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
         var putObjectRequest =
                 PutObjectRequest.builder()
                         .bucket(BUCKET_NAME)
@@ -348,7 +357,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         ACCOUNT_CREATED_CONFIRMATION,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
         var putObjectRequest =
                 PutObjectRequest.builder()
                         .bucket(BUCKET_NAME)
@@ -376,7 +385,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         RESET_PASSWORD_WITH_CODE,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     @Test
@@ -397,7 +406,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                        CommonTestVariables.CLIENT_SESSION_ID);
+                        EXPECTED_REFERENCE);
     }
 
     private String buildContactUsUrl() {
@@ -423,6 +432,13 @@ public class NotificationHandlerTest {
                         SupportedLanguage.EN,
                         CommonTestVariables.SESSION_ID,
                         CommonTestVariables.CLIENT_SESSION_ID);
-        return generateSQSEvent(objectMapper.writeValueAsString(notifyRequest));
+
+        // Inject the unique notification reference
+        JsonObject jsonMap =
+                objectMapper.readValue(
+                        objectMapper.writeValueAsString(notifyRequest), JsonObject.class);
+        jsonMap.addProperty("unique_notification_reference", TEST_UNIQUE_NOTIFICATION_REFERENCE);
+
+        return generateSQSEvent(new Gson().toJson(jsonMap));
     }
 }
