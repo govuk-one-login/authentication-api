@@ -30,40 +30,40 @@ function loginAws() {
 function exportSecrets() {
   SECRET_ENVIRONMENT="$1"
 
-  if [[ $SECRET_ENVIRONMENT == "dev" ]]; then
+  if [[ ${SECRET_ENVIRONMENT} == "dev" ]]; then
     SECRET_ENVIRONMENT=sandpit
   fi
 
-  ENV=$ENVIRONMENT # The read_secrets script messes with the value of ENVIRONMENT
+  ENV=${ENVIRONMENT} # The read_secrets script messes with the value of ENVIRONMENT
   # shellcheck disable=SC1091
-  source "../../../scripts/read_secrets__main.sh" "$SECRET_ENVIRONMENT"
-  ENVIRONMENT=$ENV
+  source "../../../scripts/read_secrets__main.sh" "${SECRET_ENVIRONMENT}"
+  ENVIRONMENT=${ENV}
 }
 
 PERMITTED_ENVIRONMENTS="dev build staging integration production"
 
-if [[ $# == 0 ]] || ! [[ $PERMITTED_ENVIRONMENTS =~ ( |^)$1( |$) ]]; then
-  echo "Call ./deploy <env>, where <env> is one of $PERMITTED_ENVIRONMENTS"
+if [[ $# == 0 ]] || ! [[ ${PERMITTED_ENVIRONMENTS} =~ ( |^)$1( |$) ]]; then
+  echo "Call ./deploy <env>, where <env> is one of ${PERMITTED_ENVIRONMENTS}"
   exit 1
 fi
 
 ENVIRONMENT=$1
 
-PARAMETERS_FILE=${PARAMETERS_FILE:=./$ENVIRONMENT/parameters.json}
-TAGS_FILE=${TAGS_FILE:=./$ENVIRONMENT/tags.json}
+PARAMETERS_FILE=${PARAMETERS_FILE:=./${ENVIRONMENT}/parameters.json}
+TAGS_FILE=${TAGS_FILE:=./${ENVIRONMENT}/tags.json}
 
-if [ ! -f "$PARAMETERS_FILE" ]; then
+if [ ! -f "${PARAMETERS_FILE}" ]; then
   echo "Configuration file not found. Please see README.md"
   exit 1
 fi
 
-if [ ! -f "$TAGS_FILE" ]; then
+if [ ! -f "${TAGS_FILE}" ]; then
   echo "Tags file not found. Please see README.md"
   exit 1
 fi
 
-loginAws "$ENVIRONMENT"
-exportSecrets "$ENVIRONMENT"
+loginAws "${ENVIRONMENT}"
+exportSecrets "${ENVIRONMENT}"
 
 if [[ -z ${ORIGIN_CLOAKING_HEADER:-} ]]; then
   if [[ -z ${TF_VAR_oidc_origin_cloaking_header:-} ]]; then
@@ -88,17 +88,17 @@ if [[ $# == 2 ]] && [[ $2 == "--create" ]]; then
   aws cloudformation create-stack \
     --region eu-west-2 \
     --enable-termination-protection \
-    --stack-name="$ENVIRONMENT-oidc-cloudfront" \
+    --stack-name="${ENVIRONMENT}-oidc-cloudfront" \
     --capabilities CAPABILITY_NAMED_IAM \
     --template-url ${TEMPLATE_URL} \
-    --parameters="$PARAMETERS" \
+    --parameters="${PARAMETERS}" \
     --tags="$(jq '. | tojson' -r "${TAGS_FILE}")"
 else
   aws cloudformation update-stack \
     --region eu-west-2 \
-    --stack-name="$ENVIRONMENT-oidc-cloudfront" \
+    --stack-name="${ENVIRONMENT}-oidc-cloudfront" \
     --capabilities CAPABILITY_NAMED_IAM \
     --use-previous-template \
-    --parameters="$PARAMETERS" \
+    --parameters="${PARAMETERS}" \
     --tags="$(jq '. | tojson' -r "${TAGS_FILE}")"
 fi
