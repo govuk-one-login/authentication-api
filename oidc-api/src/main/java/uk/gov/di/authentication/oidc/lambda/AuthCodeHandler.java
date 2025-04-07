@@ -22,6 +22,7 @@ import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -39,6 +40,7 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -46,7 +48,6 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -88,6 +89,7 @@ public class AuthCodeHandler
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
+    private final DynamoClientService dynamoClientService;
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -101,7 +103,8 @@ public class AuthCodeHandler
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
@@ -114,6 +117,7 @@ public class AuthCodeHandler
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
+        this.dynamoClientService = dynamoClientService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
@@ -131,6 +135,7 @@ public class AuthCodeHandler
         dynamoService = new DynamoService(configurationService);
         authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        dynamoClientService = new DynamoClientService(configurationService);
     }
 
     public AuthCodeHandler(
@@ -149,6 +154,7 @@ public class AuthCodeHandler
         dynamoService = new DynamoService(configurationService);
         authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        dynamoClientService = new DynamoClientService(configurationService);
     }
 
     public AuthCodeHandler() {
@@ -205,6 +211,7 @@ public class AuthCodeHandler
         AuthenticationRequest authenticationRequest = null;
         OrchClientSessionItem orchClientSession;
         ClientID clientID;
+        ClientRegistry client;
         AuthorizationCode authCode;
         AuthenticationSuccessResponse authenticationResponse;
         try {
@@ -243,10 +250,18 @@ public class AuthCodeHandler
                 subjectIdOptional = Optional.empty();
             }
 
+            client =
+                    dynamoClientService
+                            .getClient(clientID.getValue())
+                            .orElseThrow(() -> new ClientNotFoundException(clientID.getValue()));
+
+            if (!orchestrationAuthorizationService.isClientRedirectUriValid(client, redirectUri)) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
+            }
+
             authCode =
                     generateAuthCode(
                             clientID,
-                            redirectUri,
                             emailOptional,
                             orchClientSession.getVtrList(),
                             clientSessionId,
@@ -441,16 +456,11 @@ public class AuthCodeHandler
 
     private AuthorizationCode generateAuthCode(
             ClientID clientID,
-            URI redirectUri,
             Optional<String> emailOptional,
             List<VectorOfTrust> vtrList,
             String clientSessionId,
             Session session,
-            OrchSessionItem orchSession)
-            throws ClientNotFoundException, ProcessAuthRequestException {
-        if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
-            throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
-        }
+            OrchSessionItem orchSession) {
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                 VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
         if (isNull(session.getCurrentCredentialStrength())

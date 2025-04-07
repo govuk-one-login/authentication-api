@@ -107,7 +107,11 @@ public class OrchestrationAuthorizationService {
         if (client.isEmpty()) {
             throw new ClientNotFoundException(clientID.toString());
         }
-        return client.get().getRedirectUrls().contains(redirectURI.toString());
+        return isClientRedirectUriValid(client.get(), redirectURI);
+    }
+
+    public boolean isClientRedirectUriValid(ClientRegistry client, URI redirectURI) {
+        return client.getRedirectUrls().contains(redirectURI.toString());
     }
 
     public AuthenticationSuccessResponse generateSuccessfulAuthResponse(
