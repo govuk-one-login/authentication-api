@@ -1,5 +1,9 @@
 common_state_bucket = "digital-identity-prod-tfstate"
 
+# FMS Flag
+fms_enabled          = true
+am_api_fms_tag_value = "accountmanagementprod"
+
 # URIs
 internal_sector_uri = "https://identity.account.gov.uk"
 
