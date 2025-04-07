@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -379,9 +378,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditContext auditContext,
             ClientRegistry client,
             Optional<String> maybeRpPairwiseId) {
-        var session = userContext.getSession();
         var authSession = userContext.getAuthSession();
-        var sessionId = authSession.getSessionId();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
@@ -411,7 +408,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
-                    journeyType, subjectId, session, authSession, sessionId, maybeRpPairwiseId);
+                    journeyType, subjectId, authSession, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             maybeRpPairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -429,9 +426,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     void preserveReauthCountsForAuditIfJourneyIsReauth(
             JourneyType journeyType,
             String subjectId,
-            Session session,
             AuthSessionItem authSession,
-            String sessionId,
             Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
@@ -445,8 +440,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                             JourneyType.REAUTHENTICATION)
                             : authenticationAttemptsService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
-            var updatedSession = session.setPreservedReauthCountsForAudit(counts);
-            sessionService.storeOrUpdateSession(updatedSession, sessionId);
             var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
             authSessionService.updateSession(updatedAuthSession);
         }
