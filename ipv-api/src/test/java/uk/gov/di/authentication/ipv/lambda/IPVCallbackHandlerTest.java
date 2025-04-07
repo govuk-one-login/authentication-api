@@ -104,6 +104,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -276,6 +277,8 @@ class IPVCallbackHandlerTest {
 
     @BeforeEach
     void setUp() {
+        clearInvocations(ipvCallbackHelper);
+
         handler =
                 new IPVCallbackHandler(
                         configService,
@@ -574,11 +577,15 @@ class IPVCallbackHandlerTest {
                                         .add(ValidClaims.CORE_IDENTITY_JWT.getValue())
                                         .add(ValidClaims.RETURN_CODE.getValue()));
         var testAuthRequestParams = generateAuthRequest(claimsRequest).toParameters();
+
+        List<VectorOfTrust> vtrList = List.of();
+
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         Optional.of(
                                 new ClientSession(
-                                        testAuthRequestParams, null, List.of(), CLIENT_NAME)));
+                                        testAuthRequestParams, null, vtrList, CLIENT_NAME)));
+
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         Optional.of(
@@ -586,10 +593,10 @@ class IPVCallbackHandlerTest {
                                         CLIENT_SESSION_ID,
                                         testAuthRequestParams,
                                         null,
-                                        List.of(),
+                                        vtrList,
                                         CLIENT_NAME)));
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
-        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
+        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                         any(),
@@ -614,6 +621,22 @@ class IPVCallbackHandlerTest {
                         getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry));
 
         assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
+
+        verify(ipvCallbackHelper)
+                .generateReturnCodeAuthenticationResponse(
+                        any(),
+                        eq(CLIENT_SESSION_ID),
+                        eq(userProfile),
+                        eq(session),
+                        eq(SESSION_ID),
+                        any(OrchSessionItem.class),
+                        eq(CLIENT_NAME),
+                        any(Subject.class),
+                        anyString(),
+                        eq(userIdentityUserInfo),
+                        anyString(),
+                        eq(PERSISTENT_SESSION_ID),
+                        eq(CLIENT_ID.getValue()));
     }
 
     @Test

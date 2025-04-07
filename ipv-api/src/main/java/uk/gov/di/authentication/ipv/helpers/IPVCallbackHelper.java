@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -36,6 +37,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -60,6 +62,7 @@ public class IPVCallbackHelper {
     private final AuditService auditService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
+    private final OrchAuthCodeService orchAuthCodeService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoClientService dynamoClientService;
     private final DynamoIdentityService dynamoIdentityService;
@@ -73,6 +76,7 @@ public class IPVCallbackHelper {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
@@ -96,6 +100,7 @@ public class IPVCallbackHelper {
         this.authorisationCodeService =
                 new AuthorisationCodeService(
                         configurationService, redis, SerializationService.getInstance());
+        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
@@ -116,6 +121,7 @@ public class IPVCallbackHelper {
             AuditService auditService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
+            OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoClientService dynamoClientService,
             DynamoIdentityService dynamoIdentityService,
@@ -128,6 +134,7 @@ public class IPVCallbackHelper {
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
+        this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.dynamoClientService = dynamoClientService;
         this.dynamoIdentityService = dynamoIdentityService;
@@ -208,12 +215,31 @@ public class IPVCallbackHelper {
                 () ->
                         saveIdentityClaimsToDynamo(
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
                         clientId,
                         clientSessionId,
                         userProfile.getEmail(),
                         orchSession.getAuthTime());
+        /*
+            TODO: ATO-1218:
+             - Move the catch clause below to the bottom of the IPVCallbackHandler "handleRequest" method and return the result of redirectToFrontendErrorPage (similar to the other catch clauses).
+             - Update the log in the catch clause to be level 'error' and remove Redis references (as by this point the DynamoDB store will be the primary).
+        */
+        try {
+            orchAuthCodeService.generateAndSaveAuthorisationCode(
+                    authCode,
+                    clientId,
+                    clientSessionId,
+                    userProfile.getEmail(),
+                    orchSession.getAuthTime());
+        } catch (OrchAuthCodeException e) {
+            LOG.warn(
+                    "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
+                    e.getMessage());
+        }
+
         var authenticationResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
