@@ -5,6 +5,8 @@ import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.validation.Required;
 
+import java.util.UUID;
+
 public class NotifyRequest {
 
     @Expose
@@ -21,6 +23,8 @@ public class NotifyRequest {
     @Expose private String sessionId;
 
     @Expose private String clientSessionId;
+
+    @Expose private String uniqueNotificationReference = UUID.randomUUID().toString();
 
     public NotifyRequest() {}
 
@@ -85,5 +89,9 @@ public class NotifyRequest {
 
     public String getClientSessionId() {
         return clientSessionId;
+    }
+
+    public String getUniqueNotificationReference() {
+        return uniqueNotificationReference;
     }
 }
