@@ -946,6 +946,8 @@ public class AuthorisationHandler
                         .claim("is_one_login_service", client.isOneLoginService())
                         .claim("service_type", client.getServiceType())
                         .claim("govuk_signin_journey_id", clientSessionId)
+                        // TODO: We can remove this field once we are using
+                        //       requested_credential_strength in the frontend
                         .claim("confidence", requestedVtr.getCredentialTrustLevel().getValue())
                         .claim(
                                 "requested_credential_strength",
