@@ -42,7 +42,7 @@ public class OrchClientSessionService extends BaseDynamoService<OrchClientSessio
             DynamoDbClient dynamoDbClient,
             DynamoDbTable<OrchClientSessionItem> dynamoDbTable,
             ConfigurationService configurationService) {
-        super(dynamoDbTable, dynamoDbClient);
+        super(dynamoDbTable, dynamoDbClient, configurationService);
         this.configurationService = configurationService;
         this.timeToLive = configurationService.getSessionExpiry();
         this.nowClock = new NowClock(Clock.systemUTC());

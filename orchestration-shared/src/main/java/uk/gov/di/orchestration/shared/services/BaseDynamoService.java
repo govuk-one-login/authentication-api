@@ -20,6 +20,7 @@ public class BaseDynamoService<T> {
 
     private final DynamoDbTable<T> dynamoTable;
     private final DynamoDbClient client;
+    private final boolean useConsistentReads;
 
     public BaseDynamoService(
             Class<T> objectClass, String table, ConfigurationService configurationService) {
@@ -38,15 +39,20 @@ public class BaseDynamoService<T> {
         client = createDynamoClient(configurationService);
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
+        useConsistentReads = configurationService.isUseStronglyConsistentReads();
 
         if (!isTableInOrchAccount) {
             warmUp();
         }
     }
 
-    public BaseDynamoService(DynamoDbTable<T> dynamoTable, DynamoDbClient client) {
+    public BaseDynamoService(
+            DynamoDbTable<T> dynamoTable,
+            DynamoDbClient client,
+            ConfigurationService configurationService) {
         this.dynamoTable = dynamoTable;
         this.client = client;
+        this.useConsistentReads = configurationService.isUseStronglyConsistentReads();
     }
 
     public void update(T item) {
@@ -58,14 +64,11 @@ public class BaseDynamoService<T> {
     }
 
     public Optional<T> get(String partition) {
-        return Optional.ofNullable(
-                dynamoTable.getItem(Key.builder().partitionValue(partition).build()));
+        return get(Key.builder().partitionValue(partition).build());
     }
 
     public Optional<T> get(String partition, String sort) {
-        return Optional.ofNullable(
-                dynamoTable.getItem(
-                        Key.builder().partitionValue(partition).sortValue(sort).build()));
+        return get(Key.builder().partitionValue(partition).sortValue(sort).build());
     }
 
     public Optional<T> getWithConsistentRead(String partition, boolean consistentRead) {
@@ -74,6 +77,15 @@ public class BaseDynamoService<T> {
                         GetItemEnhancedRequest.builder()
                                 .consistentRead(consistentRead)
                                 .key(Key.builder().partitionValue(partition).build())
+                                .build()));
+    }
+
+    private Optional<T> get(Key key) {
+        return Optional.ofNullable(
+                dynamoTable.getItem(
+                        GetItemEnhancedRequest.builder()
+                                .consistentRead(useConsistentReads)
+                                .key(key)
                                 .build()));
     }
 

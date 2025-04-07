@@ -36,7 +36,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
             DynamoDbClient dynamoDbClient,
             DynamoDbTable<OrchSessionItem> dynamoDbTable,
             ConfigurationService configurationService) {
-        super(dynamoDbTable, dynamoDbClient);
+        super(dynamoDbTable, dynamoDbClient, configurationService);
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
     }
