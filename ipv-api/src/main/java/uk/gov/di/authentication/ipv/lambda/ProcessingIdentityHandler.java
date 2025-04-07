@@ -14,7 +14,9 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -140,6 +142,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             // ATO-1514: Introducing this unused var, we will swap usages over to it in a future PR
             int orchSessionProcessingIdentityAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
+            // ATO-1514: Temporary logging to check the values are in sync.
+            logProcessingIdentityAttempts(userContext.getSession(), userContext.getOrchSession());
             LOG.info(
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
                     processingAttempts);
@@ -234,5 +238,28 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 200,
                 new ProcessingIdentityInterventionResponse(
                         ProcessingIdentityStatus.INTERVENTION, redirectUrl));
+    }
+
+    private void logProcessingIdentityAttempts(Session session, OrchSessionItem orchSession) {
+        try {
+
+            LOG.info(
+                    "Are processing identity attempts equal in both session stores: {}",
+                    Objects.equals(
+                            session.getProcessingIdentityAttempts(),
+                            orchSession.getProcessingIdentityAttempts()));
+
+            LOG.info(
+                    "Shared session processing identity attempts: {}",
+                    session.getProcessingIdentityAttempts());
+            LOG.info(
+                    "Orch session processing identity attempts: {}",
+                    orchSession.getProcessingIdentityAttempts());
+
+        } catch (Exception e) {
+            LOG.warn(
+                    "Exception when logging processing identity attempts: {}. Continuing as normal",
+                    e.getMessage());
+        }
     }
 }
