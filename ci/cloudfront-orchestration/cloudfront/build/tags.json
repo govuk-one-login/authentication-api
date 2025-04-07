@@ -21,6 +21,10 @@
   },
   {
     "Key": "FMSGlobalCustomPolicy",
+    "Value": "true"
+  },
+  {
+    "Key": "FMSGlobalCustomPolicyName",
     "Value": "cloudfrontoidc"
   }
 ]
