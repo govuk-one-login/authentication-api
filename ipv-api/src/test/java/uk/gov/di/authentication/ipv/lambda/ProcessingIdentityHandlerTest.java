@@ -197,6 +197,8 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
+        assertThat(session.getProcessingIdentityAttempts(), equalTo(1));
+        assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(1));
     }
 
     @Test
@@ -356,6 +358,7 @@ class ProcessingIdentityHandlerTest {
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.NO_ENTRY))));
         assertThat(session.getProcessingIdentityAttempts(), equalTo(0));
+        assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(0));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "ProcessingIdentity",

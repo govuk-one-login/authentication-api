@@ -2636,6 +2636,7 @@ class AuthorisationHandlerTest {
         void setup() {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
+            session.incrementProcessingIdentityAttempts();
             withExistingSession(session);
             when(sessionService.copySessionForMaxAge(any(Session.class))).thenCallRealMethod();
         }
@@ -2718,6 +2719,7 @@ class AuthorisationHandlerTest {
             when(clientService.getClient(anyString()))
                     .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            orchSession.incrementProcessingIdentityAttempts();
             withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
             var requestParams =
                     buildRequestParams(
@@ -2825,10 +2827,14 @@ class AuthorisationHandlerTest {
 
             ArgumentCaptor<OrchSessionItem> addSessionCaptor =
                     ArgumentCaptor.forClass(OrchSessionItem.class);
+            ArgumentCaptor<Session> newSharedSesisonCaptor = ArgumentCaptor.forClass(Session.class);
             if (maxAgeExpired) {
                 verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
+                verify(sessionService, times(2))
+                        .storeOrUpdateSession(newSharedSesisonCaptor.capture(), anyString());
                 OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
                 OrchSessionItem newOrchSession = addSessionCaptor.getAllValues().get(1);
+                Session newSharedSession = newSharedSesisonCaptor.getValue();
 
                 assertNotEquals(updatedPreviousSession.getSessionId(), orchSession.getSessionId());
                 assertNotEquals(
@@ -2841,6 +2847,7 @@ class AuthorisationHandlerTest {
                                 > timeNow + configService.getSessionExpiry() - 100);
                 assertTrue(updatedPreviousSession.getAuthenticated());
                 assertEquals(updatedPreviousSession.getAuthTime(), authTime);
+                assertEquals(0, newSharedSession.getProcessingIdentityAttempts());
 
                 verify(orchSessionService).deleteSession(orchSession.getSessionId());
 
@@ -2855,6 +2862,8 @@ class AuthorisationHandlerTest {
                 assertEquals(
                         newOrchSession.getPreviousSessionId(),
                         updatedPreviousSession.getSessionId());
+                assertEquals(0, newOrchSession.getProcessingIdentityAttempts());
+
             } else {
                 verify(orchSessionService, times(1)).addSession(addSessionCaptor.capture());
                 OrchSessionItem updatedSession = addSessionCaptor.getAllValues().get(0);
@@ -2869,6 +2878,7 @@ class AuthorisationHandlerTest {
                 assertTrue(
                         updatedSession.getTimeToLive()
                                 > timeNow + configService.getSessionExpiry() - 100);
+                assertEquals(0, updatedSession.getProcessingIdentityAttempts());
 
                 verify(orchSessionService).deleteSession(orchSession.getSessionId());
             }
