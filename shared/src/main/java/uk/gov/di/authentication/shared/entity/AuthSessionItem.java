@@ -34,6 +34,11 @@ public class AuthSessionItem {
             "PreservedReauthCountsForAuditMap";
     public static final String ATTRIBUTE_ACHIEVED_CREDENTIAL_STRENGTH =
             "AchievedCredentialStrength";
+    public static final String ATTRIBUTE_REQUESTED_CREDENTIAL_STRENGTH =
+            "RequestedCredentialStrength";
+    public static final String ATTRIBUTE_REQUESTED_LEVEL_OF_CONFIDENCE =
+            "RequestedLevelOfConfidence";
+    public static final String ATTRIBUTE_CLIENT_ID = "ClientId";
 
     public enum AccountState {
         NEW,
@@ -68,6 +73,9 @@ public class AuthSessionItem {
     private int passwordResetCount;
     private Map<CountType, Integer> preservedReauthCountsForAuditMap;
     private CredentialTrustLevel achievedCredentialStrength;
+    private CredentialTrustLevel requestedCredentialStrength;
+    private LevelOfConfidence requestedLevelOfConfidence;
+    private String clientId;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -321,6 +329,50 @@ public class AuthSessionItem {
 
     public AuthSessionItem withAchievedCredentialStrength(CredentialTrustLevel credentialStrength) {
         this.achievedCredentialStrength = credentialStrength;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_REQUESTED_CREDENTIAL_STRENGTH)
+    public CredentialTrustLevel getRequestedCredentialStrength() {
+        return requestedCredentialStrength;
+    }
+
+    public void setRequestedCredentialStrength(CredentialTrustLevel requestedCredentialStrength) {
+        this.requestedCredentialStrength = requestedCredentialStrength;
+    }
+
+    public AuthSessionItem withRequestedCredentialStrength(
+            CredentialTrustLevel requestedCredentialStrength) {
+        this.requestedCredentialStrength = requestedCredentialStrength;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_REQUESTED_LEVEL_OF_CONFIDENCE)
+    public LevelOfConfidence getRequestedLevelOfConfidence() {
+        return requestedLevelOfConfidence;
+    }
+
+    public void setRequestedLevelOfConfidence(LevelOfConfidence requestedLevelOfConfidence) {
+        this.requestedLevelOfConfidence = requestedLevelOfConfidence;
+    }
+
+    public AuthSessionItem withRequestedLevelOfConfidence(
+            LevelOfConfidence requestedLevelOfConfidence) {
+        this.requestedLevelOfConfidence = requestedLevelOfConfidence;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_ID)
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    public AuthSessionItem withClientId(String clientId) {
+        this.clientId = clientId;
         return this;
     }
 
