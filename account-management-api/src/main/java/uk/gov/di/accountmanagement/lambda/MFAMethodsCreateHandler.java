@@ -85,8 +85,8 @@ public class MFAMethodsCreateHandler
         }
         var userProfile = maybeUserProfile.get();
 
-        var maybeSmsMigrationError = migrateSmsMfaForUserIfRequired(userProfile);
-        if (maybeSmsMigrationError.isPresent()) return maybeSmsMigrationError.get();
+        var maybeMigrationErrorResponse = migrateMfaCredentialsForUserIfRequired(userProfile);
+        if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
 
         try {
             MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
@@ -99,20 +99,18 @@ public class MFAMethodsCreateHandler
                             userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
             if (addBackupMfaResult.isLeft()) {
-                switch (addBackupMfaResult.getLeft()) {
-                    case INVALID_PRIORITY_IDENTIFIER -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-                    }
-                    case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1068);
-                    }
-                    case PHONE_NUMBER_ALREADY_EXISTS -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1069);
-                    }
-                    case AUTH_APP_EXISTS -> {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1070);
-                    }
-                }
+                return switch (addBackupMfaResult.getLeft()) {
+                    case INVALID_PRIORITY_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1001);
+                    case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1068);
+                    case PHONE_NUMBER_ALREADY_EXISTS -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1069);
+                    case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1070);
+                    case ERROR_RETRIEVING_MFA_METHODS -> generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.ERROR_1071);
+                };
             }
 
             return generateApiGatewayProxyResponse(200, addBackupMfaResult.get(), true);
@@ -122,7 +120,7 @@ public class MFAMethodsCreateHandler
         }
     }
 
-    private Optional<APIGatewayProxyResponseEvent> migrateSmsMfaForUserIfRequired(
+    private Optional<APIGatewayProxyResponseEvent> migrateMfaCredentialsForUserIfRequired(
             UserProfile userProfile) {
         if (!userProfile.getMfaMethodsMigrated()) {
             Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
@@ -132,13 +130,17 @@ public class MFAMethodsCreateHandler
                 MfaMigrationFailureReason mfaMigrationFailureReason =
                         maybeMfaMigrationFailureReason.get();
 
-                LOG.warn("Failed to migrate SMS MFA due to {}", mfaMigrationFailureReason);
+                LOG.warn(
+                        "Failed to migrate user's MFA credentials due to {}",
+                        mfaMigrationFailureReason);
 
-                if (mfaMigrationFailureReason
-                        == MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL) {
-                    return Optional.of(
+                return switch (mfaMigrationFailureReason) {
+                    case NO_USER_FOUND_FOR_EMAIL -> Optional.of(
                             generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056));
-                }
+                    case UNEXPECTED_ERROR_RETRIEVING_METHODS -> Optional.of(
+                            generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064));
+                    case ALREADY_MIGRATED -> Optional.empty();
+                };
             }
         }
 

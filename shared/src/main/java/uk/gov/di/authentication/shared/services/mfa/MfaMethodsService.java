@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
-import uk.gov.di.authentication.shared.exceptions.UnknownMfaTypeException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -34,58 +33,47 @@ public class MfaMethodsService {
 
     private final AuthenticationService persistentService;
 
-    // TODO generate and store UUID (AUT-4122)
-    public static final String HARDCODED_APP_MFA_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
-    public static final String HARDCODED_SMS_MFA_ID = "35c7940d-be5f-4b31-95b7-0eedc42929b9";
-
     public MfaMethodsService(ConfigurationService configurationService) {
         this.persistentService = new DynamoService(configurationService);
     }
 
-    public List<MfaMethodData> getMfaMethods(String email) {
+    public Either<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
             return getMfaMethodsForMigratedUser(userCredentials);
         } else {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
-                    .map(List::of)
-                    .orElseGet(List::of);
+                    .map(optional -> optional.map(List::of).orElseGet(List::of));
         }
     }
 
-    private List<MfaMethodData> getMfaMethodsForMigratedUser(UserCredentials userCredentials)
-            throws UnknownMfaTypeException {
-        return Optional.ofNullable(userCredentials.getMfaMethods())
-                .orElse(new ArrayList<>())
-                .stream()
-                .map(
-                        mfaMethod -> {
-                            if (mfaMethod
-                                    .getMfaMethodType()
-                                    .equals(MFAMethodType.AUTH_APP.getValue())) {
-                                return MfaMethodData.authAppMfaData(
-                                        mfaMethod.getMfaIdentifier(),
-                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
-                                        mfaMethod.isMethodVerified(),
-                                        mfaMethod.getCredentialValue());
-                            } else if (mfaMethod
-                                    .getMfaMethodType()
-                                    .equals(MFAMethodType.SMS.getValue())) {
-                                return MfaMethodData.smsMethodData(
-                                        mfaMethod.getMfaIdentifier(),
-                                        PriorityIdentifier.valueOf(mfaMethod.getPriority()),
-                                        mfaMethod.isMethodVerified(),
-                                        mfaMethod.getDestination());
-                            } else {
-                                LOG.error(
-                                        "Unknown mfa method type: {}",
-                                        mfaMethod.getMfaMethodType());
-                                throw new UnknownMfaTypeException(
-                                        "Unknown mfa method type: " + mfaMethod.getMfaMethodType());
-                            }
-                        })
-                .toList();
+    private Either<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethodsForMigratedUser(
+            UserCredentials userCredentials) {
+        List<Either<MfaRetrieveFailureReason, MfaMethodData>> mfaMethodDataResults =
+                Optional.ofNullable(userCredentials.getMfaMethods())
+                        .orElse(new ArrayList<>())
+                        .stream()
+                        .map(
+                                mfaMethod -> {
+                                    var mfaMethodData = MfaMethodData.from(mfaMethod);
+                                    if (mfaMethodData.isLeft()) {
+                                        LOG.error(
+                                                "Error converting mfa method with type {} to mfa method data: {}",
+                                                mfaMethod.getMfaMethodType(),
+                                                mfaMethodData.getLeft());
+                                        return Either.<MfaRetrieveFailureReason, MfaMethodData>left(
+                                                MfaRetrieveFailureReason
+                                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA);
+                                    } else {
+                                        return Either
+                                                .<MfaRetrieveFailureReason, MfaMethodData>right(
+                                                        mfaMethodData.get());
+                                    }
+                                })
+                        .toList();
+        return Either.sequenceRight(io.vavr.collection.List.ofAll(mfaMethodDataResults))
+                .map(Value::toJavaList);
     }
 
     public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
@@ -124,26 +112,54 @@ public class MfaMethodsService {
         return Either.right(mfaIdentifier);
     }
 
-    private Optional<MfaMethodData> getMfaMethodForNonMigratedUser(
-            UserProfile userProfile, UserCredentials userCredentials) {
+    private Either<MfaRetrieveFailureReason, Optional<MfaMethodData>>
+            getMfaMethodForNonMigratedUser(
+                    UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.isPresent()) {
             var method = enabledAuthAppMethod.get();
-            return Optional.of(
-                    MfaMethodData.authAppMfaData(
-                            HARDCODED_APP_MFA_ID,
-                            PriorityIdentifier.DEFAULT,
-                            method.isMethodVerified(),
-                            method.getCredentialValue()));
+            String mfaIdentifier;
+            if (Objects.nonNull(method.getMfaIdentifier())) {
+                mfaIdentifier = method.getMfaIdentifier();
+            } else {
+                mfaIdentifier = UUID.randomUUID().toString();
+                var result =
+                        persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+                                userProfile.getEmail(), mfaIdentifier);
+                if (result.isLeft()) {
+                    LOG.error(
+                            "Unexpected error updating non migrated auth app mfa identifier: {}",
+                            result.getLeft());
+                    return Either.left(
+                            MfaRetrieveFailureReason
+                                    .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP);
+                }
+            }
+            return Either.right(
+                    Optional.of(
+                            MfaMethodData.authAppMfaData(
+                                    mfaIdentifier,
+                                    PriorityIdentifier.DEFAULT,
+                                    method.isMethodVerified(),
+                                    method.getCredentialValue())));
         } else if (userProfile.isPhoneNumberVerified()) {
-            return Optional.of(
-                    MfaMethodData.smsMethodData(
-                            HARDCODED_SMS_MFA_ID,
-                            PriorityIdentifier.DEFAULT,
-                            true,
-                            userProfile.getPhoneNumber()));
+            String mfaIdentifier;
+            if (Objects.nonNull(userProfile.getMfaIdentifier())) {
+                mfaIdentifier = userProfile.getMfaIdentifier();
+            } else {
+                mfaIdentifier = UUID.randomUUID().toString();
+                persistentService.setMfaIdentifierForNonMigratedSmsMethod(
+                        userProfile.getEmail(), mfaIdentifier);
+            }
+            return Either.right(
+                    Optional.of(
+                            MfaMethodData.smsMethodData(
+                                    mfaIdentifier,
+                                    PriorityIdentifier.DEFAULT,
+                                    true,
+                                    userProfile.getPhoneNumber())));
         } else {
-            return Optional.empty();
+            return Either.right(Optional.empty());
         }
     }
 
@@ -154,7 +170,13 @@ public class MfaMethodsService {
         }
 
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
-        List<MfaMethodData> mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
+        Either<MfaRetrieveFailureReason, List<MfaMethodData>> mfaMethodsResult =
+                getMfaMethodsForMigratedUser(userCredentials);
+        if (mfaMethodsResult.isLeft()) {
+            return Either.left(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
+        }
+
+        var mfaMethods = mfaMethodsResult.get();
 
         if (mfaMethods.size() >= 2) {
             return Either.left(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
@@ -189,7 +211,8 @@ public class MfaMethodsService {
                             true,
                             smsMfaDetail.phoneNumber()));
         } else {
-            boolean authAppExists =
+            boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
+                    // auth apps?
                     mfaMethods.stream()
                             .map(MfaMethodData::method)
                             .filter(AuthAppMfaDetail.class::isInstance)
@@ -392,8 +415,14 @@ public class MfaMethodsService {
             return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
         }
 
-        var maybeNonMigratedMfaMethod =
+        var nonMigratedRetrieveResult =
                 getMfaMethodForNonMigratedUser(userProfile, userCredentials);
+
+        if (nonMigratedRetrieveResult.isLeft()) {
+            return Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
+        }
+
+        var maybeNonMigratedMfaMethod = nonMigratedRetrieveResult.get();
 
         // Bail if no MFA methods to migrate
         if (maybeNonMigratedMfaMethod.isEmpty()) {
@@ -403,13 +432,22 @@ public class MfaMethodsService {
 
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
+        String mfaIdentifier;
+        if (Objects.isNull(nonMigratedMfaMethod.mfaIdentifier())) {
+            mfaIdentifier = UUID.randomUUID().toString();
+        } else {
+            mfaIdentifier = nonMigratedMfaMethod.mfaIdentifier();
+        }
+
         return nonMigratedMfaMethod.method() instanceof AuthAppMfaDetail
-                ? migrateAuthAppToNewFormat(email, (AuthAppMfaDetail) nonMigratedMfaMethod.method())
-                : migrateSmsToNewFormat(email, (SmsMfaDetail) nonMigratedMfaMethod.method());
+                ? migrateAuthAppToNewFormat(
+                        email, (AuthAppMfaDetail) nonMigratedMfaMethod.method(), mfaIdentifier)
+                : migrateSmsToNewFormat(
+                        email, (SmsMfaDetail) nonMigratedMfaMethod.method(), mfaIdentifier);
     }
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
-            String email, AuthAppMfaDetail authAppMfaDetail) {
+            String email, AuthAppMfaDetail authAppMfaDetail, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.authAppMfaMethod(
@@ -417,12 +455,12 @@ public class MfaMethodsService {
                         true,
                         true,
                         PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
+                        identifier));
         return Optional.empty();
     }
 
     private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
-            String email, SmsMfaDetail smsMfaDetail) {
+            String email, SmsMfaDetail smsMfaDetail, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.smsMfaMethod(
@@ -430,7 +468,7 @@ public class MfaMethodsService {
                         true,
                         smsMfaDetail.phoneNumber(),
                         PriorityIdentifier.DEFAULT,
-                        UUID.randomUUID().toString()));
+                        identifier));
 
         return Optional.empty();
     }

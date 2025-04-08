@@ -83,17 +83,22 @@ class MFAMethodsCreateHandlerTest {
         when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.empty());
     }
 
-    private static Stream<Arguments> shouldReturn400WhenSmsMigrationFailedArgs() {
+    private static Stream<Arguments> migrationFailureReasonsToExpectedResponses() {
         return Stream.of(
                 Arguments.of(
                         MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
-                        ErrorResponse.ERROR_1056));
+                        ErrorResponse.ERROR_1056,
+                        400),
+                Arguments.of(
+                        MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS,
+                        ErrorResponse.ERROR_1064,
+                        500));
     }
 
     @ParameterizedTest
-    @MethodSource("shouldReturn400WhenSmsMigrationFailedArgs")
-    void shouldReturn400WhenSmsMigrationFailed(
-            MfaMigrationFailureReason reason, ErrorResponse expectedError) {
+    @MethodSource("migrationFailureReasonsToExpectedResponses")
+    void shouldReturnRelevantStatusCodeWhenMigrationFailed(
+            MfaMigrationFailureReason reason, ErrorResponse expectedError, int expectedStatusCode) {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
@@ -107,7 +112,7 @@ class MFAMethodsCreateHandlerTest {
 
         var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(400));
+        assertThat(result, hasStatus(expectedStatusCode));
         assertTrue(result.getBody().contains(String.valueOf(expectedError.getCode())));
         assertTrue(result.getBody().contains(expectedError.getMessage()));
     }
@@ -333,6 +338,24 @@ class MFAMethodsCreateHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
+    }
+
+    @Test
+    void shouldReturn500WhenMfaMethodServiceReturnsRetrieveError() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        TEST_PUBLIC_SUBJECT);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.addBackupMfa(any(), any()))
+                .thenReturn(Either.left(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
