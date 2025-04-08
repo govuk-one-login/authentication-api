@@ -244,32 +244,6 @@ public class TokenHandler
             Optional<AuthCodeExchangeData> orchAuthCodeExchangeDataMaybe =
                     orchAuthCodeService.getExchangeDataForCode(requestBody.get("code"));
 
-            // TODO: ATO-1205: Remove these logs after consistency checks are complete.
-            if (orchAuthCodeExchangeDataMaybe.isEmpty()) {
-                LOG.warn(
-                        "OrchAuthCode consistency check error: Record present in Redis but not in DynamoDB. ClientId: {}. ClientSessionId: {}. NOTE: Redis is still the primary at present.",
-                        authCodeExchangeData.getClientId(),
-                        authCodeExchangeData.getClientSessionId());
-            } else {
-                AuthCodeExchangeData orchAuthCodeExchangeData = orchAuthCodeExchangeDataMaybe.get();
-
-                LOG.info(
-                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode client ID equal? {}",
-                        Objects.equals(
-                                authCodeExchangeData.getClientId(),
-                                orchAuthCodeExchangeData.getClientId()));
-                LOG.info(
-                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode client session ID equal? {}",
-                        Objects.equals(
-                                authCodeExchangeData.getClientSessionId(),
-                                orchAuthCodeExchangeData.getClientSessionId()));
-                LOG.info(
-                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode auth time equal? {}",
-                        Objects.equals(
-                                authCodeExchangeData.getAuthTime(),
-                                orchAuthCodeExchangeData.getAuthTime()));
-            }
-
             /*
                 TODO: ATO-1205:
                  - Need to rethrow exceptions (as RuntimeException?) or return a 500 api gateway proxy response ourselves.
