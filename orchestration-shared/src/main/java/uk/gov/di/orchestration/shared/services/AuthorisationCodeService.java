@@ -7,8 +7,6 @@ import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
-import java.util.Optional;
-
 public class AuthorisationCodeService {
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationCodeService.class);
@@ -57,18 +55,5 @@ public class AuthorisationCodeService {
             LOG.error("Error persisting auth code to cache");
             throw new RuntimeException(e);
         }
-    }
-
-    public Optional<AuthCodeExchangeData> getExchangeDataForCode(String code) {
-        return Optional.ofNullable(redisConnectionService.popValue(AUTH_CODE_PREFIX.concat(code)))
-                .map(
-                        s -> {
-                            try {
-                                return objectMapper.readValue(s, AuthCodeExchangeData.class);
-                            } catch (JsonException e) {
-                                LOG.error("Error deserialising auth code data from cache");
-                                throw new RuntimeException(e);
-                            }
-                        });
     }
 }
