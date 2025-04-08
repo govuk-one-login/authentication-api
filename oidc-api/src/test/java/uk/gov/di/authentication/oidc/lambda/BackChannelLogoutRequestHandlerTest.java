@@ -13,6 +13,7 @@ import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
@@ -47,13 +48,15 @@ class BackChannelLogoutRequestHandlerTest {
     private final TokenService tokenService = mock(TokenService.class);
     private final Context context = mock(Context.class);
     private final Instant fixedDate = Instant.now();
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     private final BackChannelLogoutRequestHandler handler =
             new BackChannelLogoutRequestHandler(
                     oidcApi,
                     request,
                     tokenService,
-                    new NowClock(fixed(fixedDate, systemDefault())));
+                    new NowClock(fixed(fixedDate, systemDefault())),
+                    configurationService);
 
     @BeforeEach
     void setup() {

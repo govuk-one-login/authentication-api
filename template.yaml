@@ -90,6 +90,7 @@ Conditions:
       !Equals [!Ref Environment, integration],
       !Equals [!Ref Environment, production],
     ]
+  IsBuild: !Equals [!Ref Environment, build]
   SupportMaxAgeEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -4231,6 +4232,7 @@ Resources:
 
   BackChannelLogoutDLQAlarm:
     Type: AWS::CloudWatch::Alarm
+    Condition: IsBuild
     Properties:
       AlarmName: !Sub ${Environment}-backchannel-logout-dlq-alarm
       AlarmDescription: !Sub "${Environment} backchannel logout DLQ has a message.ACCOUNT: di-orchestration-${Environment}. Runbook: TBC"

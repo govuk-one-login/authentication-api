@@ -28,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +44,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
     private final HttpRequestService httpRequestService;
     private final TokenService tokenService;
     private final NowClock clock;
+    private final ConfigurationService configurationService;
 
     public BackChannelLogoutRequestHandler() {
         var configurationService = ConfigurationService.getInstance();
@@ -55,17 +57,20 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
                         new KmsConnectionService(configurationService),
                         oidcApi);
         this.clock = new NowClock(Clock.systemUTC());
+        this.configurationService = configurationService;
     }
 
     public BackChannelLogoutRequestHandler(
             OidcAPI oidcApi,
             HttpRequestService httpRequestService,
             TokenService tokenService,
-            NowClock clock) {
+            NowClock clock,
+            ConfigurationService configurationService) {
         this.oidcApi = oidcApi;
         this.httpRequestService = httpRequestService;
         this.tokenService = tokenService;
         this.clock = clock;
+        this.configurationService = configurationService;
     }
 
     @Override
@@ -88,8 +93,10 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
             try {
                 sendLogoutMessage(message);
             } catch (BackChannelLogoutPostRequestException e) {
-                batchItemFailures.add(
-                        new SQSBatchResponse.BatchItemFailure(message.getMessageId()));
+                if (Objects.equals(configurationService.getEnvironment(), "build")) {
+                    batchItemFailures.add(
+                            new SQSBatchResponse.BatchItemFailure(message.getMessageId()));
+                }
             }
         }
 
