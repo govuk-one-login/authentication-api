@@ -143,7 +143,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
+        return super.handleRequestWithoutClientSession(input, context);
     }
 
     @Override
