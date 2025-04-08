@@ -3,7 +3,6 @@ package uk.gov.di.accountmanagement.api;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsRetrieveHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -12,7 +11,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.Collections;
 import java.util.Map;
@@ -32,12 +30,9 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
     private static String testInternalSubject;
     private static String publicSubjectId;
 
-    @RegisterExtension
-    private static UserStoreExtension userStoreExtension = new UserStoreExtension();
-
     @BeforeEach
     void setUp() {
-        publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
+        publicSubjectId = userStore.signUp(EMAIL, PASSWORD);
         ConfigurationService mfaMethodEnabledConfigurationService =
                 new ConfigurationService() {
                     @Override
@@ -56,7 +51,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithSmsMethodWhenUserExists() {
-        userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
+        userStore.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
 
         var response =
                 makeRequest(
@@ -66,8 +61,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Map.of("publicSubjectId", publicSubjectId),
                         Map.of("principalId", testInternalSubject));
 
-        var mfaIdentifier =
-                userStoreExtension.getUserProfileFromEmail(EMAIL).get().getMfaIdentifier();
+        var mfaIdentifier = userStore.getUserProfileFromEmail(EMAIL).get().getMfaIdentifier();
 
         assertEquals(200, response.getStatusCode());
         var expectedResponse =
@@ -90,9 +84,9 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithSmsAndExistingMfaIdWhenUserExists() {
-        userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
+        userStore.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
         var mfaIdentifier = "some-identifier";
-        userStoreExtension.setPhoneNumberMfaIdentifer(EMAIL, mfaIdentifier);
+        userStore.setPhoneNumberMfaIdentifer(EMAIL, mfaIdentifier);
 
         var response =
                 makeRequest(
@@ -123,8 +117,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithAuthAppMethodWithGeneratedMfaIdWhenUserExists() {
-        userStoreExtension.addMfaMethod(
-                EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
+        userStore.addMfaMethod(EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
 
         var response =
                 makeRequest(
@@ -134,7 +127,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Map.of("publicSubjectId", publicSubjectId),
                         Map.of("principalId", testInternalSubject));
 
-        var identifier = userStoreExtension.getMfaMethod(EMAIL).get(0).getMfaIdentifier();
+        var identifier = userStore.getMfaMethod(EMAIL).get(0).getMfaIdentifier();
 
         assertEquals(200, response.getStatusCode());
         var expectedResponse =
@@ -158,8 +151,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
     @Test
     void shouldReturn200WithAuthAppMethodAndExistingMfaIdWhenUserExists() {
         var identifier = "some-identifier";
-        userStoreExtension.addAuthAppMethodWithIdentifier(
-                EMAIL, true, true, "some-credential", identifier);
+        userStore.addAuthAppMethodWithIdentifier(EMAIL, true, true, "some-credential", identifier);
 
         var response =
                 makeRequest(
@@ -169,7 +161,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Map.of("publicSubjectId", publicSubjectId),
                         Map.of("principalId", testInternalSubject));
 
-        var storedIdentifier = userStoreExtension.getMfaMethod(EMAIL).get(0).getMfaIdentifier();
+        var storedIdentifier = userStore.getMfaMethod(EMAIL).get(0).getMfaIdentifier();
         assertEquals(identifier, storedIdentifier);
 
         assertEquals(200, response.getStatusCode());
@@ -193,7 +185,7 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldReturn200WithMultipleMethodsWhenMigratedUserExists() {
-        userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+        userStore.setMfaMethodsMigrated(EMAIL, true);
 
         var authAppIdentifier = "14895398-33e5-41f0-b059-811b07df348d";
         var smsIdentifier = "e2d3f441-a17f-44a3-b608-b32c129b48b4";
@@ -207,8 +199,8 @@ class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         var sms =
                 MFAMethod.smsMfaMethod(
                         true, true, PHONE_NUMBER, PriorityIdentifier.BACKUP, smsIdentifier);
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, authApp);
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, sms);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, authApp);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, sms);
 
         var response =
                 makeRequest(

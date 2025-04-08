@@ -2,7 +2,6 @@ package uk.gov.di.accountmanagement.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsDeleteHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -11,7 +10,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.util.Collections;
 import java.util.Map;
@@ -43,9 +41,6 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     "20fbea7e-4c4e-4a32-a7b5-000bb4863660");
     private String publicSubjectId;
 
-    @RegisterExtension
-    private static UserStoreExtension userStoreExtension = new UserStoreExtension();
-
     @BeforeEach
     void setUp() {
         ConfigurationService mfaMethodEnabledConfigurationService =
@@ -56,7 +51,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     }
                 };
         handler = new MFAMethodsDeleteHandler(mfaMethodEnabledConfigurationService);
-        publicSubjectId = userStoreExtension.signUp(EMAIL, PASSWORD);
+        publicSubjectId = userStore.signUp(EMAIL, PASSWORD);
         byte[] salt = userStore.addSalt(EMAIL);
         testInternalSubject =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -67,9 +62,9 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn204AndDeleteAnMfaMethodWhenUserExists() {
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, DEFAULT_PRIORITY_AUTH_APP);
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, BACKUP_PRIORITY_SMS);
-        userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, DEFAULT_PRIORITY_AUTH_APP);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, BACKUP_PRIORITY_SMS);
+        userStore.setMfaMethodsMigrated(EMAIL, true);
 
         var response =
                 makeRequest(
@@ -85,7 +80,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertEquals(204, response.getStatusCode());
 
-        var mfaMethods = userStoreExtension.getMfaMethod(EMAIL);
+        var mfaMethods = userStore.getMfaMethod(EMAIL);
         assertEquals(1, mfaMethods.size());
 
         var mfaMethod = mfaMethods.stream().findFirst().get();
@@ -115,9 +110,9 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn404WhenMfaMethodDoesNotExist() {
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, DEFAULT_PRIORITY_AUTH_APP);
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, BACKUP_PRIORITY_SMS);
-        userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, DEFAULT_PRIORITY_AUTH_APP);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, BACKUP_PRIORITY_SMS);
+        userStore.setMfaMethodsMigrated(EMAIL, true);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -133,14 +128,14 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertEquals(404, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1065));
 
-        assertEquals(2, userStoreExtension.getMfaMethod(EMAIL).size());
+        assertEquals(2, userStore.getMfaMethod(EMAIL).size());
     }
 
     @Test
     void shouldReturn400WhenMfaMethodIsDefault() {
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, DEFAULT_PRIORITY_AUTH_APP);
-        userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, BACKUP_PRIORITY_SMS);
-        userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, DEFAULT_PRIORITY_AUTH_APP);
+        userStore.addMfaMethodSupportingMultiple(EMAIL, BACKUP_PRIORITY_SMS);
+        userStore.setMfaMethodsMigrated(EMAIL, true);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -156,14 +151,14 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertEquals(409, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1066));
 
-        assertEquals(2, userStoreExtension.getMfaMethod(EMAIL).size());
+        assertEquals(2, userStore.getMfaMethod(EMAIL).size());
     }
 
     @Test
     void shouldReturn400WhenUsersMfaMethodsAreNotMigrated() {
-        userStoreExtension.setMfaMethodsMigrated(EMAIL, false);
+        userStore.setMfaMethodsMigrated(EMAIL, false);
 
-        userStoreExtension.addMfaMethod(EMAIL, MFAMethodType.AUTH_APP, true, true, "credential");
+        userStore.addMfaMethod(EMAIL, MFAMethodType.AUTH_APP, true, true, "credential");
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -179,7 +174,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertEquals(400, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1067));
 
-        assertEquals(1, userStoreExtension.getMfaMethod(EMAIL).size());
+        assertEquals(1, userStore.getMfaMethod(EMAIL).size());
     }
 
     @Test
