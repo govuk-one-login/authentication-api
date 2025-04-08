@@ -52,11 +52,6 @@ public class NotifyRequest {
     }
 
     public NotifyRequest(
-            String destination, NotificationType notificationType, SupportedLanguage language) {
-        this(destination, notificationType, null, language);
-    }
-
-    public NotifyRequest(
             String destination,
             NotificationType notificationType,
             SupportedLanguage language,

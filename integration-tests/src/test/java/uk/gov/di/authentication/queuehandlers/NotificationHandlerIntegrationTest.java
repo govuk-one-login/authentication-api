@@ -132,7 +132,11 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         handler.handleRequest(
                 createSqsEvent(
                         new NotifyRequest(
-                                TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN)),
+                                TEST_EMAIL_ADDRESS,
+                                notificationType,
+                                SupportedLanguage.EN,
+                                SESSION_ID,
+                                CLIENT_SESSION_ID)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
