@@ -12,6 +12,7 @@ data "aws_iam_policy_document" "mfa_method_analysis_dynamo_access" {
 
     resources = [
       data.aws_dynamodb_table.user_profile.arn,
+      "${data.aws_dynamodb_table.user_profile.arn}/index/PhoneNumberIndex",
       data.aws_dynamodb_table.user_credentials.arn,
     ]
   }

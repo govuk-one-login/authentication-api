@@ -56,6 +56,49 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
         List<ForkJoinTask<MFAMethodAnalysis>> batchTasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(100);
 
+        batchTasks.add(
+                forkJoinPool.submit(
+                        () -> {
+                            Map<String, AttributeValue> lastKey = null;
+                            int totalCount = 0;
+                            int totalScanned = 0;
+                            int logThreshold = 100_000;
+                            int lastLoggedAt = 0;
+
+                            do {
+                                ScanRequest request =
+                                        ScanRequest.builder()
+                                                .tableName(userProfileTableName)
+                                                .indexName("PhoneNumberIndex")
+                                                .filterExpression("PhoneNumberVerified = :v")
+                                                .expressionAttributeValues(
+                                                        Map.of(
+                                                                ":v",
+                                                                AttributeValue.builder()
+                                                                        .n("1")
+                                                                        .build()))
+                                                .exclusiveStartKey(lastKey)
+                                                .build();
+
+                                ScanResponse response = client.scan(request);
+
+                                totalCount += response.count();
+                                totalScanned += response.scannedCount();
+                                lastKey = response.lastEvaluatedKey();
+
+                                if (totalScanned - lastLoggedAt >= logThreshold) {
+                                    LOG.info("Fetched {} phone number index records", totalScanned);
+                                    lastLoggedAt = totalScanned - (totalScanned % logThreshold);
+                                }
+                            } while (lastKey != null && !lastKey.isEmpty());
+
+                            MFAMethodAnalysis analysis = new MFAMethodAnalysis();
+                            analysis.incrementCountOfPhoneNumberUsersAssessed(totalScanned);
+                            analysis.incrementCountOfUsersWithVerifiedPhoneNumber(totalCount);
+
+                            return analysis;
+                        }));
+
         try {
             Map<String, AttributeValue> lastKey = null;
             do {
@@ -127,6 +170,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
                                         .getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods());
                 finalMFAMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
                         taskResult.getAttributeCombinationsForAuthAppUsersCount());
+                finalMFAMethodAnalysis.incrementCountOfPhoneNumberUsersAssessed(
+                        taskResult.getCountOfPhoneNumberUsersAssessed());
+                finalMFAMethodAnalysis.incrementCountOfUsersWithVerifiedPhoneNumber(
+                        taskResult.getCountOfUsersWithVerifiedPhoneNumber());
             }
 
             gracefulPoolShutdown(forkJoinPool);
@@ -282,7 +329,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
 
     private static class MFAMethodAnalysis {
         private long countOfAuthAppUsersAssessed = 0;
+        private long countOfPhoneNumberUsersAssessed = 0;
         private long countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods = 0;
+        private long countOfUsersWithVerifiedPhoneNumber = 0;
         private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 attributeCombinationsForAuthAppUsersCount = new HashMap<>();
 
@@ -301,6 +350,22 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
         public void incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
                 long i) {
             this.countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods += i;
+        }
+
+        public long getCountOfPhoneNumberUsersAssessed() {
+            return countOfPhoneNumberUsersAssessed;
+        }
+
+        public void incrementCountOfPhoneNumberUsersAssessed(long i) {
+            this.countOfPhoneNumberUsersAssessed += i;
+        }
+
+        public long getCountOfUsersWithVerifiedPhoneNumber() {
+            return countOfUsersWithVerifiedPhoneNumber;
+        }
+
+        public void incrementCountOfUsersWithVerifiedPhoneNumber(long i) {
+            this.countOfUsersWithVerifiedPhoneNumber += i;
         }
 
         public Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
@@ -323,8 +388,12 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
             return "MFAMethodAnalysis{"
                     + "countOfAuthAppUsersAssessed="
                     + countOfAuthAppUsersAssessed
+                    + ", countOfPhoneNumberUsersAssessed="
+                    + countOfPhoneNumberUsersAssessed
                     + ", countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods="
                     + countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods
+                    + ", countOfUsersWithVerifiedPhoneNumber="
+                    + countOfUsersWithVerifiedPhoneNumber
                     + ", attributeCombinationsForAuthAppUsersCount="
                     + attributeCombinationsForAuthAppUsersCount
                     + '}';
