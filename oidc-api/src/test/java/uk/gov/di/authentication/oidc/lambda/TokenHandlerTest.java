@@ -60,7 +60,6 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -166,8 +165,6 @@ public class TokenHandlerTest {
             mock(TokenClientAuthValidatorFactory.class);
     private final TokenClientAuthValidator tokenClientAuthValidator =
             mock(TokenClientAuthValidator.class);
-    private final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
@@ -192,7 +189,6 @@ public class TokenHandlerTest {
                         tokenService,
                         dynamoService,
                         configurationService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         clientSessionService,
                         orchClientSessionService,
@@ -689,8 +685,6 @@ public class TokenHandlerTest {
                         anyString(), any()))
                 .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(Optional.empty());
         when(orchAuthCodeService.getExchangeDataForCode(authCode)).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result =
@@ -1543,8 +1537,6 @@ public class TokenHandlerTest {
                         .setClientSessionId(CLIENT_SESSION_ID)
                         .setAuthTime(AUTH_TIME)
                         .setClientId(clientId);
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(Optional.of(authCodeExchangeData));
         when(orchAuthCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(Optional.of(authCodeExchangeData));
         var orchClientSession =
@@ -1567,8 +1559,6 @@ public class TokenHandlerTest {
                         .setClientSessionId(CLIENT_SESSION_ID)
                         .setAuthTime(AUTH_TIME)
                         .setClientId(CLIENT_ID);
-        when(authorisationCodeService.getExchangeDataForCode(anyString()))
-                .thenReturn(Optional.of(authCodeExchangeData));
         when(orchAuthCodeService.getExchangeDataForCode(anyString()))
                 .thenReturn(Optional.of(authCodeExchangeData));
 

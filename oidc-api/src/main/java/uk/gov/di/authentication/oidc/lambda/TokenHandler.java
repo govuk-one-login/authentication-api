@@ -34,7 +34,6 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodExcep
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -84,7 +83,6 @@ public class TokenHandler
     private final TokenService tokenService;
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
-    private final AuthorisationCodeService authorisationCodeService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
@@ -100,7 +98,6 @@ public class TokenHandler
             TokenService tokenService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
-            AuthorisationCodeService authorisationCodeService,
             OrchAuthCodeService orchAuthCodeService,
             ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
@@ -111,7 +108,6 @@ public class TokenHandler
         this.tokenService = tokenService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
-        this.authorisationCodeService = authorisationCodeService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
@@ -130,9 +126,6 @@ public class TokenHandler
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
-        this.authorisationCodeService =
-                new AuthorisationCodeService(
-                        configurationService, redisConnectionService, objectMapper);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
@@ -156,9 +149,6 @@ public class TokenHandler
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
-        this.authorisationCodeService =
-                new AuthorisationCodeService(
-                        configurationService, redisConnectionService, objectMapper);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
