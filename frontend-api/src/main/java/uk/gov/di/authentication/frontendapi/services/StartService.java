@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -148,9 +149,21 @@ public class StartService {
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
         var clientRegistry = userContext.getClient().orElseThrow();
+
+        AuthenticationRequest authRequest;
+        try {
+            authRequest =
+                    AuthenticationRequest.parse(
+                            userContext.getClientSession().getAuthRequestParams());
+        } catch (ParseException e) {
+            throw new RuntimeException();
+        }
+        List<String> vtr = authRequest.getCustomParameter("vtr");
+        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
+
         identityRequired =
                 IdentityHelper.identityRequired(
-                        userContext.getClientSession().getAuthRequestParams(),
+                        vectorOfTrust.getLevelOfConfidence(),
                         clientRegistry.isIdentityVerificationSupported(),
                         identityEnabled);
         if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
