@@ -119,12 +119,14 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
 
             for (ForkJoinTask<MFAMethodAnalysis> task : batchTasks) {
                 MFAMethodAnalysis taskResult = task.join();
-                finalMFAMethodAnalysis.incrementCountOfUsersAssessed(
-                        taskResult.getCountOfUsersAssessed());
+                finalMFAMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
+                        taskResult.getCountOfAuthAppUsersAssessed());
                 finalMFAMethodAnalysis
                         .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
                                 taskResult
                                         .getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods());
+                finalMFAMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
+                        taskResult.getAttributeCombinationsForAuthAppUsersCount());
             }
 
             gracefulPoolShutdown(forkJoinPool);
@@ -132,7 +134,6 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
             forcePoolShutdown(forkJoinPool);
         }
 
-        LOG.info("Found {} credentials/profile matches with AUTH_APP", finalMFAMethodAnalysis);
         return finalMFAMethodAnalysis.toString();
     }
 
@@ -213,7 +214,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
         }
 
         MFAMethodAnalysis mfaMethodAnalysis = new MFAMethodAnalysis();
-        mfaMethodAnalysis.incrementCountOfUsersAssessed(batch.size());
+        mfaMethodAnalysis.incrementCountOfAuthAppUsersAssessed(batch.size());
         mfaMethodAnalysis
                 .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
                         batch.stream()
@@ -222,20 +223,31 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
                                                 ::userHasAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods)
                                 .count());
 
+        Map<UserCredentialsProfileJoin.AttributeCombinations, Long> attributeCombinationsCount =
+                new HashMap<>();
+        for (UserCredentialsProfileJoin item : batch) {
+            attributeCombinationsCount.merge(item.getAttributeCombinations(), 1L, Long::sum);
+        }
+        mfaMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
+                attributeCombinationsCount);
+
         return mfaMethodAnalysis;
     }
 
     private static class UserCredentialsProfileJoin {
+        public static final String EMPTY = "empty";
         private final String email;
-        private final Optional<Boolean> enabled;
-        private final Optional<Boolean> methodVerified;
+        private final Optional<Boolean> authAppEnabled;
+        private final Optional<Boolean> authAppMethodVerified;
         private Optional<Boolean> phoneNumberVerified = Optional.empty();
 
         public UserCredentialsProfileJoin(
-                String email, Optional<Boolean> enabled, Optional<Boolean> methodVerified) {
+                String email,
+                Optional<Boolean> authAppEnabled,
+                Optional<Boolean> authAppMethodVerified) {
             this.email = email;
-            this.enabled = enabled;
-            this.methodVerified = methodVerified;
+            this.authAppEnabled = authAppEnabled;
+            this.authAppMethodVerified = authAppMethodVerified;
         }
 
         public String getEmail() {
@@ -247,23 +259,39 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
         }
 
         public boolean userHasAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods() {
-            if (methodVerified.isEmpty() || phoneNumberVerified.isEmpty() || enabled.isEmpty()) {
+            if (authAppMethodVerified.isEmpty()
+                    || phoneNumberVerified.isEmpty()
+                    || authAppEnabled.isEmpty()) {
                 return false;
             }
-            return !methodVerified.get() && !phoneNumberVerified.get() && enabled.get();
+            return !authAppMethodVerified.get()
+                    && !phoneNumberVerified.get()
+                    && authAppEnabled.get();
         }
+
+        public AttributeCombinations getAttributeCombinations() {
+            return new AttributeCombinations(
+                    authAppEnabled.map(String::valueOf).orElse(EMPTY),
+                    authAppMethodVerified.map(String::valueOf).orElse(EMPTY),
+                    phoneNumberVerified.map(String::valueOf).orElse(EMPTY));
+        }
+
+        public record AttributeCombinations(
+                String authAppEnabled, String authAppMethodVerified, String phoneNumberVerified) {}
     }
 
     private static class MFAMethodAnalysis {
-        private long countOfUsersAssessed = 0;
+        private long countOfAuthAppUsersAssessed = 0;
         private long countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods = 0;
+        private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
+                attributeCombinationsForAuthAppUsersCount = new HashMap<>();
 
-        public long getCountOfUsersAssessed() {
-            return countOfUsersAssessed;
+        public long getCountOfAuthAppUsersAssessed() {
+            return countOfAuthAppUsersAssessed;
         }
 
-        public void incrementCountOfUsersAssessed(long i) {
-            this.countOfUsersAssessed += i;
+        public void incrementCountOfAuthAppUsersAssessed(long i) {
+            this.countOfAuthAppUsersAssessed += i;
         }
 
         public long getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods() {
@@ -275,13 +303,30 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
             this.countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods += i;
         }
 
+        public Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
+                getAttributeCombinationsForAuthAppUsersCount() {
+            return attributeCombinationsForAuthAppUsersCount;
+        }
+
+        public void mergeAttributeCombinationsForAuthAppUsersCount(
+                Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
+                        attributeCombinationsCount) {
+            for (Map.Entry<UserCredentialsProfileJoin.AttributeCombinations, Long> item :
+                    attributeCombinationsCount.entrySet()) {
+                this.attributeCombinationsForAuthAppUsersCount.merge(
+                        item.getKey(), item.getValue(), Long::sum);
+            }
+        }
+
         @Override
         public String toString() {
             return "MFAMethodAnalysis{"
-                    + "countOfUsersAssessed="
-                    + countOfUsersAssessed
+                    + "countOfAuthAppUsersAssessed="
+                    + countOfAuthAppUsersAssessed
                     + ", countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods="
                     + countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods
+                    + ", attributeCombinationsForAuthAppUsersCount="
+                    + attributeCombinationsForAuthAppUsersCount
                     + '}';
         }
     }
