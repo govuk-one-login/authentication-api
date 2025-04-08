@@ -107,7 +107,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
+        return super.handleRequestWithoutClientSession(input, context);
     }
 
     @Override
