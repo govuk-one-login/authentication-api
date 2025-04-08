@@ -121,7 +121,8 @@ class AuthenticationAuthCodeHandlerTest {
         authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
-                        .withEmailAddress(CommonTestVariables.EMAIL);
+                        .withEmailAddress(CommonTestVariables.EMAIL)
+                        .withClientId(CLIENT_ID);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
