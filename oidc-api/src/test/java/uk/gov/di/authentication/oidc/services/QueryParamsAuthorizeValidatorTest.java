@@ -1,9 +1,5 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.crypto.RSADecrypter;
-import com.nimbusds.jwt.EncryptedJWT;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
@@ -915,11 +911,6 @@ class QueryParamsAuthorizeValidatorTest {
         claimsRequest.ifPresent(authRequestBuilder::claims);
 
         return authRequestBuilder.build();
-    }
-
-    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
-        encryptedJWT.decrypt(new RSADecrypter(privateKey));
-        return encryptedJWT.getPayload().toSignedJWT();
     }
 
     private KeyPair generateRsaKeyPair() {
