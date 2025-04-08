@@ -118,6 +118,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.createSession(sessionId);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
+        authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -178,6 +179,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.createSession(sessionId);
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
+        authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);

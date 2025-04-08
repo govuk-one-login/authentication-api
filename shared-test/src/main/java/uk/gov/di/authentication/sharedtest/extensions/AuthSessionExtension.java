@@ -88,6 +88,14 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
         updateSession(getSession(sessionId).orElseThrow().withEmailAddress(email));
     }
 
+    public void addRequestedCredentialStrengthToSession(
+            String sessionId, CredentialTrustLevel credentialTrustLevel) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .withRequestedCredentialStrength(credentialTrustLevel));
+    }
+
     public void addInternalCommonSubjectIdToSession(
             String sessionId, String internalCommonSubjectIdl) {
         updateSession(
