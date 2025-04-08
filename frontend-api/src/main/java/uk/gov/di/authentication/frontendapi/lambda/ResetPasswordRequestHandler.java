@@ -250,7 +250,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             resetPasswordRequest.getEmail(),
                             RESET_PASSWORD_WITH_CODE,
                             code,
-                            userContext.getUserLanguage());
+                            userContext.getUserLanguage(),
+                            userContext.getAuthSession().getSessionId(),
+                            userContext.getClientSessionId());
             sqsClient.send(serialiseNotifyRequest(notifyRequest));
         }
 

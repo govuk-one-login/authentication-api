@@ -194,7 +194,9 @@ class ResetPasswordRequestHandlerTest {
                         CommonTestVariables.EMAIL,
                         RESET_PASSWORD_WITH_CODE,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        SESSION_ID,
+                        CLIENT_SESSION_ID);
 
         public static APIGatewayProxyRequestEvent validEvent;
 
