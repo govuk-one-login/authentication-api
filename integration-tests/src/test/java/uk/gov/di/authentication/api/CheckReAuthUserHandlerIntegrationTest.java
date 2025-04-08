@@ -99,8 +99,12 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void setup() throws Json.JsonException {
 
         var sessionId = redis.createSession();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL);
+        authSessionExtension.addSession(
+                sessionId,
+                authSession ->
+                        authSession
+                                .withEmailAddress(TEST_EMAIL)
+                                .withClientId(CLIENT_ID.getValue()));
         requestHeaders = createHeaders(sessionId);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
         handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE, redisConnectionService);

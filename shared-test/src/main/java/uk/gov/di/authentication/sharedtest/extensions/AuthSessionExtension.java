@@ -18,6 +18,7 @@ import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 public class AuthSessionExtension extends DynamoExtension implements AfterEachCallback {
 
@@ -76,6 +77,11 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
 
     public void addSession(String sessionId) {
         authSessionService.addSession(authSessionService.generateNewAuthSession(sessionId));
+    }
+
+    public void addSession(String sessionId, UnaryOperator<AuthSessionItem> updateFn) {
+        var authSession = authSessionService.generateNewAuthSession(sessionId);
+        authSessionService.addSession(updateFn.apply(authSession));
     }
 
     public void addEmailToSession(String sessionId, String email) {
