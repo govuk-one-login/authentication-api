@@ -305,7 +305,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         .withAccountState(AuthSessionItem.AccountState.EXISTING)
                         .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
 
-        var userMfaDetail = getUserMFADetail(userContext, userCredentials, userProfile);
+        var userMfaDetail =
+                getUserMFADetail(
+                        authSessionItem.getRequestedCredentialStrength(),
+                        userCredentials,
+                        userProfile);
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
 

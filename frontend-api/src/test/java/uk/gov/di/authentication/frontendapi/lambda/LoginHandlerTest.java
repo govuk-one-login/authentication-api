@@ -249,7 +249,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
+        usingValidAuthSession(LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -298,7 +298,7 @@ class LoginHandlerTest {
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSession(LOW_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event =
@@ -1108,13 +1108,18 @@ class LoginHandlerTest {
     }
 
     private void usingValidAuthSession() {
+        usingValidAuthSession(CredentialTrustLevel.MEDIUM_LEVEL);
+    }
+
+    private void usingValidAuthSession(CredentialTrustLevel credentialTrustLevel) {
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withRequestedCredentialStrength(credentialTrustLevel)));
     }
 
     private void usingInvalidAuthSession() {
