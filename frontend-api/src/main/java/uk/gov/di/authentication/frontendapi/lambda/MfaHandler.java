@@ -247,6 +247,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 userContext.getAuthSession().getSessionId(),
                                 userContext.getClientSessionId());
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
+                LOG.info(
+                        "{} SMS placed on queue with reference: {}",
+                        notifyRequest.getNotificationType(),
+                        notifyRequest.getUniqueNotificationReference());
                 auditableEvent = FrontendAuditableEvent.AUTH_MFA_CODE_SENT;
             }
 

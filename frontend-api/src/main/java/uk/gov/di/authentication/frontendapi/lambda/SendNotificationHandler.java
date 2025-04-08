@@ -198,7 +198,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 userContext.getClientSessionId());
                 if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                    LOG.info("{} email placed on queue", request.getNotificationType());
+                    LOG.info(
+                            "{} EMAIL placed on queue with reference: {}",
+                            notifyRequest.getNotificationType(),
+                            notifyRequest.getUniqueNotificationReference());
                 }
                 return generateEmptySuccessApiGatewayResponse();
             }
@@ -378,8 +381,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             sessionId,
                             userContext.getClientSessionId());
             emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            LOG.info("{} placed on queue", request.getNotificationType());
-            LOG.info("Successfully processed request");
+            LOG.info(
+                    "{} placed on queue with reference: {}",
+                    notifyRequest.getNotificationType(),
+                    notifyRequest.getUniqueNotificationReference());
         }
 
         auditService.submitAuditEvent(

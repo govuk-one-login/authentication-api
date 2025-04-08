@@ -224,6 +224,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
                 LOG.info("Placing message on queue to send password reset confirmation to Email");
                 sqsClient.send(serialiseRequest(emailNotifyRequest));
+                LOG.info(
+                        "{} EMAIL placed on queue with reference: {}",
+                        emailNotifyRequest.getNotificationType(),
+                        emailNotifyRequest.getUniqueNotificationReference());
                 if (shouldSendConfirmationToSms(userProfile)) {
                     var smsNotifyRequest =
                             new NotifyRequest(
@@ -232,8 +236,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                                     userContext.getUserLanguage(),
                                     userContext.getAuthSession().getSessionId(),
                                     userContext.getClientSessionId());
-                    LOG.info("Placing message on queue to send password reset confirmation to SMS");
                     sqsClient.send(serialiseRequest(smsNotifyRequest));
+                    LOG.info(
+                            "{} SMS placed on queue with reference: {}",
+                            smsNotifyRequest.getNotificationType(),
+                            smsNotifyRequest.getUniqueNotificationReference());
                 }
             }
 
