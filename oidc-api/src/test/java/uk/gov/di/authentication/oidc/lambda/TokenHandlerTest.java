@@ -65,6 +65,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -95,6 +96,7 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -105,6 +107,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
@@ -166,6 +169,7 @@ public class TokenHandlerTest {
             mock(TokenClientAuthValidator.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
+    private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -190,6 +194,7 @@ public class TokenHandlerTest {
                         dynamoService,
                         configurationService,
                         authorisationCodeService,
+                        orchAuthCodeService,
                         clientSessionService,
                         orchClientSessionService,
                         tokenValidationService,
@@ -276,6 +281,8 @@ public class TokenHandlerTest {
         verify(orchClientSessionService)
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
         assertEquals(signedJWT.serialize(), orchClientSessionCaptor.getValue().getIdTokenHint());
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -331,6 +338,8 @@ public class TokenHandlerTest {
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
                 .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @ParameterizedTest
@@ -398,6 +407,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @ParameterizedTest
@@ -599,12 +610,15 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
         setupNoClientSessions();
 
+        String authCode = new AuthorizationCode().getValue();
+
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(
-                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -678,6 +692,7 @@ public class TokenHandlerTest {
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(Optional.empty());
+        when(orchAuthCodeService.getExchangeDataForCode(authCode)).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
@@ -691,6 +706,11 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+
+        // TODO: ATO-1205: Update this to call assertAuthCodeExchangeDataRetrieved instead. We can't
+        // make this assertion at present as no call is made to orchAuthCodeService (as we fail when
+        // the call to authorisationCodeService fails).
+        verify(authorisationCodeService, times(1)).getExchangeDataForCode(eq(authCode));
     }
 
     @Test
@@ -722,6 +742,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Nested
@@ -797,6 +819,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -837,6 +861,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -878,6 +904,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @ParameterizedTest
@@ -920,6 +948,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -961,6 +991,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -1029,6 +1061,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -1092,6 +1126,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -1154,6 +1190,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+
+            assertAuthCodeExchangeDataRetrieved(authCode);
         }
 
         // Based off the spec:
@@ -1289,6 +1327,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 DOC_APP_CLIENT_ID.getValue()));
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     private static Stream<Arguments> vectorsTypesThatShouldNotReturnClaims() {
@@ -1355,6 +1395,8 @@ public class TokenHandlerTest {
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
         assertClaimsRequestIfPresent(oidcClaimsRequest, false);
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -1421,6 +1463,64 @@ public class TokenHandlerTest {
         assertClaimsRequestIfPresent(oidcClaimsRequest, true);
     }
 
+    // TODO: ATO-1205: Update this test to handle new behaviour when unchecked exceptions are
+    // encountered -- see TODO comment in the handler.
+    @Test
+    void shouldCatchAnyUncheckedOrchAuthCodeGetExchangeDataForCodeExceptions()
+            throws JOSEException, TokenAuthInvalidException {
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID,
+                        RP_PAIRWISE_SUBJECT,
+                        "issuer-url",
+                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        AuthenticationRequest authenticationRequest = generateAuthRequest();
+        List<VectorOfTrust> vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
+        setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
+        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES,
+                        Map.of("nonce", NONCE),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        null,
+                        false,
+                        JWSAlgorithm.ES256,
+                        CLIENT_SESSION_ID,
+                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        AUTH_TIME))
+                .thenReturn(tokenResponse);
+
+        when(orchAuthCodeService.getExchangeDataForCode(authCode))
+                .thenThrow(
+                        new RuntimeException(
+                                "Some unchecked exception during orch auth code exchange data retrieval."));
+
+        assertDoesNotThrow(
+                () -> generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true));
+
+        assertAuthCodeExchangeDataRetrieved(authCode);
+    }
+
     private void setupClientSessions(
             String authCode, Map<String, List<String>> authRequestParams, List<VectorOfTrust> vtr) {
         setupClientSessions(authCode, authRequestParams, vtr, CLIENT_ID, null);
@@ -1437,14 +1537,17 @@ public class TokenHandlerTest {
                         .setDocAppSubjectId(docAppSubjectId);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
+
+        AuthCodeExchangeData authCodeExchangeData =
+                new AuthCodeExchangeData()
+                        .setEmail(TEST_EMAIL)
+                        .setClientSessionId(CLIENT_SESSION_ID)
+                        .setAuthTime(AUTH_TIME)
+                        .setClientId(clientId);
         when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(clientId)));
+                .thenReturn(Optional.of(authCodeExchangeData));
+        when(orchAuthCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(Optional.of(authCodeExchangeData));
         var orchClientSession =
                 new OrchClientSessionItem(
                         CLIENT_SESSION_ID,
@@ -1459,14 +1562,17 @@ public class TokenHandlerTest {
     }
 
     private void setupNoClientSessions() {
+        AuthCodeExchangeData authCodeExchangeData =
+                new AuthCodeExchangeData()
+                        .setEmail(TEST_EMAIL)
+                        .setClientSessionId(CLIENT_SESSION_ID)
+                        .setAuthTime(AUTH_TIME)
+                        .setClientId(CLIENT_ID);
         when(authorisationCodeService.getExchangeDataForCode(anyString()))
-                .thenReturn(
-                        Optional.of(
-                                new AuthCodeExchangeData()
-                                        .setEmail(TEST_EMAIL)
-                                        .setClientSessionId(CLIENT_SESSION_ID)
-                                        .setAuthTime(AUTH_TIME)
-                                        .setClientId(CLIENT_ID)));
+                .thenReturn(Optional.of(authCodeExchangeData));
+        when(orchAuthCodeService.getExchangeDataForCode(anyString()))
+                .thenReturn(Optional.of(authCodeExchangeData));
+
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(Optional.empty());
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
@@ -1675,5 +1781,11 @@ public class TokenHandlerTest {
         } else {
             assertEquals(null, finalClaimsRequestCaptor.getValue());
         }
+    }
+
+    private void assertAuthCodeExchangeDataRetrieved(String authCode) {
+        verify(authorisationCodeService, times(1)).getExchangeDataForCode(eq(authCode));
+
+        verify(orchAuthCodeService, times(1)).getExchangeDataForCode(eq(authCode));
     }
 }
