@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -61,6 +62,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveLevelOfConfidence;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class StartServiceTest {
@@ -176,6 +179,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        LevelOfConfidence.NONE,
                         cookieConsent,
                         gaTrackingId,
                         true,
@@ -194,18 +198,19 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartIdentityInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, true, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, false));
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
+                Arguments.of(jsonArrayOf("Cl.Cm"), "P0", false, true, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, true, false),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, false));
     }
 
     @ParameterizedTest
     @MethodSource("userStartIdentityInfo")
     void shouldCreateUserStartInfoWithCorrectIdentityRequiredValue(
             String vtr,
+            String levelOfConfidence,
             boolean expectedIdentityRequiredValue,
             boolean rpSupportsIdentity,
             boolean identityEnabled) {
@@ -222,6 +227,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        retrieveLevelOfConfidence(levelOfConfidence),
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         identityEnabled,
@@ -243,6 +249,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
+                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -377,6 +384,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
+                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -408,12 +416,15 @@ class StartServiceTest {
                         Optional.of(userProfile),
                         Optional.of(userCredentials),
                         false);
-
+        var levelOfConfidence =
+                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(vtr))
+                        .getLevelOfConfidence();
         var upliftRequired =
                 startService.isUpliftRequired(userContext.getClientSession(), credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        levelOfConfidence,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -494,7 +505,7 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "true", "tracking-id", true, false, false, false, false);
+                        userContext, NONE, "true", "tracking-id", true, false, false, false, false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(expectedMfaMethodType));
     }
@@ -520,7 +531,7 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "true", "tracking-id", true, false, false, false, false);
+                        userContext, NONE, "true", "tracking-id", true, false, false, false, false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(MFAMethodType.NONE));
     }
