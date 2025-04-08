@@ -818,6 +818,28 @@ class QueryParamsAuthorizeValidatorTest {
                 () -> queryParamsAuthorizeValidator.validate(authRequestBuilder.build()));
     }
 
+    @Test
+    void shouldThrowWhenResponseModeIsInvalidBeforeValidatingARedirectingError() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+
+        // No state is an error we redirect back to the RP with an error message with
+        AuthenticationRequest.Builder authRequestBuilder =
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .nonce(NONCE)
+                        .responseMode(new ResponseMode("code"));
+
+        assertThrows(
+                InvalidResponseModeException.class,
+                () -> queryParamsAuthorizeValidator.validate(authRequestBuilder.build()));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"query", "fragment"})
     void shouldAllowValidResponseModes(String responseMode) {
