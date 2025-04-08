@@ -71,7 +71,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -95,7 +94,7 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_R
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
-import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.containsJsonString;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.partiallyContainsJsonString;
 
 class ResetPasswordRequestHandlerTest {
 
@@ -273,8 +272,9 @@ class ResetPasswordRequestHandlerTest {
             verify(awsSqsClient)
                     .send(
                             argThat(
-                                    containsJsonString(
-                                            objectMapper.writeValueAsString(notifyRequest))));
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(notifyRequest),
+                                            "unique_notification_reference")));
         }
 
         @Test
@@ -329,7 +329,12 @@ class ResetPasswordRequestHandlerTest {
                             any(String.class),
                             anyLong(),
                             any(NotificationType.class));
-            verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+            verify(awsSqsClient)
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(notifyRequest),
+                                            "unique_notification_reference")));
             assertThat(result, hasStatus(200));
         }
 
@@ -483,7 +488,11 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
             Mockito.doThrow(SdkClientException.class)
                     .when(awsSqsClient)
-                    .send(eq(objectMapper.writeValueAsString(notifyRequest)));
+                    .send(
+                            argThat(
+                                    partiallyContainsJsonString(
+                                            objectMapper.writeValueAsString(notifyRequest),
+                                            "unique_notification_reference")));
 
             usingValidSession();
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
