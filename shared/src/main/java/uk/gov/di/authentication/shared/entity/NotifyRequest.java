@@ -28,7 +28,7 @@ public class NotifyRequest {
 
     public NotifyRequest() {}
 
-    public NotifyRequest(
+    private NotifyRequest(
             String destination,
             NotificationType notificationType,
             String code,
