@@ -841,7 +841,8 @@ class LoginHandlerTest {
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                        .withRequestedCredentialStrength(credentialTrustLevel)));
+                                        .withRequestedCredentialStrength(credentialTrustLevel)
+                                        .withClientId(CLIENT_ID.getValue())));
     }
 
     private void usingInvalidAuthSession() {
