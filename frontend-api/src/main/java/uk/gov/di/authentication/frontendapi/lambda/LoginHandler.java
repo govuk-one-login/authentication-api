@@ -157,7 +157,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
+        return super.handleRequestWithoutClientSession(input, context);
     }
 
     @Override
