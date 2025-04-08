@@ -140,7 +140,12 @@ class MfaHandlerTest {
 
     private static final NotifyRequest notifyRequest =
             new NotifyRequest(
-                    CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    MFA_SMS,
+                    CODE,
+                    SupportedLanguage.EN,
+                    SESSION_ID,
+                    CLIENT_SESSION_ID);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
@@ -236,7 +241,9 @@ class MfaHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         CODE,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        SESSION_ID,
+                        CLIENT_SESSION_ID);
         var body = format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true");
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
