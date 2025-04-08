@@ -254,6 +254,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             userContext.getAuthSession().getSessionId(),
                             userContext.getClientSessionId());
             sqsClient.send(serialiseNotifyRequest(notifyRequest));
+            LOG.info(
+                    "{} EMAIL placed on queue with reference: {}",
+                    notifyRequest.getNotificationType(),
+                    notifyRequest.getUniqueNotificationReference());
         }
 
         LOG.info("Successfully processed request");
