@@ -114,10 +114,16 @@ class ResetPasswordHandlerTest {
             new NotifyRequest(
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
-                    SupportedLanguage.EN);
+                    SupportedLanguage.EN,
+                    SESSION_ID,
+                    CLIENT_SESSION_ID);
     private static final NotifyRequest EXPECTED_EMAIL_NOTIFY_REQUEST =
             new NotifyRequest(
-                    EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
+                    EMAIL,
+                    NotificationType.PASSWORD_RESET_CONFIRMATION,
+                    SupportedLanguage.EN,
+                    SESSION_ID,
+                    CLIENT_SESSION_ID);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
