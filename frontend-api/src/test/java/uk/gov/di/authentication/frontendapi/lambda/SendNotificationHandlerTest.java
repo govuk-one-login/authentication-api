@@ -100,6 +100,7 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_R
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.partiallyContainsJsonString;
 
 class SendNotificationHandlerTest {
 
@@ -392,14 +393,18 @@ class SendNotificationHandlerTest {
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
         verify(emailSqsClient)
                 .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        EMAIL,
-                                        notificationType,
-                                        TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN,
-                                        SESSION_ID,
-                                        CLIENT_SESSION_ID)));
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(
+                                                new NotifyRequest(
+                                                        EMAIL,
+                                                        notificationType,
+                                                        TEST_SIX_DIGIT_CODE,
+                                                        SupportedLanguage.EN,
+                                                        SESSION_ID,
+                                                        CLIENT_SESSION_ID)),
+                                        "unique_notification_reference")));
+
         var expectedEvent =
                 notificationType.equals(VERIFY_EMAIL)
                         ? AUTH_EMAIL_CODE_SENT
@@ -434,16 +439,20 @@ class SendNotificationHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
+
         verify(emailSqsClient)
                 .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        CommonTestVariables.UK_MOBILE_NUMBER,
-                                        VERIFY_PHONE_NUMBER,
-                                        TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN,
-                                        SESSION_ID,
-                                        CLIENT_SESSION_ID)));
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(
+                                                new NotifyRequest(
+                                                        CommonTestVariables.UK_MOBILE_NUMBER,
+                                                        VERIFY_PHONE_NUMBER,
+                                                        TEST_SIX_DIGIT_CODE,
+                                                        SupportedLanguage.EN,
+                                                        SESSION_ID,
+                                                        CLIENT_SESSION_ID)),
+                                        "unique_notification_reference")));
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_PHONE_CODE_SENT, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
@@ -571,14 +580,17 @@ class SendNotificationHandlerTest {
         Mockito.doThrow(SdkClientException.class)
                 .when(emailSqsClient)
                 .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        EMAIL,
-                                        notificationType,
-                                        TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN,
-                                        SESSION_ID,
-                                        CLIENT_SESSION_ID)));
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(
+                                                new NotifyRequest(
+                                                        EMAIL,
+                                                        notificationType,
+                                                        TEST_SIX_DIGIT_CODE,
+                                                        SupportedLanguage.EN,
+                                                        SESSION_ID,
+                                                        CLIENT_SESSION_ID)),
+                                        "unique_notification_reference")));
 
         var body =
                 format(
@@ -649,14 +661,17 @@ class SendNotificationHandlerTest {
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_PHONE_NUMBER);
         verify(emailSqsClient)
                 .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        phoneNumber,
-                                        VERIFY_PHONE_NUMBER,
-                                        TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN,
-                                        SESSION_ID,
-                                        CLIENT_SESSION_ID)));
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(
+                                                new NotifyRequest(
+                                                        phoneNumber,
+                                                        VERIFY_PHONE_NUMBER,
+                                                        TEST_SIX_DIGIT_CODE,
+                                                        SupportedLanguage.EN,
+                                                        SESSION_ID,
+                                                        CLIENT_SESSION_ID)),
+                                        "unique_notification_reference")));
         verify(auditService)
                 .submitAuditEvent(AUTH_PHONE_CODE_SENT, auditContext.withPhoneNumber(phoneNumber));
     }
@@ -1035,7 +1050,12 @@ class SendNotificationHandlerTest {
         var result = handler.handleRequest(event, context);
 
         var notifyRequest = new NotifyRequest(EMAIL, notificationType, SupportedLanguage.EN);
-        verify(emailSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(emailSqsClient)
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(notifyRequest),
+                                        "unique_notification_reference")));
         verifyNoInteractions(codeStorageService);
         verifyNoInteractions(auditService);
 
