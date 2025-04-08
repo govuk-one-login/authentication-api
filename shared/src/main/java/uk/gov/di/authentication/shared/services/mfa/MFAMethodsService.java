@@ -28,12 +28,12 @@ import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFA
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 
-public class MfaMethodsService {
-    private static final Logger LOG = LogManager.getLogger(MfaMethodsService.class);
+public class MFAMethodsService {
+    private static final Logger LOG = LogManager.getLogger(MFAMethodsService.class);
 
     private final AuthenticationService persistentService;
 
-    public MfaMethodsService(ConfigurationService configurationService) {
+    public MFAMethodsService(ConfigurationService configurationService) {
         this.persistentService = new DynamoService(configurationService);
     }
 

@@ -21,7 +21,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
-class MfaMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class MFAMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final String PASSWORD = "password-1";

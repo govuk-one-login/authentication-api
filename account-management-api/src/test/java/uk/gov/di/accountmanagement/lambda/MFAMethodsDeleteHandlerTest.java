@@ -15,8 +15,8 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -46,7 +46,7 @@ class MFAMethodsDeleteHandlerTest {
     private static final String TEST_INTERNAL_SUBJECT =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
-    private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
+    private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
 
     private MFAMethodsDeleteHandler handler;

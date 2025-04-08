@@ -17,7 +17,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
 import java.util.Map;
@@ -34,7 +34,7 @@ public class MFAMethodsPutHandler
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsPutHandler.class);
     private final ConfigurationService configurationService;
-    private final MfaMethodsService mfaMethodsService;
+    private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -45,13 +45,13 @@ public class MFAMethodsPutHandler
 
     public MFAMethodsPutHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
     }
 
     public MFAMethodsPutHandler(
             ConfigurationService configurationService,
-            MfaMethodsService mfaMethodsService,
+            MFAMethodsService mfaMethodsService,
             AuthenticationService authenticationService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;

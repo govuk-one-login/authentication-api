@@ -20,7 +20,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
 import java.util.HashMap;
@@ -43,7 +43,7 @@ class MFAMethodsPutHandlerTest {
 
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
-    private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
+    private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
     private static final Context context = mock(Context.class);

@@ -14,7 +14,7 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
 
@@ -28,7 +28,7 @@ public class MFAMethodsRetrieveHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
-    private final MfaMethodsService mfaMethodsService;
+    private final MFAMethodsService mfaMethodsService;
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsRetrieveHandler.class);
 
@@ -39,13 +39,13 @@ public class MFAMethodsRetrieveHandler
     public MFAMethodsRetrieveHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.dynamoService = new DynamoService(configurationService);
-        this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public MFAMethodsRetrieveHandler(
             ConfigurationService configurationService,
             DynamoService dynamoService,
-            MfaMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService) {
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
         this.mfaMethodsService = mfaMethodsService;

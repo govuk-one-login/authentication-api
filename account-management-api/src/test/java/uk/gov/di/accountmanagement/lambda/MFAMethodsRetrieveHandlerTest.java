@@ -18,7 +18,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 
 import java.util.HashMap;
@@ -51,7 +51,7 @@ class MFAMethodsRetrieveHandlerTest {
     private static final String TEST_INTERNAL_SUBJECT =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
-    private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
+    private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final String MFA_IDENTIFIER = "03a89933-cddd-471d-8fdb-562f14a2404f";
 
     private MFAMethodsRetrieveHandler handler;

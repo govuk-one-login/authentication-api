@@ -13,7 +13,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
 
@@ -28,7 +28,7 @@ public class MFAMethodsDeleteHandler
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsDeleteHandler.class);
     private final ConfigurationService configurationService;
-    private final MfaMethodsService mfaMethodsService;
+    private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
 
     public MFAMethodsDeleteHandler() {
@@ -37,13 +37,13 @@ public class MFAMethodsDeleteHandler
 
     public MFAMethodsDeleteHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
     }
 
     public MFAMethodsDeleteHandler(
             ConfigurationService configurationService,
-            MfaMethodsService mfaMethodsService,
+            MFAMethodsService mfaMethodsService,
             DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;

@@ -17,8 +17,8 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 
 import java.util.Map;
@@ -34,7 +34,7 @@ public class MFAMethodsCreateHandler
     private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
-    private final MfaMethodsService mfaMethodsService;
+    private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
@@ -44,13 +44,13 @@ public class MFAMethodsCreateHandler
 
     public MFAMethodsCreateHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
     }
 
     public MFAMethodsCreateHandler(
             ConfigurationService configurationService,
-            MfaMethodsService mfaMethodsService,
+            MFAMethodsService mfaMethodsService,
             DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;

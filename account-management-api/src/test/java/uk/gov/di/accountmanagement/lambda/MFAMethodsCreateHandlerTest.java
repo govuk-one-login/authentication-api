@@ -24,8 +24,8 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -66,7 +66,7 @@ class MFAMethodsCreateHandlerTest {
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
-    private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
+    private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
