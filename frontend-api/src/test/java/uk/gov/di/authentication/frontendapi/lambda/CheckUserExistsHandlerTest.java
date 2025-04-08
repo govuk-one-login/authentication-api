@@ -104,11 +104,12 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = new Session();
+    private static final String CLIENT_ID = "test-client-id";
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
-                    .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-    private static final String CLIENT_ID = "test-client-id";
+                    .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
+                    .withClientId(CLIENT_ID);
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";
