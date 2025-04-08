@@ -329,6 +329,7 @@ class StartHandlerTest {
                         any(),
                         any(),
                         any(),
+                        any(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
@@ -355,6 +356,7 @@ class StartHandlerTest {
                 .createNewSessionWithExistingIdAndClientSession(SESSION_ID, CLIENT_SESSION_ID);
         verify(startService)
                 .buildUserStartInfo(
+                        any(),
                         any(),
                         any(),
                         any(),
@@ -604,6 +606,7 @@ class StartHandlerTest {
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
                         eq(userContext),
+                        any(),
                         any(),
                         any(),
                         anyBoolean(),
