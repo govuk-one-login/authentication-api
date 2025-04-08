@@ -183,7 +183,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
                 userMfaDetail =
                         getUserMFADetail(
-                                userContext,
+                                authSession.getRequestedCredentialStrength(),
                                 userCredentials,
                                 userProfile.get().getPhoneNumber(),
                                 isPhoneNumberVerified);
