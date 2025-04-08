@@ -250,7 +250,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -302,7 +302,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -361,7 +361,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithAchievedCredentialStrength(MEDIUM_LEVEL);
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(MEDIUM_LEVEL, LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -419,7 +419,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithAchievedCredentialStrength(LOW_LEVEL);
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(LOW_LEVEL, LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -475,7 +475,7 @@ class LoginHandlerTest {
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event =
@@ -500,7 +500,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
@@ -562,7 +562,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
         usingDefaultVectorOfTrust();
 
@@ -637,7 +637,7 @@ class LoginHandlerTest {
                 .thenReturn(migratedUserCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
         usingDefaultVectorOfTrust();
 
@@ -752,7 +752,7 @@ class LoginHandlerTest {
                 .thenReturn(testUserCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingDefaultVectorOfTrust();
 
         // Act
@@ -1052,7 +1052,7 @@ class LoginHandlerTest {
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(false);
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -1135,7 +1135,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1158,7 +1158,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingValidSession();
-        usingValidAuthSession();
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1286,6 +1286,18 @@ class LoginHandlerTest {
 
     private void usingValidAuthSessionWithAchievedCredentialStrength(
             CredentialTrustLevel credentialTrustLevel) {
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(
+                credentialTrustLevel, CredentialTrustLevel.MEDIUM_LEVEL);
+    }
+
+    private void usingValidAuthSessionWithRequestedCredentialStrength(
+            CredentialTrustLevel credentialTrustLevel) {
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(null, credentialTrustLevel);
+    }
+
+    private void usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(
+            CredentialTrustLevel achievedCredentialStrength,
+            CredentialTrustLevel requestedCredentialStrength) {
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
@@ -1294,7 +1306,9 @@ class LoginHandlerTest {
                                         .withEmailAddress(EMAIL)
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
                                         .withClientId(CLIENT_ID.getValue())
-                                        .withAchievedCredentialStrength(credentialTrustLevel)));
+                                        .withAchievedCredentialStrength(achievedCredentialStrength)
+                                        .withRequestedCredentialStrength(
+                                                requestedCredentialStrength)));
     }
 
     private void usingValidAuthSession() {

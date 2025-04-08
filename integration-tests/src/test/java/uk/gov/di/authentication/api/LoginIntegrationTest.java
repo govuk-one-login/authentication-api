@@ -119,6 +119,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+        authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -180,6 +181,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+        authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
