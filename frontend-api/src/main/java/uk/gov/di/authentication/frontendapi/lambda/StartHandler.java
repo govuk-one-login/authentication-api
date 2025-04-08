@@ -50,6 +50,8 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.retrieveCredentialTrustLevel;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveLevelOfConfidence;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -180,6 +182,11 @@ public class StartHandler
                             Optional.ofNullable(startRequest.previousSessionId()),
                             sessionId,
                             startRequest.currentCredentialStrength());
+            authSession.setRequestedCredentialStrength(
+                    retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength()));
+            authSession.setRequestedLevelOfConfidence(
+                    retrieveLevelOfConfidence(startRequest.requestedLevelOfConfidence()));
+            authSession.setClientId(startRequest.clientId());
 
             var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
 
