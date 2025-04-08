@@ -5,6 +5,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -14,6 +15,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -34,7 +36,11 @@ public class MfaHelper {
         List<String> vtr = authRequest.getCustomParameter("vtr");
         VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
 
-        return !vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL);
+        return mfaRequired(vectorOfTrust.getCredentialTrustLevel());
+    }
+
+    public static boolean mfaRequired(CredentialTrustLevel credentialTrustLevel) {
+        return !Objects.equals(credentialTrustLevel, LOW_LEVEL);
     }
 
     public static Optional<MFAMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
@@ -53,6 +59,22 @@ public class MfaHelper {
     public static UserMfaDetail getUserMFADetail(
             UserContext userContext, UserCredentials userCredentials, UserProfile userProfile) {
         var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
+        if (userProfile.getMfaMethodsMigrated()) {
+            return getMfaDetailForMigratedUser(userCredentials, isMfaRequired);
+        } else {
+            return getMfaDetailForNonMigratedUser(
+                    userCredentials,
+                    userProfile.getPhoneNumber(),
+                    userProfile.isPhoneNumberVerified(),
+                    isMfaRequired);
+        }
+    }
+
+    public static UserMfaDetail getUserMFADetail(
+            CredentialTrustLevel credentialTrustLevel,
+            UserCredentials userCredentials,
+            UserProfile userProfile) {
+        var isMfaRequired = mfaRequired(credentialTrustLevel);
         if (userProfile.getMfaMethodsMigrated()) {
             return getMfaDetailForMigratedUser(userCredentials, isMfaRequired);
         } else {
