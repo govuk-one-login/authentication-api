@@ -64,7 +64,8 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             MFAMethodType mfaMethodType) throws JsonException, URISyntaxException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
-        authSessionStore.addSession(sessionId);
+        authSessionStore.addSession(
+                sessionId, authSession -> authSession.withClientId(CLIENT_ID.getValue()));
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
         var salt = userStore.addSalt(emailAddress);
@@ -120,7 +121,8 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
 
         String sessionId = redis.createSession();
-        authSessionStore.addSession(sessionId);
+        authSessionStore.addSession(
+                sessionId, authSession -> authSession.withClientId(CLIENT_ID.getValue()));
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 
