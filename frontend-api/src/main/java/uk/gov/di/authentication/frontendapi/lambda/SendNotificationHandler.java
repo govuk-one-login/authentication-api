@@ -193,7 +193,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         new NotifyRequest(
                                 request.getEmail(),
                                 request.getNotificationType(),
-                                userContext.getUserLanguage());
+                                userContext.getUserLanguage(),
+                                userContext.getAuthSession().getSessionId(),
+                                userContext.getClientSessionId());
                 if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info("{} email placed on queue", request.getNotificationType());

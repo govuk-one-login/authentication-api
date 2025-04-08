@@ -91,6 +91,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.S
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -1042,14 +1044,21 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
+        event.setHeaders(
+                Map.of(SESSION_ID_HEADER, SESSION_ID, CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                         EMAIL, notificationType, JourneyType.REGISTRATION));
         var result = handler.handleRequest(event, context);
 
-        var notifyRequest = new NotifyRequest(EMAIL, notificationType, SupportedLanguage.EN);
+        var notifyRequest =
+                new NotifyRequest(
+                        EMAIL,
+                        notificationType,
+                        SupportedLanguage.EN,
+                        SESSION_ID,
+                        CLIENT_SESSION_ID);
         verify(emailSqsClient)
                 .send(
                         argThat(
