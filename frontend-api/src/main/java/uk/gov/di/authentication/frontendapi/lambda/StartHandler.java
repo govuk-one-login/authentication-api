@@ -50,6 +50,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.retrieveCredentialTrustLevel;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveLevelOfConfidence;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -171,7 +172,10 @@ public class StartHandler
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-
+        var requestedLevelOfConfidence =
+                Optional.ofNullable(startRequest.requestedLevelOfConfidence())
+                        .map(LevelOfConfidence::retrieveLevelOfConfidence)
+                        .orElse(NONE);
         logIfNewFieldsDoNotMatchClientSessionAuthParameters(startRequest, clientSession);
 
         boolean isUserAuthenticatedWithValidProfile;
@@ -278,6 +282,7 @@ public class StartHandler
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
+                            requestedLevelOfConfidence,
                             cookieConsent,
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),
