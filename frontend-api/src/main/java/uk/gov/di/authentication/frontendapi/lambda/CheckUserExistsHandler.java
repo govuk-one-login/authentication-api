@@ -92,7 +92,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
+        return super.handleRequestWithoutClientSession(input, context);
     }
 
     @Override
