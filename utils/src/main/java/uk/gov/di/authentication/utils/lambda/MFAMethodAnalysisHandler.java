@@ -176,30 +176,12 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
                         taskResult.getCountOfUsersWithVerifiedPhoneNumber());
             }
 
-            gracefulPoolShutdown(forkJoinPool);
+            Pool.gracefulPoolShutdown(forkJoinPool);
         } finally {
-            forcePoolShutdown(forkJoinPool);
+            Pool.forcePoolShutdown(forkJoinPool);
         }
 
         return finalMFAMethodAnalysis.toString();
-    }
-
-    private void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
-        forkJoinPool.shutdown();
-        try {
-            if (!forkJoinPool.awaitTermination(15, TimeUnit.SECONDS)) {
-                LOG.warn("ForkJoinPool did not terminate normally");
-            }
-        } catch (InterruptedException e) {
-            LOG.error("ForkJoinPool termination interrupted", e);
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    private void forcePoolShutdown(ForkJoinPool forkJoinPool) {
-        if (!forkJoinPool.isShutdown()) {
-            forkJoinPool.shutdownNow();
-        }
     }
 
     private void queueBatch(
@@ -279,6 +261,26 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
                 attributeCombinationsCount);
 
         return mfaMethodAnalysis;
+    }
+
+    private static class Pool {
+        private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
+            forkJoinPool.shutdown();
+            try {
+                if (!forkJoinPool.awaitTermination(15, TimeUnit.SECONDS)) {
+                    LOG.warn("ForkJoinPool did not terminate normally");
+                }
+            } catch (InterruptedException e) {
+                LOG.error("ForkJoinPool termination interrupted", e);
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        private static void forcePoolShutdown(ForkJoinPool forkJoinPool) {
+            if (!forkJoinPool.isShutdown()) {
+                forkJoinPool.shutdownNow();
+            }
+        }
     }
 
     private static class UserCredentialsProfileJoin {
