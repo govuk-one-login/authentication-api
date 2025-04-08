@@ -36,6 +36,8 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
 
     private final NotificationHandler handler = new NotificationHandler(configurationService);
     public final String CODE = format("%06d", new SecureRandom().nextInt(999999));
+    public static final String SESSION_ID = "session-id";
+    public static final String CLIENT_SESSION_ID = "known-client-session-id";
 
     @Test
     void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws Json.JsonException {
@@ -43,7 +45,12 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         handler.handleRequest(
                 createSqsEvent(
                         new NotifyRequest(
-                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE, SupportedLanguage.EN)),
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_EMAIL,
+                                CODE,
+                                SupportedLanguage.EN,
+                                SESSION_ID,
+                                CLIENT_SESSION_ID)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -69,7 +76,9 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                                 TEST_PHONE_NUMBER,
                                 VERIFY_PHONE_NUMBER,
                                 CODE,
-                                SupportedLanguage.EN)),
+                                SupportedLanguage.EN,
+                                SESSION_ID,
+                                CLIENT_SESSION_ID)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -88,7 +97,13 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     void shouldCallNotifyWhenValidMfaRequestIsAddedToQueue() throws Json.JsonException {
         handler.handleRequest(
                 createSqsEvent(
-                        new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN)),
+                        new NotifyRequest(
+                                TEST_PHONE_NUMBER,
+                                MFA_SMS,
+                                CODE,
+                                SupportedLanguage.EN,
+                                SESSION_ID,
+                                CLIENT_SESSION_ID)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
