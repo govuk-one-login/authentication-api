@@ -13,6 +13,7 @@ import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerRe
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -261,7 +262,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         }
 
         LOG.info("Successfully processed request");
-        var maybeResponse = generateResponseWithMfaDetail(resetPasswordRequest, userContext);
+        var credentialTrustLevel = userContext.getAuthSession().getRequestedCredentialStrength();
+        var maybeResponse =
+                generateResponseWithMfaDetail(resetPasswordRequest, credentialTrustLevel);
         if (maybeResponse.isPresent()) {
             try {
                 return generateApiGatewayProxyResponse(200, maybeResponse.get());
@@ -275,14 +278,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     }
 
     Optional<ResetPasswordRequestHandlerResponse> generateResponseWithMfaDetail(
-            ResetPasswordRequest resetPasswordRequest, UserContext userContext) {
+            ResetPasswordRequest resetPasswordRequest, CredentialTrustLevel credentialTrustLevel) {
         return authenticationService
                 .getUserProfileByEmailMaybe(resetPasswordRequest.getEmail())
                 .map(
                         userProfile -> {
                             var userMfaDetail =
                                     getUserMFADetail(
-                                            userContext,
+                                            credentialTrustLevel,
                                             authenticationService.getUserCredentialsFromEmail(
                                                     resetPasswordRequest.getEmail()),
                                             userProfile);
