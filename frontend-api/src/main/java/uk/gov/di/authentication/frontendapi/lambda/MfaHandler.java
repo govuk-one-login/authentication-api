@@ -240,7 +240,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 LOG.info("Placing message on queue with NotificationType {}", notificationType);
                 var notifyRequest =
                         new NotifyRequest(
-                                phoneNumber, notificationType, code, userContext.getUserLanguage());
+                                phoneNumber,
+                                notificationType,
+                                code,
+                                userContext.getUserLanguage(),
+                                userContext.getAuthSession().getSessionId(),
+                                userContext.getClientSessionId());
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
                 auditableEvent = FrontendAuditableEvent.AUTH_MFA_CODE_SENT;
             }
