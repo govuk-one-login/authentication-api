@@ -20,6 +20,7 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -195,7 +196,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .nonce(new Nonce())
                         .state(state)
                         .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString());
+                        .customParameter("redirect_uri", REDIRECT_URI.toString())
+                        .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
         var authRequest = builder.build();
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
@@ -206,14 +208,24 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Reauthenticate", "true");
 
         var response =
-                makeRequest(Optional.of(makeRequestBody(true, authRequest)), headers, Map.of());
+                makeRequest(
+                        Optional.of(makeRequestBody(true, authRequest, "P1", "Cl.Cm")),
+                        headers,
+                        Map.of());
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
-        assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
+        var actualAuthSession = authSessionExtension.getSession(sessionId).orElseThrow();
+        assertThat(
+                actualAuthSession.getRequestedCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                actualAuthSession.getRequestedLevelOfConfidence(),
+                equalTo(LevelOfConfidence.LOW_LEVEL));
+        assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND, AUTH_REAUTH_REQUESTED));
     }
