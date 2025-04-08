@@ -50,55 +50,14 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
 
     @Override
     public String handleRequest(String input, Context context) {
-        long totalBatches = 0;
-        long totalUserCredentialsFetched = 0;
         List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(100);
 
-        parallelTasks.add(
-                forkJoinPool.submit(
-                        () -> {
-                            Map<String, AttributeValue> lastKey = null;
-                            int totalCount = 0;
-                            int totalScanned = 0;
-                            int logThreshold = 100_000;
-                            int lastLoggedAt = 0;
-
-                            do {
-                                ScanRequest request =
-                                        ScanRequest.builder()
-                                                .tableName(userProfileTableName)
-                                                .indexName("PhoneNumberIndex")
-                                                .filterExpression("PhoneNumberVerified = :v")
-                                                .expressionAttributeValues(
-                                                        Map.of(
-                                                                ":v",
-                                                                AttributeValue.builder()
-                                                                        .n("1")
-                                                                        .build()))
-                                                .exclusiveStartKey(lastKey)
-                                                .build();
-
-                                ScanResponse response = client.scan(request);
-
-                                totalCount += response.count();
-                                totalScanned += response.scannedCount();
-                                lastKey = response.lastEvaluatedKey();
-
-                                if (totalScanned - lastLoggedAt >= logThreshold) {
-                                    LOG.info("Fetched {} phone number index records", totalScanned);
-                                    lastLoggedAt = totalScanned - (totalScanned % logThreshold);
-                                }
-                            } while (lastKey != null && !lastKey.isEmpty());
-
-                            MFAMethodAnalysis analysis = new MFAMethodAnalysis();
-                            analysis.incrementCountOfPhoneNumberUsersAssessed(totalScanned);
-                            analysis.incrementCountOfUsersWithVerifiedPhoneNumber(totalCount);
-
-                            return analysis;
-                        }));
-
         try {
+            fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks);
+
+            long totalBatches = 0;
+            long totalUserCredentialsFetched = 0;
             Map<String, AttributeValue> lastKey = null;
             do {
                 ScanRequest scanRequest =
@@ -185,6 +144,52 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
                     taskResult.getCountOfUsersWithVerifiedPhoneNumber());
         }
         return finalMFAMethodAnalysis;
+    }
+
+    private void fetchPhoneNumberVerifiedStatistics(
+            ForkJoinPool forkJoinPool, List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
+        parallelTasks.add(
+                forkJoinPool.submit(
+                        () -> {
+                            Map<String, AttributeValue> lastKey = null;
+                            int totalCount = 0;
+                            int totalScanned = 0;
+                            int logThreshold = 100_000;
+                            int lastLoggedAt = 0;
+
+                            do {
+                                ScanRequest request =
+                                        ScanRequest.builder()
+                                                .tableName(userProfileTableName)
+                                                .indexName("PhoneNumberIndex")
+                                                .filterExpression("PhoneNumberVerified = :v")
+                                                .expressionAttributeValues(
+                                                        Map.of(
+                                                                ":v",
+                                                                AttributeValue.builder()
+                                                                        .n("1")
+                                                                        .build()))
+                                                .exclusiveStartKey(lastKey)
+                                                .build();
+
+                                ScanResponse response = client.scan(request);
+
+                                totalCount += response.count();
+                                totalScanned += response.scannedCount();
+                                lastKey = response.lastEvaluatedKey();
+
+                                if (totalScanned - lastLoggedAt >= logThreshold) {
+                                    LOG.info("Fetched {} phone number index records", totalScanned);
+                                    lastLoggedAt = totalScanned - (totalScanned % logThreshold);
+                                }
+                            } while (lastKey != null && !lastKey.isEmpty());
+
+                            MFAMethodAnalysis analysis = new MFAMethodAnalysis();
+                            analysis.incrementCountOfPhoneNumberUsersAssessed(totalScanned);
+                            analysis.incrementCountOfUsersWithVerifiedPhoneNumber(totalCount);
+
+                            return analysis;
+                        }));
     }
 
     private void queueBatch(
