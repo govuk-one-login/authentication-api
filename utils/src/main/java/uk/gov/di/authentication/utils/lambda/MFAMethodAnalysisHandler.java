@@ -50,13 +50,12 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
 
     @Override
     public String handleRequest(String input, Context context) {
-        MFAMethodAnalysis finalMFAMethodAnalysis = new MFAMethodAnalysis();
         long totalBatches = 0;
         long totalUserCredentialsFetched = 0;
-        List<ForkJoinTask<MFAMethodAnalysis>> batchTasks = new ArrayList<>();
+        List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(100);
 
-        batchTasks.add(
+        parallelTasks.add(
                 forkJoinPool.submit(
                         () -> {
                             Map<String, AttributeValue> lastKey = null;
@@ -147,49 +146,53 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
 
                     if (currentBatch.size() >= 100) {
                         totalBatches++;
-                        queueBatch(forkJoinPool, currentBatch, totalBatches, batchTasks);
+                        queueBatch(forkJoinPool, currentBatch, totalBatches, parallelTasks);
                         currentBatch = new ArrayList<>();
                     }
                 }
 
                 if (!currentBatch.isEmpty()) {
                     totalBatches++;
-                    queueBatch(forkJoinPool, currentBatch, totalBatches, batchTasks);
+                    queueBatch(forkJoinPool, currentBatch, totalBatches, parallelTasks);
                 }
 
                 lastKey = scanResponse.lastEvaluatedKey();
             } while (lastKey != null && !lastKey.isEmpty());
 
-            for (ForkJoinTask<MFAMethodAnalysis> task : batchTasks) {
-                MFAMethodAnalysis taskResult = task.join();
-                finalMFAMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
-                        taskResult.getCountOfAuthAppUsersAssessed());
-                finalMFAMethodAnalysis
-                        .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
-                                taskResult
-                                        .getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods());
-                finalMFAMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
-                        taskResult.getAttributeCombinationsForAuthAppUsersCount());
-                finalMFAMethodAnalysis.incrementCountOfPhoneNumberUsersAssessed(
-                        taskResult.getCountOfPhoneNumberUsersAssessed());
-                finalMFAMethodAnalysis.incrementCountOfUsersWithVerifiedPhoneNumber(
-                        taskResult.getCountOfUsersWithVerifiedPhoneNumber());
-            }
-
             Pool.gracefulPoolShutdown(forkJoinPool);
+            return combineTaskResults(parallelTasks).toString();
         } finally {
             Pool.forcePoolShutdown(forkJoinPool);
         }
+    }
 
-        return finalMFAMethodAnalysis.toString();
+    private static MFAMethodAnalysis combineTaskResults(
+            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
+        MFAMethodAnalysis finalMFAMethodAnalysis = new MFAMethodAnalysis();
+        for (ForkJoinTask<MFAMethodAnalysis> task : parallelTasks) {
+            MFAMethodAnalysis taskResult = task.join();
+            finalMFAMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
+                    taskResult.getCountOfAuthAppUsersAssessed());
+            finalMFAMethodAnalysis
+                    .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
+                            taskResult
+                                    .getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods());
+            finalMFAMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
+                    taskResult.getAttributeCombinationsForAuthAppUsersCount());
+            finalMFAMethodAnalysis.incrementCountOfPhoneNumberUsersAssessed(
+                    taskResult.getCountOfPhoneNumberUsersAssessed());
+            finalMFAMethodAnalysis.incrementCountOfUsersWithVerifiedPhoneNumber(
+                    taskResult.getCountOfUsersWithVerifiedPhoneNumber());
+        }
+        return finalMFAMethodAnalysis;
     }
 
     private void queueBatch(
             ForkJoinPool forkJoinPool,
             List<UserCredentialsProfileJoin> batch,
             long batchNumber,
-            List<ForkJoinTask<MFAMethodAnalysis>> batchTasks) {
-        batchTasks.add(forkJoinPool.submit(() -> batchGetUserProfiles(batchNumber, batch)));
+            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
+        parallelTasks.add(forkJoinPool.submit(() -> batchGetUserProfiles(batchNumber, batch)));
     }
 
     private MFAMethodAnalysis batchGetUserProfiles(
