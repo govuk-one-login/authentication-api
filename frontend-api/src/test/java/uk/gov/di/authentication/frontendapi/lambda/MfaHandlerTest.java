@@ -584,8 +584,6 @@ class MfaHandlerTest {
     private void usingValidClientSession(String clientId) {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest(clientId).toParameters());
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {

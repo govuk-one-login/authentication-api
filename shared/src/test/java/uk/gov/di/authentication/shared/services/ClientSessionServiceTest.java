@@ -15,12 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -57,12 +55,7 @@ class ClientSessionServiceTest {
                 clientSessionService.getClientSessionFromRequestHeaders(
                         Map.of("Session-Id", sessionId, "Client-Session-Id", clientSessionId));
 
-        clientSessionInRedis.ifPresentOrElse(
-                clientSession ->
-                        assertThat(
-                                clientSession.getAuthRequestParams().containsKey("authparam"),
-                                is(true)),
-                () -> fail("Could not retrieve client session"));
+        assertTrue(clientSessionInRedis.isPresent());
     }
 
     @Test
