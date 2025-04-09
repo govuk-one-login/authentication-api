@@ -183,8 +183,9 @@ public class StartHandler
                             Optional.ofNullable(startRequest.previousSessionId()),
                             sessionId,
                             startRequest.currentCredentialStrength());
-            authSession.setRequestedCredentialStrength(
-                    retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength()));
+            var requestedCredentialTrustLevel =
+                    retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength());
+            authSession.setRequestedCredentialStrength(requestedCredentialTrustLevel);
             if (startRequest.requestedLevelOfConfidence() != null) {
                 authSession.setRequestedLevelOfConfidence(
                         retrieveLevelOfConfidence(startRequest.requestedLevelOfConfidence()));
@@ -196,7 +197,8 @@ public class StartHandler
 
             var upliftRequired =
                     startService.isUpliftRequired(
-                            clientSession, startRequest.currentCredentialStrength());
+                            requestedCredentialTrustLevel,
+                            startRequest.currentCredentialStrength());
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
