@@ -30,7 +30,6 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -74,7 +73,6 @@ public class DocAppCallbackHandler
     private final DynamoDocAppService dynamoDocAppService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
-    private final AuthorisationCodeService authorisationCodeService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final AuthFrontend authFrontend;
     private final DocAppCriAPI docAppCriApi;
@@ -92,7 +90,6 @@ public class DocAppCallbackHandler
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
-            AuthorisationCodeService authorisationCodeService,
             OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
@@ -105,7 +102,6 @@ public class DocAppCallbackHandler
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
-        this.authorisationCodeService = authorisationCodeService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
@@ -129,7 +125,6 @@ public class DocAppCallbackHandler
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
-        this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
@@ -154,9 +149,6 @@ public class DocAppCallbackHandler
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
-        this.authorisationCodeService =
-                new AuthorisationCodeService(
-                        configurationService, redis, SerializationService.getInstance());
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
