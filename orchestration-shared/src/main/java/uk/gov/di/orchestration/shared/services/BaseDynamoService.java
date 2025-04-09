@@ -85,6 +85,15 @@ public class BaseDynamoService<T> {
                                 .build()));
     }
 
+    public Optional<T> getWithConsistentRead(String partition) {
+        return Optional.ofNullable(
+                dynamoTable.getItem(
+                        GetItemEnhancedRequest.builder()
+                                .consistentRead(true)
+                                .key(Key.builder().partitionValue(partition).build())
+                                .build()));
+    }
+
     public void delete(String partition) {
         get(partition).ifPresent(dynamoTable::deleteItem);
     }

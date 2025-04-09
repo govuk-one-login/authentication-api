@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -45,6 +46,11 @@ class OrchAuthCodeServiceTest {
             GetItemEnhancedRequest.builder()
                     .key(AUTH_CODE_PARTITION_KEY)
                     .consistentRead(false)
+                    .build();
+    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ =
+            GetItemEnhancedRequest.builder()
+                    .key(AUTH_CODE_PARTITION_KEY)
+                    .consistentRead(true)
                     .build();
     private static final long AUTH_CODE_EXPIRY = 123L;
 
@@ -119,6 +125,48 @@ class OrchAuthCodeServiceTest {
     }
 
     @Test
+    void shouldNotGetAuthCodeExchangeDataByAuthCodeWhenNoOrchAuthCodeItemExists() {
+        var exchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
+
+        assertTrue(exchangeData.isEmpty());
+
+        verify(table).getItem(AUTH_CODE_GET_REQUEST);
+        assertGetItemCalledWithStronglyConsistentRead();
+    }
+
+    @Test
+    void
+            shouldRetryGetOrchAuthCodeExchangeDataByAuthCodeWithStronglyConsistentReadOnceWhenItemNotFound()
+                    throws Json.JsonException {
+        var exchangeData = aAuthCodeExchangeDataEntity();
+        var exchangeDataSerialized = objectMapper.writeValueAsString(exchangeData);
+
+        OrchAuthCodeItem orchAuthCodeItem =
+                new OrchAuthCodeItem()
+                        .withAuthCode(AUTH_CODE)
+                        .withAuthCodeExchangeData(exchangeDataSerialized)
+                        .withIsUsed(false)
+                        .withTimeToLive(VALID_TTL);
+
+        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(null);
+        when(table.getItem(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ))
+                .thenReturn(orchAuthCodeItem);
+
+        var actualExchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
+
+        assertTrue(actualExchangeData.isPresent());
+
+        assertEquals(exchangeData.getClientId(), actualExchangeData.get().getClientId());
+        assertEquals(
+                exchangeData.getClientSessionId(), actualExchangeData.get().getClientSessionId());
+        assertEquals(exchangeData.getEmail(), actualExchangeData.get().getEmail());
+        assertEquals(exchangeData.getAuthTime(), actualExchangeData.get().getAuthTime());
+
+        verify(table).getItem(AUTH_CODE_GET_REQUEST);
+        assertGetItemCalledWithStronglyConsistentRead();
+    }
+
+    @Test
     void shouldMarkAuthCodeAsUsedAfterSuccessfullyGettingOrchAuthCodeExchangeData()
             throws Json.JsonException {
         var exchangeData = aAuthCodeExchangeDataEntity();
@@ -143,12 +191,15 @@ class OrchAuthCodeServiceTest {
     }
 
     @Test
-    void shouldNotGetAuthCodeExchangeDataByAuthCodeWhenNoOrchAuthCodeItemExists() {
-        var authCode = "an-unknown-auth-code";
+    void shouldThrowWhenFailingToGetAuthCodeExchangeDataByAuthCodeWithStronglyConsistentRead() {
+        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(null);
+        withFailedGetWithStronglyConsistentRead();
 
-        var exchangeData = orchAuthCodeService.getExchangeDataForCode(authCode);
+        assertThrows(
+                OrchAuthCodeException.class,
+                () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
 
-        assertTrue(exchangeData.isEmpty());
+        assertGetItemCalledWithStronglyConsistentRead();
     }
 
     @Test
@@ -190,6 +241,10 @@ class OrchAuthCodeServiceTest {
                 .setClientSessionId(CLIENT_SESSION_ID)
                 .setEmail(EMAIL)
                 .setAuthTime(AUTH_TIME);
+    }
+
+    private void assertGetItemCalledWithStronglyConsistentRead() {
+        verify(table).getItem(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ);
     }
 
     private void withValidOrchAuthCode(AuthCodeExchangeData exchangeData)
@@ -243,7 +298,16 @@ class OrchAuthCodeServiceTest {
     private void withFailedGet() {
         doThrow(DynamoDbException.builder().message("Failed to get from table").build())
                 .when(table)
-                .getItem(any(GetItemEnhancedRequest.class));
+                .getItem(eq(AUTH_CODE_GET_REQUEST));
+    }
+
+    private void withFailedGetWithStronglyConsistentRead() {
+        doThrow(
+                        DynamoDbException.builder()
+                                .message("Failed to get from table with strongly consistent read")
+                                .build())
+                .when(table)
+                .getItem(eq(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ));
     }
 
     private void withFailedUpdate() {
