@@ -63,6 +63,7 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   IsNotProduction: !Not [!Equals [!Ref Environment, production]]
+  IsNotIntegration: !Not [!Equals [!Ref Environment, integration]]
   IsNotDevOrProd:
     !Not [
       !Or [
@@ -1262,6 +1263,8 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt BackChannelLogoutQueue.Arn
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -4355,6 +4358,29 @@ Resources:
       KeyUsage: ENCRYPT_DECRYPT
       KeySpec: SYMMETRIC_DEFAULT
       EnableKeyRotation: true
+
+  BackChannelLogoutDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotIntegration
+    Properties:
+      AlarmName: !Sub ${Environment}-backchannel-logout-dlq-alarm
+      AlarmDescription: !Sub "${Environment} backchannel logout DLQ has a message.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5292228639/Runbook+Backchannel+Logout+DLQ+Alarm"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::GetAtt:
+              - BackChannelLogoutDeadLetterQueue
+              - QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
   #endregion
 
   #region Storage Token Jwk Lambda
