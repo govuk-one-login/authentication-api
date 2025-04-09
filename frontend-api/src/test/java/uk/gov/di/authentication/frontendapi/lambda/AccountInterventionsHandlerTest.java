@@ -128,7 +128,8 @@ class AccountInterventionsHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_SUBJECT_ID)
+                    .withRequestedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -238,8 +239,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -261,8 +260,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(featureSwitch);
 
@@ -401,8 +398,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
         var authSessionWithChanges =
                 authSession
@@ -439,8 +434,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
 
@@ -468,8 +461,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
         when(userContext.getClientSession()).thenReturn(null);
@@ -577,9 +568,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(
                         generateAccountInterventionResponse(
                                 blocked, suspended, reproveIdentity, resetPassword));
-
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
 
