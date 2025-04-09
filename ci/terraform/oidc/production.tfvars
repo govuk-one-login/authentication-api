@@ -1,7 +1,6 @@
 shared_state_bucket = "digital-identity-prod-tfstate"
 
-# FMS Flag
-fms_enabled                = true
+# FMS
 frontend_api_fms_tag_value = "authfrontendprod"
 
 # App-specific

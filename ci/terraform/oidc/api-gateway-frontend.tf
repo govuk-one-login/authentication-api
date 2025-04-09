@@ -164,25 +164,6 @@ resource "aws_cloudwatch_log_subscription_filter" "frontend_api_access_log_subsc
   }
 }
 
-resource "aws_cloudwatch_log_group" "frontend_waf_logs" {
-  name              = "aws-waf-logs-frontend-${var.environment}"
-  retention_in_days = var.cloudwatch_log_retention
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-}
-
-
-resource "aws_cloudwatch_log_subscription_filter" "frontend_api_waf_log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "${var.environment}-frontend-api-waf-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.frontend_waf_logs.name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
-
-  lifecycle {
-    create_before_destroy = false
-  }
-}
-
 resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
   deployment_id = aws_api_gateway_deployment.frontend_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_frontend_api.id
@@ -219,13 +200,10 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     aws_api_gateway_deployment.deployment,
   ]
 
-  tags = (
-    var.fms_enabled ?
-    {
-      "FMSRegionalPolicy" = "false"
-      "CustomPolicy"      = var.frontend_api_fms_tag_value
-    } : {}
-  )
+  tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = var.frontend_api_fms_tag_value
+  }
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_frontend_logging_settings" {
@@ -255,117 +233,4 @@ resource "aws_api_gateway_base_path_mapping" "frontend_api" {
 module "dashboard_frontend_api" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_authentication_frontend_api.name
-}
-
-resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
-  name  = "${var.environment}-frontend-waf-web-acl"
-  scope = "REGIONAL"
-
-  default_action {
-    allow {}
-  }
-
-  rule {
-    action {
-      block {}
-    }
-    priority = 1
-    name     = "${var.environment}-frontend-waf-rate-based-rule"
-    statement {
-      rate_based_statement {
-        limit              = var.environment == "staging" ? 10000000 : 28800
-        aggregate_key_type = "IP"
-      }
-    }
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}FrontendWafMaxRequestRate"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    override_action {
-      none {}
-    }
-    priority = 2
-    name     = "${var.environment}-frontend-common-rule-set"
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesCommonRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}FrontendWafCommonRuleSet"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    override_action {
-      none {}
-    }
-    priority = 3
-    name     = "${var.environment}-frontend-bad-rule-set"
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}FrontendWafBaduleSet"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${replace(var.environment, "-", "")}FrontendWafRules"
-    sampled_requests_enabled   = true
-  }
-}
-
-
-resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
-  count        = var.fms_enabled ? 0 : 1
-  resource_arn = aws_api_gateway_stage.endpoint_frontend_stage.arn
-  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_frontend_api.arn
-
-  depends_on = [
-    aws_api_gateway_stage.endpoint_frontend_stage,
-    aws_wafv2_web_acl.wafregional_web_acl_frontend_api
-  ]
-}
-
-resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_api" {
-  log_destination_configs = [aws_cloudwatch_log_group.frontend_waf_logs.arn]
-  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_frontend_api.arn
-
-  logging_filter {
-    default_behavior = "KEEP"
-
-    filter {
-      behavior = "KEEP"
-
-      condition {
-        action_condition {
-          action = "BLOCK"
-        }
-      }
-
-      requirement = "MEETS_ANY"
-    }
-  }
-
-  depends_on = [
-    aws_cloudwatch_log_group.frontend_waf_logs
-  ]
 }
