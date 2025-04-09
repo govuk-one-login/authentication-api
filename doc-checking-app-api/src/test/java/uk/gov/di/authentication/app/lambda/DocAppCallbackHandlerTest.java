@@ -139,16 +139,8 @@ class DocAppCallbackHandlerTest {
 
     @BeforeEach
     void setUp() {
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        CLIENT_ID.getValue(), CLIENT_SESSION_ID, null, null))
-                .thenReturn(AUTH_CODE);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        eq(null)))
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null)))
                 .thenReturn(AUTH_CODE);
 
         handler =
@@ -642,24 +634,13 @@ class DocAppCallbackHandlerTest {
     }
 
     private void assertAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null));
-
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        eq(AUTH_CODE),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        eq(null));
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null));
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
-
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any(), any());
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
     }
 }
