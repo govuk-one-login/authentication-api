@@ -84,7 +84,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequestWithoutClientSession(input, context);
+        return super.handleRequest(input, context);
     }
 
     @Override
