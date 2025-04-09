@@ -39,7 +39,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -91,8 +90,6 @@ class DocAppCallbackHandlerTest {
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
-    private static final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
@@ -151,7 +148,6 @@ class DocAppCallbackHandlerTest {
                         orchClientSessionService,
                         auditService,
                         dynamoDocAppService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
