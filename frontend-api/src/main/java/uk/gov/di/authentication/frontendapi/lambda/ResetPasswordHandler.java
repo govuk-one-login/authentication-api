@@ -136,7 +136,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequestWithoutClientSession(input, context);
+        return super.handleRequest(input, context);
     }
 
     @Override
