@@ -110,7 +110,12 @@ public class StartService {
         } catch (java.text.ParseException e) {
             throw new RuntimeException("Unable to parse claims in request object");
         }
-        var clientRegistry = userContext.getClient().orElseThrow();
+        return buildClientStartInfo(
+                userContext.getClient().orElseThrow(), scopes, redirectURI, state);
+    }
+
+    public ClientStartInfo buildClientStartInfo(
+            ClientRegistry clientRegistry, List<String> scopes, URI redirectURI, State state) {
         var clientInfo =
                 new ClientStartInfo(
                         clientRegistry.getClientName(),

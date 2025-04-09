@@ -6,7 +6,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -545,8 +544,7 @@ class StartServiceTest {
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT signedJWT,
-            boolean oneLoginService)
-            throws ParseException {
+            boolean oneLoginService) {
         var userContext =
                 buildUserContext(
                         jsonArrayOf("Cl.Cm"),
@@ -557,8 +555,14 @@ class StartServiceTest {
                         Optional.empty(),
                         Optional.empty(),
                         oneLoginService);
+        var scopes = Objects.nonNull(signedJWT) ? DOC_APP_SCOPES : SCOPES;
 
-        var clientStartInfo = startService.buildClientStartInfo(userContext);
+        var clientStartInfo =
+                startService.buildClientStartInfo(
+                        userContext.getClient().orElseThrow(),
+                        scopes.toStringList(),
+                        REDIRECT_URI,
+                        STATE);
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
