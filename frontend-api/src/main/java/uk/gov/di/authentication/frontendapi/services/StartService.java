@@ -34,7 +34,6 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.function.Predicate.not;
-import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
 
 public class StartService {
@@ -186,13 +185,12 @@ public class StartService {
         return null;
     }
 
-    public String getCookieConsentValue(
-            Map<String, List<String>> authRequestParameters, String clientID) {
+    public String getCookieConsentValue(String cookieConsentValue, String clientID) {
         try {
-            if (validCookieConsentValueIsPresent(authRequestParameters)
+            if (validCookieConsentValueIsPresent(cookieConsentValue)
                     && isClientCookieConsentShared(clientID)) {
                 LOG.info("Sharing cookie_consent");
-                return authRequestParameters.get(COOKIE_CONSENT).get(0);
+                return cookieConsentValue;
             }
             return null;
         } catch (ClientNotFoundException e) {
@@ -271,12 +269,9 @@ public class StartService {
                                                 clientID)));
     }
 
-    private boolean validCookieConsentValueIsPresent(
-            Map<String, List<String>> authRequestParameters) {
-        return authRequestParameters.containsKey(COOKIE_CONSENT)
-                && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()
-                && authRequestParameters.get(COOKIE_CONSENT).get(0) != null
+    private boolean validCookieConsentValueIsPresent(String cookieConsent) {
+        return cookieConsent != null
                 && List.of(COOKIE_CONSENT_ACCEPT, COOKIE_CONSENT_REJECT, COOKIE_CONSENT_NOT_ENGAGED)
-                        .contains(authRequestParameters.get(COOKIE_CONSENT).get(0));
+                        .contains(cookieConsent);
     }
 }

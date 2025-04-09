@@ -602,20 +602,9 @@ class StartServiceTest {
                                         REDIRECT_URI.toString(),
                                         CLIENT_ID.getValue(),
                                         cookieConsentShared)));
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .customParameter("cookie_consent", cookieConsentValue)
-                        .build();
 
         assertThat(
-                startService.getCookieConsentValue(
-                        authRequest.toParameters(), CLIENT_ID.getValue()),
+                startService.getCookieConsentValue(cookieConsentValue, CLIENT_ID.getValue()),
                 equalTo(expectedValue));
     }
 

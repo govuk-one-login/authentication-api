@@ -596,7 +596,6 @@ class StartHandlerTest {
                 .thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
                         eq(userContext),
                         any(),
