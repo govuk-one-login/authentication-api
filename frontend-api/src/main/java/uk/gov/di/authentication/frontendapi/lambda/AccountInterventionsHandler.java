@@ -226,12 +226,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         var vtr = new ArrayList<String>();
 
         try {
-            vtr.add(
-                    userContext
-                            .getClientSession()
-                            .getEffectiveVectorOfTrust()
-                            .getCredentialTrustLevel()
-                            .getValue());
+            vtr.add(userContext.getAuthSession().getRequestedCredentialStrength().getValue());
         } catch (Exception e) {
             LOG.warn(
                     "Error retrieving effective vector of trust for TICF CRI Request: {}",
