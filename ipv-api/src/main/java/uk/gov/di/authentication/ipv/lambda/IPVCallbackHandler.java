@@ -347,14 +347,14 @@ public class IPVCallbackHandler
             // TODO: ATO-1117: temporary logs to check values are as expected
             LOG.info(
                     "is rpPairwiseId the same on clientSession as calculated: {}",
-                    rpPairwiseSubject.getValue().equals(orchClientSession.getRpPairwiseId()));
+                    Objects.equals(
+                            rpPairwiseSubject.getValue(), orchClientSession.getRpPairwiseId()));
             LOG.info(
                     "is correct pairwiseId for client the same on clientSession as calculated: {}",
-                    rpPairwiseSubject
-                            .getValue()
-                            .equals(
-                                    orchClientSession.getCorrectPairwiseIdGivenSubjectType(
-                                            clientRegistry.getSubjectType())));
+                    Objects.equals(
+                            rpPairwiseSubject.getValue(),
+                            orchClientSession.getCorrectPairwiseIdGivenSubjectType(
+                                    clientRegistry.getSubjectType())));
             if (orchSession.getInternalCommonSubjectId() != null
                     && !orchSession.getInternalCommonSubjectId().isBlank()) {
                 Optional<UserInfo> authUserInfo =
@@ -368,13 +368,15 @@ public class IPVCallbackHandler
                 } else {
                     LOG.info(
                             "is email the same on authUserInfo as on session: {}",
-                            session.getEmailAddress().equals(authUserInfo.get().getEmailAddress()));
+                            Objects.equals(
+                                    session.getEmailAddress(),
+                                    authUserInfo.get().getEmailAddress()));
                     if (userProfile.getPhoneNumber() != null) {
                         LOG.info(
                                 "is phone number the same on authUserInfo as on UserProfile: {}",
-                                userProfile
-                                        .getPhoneNumber()
-                                        .equals(authUserInfo.get().getPhoneNumber()));
+                                Objects.equals(
+                                        userProfile.getPhoneNumber(),
+                                        authUserInfo.get().getPhoneNumber()));
                     }
                     var saltFromAuthUserInfo = authUserInfo.get().getStringClaim("salt");
                     if (saltFromAuthUserInfo != null && !saltFromAuthUserInfo.isBlank()) {
@@ -382,7 +384,7 @@ public class IPVCallbackHandler
                         var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
                         LOG.info(
                                 "is salt the same on authUserInfo as on UserProfile: {}",
-                                userProfile.getSalt().equals(saltBuffer));
+                                Objects.equals(userProfile.getSalt(), saltBuffer));
                     } else {
                         LOG.info(
                                 "salt on authUserInfo is null or blank. Is salt on UserProfile defined: {}",
@@ -390,14 +392,13 @@ public class IPVCallbackHandler
                     }
                     LOG.info(
                             "is subjectId the same on authUserInfo as on UserProfile: {}",
-                            userProfile
-                                    .getSubjectID()
-                                    .equals(
-                                            authUserInfo
-                                                    .get()
-                                                    .getClaim(
-                                                            AuthUserInfoClaims.LOCAL_ACCOUNT_ID
-                                                                    .getValue())));
+                            Objects.equals(
+                                    userProfile.getSubjectID(),
+                                    authUserInfo
+                                            .get()
+                                            .getClaim(
+                                                    AuthUserInfoClaims.LOCAL_ACCOUNT_ID
+                                                            .getValue())));
                 }
             } else {
                 LOG.info("internalCommonSubjectId is empty");
