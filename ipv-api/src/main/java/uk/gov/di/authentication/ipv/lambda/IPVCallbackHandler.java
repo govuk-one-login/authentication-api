@@ -404,12 +404,14 @@ public class IPVCallbackHandler
                                     ipvTokenService.getToken(
                                             input.getQueryStringParameters().get("code")));
             if (!tokenResponse.indicatesSuccess()) {
-                LOG.error(
-                        "IPV TokenResponse was not successful: {}",
-                        tokenResponse.toErrorResponse().toJSONObject());
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
-                return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
+                return RedirectService.redirectToFrontendErrorPage(
+                        frontend.errorURI(),
+                        new Exception(
+                                String.format(
+                                        "IPV TokenResponse was not successful: %s",
+                                        tokenResponse.toErrorResponse().toJSONObject())));
             }
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
@@ -531,17 +533,17 @@ public class IPVCallbackHandler
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
-            LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(frontend.errorIpvCallbackURI());
+            return RedirectService.redirectToFrontendErrorPage(frontend.errorIpvCallbackURI(), e);
         } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
-            LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
+            return RedirectService.redirectToFrontendErrorPage(frontend.errorURI(), e);
         } catch (ParseException e) {
-            LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
+            return RedirectService.redirectToFrontendErrorPage(
+                    frontend.errorURI(),
+                    new Error("Cannot retrieve auth request params from client session id"));
         } catch (JsonException e) {
-            LOG.error("Unable to serialize SPOTRequest when placing on queue");
-            return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
+            return RedirectService.redirectToFrontendErrorPage(
+                    frontend.errorURI(),
+                    new Error("Unable to serialize SPOTRequest when placing on queue"));
         } catch (UserNotFoundException e) {
             LOG.error(e.getMessage());
             throw new RuntimeException(e);

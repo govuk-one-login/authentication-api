@@ -13,9 +13,12 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 public class RedirectService {
     private static final Logger LOG = LogManager.getLogger(RedirectService.class);
 
-    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPage(URI errorPageUri) {
+    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPage(
+            URI errorPageUri, Throwable error) {
         var errorPageUriStr = errorPageUri.toString();
-        LOG.info("Redirecting to frontend error page: {}", errorPageUriStr);
+        LOG.atError()
+                .withThrowable(error)
+                .log("Redirecting to frontend error page: {}", errorPageUriStr);
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorPageUriStr), null);
     }
