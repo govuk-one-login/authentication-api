@@ -133,7 +133,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
+        return super.handleRequestWithoutClientSession(input, context);
     }
 
     @Override
