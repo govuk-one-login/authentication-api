@@ -2,14 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -933,19 +926,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(clientSession));
 
         return handler.handleRequest(event, context);
-    }
-
-    private AuthenticationRequest withAuthenticationRequest(String clientId) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        return new AuthenticationRequest.Builder(
-                        new ResponseType(ResponseType.Value.CODE),
-                        scope,
-                        new ClientID(clientId),
-                        REDIRECT_URI)
-                .state(new State())
-                .nonce(new Nonce())
-                .build();
     }
 
     private static Stream<Arguments> codeRequestTypes() {

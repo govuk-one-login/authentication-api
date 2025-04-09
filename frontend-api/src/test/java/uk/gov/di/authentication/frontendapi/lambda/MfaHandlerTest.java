@@ -2,13 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -749,19 +742,6 @@ class MfaHandlerTest {
     private void usingValidClientSession(String clientId) {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-    }
-
-    private AuthenticationRequest withAuthenticationRequest(String clientId) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        return new AuthenticationRequest.Builder(
-                        new ResponseType(ResponseType.Value.CODE),
-                        scope,
-                        new ClientID(clientId),
-                        REDIRECT_URI)
-                .state(new State())
-                .nonce(new Nonce())
-                .build();
     }
 
     private static Stream<Arguments> smsJourneyTypes() {

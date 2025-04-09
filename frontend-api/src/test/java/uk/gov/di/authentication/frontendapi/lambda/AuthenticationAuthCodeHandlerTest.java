@@ -2,14 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -437,19 +430,5 @@ class AuthenticationAuthCodeHandlerTest {
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(TEST_SUBJECT_ID);
-    }
-
-    private AuthenticationRequest generateAuthRequest() {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce());
-        return builder.build();
     }
 }

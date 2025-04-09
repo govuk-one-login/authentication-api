@@ -2,14 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +52,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -1057,17 +1049,6 @@ class VerifyMfaCodeHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         return handler.handleRequest(event, context);
-    }
-
-    private AuthenticationRequest withAuthenticationRequest() {
-        return new AuthenticationRequest.Builder(
-                        new ResponseType(ResponseType.Value.CODE),
-                        new Scope(OIDCScopeValue.OPENID),
-                        new ClientID(CLIENT_ID),
-                        URI.create("https://redirectUri"))
-                .state(new State())
-                .nonce(new Nonce())
-                .build();
     }
 
     private void assertAuditEventSubmittedWithMetadata(
