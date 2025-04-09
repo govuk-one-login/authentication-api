@@ -776,6 +776,7 @@ public class AuthorisationHandler
                 new OrchSessionItem(previousSession)
                         .withSessionId(newSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry());
+        updatedSession.resetProcessingIdentityAttempts();
         orchSessionService.addSession(updatedSession);
         orchSessionService.deleteSession(previousSession.getSessionId());
         LOG.info(
