@@ -205,9 +205,7 @@ public class StartHandler
             var clientStartInfo = startService.buildClientStartInfo(userContext);
 
             var cookieConsent = startRequest.cookieConsent();
-            var gaTrackingId =
-                    startService.getGATrackingId(
-                            userContext.getClientSession().getAuthRequestParams());
+            var gaTrackingId = startRequest.ga();
             var reauthenticateHeader =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
