@@ -266,6 +266,11 @@ public class AuthenticationCallbackHandler
         LOG.info("Request received to AuthenticationCallbackHandler");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
 
+        if (true) {
+            return RedirectService.redirectToFrontendErrorPage(
+                    authFrontend.errorURI(), new Error("test error"));
+        }
+
         try {
             CookieHelper.SessionCookieIds sessionCookiesIds =
                     CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
