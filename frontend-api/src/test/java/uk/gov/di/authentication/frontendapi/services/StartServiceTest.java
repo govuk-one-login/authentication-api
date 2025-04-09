@@ -414,7 +414,7 @@ class StartServiceTest {
     @ParameterizedTest
     @MethodSource("userStartUpliftInfo")
     void shouldCreateUserStartInfoWithCorrectUpliftRequiredValue(
-            String vtr,
+            String vtrString,
             boolean expectedIdentityRequiredValue,
             CredentialTrustLevel credentialTrustLevel,
             boolean expectedUpliftRequiredValue,
@@ -423,7 +423,7 @@ class StartServiceTest {
             MFAMethodType expectedMfaMethodType) {
         var userContext =
                 buildUserContext(
-                        vtr,
+                        vtrString,
                         true,
                         ClientType.WEB,
                         null,
@@ -432,11 +432,12 @@ class StartServiceTest {
                         Optional.of(userCredentials),
                         false);
         userContext.getSession().setEmailAddress(EMAIL);
-        var levelOfConfidence =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(vtr))
-                        .getLevelOfConfidence();
+        var requestedVtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(vtrString));
+        var requestedCredentialTrustLevel = requestedVtr.getCredentialTrustLevel();
+        var levelOfConfidence = requestedVtr.getLevelOfConfidence();
         var upliftRequired =
-                startService.isUpliftRequired(userContext.getClientSession(), credentialTrustLevel);
+                startService.isUpliftRequired(requestedCredentialTrustLevel, credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
