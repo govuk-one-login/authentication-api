@@ -531,13 +531,13 @@ public class IPVCallbackHandler
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
-            LOG.warn(e.getMessage());
+            LOG.error(e.getMessage());
             return RedirectService.redirectToFrontendErrorPage(frontend.errorIpvCallbackURI());
         } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
-            LOG.warn(e.getMessage());
+            LOG.error(e.getMessage());
             return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
         } catch (ParseException e) {
-            LOG.info("Cannot retrieve auth request params from client session id");
+            LOG.error("Cannot retrieve auth request params from client session id");
             return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
         } catch (JsonException e) {
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
