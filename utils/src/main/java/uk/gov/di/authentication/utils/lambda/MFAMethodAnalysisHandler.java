@@ -56,7 +56,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
             fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks);
             fetchUserCredentialsAndProfileStatistics(forkJoinPool, parallelTasks);
             Pool.gracefulPoolShutdown(forkJoinPool);
-            return combineTaskResults(parallelTasks).toString();
+            String analysis = combineTaskResults(parallelTasks).toString();
+            LOG.info("Analysis result: {}", analysis);
+            return analysis;
         } finally {
             Pool.forcePoolShutdown(forkJoinPool);
         }
