@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -36,7 +36,10 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -194,10 +197,15 @@ public class StartHandler
 
             var userContext = startService.buildUserContext(session, clientSession, authSession);
 
+            var scopes = List.of(startRequest.scope().split(" "));
+            var redirectURI = new URI(startRequest.redirectUri());
+            var state = new State(startRequest.state());
             attachLogFieldToLogs(
                     CLIENT_ID,
                     userContext.getClient().map(ClientRegistry::getClientID).orElse(UNKNOWN));
-            var clientStartInfo = startService.buildClientStartInfo(userContext);
+            var clientStartInfo =
+                    startService.buildClientStartInfo(
+                            userContext.getClient().orElseThrow(), scopes, redirectURI, state);
 
             var cookieConsent =
                     startService.getCookieConsentValue(
@@ -288,8 +296,10 @@ public class StartHandler
             var errorMessage = "Unable to serialize start response";
             LOG.error(errorMessage, e);
             return generateApiGatewayProxyResponse(400, errorMessage);
-        } catch (ParseException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
+        } catch (URISyntaxException e) {
+            var errorMessage = "Unable to parse redirect URI";
+            LOG.error(errorMessage, e);
+            return generateApiGatewayProxyResponse(400, errorMessage);
         }
     }
 
