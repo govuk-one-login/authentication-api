@@ -41,7 +41,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -64,7 +63,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -239,10 +237,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
@@ -287,10 +281,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
         usingValidAuthSession(LOW_LEVEL);
@@ -320,7 +310,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -343,7 +332,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -381,8 +369,6 @@ class LoginHandlerTest {
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidSession();
         usingValidAuthSession();
-
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -456,8 +442,6 @@ class LoginHandlerTest {
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidSession();
         usingValidAuthSession();
-
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -571,7 +555,6 @@ class LoginHandlerTest {
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         // Act
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -595,7 +578,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -630,7 +612,6 @@ class LoginHandlerTest {
                 .thenReturn(true);
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -657,7 +638,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -698,7 +678,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -739,7 +718,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -780,7 +758,6 @@ class LoginHandlerTest {
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         handler.handleRequest(event, context);
@@ -805,7 +782,6 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -837,7 +813,6 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
 
@@ -867,7 +842,6 @@ class LoginHandlerTest {
                 .thenReturn(false);
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -885,7 +859,6 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -926,7 +899,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -951,7 +923,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingDefaultVectorOfTrust();
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(
                         Result.failure(
@@ -974,7 +945,6 @@ class LoginHandlerTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingDefaultVectorOfTrust();
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(
                         Result.success(
@@ -1005,7 +975,6 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingDefaultVectorOfTrust();
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -1028,10 +997,6 @@ class LoginHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
         usingValidAuthSession();
@@ -1051,10 +1016,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
@@ -1157,13 +1118,6 @@ class LoginHandlerTest {
                 .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
-    }
-
-    private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 
     private void setUpSmokeTestClient() {

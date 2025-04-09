@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -51,7 +50,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -206,7 +204,6 @@ class LoginHandlerReauthenticationRedisTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-        usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -246,7 +243,6 @@ class LoginHandlerReauthenticationRedisTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
 
@@ -333,13 +329,6 @@ class LoginHandlerReauthenticationRedisTest {
                 .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
-    }
-
-    private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
