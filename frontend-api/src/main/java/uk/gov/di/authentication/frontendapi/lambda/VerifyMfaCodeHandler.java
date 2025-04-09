@@ -146,7 +146,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
+        return super.handleRequestWithoutClientSession(input, context);
     }
 
     @Override
