@@ -50,117 +50,156 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
 
     @Override
     public String handleRequest(String input, Context context) {
+        List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
+        ForkJoinPool forkJoinPool = new ForkJoinPool(100);
+        try {
+            fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks);
+            fetchUserCredentialsAndProfileStatistics(forkJoinPool, parallelTasks);
+            Pool.gracefulPoolShutdown(forkJoinPool);
+            return combineTaskResults(parallelTasks).toString();
+        } finally {
+            Pool.forcePoolShutdown(forkJoinPool);
+        }
+    }
+
+    private static MFAMethodAnalysis combineTaskResults(
+            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
         MFAMethodAnalysis finalMFAMethodAnalysis = new MFAMethodAnalysis();
+        for (ForkJoinTask<MFAMethodAnalysis> task : parallelTasks) {
+            MFAMethodAnalysis taskResult = task.join();
+            finalMFAMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
+                    taskResult.getCountOfAuthAppUsersAssessed());
+            finalMFAMethodAnalysis
+                    .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
+                            taskResult
+                                    .getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods());
+            finalMFAMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
+                    taskResult.getAttributeCombinationsForAuthAppUsersCount());
+            finalMFAMethodAnalysis.incrementCountOfPhoneNumberUsersAssessed(
+                    taskResult.getCountOfPhoneNumberUsersAssessed());
+            finalMFAMethodAnalysis.incrementCountOfUsersWithVerifiedPhoneNumber(
+                    taskResult.getCountOfUsersWithVerifiedPhoneNumber());
+        }
+        return finalMFAMethodAnalysis;
+    }
+
+    private void fetchPhoneNumberVerifiedStatistics(
+            ForkJoinPool forkJoinPool, List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
+        parallelTasks.add(
+                forkJoinPool.submit(
+                        () -> {
+                            Map<String, AttributeValue> lastKey = null;
+                            int totalCount = 0;
+                            int totalScanned = 0;
+                            int logThreshold = 100_000;
+                            int lastLoggedAt = 0;
+
+                            do {
+                                ScanRequest request =
+                                        ScanRequest.builder()
+                                                .tableName(userProfileTableName)
+                                                .indexName("PhoneNumberIndex")
+                                                .filterExpression("PhoneNumberVerified = :v")
+                                                .expressionAttributeValues(
+                                                        Map.of(
+                                                                ":v",
+                                                                AttributeValue.builder()
+                                                                        .n("1")
+                                                                        .build()))
+                                                .exclusiveStartKey(lastKey)
+                                                .build();
+
+                                ScanResponse response = client.scan(request);
+
+                                totalCount += response.count();
+                                totalScanned += response.scannedCount();
+                                lastKey = response.lastEvaluatedKey();
+
+                                if (totalScanned - lastLoggedAt >= logThreshold) {
+                                    LOG.info("Fetched {} phone number index records", totalScanned);
+                                    lastLoggedAt = totalScanned - (totalScanned % logThreshold);
+                                }
+                            } while (lastKey != null && !lastKey.isEmpty());
+
+                            MFAMethodAnalysis analysis = new MFAMethodAnalysis();
+                            analysis.incrementCountOfPhoneNumberUsersAssessed(totalScanned);
+                            analysis.incrementCountOfUsersWithVerifiedPhoneNumber(totalCount);
+
+                            return analysis;
+                        }));
+    }
+
+    private void fetchUserCredentialsAndProfileStatistics(
+            ForkJoinPool forkJoinPool, List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
         long totalBatches = 0;
         long totalUserCredentialsFetched = 0;
-        List<ForkJoinTask<MFAMethodAnalysis>> batchTasks = new ArrayList<>();
-        ForkJoinPool forkJoinPool = new ForkJoinPool(100);
+        Map<String, AttributeValue> lastKey = null;
+        do {
+            ScanRequest scanRequest =
+                    ScanRequest.builder()
+                            .tableName(userCredentialsTableName)
+                            .filterExpression("attribute_exists(MfaMethods)")
+                            .projectionExpression("Email,MfaMethods")
+                            .exclusiveStartKey(lastKey)
+                            .build();
 
-        try {
-            Map<String, AttributeValue> lastKey = null;
-            do {
-                ScanRequest scanRequest =
-                        ScanRequest.builder()
-                                .tableName(userCredentialsTableName)
-                                .filterExpression("attribute_exists(MfaMethods)")
-                                .projectionExpression("Email,MfaMethods")
-                                .exclusiveStartKey(lastKey)
-                                .build();
+            ScanResponse scanResponse = client.scan(scanRequest);
 
-                ScanResponse scanResponse = client.scan(scanRequest);
+            List<UserCredentialsProfileJoin> currentBatch = new ArrayList<>();
+            for (Map<String, AttributeValue> userCredentialsItem : scanResponse.items()) {
+                totalUserCredentialsFetched++;
+                if (totalUserCredentialsFetched % 100000 == 0) {
+                    LOG.info("Fetched {} user credentials records", totalUserCredentialsFetched);
+                }
 
-                List<UserCredentialsProfileJoin> currentBatch = new ArrayList<>();
-                for (Map<String, AttributeValue> userCredentialsItem : scanResponse.items()) {
-                    totalUserCredentialsFetched++;
-                    if (totalUserCredentialsFetched % 100000 == 0) {
-                        LOG.info(
-                                "Fetched {} user credentials records", totalUserCredentialsFetched);
-                    }
+                String email = userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).s();
 
-                    String email = userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).s();
-
-                    Map<String, AttributeValue> firstMfaMethod = null;
-                    if (userCredentialsItem.containsKey("MfaMethods")) {
-                        List<AttributeValue> mfaList = userCredentialsItem.get("MfaMethods").l();
-                        if (!mfaList.isEmpty()) {
-                            firstMfaMethod = mfaList.get(0).m();
-                        }
-                    }
-
-                    Optional<Boolean> enabled =
-                            Optional.ofNullable(firstMfaMethod)
-                                    .map(map -> map.get("Enabled"))
-                                    .map(AttributeValue::n)
-                                    .map(n -> n.equals("1"));
-
-                    Optional<Boolean> methodVerified =
-                            Optional.ofNullable(firstMfaMethod)
-                                    .map(map -> map.get("MethodVerified"))
-                                    .map(AttributeValue::n)
-                                    .map(n -> n.equals("1"));
-
-                    currentBatch.add(
-                            new UserCredentialsProfileJoin(email, enabled, methodVerified));
-
-                    if (currentBatch.size() >= 100) {
-                        totalBatches++;
-                        queueBatch(forkJoinPool, currentBatch, totalBatches, batchTasks);
-                        currentBatch = new ArrayList<>();
+                Map<String, AttributeValue> firstMfaMethod = null;
+                if (userCredentialsItem.containsKey("MfaMethods")) {
+                    List<AttributeValue> mfaList = userCredentialsItem.get("MfaMethods").l();
+                    if (!mfaList.isEmpty()) {
+                        firstMfaMethod = mfaList.get(0).m();
                     }
                 }
 
-                if (!currentBatch.isEmpty()) {
+                Optional<Boolean> enabled =
+                        Optional.ofNullable(firstMfaMethod)
+                                .map(map -> map.get("Enabled"))
+                                .map(AttributeValue::n)
+                                .map(n -> n.equals("1"));
+
+                Optional<Boolean> methodVerified =
+                        Optional.ofNullable(firstMfaMethod)
+                                .map(map -> map.get("MethodVerified"))
+                                .map(AttributeValue::n)
+                                .map(n -> n.equals("1"));
+
+                currentBatch.add(new UserCredentialsProfileJoin(email, enabled, methodVerified));
+
+                if (currentBatch.size() >= 100) {
                     totalBatches++;
-                    queueBatch(forkJoinPool, currentBatch, totalBatches, batchTasks);
+                    long finalTotalBatches = totalBatches;
+                    List<UserCredentialsProfileJoin> finalCurrentBatch = currentBatch;
+                    parallelTasks.add(
+                            forkJoinPool.submit(
+                                    () ->
+                                            batchGetUserProfiles(
+                                                    finalTotalBatches, finalCurrentBatch)));
+                    currentBatch = new ArrayList<>();
                 }
-
-                lastKey = scanResponse.lastEvaluatedKey();
-            } while (lastKey != null && !lastKey.isEmpty());
-
-            for (ForkJoinTask<MFAMethodAnalysis> task : batchTasks) {
-                MFAMethodAnalysis taskResult = task.join();
-                finalMFAMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
-                        taskResult.getCountOfAuthAppUsersAssessed());
-                finalMFAMethodAnalysis
-                        .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
-                                taskResult
-                                        .getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods());
-                finalMFAMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
-                        taskResult.getAttributeCombinationsForAuthAppUsersCount());
             }
 
-            gracefulPoolShutdown(forkJoinPool);
-        } finally {
-            forcePoolShutdown(forkJoinPool);
-        }
-
-        return finalMFAMethodAnalysis.toString();
-    }
-
-    private void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
-        forkJoinPool.shutdown();
-        try {
-            if (!forkJoinPool.awaitTermination(15, TimeUnit.SECONDS)) {
-                LOG.warn("ForkJoinPool did not terminate normally");
+            if (!currentBatch.isEmpty()) {
+                totalBatches++;
+                long finalTotalBatches = totalBatches;
+                List<UserCredentialsProfileJoin> finalCurrentBatch = currentBatch;
+                parallelTasks.add(
+                        forkJoinPool.submit(
+                                () -> batchGetUserProfiles(finalTotalBatches, finalCurrentBatch)));
             }
-        } catch (InterruptedException e) {
-            LOG.error("ForkJoinPool termination interrupted", e);
-            Thread.currentThread().interrupt();
-        }
-    }
 
-    private void forcePoolShutdown(ForkJoinPool forkJoinPool) {
-        if (!forkJoinPool.isShutdown()) {
-            forkJoinPool.shutdownNow();
-        }
-    }
-
-    private void queueBatch(
-            ForkJoinPool forkJoinPool,
-            List<UserCredentialsProfileJoin> batch,
-            long batchNumber,
-            List<ForkJoinTask<MFAMethodAnalysis>> batchTasks) {
-        batchTasks.add(forkJoinPool.submit(() -> batchGetUserProfiles(batchNumber, batch)));
+            lastKey = scanResponse.lastEvaluatedKey();
+        } while (lastKey != null && !lastKey.isEmpty());
     }
 
     private MFAMethodAnalysis batchGetUserProfiles(
@@ -234,6 +273,26 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
         return mfaMethodAnalysis;
     }
 
+    private static class Pool {
+        private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
+            forkJoinPool.shutdown();
+            try {
+                if (!forkJoinPool.awaitTermination(15, TimeUnit.SECONDS)) {
+                    LOG.warn("ForkJoinPool did not terminate normally");
+                }
+            } catch (InterruptedException e) {
+                LOG.error("ForkJoinPool termination interrupted", e);
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        private static void forcePoolShutdown(ForkJoinPool forkJoinPool) {
+            if (!forkJoinPool.isShutdown()) {
+                forkJoinPool.shutdownNow();
+            }
+        }
+    }
+
     private static class UserCredentialsProfileJoin {
         public static final String EMPTY = "empty";
         private final String email;
@@ -282,7 +341,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
 
     private static class MFAMethodAnalysis {
         private long countOfAuthAppUsersAssessed = 0;
+        private long countOfPhoneNumberUsersAssessed = 0;
         private long countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods = 0;
+        private long countOfUsersWithVerifiedPhoneNumber = 0;
         private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 attributeCombinationsForAuthAppUsersCount = new HashMap<>();
 
@@ -301,6 +362,22 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
         public void incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
                 long i) {
             this.countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods += i;
+        }
+
+        public long getCountOfPhoneNumberUsersAssessed() {
+            return countOfPhoneNumberUsersAssessed;
+        }
+
+        public void incrementCountOfPhoneNumberUsersAssessed(long i) {
+            this.countOfPhoneNumberUsersAssessed += i;
+        }
+
+        public long getCountOfUsersWithVerifiedPhoneNumber() {
+            return countOfUsersWithVerifiedPhoneNumber;
+        }
+
+        public void incrementCountOfUsersWithVerifiedPhoneNumber(long i) {
+            this.countOfUsersWithVerifiedPhoneNumber += i;
         }
 
         public Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
@@ -323,8 +400,12 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
             return "MFAMethodAnalysis{"
                     + "countOfAuthAppUsersAssessed="
                     + countOfAuthAppUsersAssessed
+                    + ", countOfPhoneNumberUsersAssessed="
+                    + countOfPhoneNumberUsersAssessed
                     + ", countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods="
                     + countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods
+                    + ", countOfUsersWithVerifiedPhoneNumber="
+                    + countOfUsersWithVerifiedPhoneNumber
                     + ", attributeCombinationsForAuthAppUsersCount="
                     + attributeCombinationsForAuthAppUsersCount
                     + '}';

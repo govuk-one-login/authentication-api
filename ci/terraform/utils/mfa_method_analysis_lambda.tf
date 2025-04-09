@@ -5,17 +5,16 @@ data "aws_iam_policy_document" "mfa_method_analysis_dynamo_access" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:DescribeTable",
       "dynamodb:Scan",
       "dynamodb:BatchGetItem",
     ]
 
     resources = [
       data.aws_dynamodb_table.user_profile.arn,
+      "${data.aws_dynamodb_table.user_profile.arn}/index/PhoneNumberIndex",
       data.aws_dynamodb_table.user_credentials.arn,
     ]
   }
-
   statement {
     sid    = "AllowAccessToKms"
     effect = "Allow"
@@ -25,14 +24,6 @@ data "aws_iam_policy_document" "mfa_method_analysis_dynamo_access" {
     resources = [local.user_profile_kms_key_arn, local.user_credentials_kms_key_arn]
   }
 }
-
-# data "aws_dynamodb_table" "user_profile" {
-#   name = "${var.environment}-user-profile"
-# }
-#
-# data "aws_dynamodb_table" "user_credentials" {
-#   name = "${var.environment}-user-credentials"
-# }
 
 resource "aws_iam_policy" "mfa_method_analysis_dynamo_access" {
   count       = var.mfa_method_analysis_enabled ? 1 : 0
