@@ -566,12 +566,6 @@ public class AuthenticationCallbackHandler
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
-                if (isNull(session.getCurrentCredentialStrength())
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        session.getCurrentCredentialStrength())
-                                > 0) {
-                    session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
-                }
 
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
