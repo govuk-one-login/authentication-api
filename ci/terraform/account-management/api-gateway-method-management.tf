@@ -70,15 +70,10 @@ module "account-management-method_management_gateway" {
 
   vpc_endpoint_ids = local.api_vpc_endpoint_ids
 
-  waf_arns = var.fms_enabled ? [] : [aws_wafv2_web_acl.wafregional_web_acl_am_api[local.method-management_web_acl_name].arn]
-
-  extra_tags = (
-    var.fms_enabled ?
-    {
-      "FMSRegionalPolicy" = "false"
-      "CustomPolicy"      = var.am_api_fms_tag_value
-    } : {}
-  )
+  extra_tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = var.am_api_fms_tag_value
+  }
 
 }
 

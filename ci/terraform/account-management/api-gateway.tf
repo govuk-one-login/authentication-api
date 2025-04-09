@@ -117,25 +117,6 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log
   }
 }
 
-resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
-
-  name              = "aws-waf-logs-account-management-${var.environment}"
-  retention_in_days = var.cloudwatch_log_retention
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "account_management_waf_log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "${var.environment}-account-management-api-waf-logs-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs.name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
-
-  lifecycle {
-    create_before_destroy = false
-  }
-}
-
 resource "aws_api_gateway_stage" "stage" {
   deployment_id = aws_api_gateway_deployment.deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_account_management_api.id
@@ -154,13 +135,10 @@ resource "aws_api_gateway_stage" "stage" {
     aws_api_gateway_deployment.deployment,
   ]
 
-  tags = (
-    var.fms_enabled ?
-    {
-      "FMSRegionalPolicy" = "false"
-      "CustomPolicy"      = var.am_api_fms_tag_value
-    } : {}
-  )
+  tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = var.am_api_fms_tag_value
+  }
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
@@ -190,125 +168,4 @@ resource "aws_api_gateway_base_path_mapping" "api" {
 module "dashboard" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_account_management_api.name
-}
-
-locals {
-  legacy_web_acl_name            = "am-waf-web-acl"
-  method-management_web_acl_name = "am-waf-web-acl-method-management"
-  web_acl_names                  = [local.legacy_web_acl_name, local.method-management_web_acl_name]
-}
-
-
-resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
-  for_each = toset(local.web_acl_names)
-  name     = "${var.environment}-${each.key}"
-  scope    = "REGIONAL"
-
-  default_action {
-    allow {}
-  }
-
-  rule {
-    action {
-      block {}
-    }
-    priority = 1
-    name     = "${var.environment}-am-waf-rate-based-rule"
-    statement {
-      rate_based_statement {
-        limit              = 3600
-        aggregate_key_type = "IP"
-      }
-    }
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}AMWafMaxRequestRate"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    override_action {
-      none {}
-    }
-    priority = 2
-    name     = "${var.environment}-am-common-rule-set"
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesCommonRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}AMWafCommonRuleSet"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    override_action {
-      none {}
-    }
-    priority = 3
-    name     = "${var.environment}-am-bad-rule-set"
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}AmWafBaduleSet"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${replace(var.environment, "-", "")}AMWafRules"
-    sampled_requests_enabled   = true
-  }
-}
-
-
-resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
-  count        = var.fms_enabled ? 0 : 1
-  resource_arn = aws_api_gateway_stage.stage.arn
-  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_am_api[local.legacy_web_acl_name].arn
-
-  depends_on = [
-    aws_api_gateway_stage.stage,
-    aws_wafv2_web_acl.wafregional_web_acl_am_api
-  ]
-}
-
-resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_am_api" {
-  log_destination_configs = [aws_cloudwatch_log_group.account_management_waf_logs.arn]
-  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_am_api[local.legacy_web_acl_name].arn # The first of the two that are created
-
-  logging_filter {
-    default_behavior = "KEEP"
-
-    filter {
-      behavior = "KEEP"
-
-      condition {
-        action_condition {
-          action = "BLOCK"
-        }
-      }
-
-      requirement = "MEETS_ANY"
-    }
-  }
-
-  depends_on = [
-    aws_cloudwatch_log_group.account_management_waf_logs
-  ]
 }

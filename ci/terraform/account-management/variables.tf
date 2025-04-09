@@ -208,13 +208,6 @@ variable "mfa_method_management_api_enabled" {
   type        = bool
   default     = false
 }
-
-variable "fms_enabled" {
-  default     = false
-  description = "To enable FMS WAF on Auth API gateway , this flag will remove existing waf Assocaition on resource"
-  type        = bool
-}
-
 variable "home_vpc_endpoint_id" {
   description = "The execute API vpc endpoint ID of Home AWS account to give execute access on method mgmt API"
   type        = string
