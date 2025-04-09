@@ -300,18 +300,8 @@ public class DocAppCallbackHandler
                 cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
 
                 var authCode =
-                        authorisationCodeService.generateAndSaveAuthorisationCode(
+                        orchAuthCodeService.generateAndSaveAuthorisationCode(
                                 clientId, clientSessionId, null, null);
-
-                // TODO: ATO-1218: Remove the try-catch block below
-                try {
-                    orchAuthCodeService.generateAndSaveAuthorisationCode(
-                            authCode, clientId, clientSessionId, null, null);
-                } catch (OrchAuthCodeException e) {
-                    LOG.warn(
-                            "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
-                            e.getMessage());
-                }
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
@@ -361,7 +351,7 @@ public class DocAppCallbackHandler
                     return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
                 }
             }
-        } catch (DocAppCallbackException | NoSessionException e) {
+        } catch (DocAppCallbackException | NoSessionException | OrchAuthCodeException e) {
             LOG.warn(e.getMessage());
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
