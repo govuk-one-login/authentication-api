@@ -6,7 +6,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -28,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -60,6 +60,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveLevelOfConfidence;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class StartServiceTest {
@@ -71,7 +73,10 @@ class StartServiceTest {
     private static final String SESSION_ID = "a-session-id";
     private static final Session SESSION = new Session().setEmailAddress(EMAIL);
     private static final AuthSessionItem AUTH_SESSION =
-            new AuthSessionItem().withEmailAddress(EMAIL).withSessionId(SESSION_ID);
+            new AuthSessionItem()
+                    .withEmailAddress(EMAIL)
+                    .withSessionId(SESSION_ID)
+                    .withClientId(CLIENT_ID.getValue());
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String AUDIENCE = "oidc-audience";
@@ -189,6 +194,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        LevelOfConfidence.NONE,
                         cookieConsent,
                         gaTrackingId,
                         true,
@@ -207,18 +213,19 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartIdentityInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, true, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, false));
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
+                Arguments.of(jsonArrayOf("Cl.Cm"), "P0", false, true, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, true, false),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, false));
     }
 
     @ParameterizedTest
     @MethodSource("userStartIdentityInfo")
     void shouldCreateUserStartInfoWithCorrectIdentityRequiredValue(
             String vtr,
+            String levelOfConfidence,
             boolean expectedIdentityRequiredValue,
             boolean rpSupportsIdentity,
             boolean identityEnabled) {
@@ -235,6 +242,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        retrieveLevelOfConfidence(levelOfConfidence),
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         identityEnabled,
@@ -256,6 +264,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
+                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -390,6 +399,7 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
+                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -404,7 +414,7 @@ class StartServiceTest {
     @ParameterizedTest
     @MethodSource("userStartUpliftInfo")
     void shouldCreateUserStartInfoWithCorrectUpliftRequiredValue(
-            String vtr,
+            String vtrString,
             boolean expectedIdentityRequiredValue,
             CredentialTrustLevel credentialTrustLevel,
             boolean expectedUpliftRequiredValue,
@@ -413,7 +423,7 @@ class StartServiceTest {
             MFAMethodType expectedMfaMethodType) {
         var userContext =
                 buildUserContext(
-                        vtr,
+                        vtrString,
                         true,
                         ClientType.WEB,
                         null,
@@ -422,12 +432,16 @@ class StartServiceTest {
                         Optional.of(userCredentials),
                         false);
         userContext.getSession().setEmailAddress(EMAIL);
-
+        var requestedVtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(vtrString));
+        var requestedCredentialTrustLevel = requestedVtr.getCredentialTrustLevel();
+        var levelOfConfidence = requestedVtr.getLevelOfConfidence();
         var upliftRequired =
-                startService.isUpliftRequired(userContext.getClientSession(), credentialTrustLevel);
+                startService.isUpliftRequired(requestedCredentialTrustLevel, credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
+                        levelOfConfidence,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -445,8 +459,7 @@ class StartServiceTest {
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT signedJWT,
-            boolean oneLoginService)
-            throws ParseException {
+            boolean oneLoginService) {
         var userContext =
                 buildUserContext(
                         jsonArrayOf("Cl.Cm"),
@@ -457,8 +470,14 @@ class StartServiceTest {
                         Optional.empty(),
                         Optional.empty(),
                         oneLoginService);
+        var scopes = Objects.nonNull(signedJWT) ? DOC_APP_SCOPES : SCOPES;
 
-        var clientStartInfo = startService.buildClientStartInfo(userContext);
+        var clientStartInfo =
+                startService.buildClientStartInfo(
+                        userContext.getClient().orElseThrow(),
+                        scopes.toStringList(),
+                        REDIRECT_URI,
+                        STATE);
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));

@@ -80,7 +80,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
                         redisConnectionService);
         this.sessionId = redis.createSession();
-        authSessionExtension.addSession(this.sessionId);
+        authSessionExtension.addSession(
+                sessionId, authSessionItem -> authSessionItem.withClientId(CLIENT_ID));
         txmaAuditQueue.clear();
     }
 

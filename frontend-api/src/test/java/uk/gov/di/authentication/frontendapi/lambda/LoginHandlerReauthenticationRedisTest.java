@@ -3,14 +3,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -24,14 +18,12 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -49,13 +41,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -77,7 +66,6 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.S
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -168,7 +156,6 @@ class LoginHandlerReauthenticationRedisTest {
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         handler =
                 new LoginHandler(
@@ -204,7 +191,6 @@ class LoginHandlerReauthenticationRedisTest {
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-        usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -244,7 +230,6 @@ class LoginHandlerReauthenticationRedisTest {
 
         usingValidSession();
         usingValidAuthSession();
-        usingDefaultVectorOfTrust();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
 
@@ -259,27 +244,6 @@ class LoginHandlerReauthenticationRedisTest {
         }
     }
 
-    private AuthenticationRequest generateAuthRequest() {
-        return generateAuthRequest(null);
-    }
-
-    private AuthenticationRequest generateAuthRequest(CredentialTrustLevel credentialTrustLevel) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                CLIENT_ID,
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce());
-        if (nonNull(credentialTrustLevel)) {
-            builder.customParameter("vtr", jsonArrayOf(credentialTrustLevel.getValue()));
-        }
-        return builder.build();
-    }
-
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
@@ -292,7 +256,8 @@ class LoginHandlerReauthenticationRedisTest {
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withClientId(CLIENT_ID.getValue())));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
@@ -330,13 +295,6 @@ class LoginHandlerReauthenticationRedisTest {
                 .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
-    }
-
-    private void usingDefaultVectorOfTrust() {
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(

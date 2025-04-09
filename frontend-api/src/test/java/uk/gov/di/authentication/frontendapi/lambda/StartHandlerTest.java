@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -164,7 +163,7 @@ class StartHandlerTest {
     @ParameterizedTest
     @MethodSource("cookieConsentGaTrackingIdValues")
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
-            throws ParseException, Json.JsonException {
+            throws Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
@@ -192,7 +191,7 @@ class StartHandlerTest {
 
     @Test
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
-            throws ParseException, Json.JsonException {
+            throws Json.JsonException {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -233,7 +232,7 @@ class StartHandlerTest {
 
     @Test
     void shouldNotCallAuthenticationAttemptsServiceWhenFeatureFlagIsOff()
-            throws ParseException, Json.JsonException {
+            throws Json.JsonException {
         var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
@@ -255,8 +254,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldUseCountsAgainstTheRpPairwiseIdWhenThereIsNoSubjectId()
-            throws ParseException, Json.JsonException {
+    void shouldUseCountsAgainstTheRpPairwiseIdWhenThereIsNoSubjectId() throws Json.JsonException {
         var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userProfile.getSubjectID()).thenReturn(null);
@@ -275,8 +273,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws ParseException, Json.JsonException {
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -309,7 +306,7 @@ class StartHandlerTest {
 
     @Test
     void shouldCreateNewSessionAndConsiderUserNotAuthenticatedWhenUserProfileNotPresent()
-            throws ParseException, Json.JsonException {
+            throws Json.JsonException {
         withNoUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -329,6 +326,7 @@ class StartHandlerTest {
                         any(),
                         any(),
                         any(),
+                        any(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
@@ -338,7 +336,7 @@ class StartHandlerTest {
 
     @Test
     void retainsExistingSessionAndConsidersUserAuthenticatedWhenUserProfilePresent()
-            throws ParseException, Json.JsonException {
+            throws Json.JsonException {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -358,6 +356,7 @@ class StartHandlerTest {
                         any(),
                         any(),
                         any(),
+                        any(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
@@ -367,7 +366,7 @@ class StartHandlerTest {
 
     @Test
     void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
-            throws Json.JsonException, ParseException {
+            throws Json.JsonException {
         withUserProfilePresent();
         var isAuthenticated = true;
         usingValidSession();
@@ -434,7 +433,7 @@ class StartHandlerTest {
             int expectedPasswordAttemptCount,
             int expectedOtpAttemptCount,
             String expectedFailureReason)
-            throws ParseException, Json.JsonException {
+            throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
@@ -511,30 +510,6 @@ class StartHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    @Test
-    void shouldReturn400WhenBuildClientStartInfoThrowsException()
-            throws ParseException, Json.JsonException {
-        when(startService.buildUserContext(
-                        eq(session), eq(clientSession), any(AuthSessionItem.class)))
-                .thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext))
-                .thenThrow(new ParseException("Unable to parse authentication request"));
-        usingValidClientSession();
-        usingValidSession();
-
-        var event =
-                apiRequestEventWithHeadersAndBody(
-                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(false));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-
-        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1038);
-        assertThat(result, hasBody(expectedResponse));
-
-        verifyNoInteractions(auditService);
-    }
-
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated)
             throws Json.JsonException {
         return makeRequestBody(null, null, null, authenticated);
@@ -595,15 +570,16 @@ class StartHandlerTest {
     }
 
     private void usingStartServiceThatReturns(
-            UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo)
-            throws ParseException {
+            UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
         when(startService.buildUserContext(eq(session), any(), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
+        when(startService.buildClientStartInfo(eq(clientRegistry), any(), any(), any()))
+                .thenReturn(clientStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
                         eq(userContext),
+                        any(),
                         any(),
                         any(),
                         anyBoolean(),

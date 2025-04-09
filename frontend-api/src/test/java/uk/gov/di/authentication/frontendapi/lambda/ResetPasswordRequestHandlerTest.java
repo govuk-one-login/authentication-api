@@ -6,10 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -139,7 +138,9 @@ class ResetPasswordRequestHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(CommonTestVariables.EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
+                    .withClientId(TEST_CLIENT_ID);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
@@ -572,18 +573,8 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private void usingValidClientSession() {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(TEST_CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {

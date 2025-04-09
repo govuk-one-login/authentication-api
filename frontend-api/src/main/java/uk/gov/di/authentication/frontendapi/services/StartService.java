@@ -1,9 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -13,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -73,7 +71,7 @@ public class StartService {
                         .withAuthSession(authSession);
         UserContext userContext;
         try {
-            var clientRegistry = getClient(clientSession);
+            var clientRegistry = getClient(authSession.getClientId());
             Optional.of(authSession)
                     .map(AuthSessionItem::getEmailAddress)
                     .flatMap(dynamoService::getUserProfileByEmailMaybe)
@@ -94,30 +92,8 @@ public class StartService {
         return userContext;
     }
 
-    public ClientStartInfo buildClientStartInfo(UserContext userContext) throws ParseException {
-        List<String> scopes;
-        URI redirectURI;
-        State state;
-        try {
-            var authenticationRequest =
-                    AuthenticationRequest.parse(
-                            userContext.getClientSession().getAuthRequestParams());
-            if (Objects.nonNull(authenticationRequest.getRequestObject())) {
-                var claimSet = authenticationRequest.getRequestObject().getJWTClaimsSet();
-                scopes = Scope.parse((String) claimSet.getClaim("scope")).toStringList();
-                redirectURI = URI.create((String) claimSet.getClaim("redirect_uri"));
-                state = State.parse((String) claimSet.getClaim("state"));
-            } else {
-                scopes = authenticationRequest.getScope().toStringList();
-                redirectURI = authenticationRequest.getRedirectionURI();
-                state = authenticationRequest.getState();
-            }
-        } catch (ParseException e) {
-            throw new ParseException("Unable to parse authentication request");
-        } catch (java.text.ParseException e) {
-            throw new RuntimeException("Unable to parse claims in request object");
-        }
-        var clientRegistry = userContext.getClient().orElseThrow();
+    public ClientStartInfo buildClientStartInfo(
+            ClientRegistry clientRegistry, List<String> scopes, URI redirectURI, State state) {
         var clientInfo =
                 new ClientStartInfo(
                         clientRegistry.getClientName(),
@@ -138,6 +114,7 @@ public class StartService {
 
     public UserStartInfo buildUserStartInfo(
             UserContext userContext,
+            LevelOfConfidence levelOfConfidence,
             String cookieConsent,
             String gaTrackingId,
             boolean identityEnabled,
@@ -150,7 +127,7 @@ public class StartService {
         var clientRegistry = userContext.getClient().orElseThrow();
         identityRequired =
                 IdentityHelper.identityRequired(
-                        userContext.getClientSession().getAuthRequestParams(),
+                        levelOfConfidence,
                         clientRegistry.isIdentityVerificationSupported(),
                         identityEnabled);
         if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
@@ -221,19 +198,17 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            ClientSession clientSession, CredentialTrustLevel currentCredentialStrength) {
+            CredentialTrustLevel requestedCredentialStrength,
+            CredentialTrustLevel currentCredentialStrength) {
         if (Objects.isNull(currentCredentialStrength)) {
             return false;
         }
-        return (currentCredentialStrength.compareTo(
-                        clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                < 0);
+        return currentCredentialStrength.compareTo(requestedCredentialStrength) < 0;
     }
 
-    public ClientRegistry getClient(ClientSession clientSession) throws ClientNotFoundException {
-        return clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
-                .findFirst()
-                .flatMap(clientService::getClient)
+    public ClientRegistry getClient(String clientId) throws ClientNotFoundException {
+        return clientService
+                .getClient(clientId)
                 .orElseThrow(
                         () ->
                                 new ClientNotFoundException(
