@@ -185,7 +185,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_ALLOWED_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_ALLOWED_RETRIES);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -227,8 +226,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(generateAuthRequest().toParameters());
 
             when(authenticationAttemptsService.getCount(
                             any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
@@ -334,8 +331,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             UserProfile userProfile = generateUserProfile(null);
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
-            when(clientSession.getAuthRequestParams())
-                    .thenReturn(generateAuthRequest().toParameters());
             clientSubjectHelperMockedStatic
                     .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
                     .thenReturn(subject);

@@ -310,8 +310,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(session));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest(CLIENT_ID).toParameters());
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
@@ -929,8 +927,6 @@ class VerifyCodeHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders())).thenReturn(session);
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest(clientId).toParameters());
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))

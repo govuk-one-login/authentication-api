@@ -1094,6 +1094,5 @@ class SendNotificationHandlerTest {
                         .build();
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 }

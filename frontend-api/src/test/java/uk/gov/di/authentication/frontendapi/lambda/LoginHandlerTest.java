@@ -187,7 +187,6 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         handler =
                 new LoginHandler(
                         configurationService,
@@ -210,8 +209,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("P0.Cl")));
@@ -262,8 +259,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("P0.Cl")));
@@ -415,7 +410,6 @@ class LoginHandlerTest {
         when(userMigrationService.processMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidAuthSession();
         usingDefaultVectorOfTrust();
@@ -439,7 +433,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
@@ -479,7 +472,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
                 .thenReturn(maxRetriesAllowed - 1);
@@ -523,7 +515,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL))
                 .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
@@ -759,8 +750,6 @@ class LoginHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("P0.Cl")));
@@ -784,8 +773,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("P0.Cl")));
