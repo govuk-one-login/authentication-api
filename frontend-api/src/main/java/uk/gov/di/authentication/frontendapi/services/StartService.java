@@ -170,13 +170,6 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            ClientSession clientSession, CredentialTrustLevel currentCredentialStrength) {
-        return isUpliftRequired(
-                clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel(),
-                currentCredentialStrength);
-    }
-
-    public boolean isUpliftRequired(
             CredentialTrustLevel requestedCredentialStrength,
             CredentialTrustLevel currentCredentialStrength) {
         if (Objects.isNull(currentCredentialStrength)) {
