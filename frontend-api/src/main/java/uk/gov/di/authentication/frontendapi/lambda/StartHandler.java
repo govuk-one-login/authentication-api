@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
@@ -43,7 +42,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
@@ -178,7 +176,6 @@ public class StartHandler
                 Optional.ofNullable(startRequest.requestedLevelOfConfidence())
                         .map(LevelOfConfidence::retrieveLevelOfConfidence)
                         .orElse(NONE);
-        logIfNewFieldsDoNotMatchClientSessionAuthParameters(startRequest, clientSession);
 
         boolean isUserAuthenticatedWithValidProfile;
         try {
@@ -381,57 +378,5 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
-    }
-
-    private static void logIfNewFieldsDoNotMatchClientSessionAuthParameters(
-            StartRequest startRequest, ClientSession clientSession) {
-        LOG.info("Checking if new fields match client session auth parameters");
-        if (!Objects.equals(
-                startRequest.cookieConsent(),
-                getAuthRequestParam(clientSession, "cookie_consent"))) {
-            LOG.warn(
-                    "\"cookie_consent\" field does not match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.ga(), getAuthRequestParam(clientSession, "_ga"))) {
-            LOG.warn("\"_ga\" field does not match custom parameter in auth request params");
-        }
-        var requestedVtr = clientSession.getEffectiveVectorOfTrust();
-        var requestedLevelOfConfidence =
-                Optional.ofNullable(requestedVtr.getLevelOfConfidence())
-                        .map(LevelOfConfidence::getValue)
-                        .orElse(null);
-        if (!Objects.equals(
-                startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence)) {
-            LOG.warn(
-                    "\"requested_level_of_confidence\" field does not match levelOfConfidence in effectiveVectorOfTrust");
-        }
-        if (!Objects.equals(
-                startRequest.requestedCredentialStrength(),
-                requestedVtr.getCredentialTrustLevel().getValue())) {
-            LOG.warn(
-                    "\"requested_credential_strength\" field does not match credentialTrustLevel in effectiveVectorOfTrust");
-        }
-        if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
-            LOG.warn("\"state\" field does not match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.clientId(), getAuthRequestParam(clientSession, "client_id"))) {
-            LOG.warn("\"client_id\" field does not match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.redirectUri(), getAuthRequestParam(clientSession, "redirect_uri"))) {
-            LOG.warn(
-                    "\"redirect_uri\" field does not match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.scope(), getAuthRequestParam(clientSession, "scope"))) {
-            LOG.warn("\"scope\" field does not match custom parameter in auth request params");
-        }
-    }
-
-    private static String getAuthRequestParam(ClientSession clientSession, String parameter) {
-        return Optional.ofNullable(clientSession.getAuthRequestParams().get(parameter)).stream()
-                .flatMap(List::stream)
-                .findFirst()
-                .orElse(null);
     }
 }
