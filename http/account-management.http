@@ -3,6 +3,8 @@
 # Populate the authToken value below use (using scripts/generate-auth-token.sh)
 
 @authToken = unset
+@publicSubjectId = unset
+@mfaIdentifier = unset
 
 ### Post to /authenticate
 POST {{baseUrl}}/authenticate
@@ -69,4 +71,54 @@ Authorization:Bearer {{authToken}}
 "email": "your.email@digital.cabinet-office.gov.uk",
 "phoneNumber": "{ new phone number }",
 "otp": "111111"
+}
+
+### Get to /mfa-methods/{publicSubjectId}
+# Gets a user's MFA methods
+# Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
+# Must also run ./scripts/api-proxy.sh account-management [environment]
+GET http://localhost:8123/mfa-methods/{{publicSubjectId}}
+Authorization:Bearer {{authToken}}
+
+### Post to /mfa-methods/{publicSubjectId}
+# Creates a new MFA method (must be back up to be successful)
+# Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
+# Must also run ./scripts/api-proxy.sh account-management [environment]
+POST http://localhost:8123/mfa-methods/{{publicSubjectId}}
+Authorization:Bearer {{authToken}}
+
+{
+"mfaMethod": {
+"priorityIdentifier": "BACKUP",
+"method": {
+"mfaMethodType": "{ AUTH_APP or SMS }",
+"{ credential or phoneNumber }": "{ credential or phoneNumber }"
+}
+}
+}
+
+### Delete to /mfa-methods/{publicSubjectId}/{mfaIdentifier}
+# Deletes a user's MFA method (must be backup)
+# Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
+# Must first get mfaIdentifier of the mfa method you want to change by using get to /mfa-methods/{publicSubjectId} populating mfaIdentifier field
+# Must also run ./scripts/api-proxy.sh account-management [environment]
+DELETE http://localhost:8123/mfa-methods/{{publicSubjectId}}/{{mfaIdentifier}}
+Authorization:Bearer {{authToken}}
+
+### Put to /mfa-methods/{publicSubjectId}/{mfaIdentifier}
+# Updates a user's MFA method (must be backup)
+# Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
+# Must first get mfaIdentifier of the mfa method you want to change by using get to /mfa-methods/{publicSubjectId} populating mfaIdentifier field
+# Must also run ./scripts/api-proxy.sh account-management [environment]
+PUT http://localhost:8123/mfa-methods/{{publicSubjectId}}/{{mfaIdentifier}}
+Authorization:Bearer {{authToken}}
+
+{
+"mfaMethod": {
+"priorityIdentifier": "BACKUP",
+"method": {
+"mfaMethodType": "{ AUTH_APP or SMS }",
+"{ credential or phoneNumber }": "{ credential or phoneNumber }"
+}
+}
 }
