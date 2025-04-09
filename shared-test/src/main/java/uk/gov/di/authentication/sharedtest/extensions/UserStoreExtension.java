@@ -3,6 +3,7 @@ package uk.gov.di.authentication.sharedtest.extensions;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.BillingMode;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -228,6 +229,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
             String credentialValue) {
         dynamoService.updateMFAMethod(
                 email, mfaMethodType, methodVerified, enabled, credentialValue);
+    }
+
+    public DynamoDbClient getRawDynamoClient() {
+        return dynamoDB;
     }
 
     @Override
