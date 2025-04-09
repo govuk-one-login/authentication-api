@@ -123,7 +123,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequestWithoutClientSession(input, context);
+        return super.handleRequest(input, context);
     }
 
     @Override

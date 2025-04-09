@@ -49,7 +49,6 @@ public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
-    private static final String CLIENT_ID = "client_id";
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
@@ -145,13 +144,6 @@ public abstract class BaseFrontendHandler<T>
                 () -> validateAndHandleRequest(input, context));
     }
 
-    public APIGatewayProxyResponseEvent handleRequestWithoutClientSession(
-            APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "frontend-api::" + getClass().getSimpleName(),
-                () -> validateAndHandleRequestWithoutClientSession(input, context));
-    }
-
     public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {}
 
     public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {}
@@ -164,16 +156,6 @@ public abstract class BaseFrontendHandler<T>
 
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return validateAndHandleRequest(input, context, true);
-    }
-
-    private APIGatewayProxyResponseEvent validateAndHandleRequestWithoutClientSession(
-            APIGatewayProxyRequestEvent input, Context context) {
-        return validateAndHandleRequest(input, context, false);
-    }
-
-    private APIGatewayProxyResponseEvent validateAndHandleRequest(
-            APIGatewayProxyRequestEvent input, Context context, boolean useClientSession) {
         ThreadContext.clearMap();
 
         String clientSessionId =
@@ -230,16 +212,7 @@ public abstract class BaseFrontendHandler<T>
 
         userContextBuilder.withClientSessionId(clientSessionId);
 
-        Optional<String> clientID;
-        if (useClientSession) {
-            clientID =
-                    clientSession
-                            .map(ClientSession::getAuthRequestParams)
-                            .map(t -> t.get(CLIENT_ID))
-                            .flatMap(v -> v.stream().findFirst());
-        } else {
-            clientID = Optional.ofNullable(authSession.get().getClientId());
-        }
+        var clientID = Optional.ofNullable(authSession.get().getClientId());
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 
