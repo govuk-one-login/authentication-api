@@ -183,9 +183,6 @@ class VerifyMfaCodeHandlerTest {
         when(clientRegistry.getClientName()).thenReturn(CLIENT_NAME);
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest().toParameters());
-
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getLockoutDuration()).thenReturn(900L);

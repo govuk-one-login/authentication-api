@@ -673,7 +673,6 @@ class ResetPasswordRequestHandlerTest {
                         .build();
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {

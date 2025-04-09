@@ -170,7 +170,6 @@ class LoginHandlerReauthenticationRedisTest {
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         handler =
                 new LoginHandler(
