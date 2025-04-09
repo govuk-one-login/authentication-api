@@ -131,7 +131,9 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -651,6 +653,32 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldResetProcessingIdentityAttemptsWhenUpdatingAnExistingSession() {
+            withExistingSession(session);
+            var previousOrchSession = new OrchSessionItem(NEW_SESSION_ID).withAuthenticated(true);
+            previousOrchSession.incrementProcessingIdentityAttempts();
+            withExistingOrchSession(previousOrchSession);
+
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verify(orchSessionService, atLeastOnce())
+                    .addSession(
+                            argThat(
+                                    orchSession ->
+                                            orchSession.getAuthenticated()
+                                                    && orchSession.getProcessingIdentityAttempts()
+                                                            == 0));
+            verify(orchSessionService, atLeastOnce()).deleteSession(NEW_SESSION_ID);
         }
 
         @Test
