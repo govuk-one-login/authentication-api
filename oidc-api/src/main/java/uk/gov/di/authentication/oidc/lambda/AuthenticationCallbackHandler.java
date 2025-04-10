@@ -336,14 +336,16 @@ public class AuthenticationCallbackHandler
                         clientId,
                         user);
             } else {
-                LOG.error(
-                        "Authentication TokenResponse was not successful: {}",
-                        tokenResponse.toErrorResponse().toJSONObject());
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+                return RedirectService.redirectToFrontendErrorPage(
+                        authFrontend.errorURI(),
+                        new Error(
+                                String.format(
+                                        "Authentication TokenResponse was not successful: %s",
+                                        tokenResponse.toErrorResponse().toJSONObject())));
             }
 
             try {
@@ -646,17 +648,14 @@ public class AuthenticationCallbackHandler
             } catch (UnsuccessfulCredentialResponseException e) {
                 auditService.submitAuditEvent(
                         AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED, clientId, user);
-                LOG.error(
-                        "Orchestration to Authentication userinfo request was not successful: {}",
-                        e.getMessage());
-                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
             }
         } catch (AuthenticationCallbackException | OrchAuthCodeException e) {
-            LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
         } catch (ParseException e) {
-            LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+            return RedirectService.redirectToFrontendErrorPage(
+                    authFrontend.errorURI(),
+                    new Error("Cannot retrieve auth request params from client session id"));
         }
     }
 

@@ -45,6 +45,28 @@ public class LogEventMatcher {
         };
     }
 
+    public static Matcher<LogEvent> withThrownMessageContaining(String... values) {
+        return new TypeSafeMatcher<>() {
+
+            @Override
+            protected boolean matchesSafely(LogEvent item) {
+                if (item.getThrown() == null) {
+                    return false;
+                }
+                var message = item.getThrown().getMessage();
+                return Arrays.stream(values).anyMatch(message::contains);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText(
+                        "a log event with throwable message containing ["
+                                + Arrays.asList(values)
+                                + "]");
+            }
+        };
+    }
+
     public static Matcher<LogEvent> withMessage(String value) {
         return new TypeSafeMatcher<>() {
 
