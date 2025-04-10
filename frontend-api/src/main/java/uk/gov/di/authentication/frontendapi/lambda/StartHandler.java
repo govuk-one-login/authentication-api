@@ -180,20 +180,9 @@ public class StartHandler
                             sessionId,
                             startRequest.currentCredentialStrength());
 
-            var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
-
             isUserAuthenticatedWithValidProfile =
-                    startRequest.authenticated() && !isUserProfileEmpty;
+                    startRequest.authenticated() && !startService.isUserProfileEmpty(authSession);
 
-            if (startRequest.authenticated() && isUserProfileEmpty) {
-                session =
-                        startService.createNewSessionWithExistingIdAndClientSession(
-                                sessionId,
-                                getHeaderValueFromHeaders(
-                                        input.getHeaders(),
-                                        CLIENT_SESSION_ID_HEADER,
-                                        configurationService.getHeadersCaseInsensitive()));
-            }
             var upliftRequired =
                     startService.isUpliftRequired(
                             clientSession, startRequest.currentCredentialStrength());
