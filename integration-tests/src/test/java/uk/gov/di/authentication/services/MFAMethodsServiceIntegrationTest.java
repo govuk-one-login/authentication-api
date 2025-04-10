@@ -462,7 +462,7 @@ class MFAMethodsServiceIntegrationTest {
             var result =
                     mfaMethodsService
                             .addBackupMfa(MFAMethodsServiceIntegrationTest.EMAIL, mfaMethod)
-                            .get();
+                            .getSuccess();
 
             List<MFAMethod> mfaMethods =
                     userStoreExtension.getMfaMethod(MFAMethodsServiceIntegrationTest.EMAIL);
@@ -494,7 +494,7 @@ class MFAMethodsServiceIntegrationTest {
             var result =
                     mfaMethodsService
                             .addBackupMfa(MFAMethodsServiceIntegrationTest.EMAIL, mfaMethod)
-                            .get();
+                            .getSuccess();
 
             List<MFAMethod> mfaMethods =
                     userStoreExtension.getMfaMethod(MFAMethodsServiceIntegrationTest.EMAIL);
@@ -527,7 +527,7 @@ class MFAMethodsServiceIntegrationTest {
                     mfaMethodsService.addBackupMfa(
                             MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
 
-            assertEquals(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER, result.getLeft());
+            assertEquals(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER, result.getFailure());
         }
 
         @Test
@@ -546,7 +546,7 @@ class MFAMethodsServiceIntegrationTest {
 
             assertEquals(
                     MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST,
-                    result.getLeft());
+                    result.getFailure());
         }
 
         @Test
@@ -562,7 +562,7 @@ class MFAMethodsServiceIntegrationTest {
                     mfaMethodsService.addBackupMfa(
                             MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
 
-            assertEquals(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS, result.getLeft());
+            assertEquals(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS, result.getFailure());
         }
 
         @Test
@@ -579,7 +579,7 @@ class MFAMethodsServiceIntegrationTest {
                     mfaMethodsService.addBackupMfa(
                             MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
 
-            assertEquals(MfaCreateFailureReason.AUTH_APP_EXISTS, result.getLeft());
+            assertEquals(MfaCreateFailureReason.AUTH_APP_EXISTS, result.getFailure());
         }
 
         @Nested

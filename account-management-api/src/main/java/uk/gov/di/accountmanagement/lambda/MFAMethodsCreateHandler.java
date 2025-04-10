@@ -4,12 +4,12 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
@@ -107,12 +107,12 @@ public class MFAMethodsCreateHandler
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
 
-            Either<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
+            Result<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
                     mfaMethodsService.addBackupMfa(
                             userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
-            if (addBackupMfaResult.isLeft()) {
-                return switch (addBackupMfaResult.getLeft()) {
+            if (addBackupMfaResult.isFailure()) {
+                return switch (addBackupMfaResult.getFailure()) {
                     case INVALID_PRIORITY_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1001);
                     case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
@@ -126,7 +126,7 @@ public class MFAMethodsCreateHandler
                 };
             }
 
-            return generateApiGatewayProxyResponse(200, addBackupMfaResult.get(), true);
+            return generateApiGatewayProxyResponse(200, addBackupMfaResult.getSuccess(), true);
 
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

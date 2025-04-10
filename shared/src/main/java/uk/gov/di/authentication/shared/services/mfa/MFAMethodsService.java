@@ -5,6 +5,7 @@ import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
@@ -156,23 +157,23 @@ public class MFAMethodsService {
         }
     }
 
-    public Either<MfaCreateFailureReason, MfaMethodData> addBackupMfa(
+    public Result<MfaCreateFailureReason, MfaMethodData> addBackupMfa(
             String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
         if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            return Either.left(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER);
+            return Result.failure(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER);
         }
 
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
         Either<MfaRetrieveFailureReason, List<MfaMethodData>> mfaMethodsResult =
                 getMfaMethodsForMigratedUser(userCredentials);
         if (mfaMethodsResult.isLeft()) {
-            return Either.left(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
+            return Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
         }
 
         var mfaMethods = mfaMethodsResult.get();
 
         if (mfaMethods.size() >= 2) {
-            return Either.left(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
+            return Result.failure(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
         }
 
         if (mfaMethod.method() instanceof SmsMfaDetail smsMfaDetail) {
@@ -185,7 +186,7 @@ public class MFAMethodsService {
                             .anyMatch(mfa -> mfa.phoneNumber().equals(smsMfaDetail.phoneNumber()));
 
             if (phoneNumberExists) {
-                return Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS);
+                return Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS);
             }
 
             String uuid = UUID.randomUUID().toString();
@@ -197,7 +198,7 @@ public class MFAMethodsService {
                             smsMfaDetail.phoneNumber(),
                             mfaMethod.priorityIdentifier(),
                             uuid));
-            return Either.right(
+            return Result.success(
                     MfaMethodData.smsMethodData(
                             uuid,
                             mfaMethod.priorityIdentifier(),
@@ -212,7 +213,7 @@ public class MFAMethodsService {
                             .anyMatch(mfa -> true);
 
             if (authAppExists) {
-                return Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS);
+                return Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS);
             }
 
             String uuid = UUID.randomUUID().toString();
@@ -224,7 +225,7 @@ public class MFAMethodsService {
                             true,
                             mfaMethod.priorityIdentifier(),
                             uuid));
-            return Either.right(
+            return Result.success(
                     MfaMethodData.authAppMfaData(
                             uuid,
                             mfaMethod.priorityIdentifier(),
