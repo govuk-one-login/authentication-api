@@ -1,5 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -17,7 +19,7 @@ import java.util.Optional;
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
 public class BaseDynamoService<T> {
-
+    private static final Logger LOG = LogManager.getLogger(BaseDynamoService.class);
     private final DynamoDbTable<T> dynamoTable;
     private final DynamoDbClient client;
     private final boolean useConsistentReads;
@@ -40,7 +42,10 @@ public class BaseDynamoService<T> {
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
         useConsistentReads = configurationService.isUseStronglyConsistentReads();
-
+        LOG.info(
+                "Is using strongly consistent reads for table \"{}\": {}",
+                table,
+                useConsistentReads);
         if (!isTableInOrchAccount) {
             warmUp();
         }
