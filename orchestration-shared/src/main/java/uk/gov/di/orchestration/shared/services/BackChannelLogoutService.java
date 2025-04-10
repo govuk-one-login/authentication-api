@@ -73,6 +73,8 @@ public class BackChannelLogoutService {
                 LOGGER.info(
                         "rpPairwiseId on client session is null, client-id = {}",
                         clientRegistry.getClientID());
+            } else if (subjectId == null) {
+                LOGGER.info("subjectId is null, client-id = {}", clientRegistry.getClientID());
             } else {
                 LOGGER.info(
                         "calculated and given rpPairwiseId are different, client-id = {}",
