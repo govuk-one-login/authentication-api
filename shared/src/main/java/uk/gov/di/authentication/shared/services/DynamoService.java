@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.result.Result;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -906,7 +907,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+    public Result<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
             String email, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -930,9 +931,9 @@ public class DynamoService implements AuthenticationService {
                                     .setMfaMethod(
                                             method.get().withMfaIdentifier(mfaMethodIdentifier)))
                     .withUpdated(dateTime);
-            return Either.right(null);
+            return Result.success(null);
         } else {
-            return Either.left(
+            return Result.failure(
                     "Attempted to set mfa identifier for mfa method in user credentials but no enabled method found");
         }
     }

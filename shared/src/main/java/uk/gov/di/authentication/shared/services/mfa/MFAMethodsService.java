@@ -120,10 +120,10 @@ public class MFAMethodsService {
                 var result =
                         persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
                                 userProfile.getEmail(), mfaIdentifier);
-                if (result.isLeft()) {
+                if (result.isFailure()) {
                     LOG.error(
                             "Unexpected error updating non migrated auth app mfa identifier: {}",
-                            result.getLeft());
+                            result.getFailure());
                     return Result.failure(
                             MfaRetrieveFailureReason
                                     .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP);

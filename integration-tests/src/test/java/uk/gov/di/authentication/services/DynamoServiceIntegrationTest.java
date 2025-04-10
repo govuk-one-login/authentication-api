@@ -564,7 +564,7 @@ class DynamoServiceIntegrationTest {
                     dynamoService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
                             TEST_EMAIL, identifier);
 
-            assertTrue(result.isRight());
+            assertTrue(result.isSuccess());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
             var mfaMethods = userCredentials.getMfaMethods();
@@ -593,10 +593,10 @@ class DynamoServiceIntegrationTest {
                     dynamoService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
                             TEST_EMAIL, identifier);
 
-            assertTrue(result.isLeft());
+            assertTrue(result.isFailure());
             assertEquals(
                     "Attempted to set mfa identifier for mfa method in user credentials but no enabled method found",
-                    result.getLeft());
+                    result.getFailure());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
             var mfaMethods = userCredentials.getMfaMethods();

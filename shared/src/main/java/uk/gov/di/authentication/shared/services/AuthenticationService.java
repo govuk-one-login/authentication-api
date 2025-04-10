@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.result.Result;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -102,7 +103,7 @@ public interface AuthenticationService {
     Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods);
 
-    Either<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+    Result<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
             String email, String mfaMethodIdentifier);
 
     void setMfaIdentifierForNonMigratedSmsMethod(String email, String smsMfaIdentifier);
