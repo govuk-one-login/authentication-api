@@ -625,7 +625,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.updateMfaMethod(EMAIL, "some-other-identifier", request);
 
-            assertEquals(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER, result.getLeft());
+            assertEquals(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER, result.getFailure());
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
             assertEquals(List.of(mfaMethodDataFrom(defaultPriorityAuthApp)), remainingMfaMethods);
@@ -662,7 +662,7 @@ class MFAMethodsServiceIntegrationTest {
                                 .stream()
                                 .sorted()
                                 .toList(),
-                        result.get());
+                        result.getSuccess());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 var expectedRemainingMethods =
@@ -703,7 +703,7 @@ class MFAMethodsServiceIntegrationTest {
                                 .stream()
                                 .sorted()
                                 .toList(),
-                        result.get());
+                        result.getSuccess());
 
                 var methodsInDatabase =
                         mfaMethodsService.getMfaMethods(EMAIL).getSuccess().stream()
@@ -733,7 +733,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER,
-                        result.getLeft());
+                        result.getFailure());
 
                 var methodsInDatabase =
                         mfaMethodsService.getMfaMethods(EMAIL).getSuccess().stream()
@@ -762,7 +762,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD,
-                        result.getLeft());
+                        result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(
@@ -789,7 +789,8 @@ class MFAMethodsServiceIntegrationTest {
                                 EMAIL, existingMethod.getMfaIdentifier(), request);
 
                 assertEquals(
-                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD, result.getLeft());
+                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD,
+                        result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
@@ -816,7 +817,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
-                        result.getLeft());
+                        result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
@@ -855,7 +856,8 @@ class MFAMethodsServiceIntegrationTest {
                 var expectedMethodsAfterUpdate =
                         Stream.of(expectedDefaultMethod, expectedBackupMethod).sorted().toList();
 
-                assertEquals(expectedMethodsAfterUpdate, result.get().stream().sorted().toList());
+                assertEquals(
+                        expectedMethodsAfterUpdate, result.getSuccess().stream().sorted().toList());
 
                 assertEquals(
                         expectedMethodsAfterUpdate, remainingMfaMethods.stream().sorted().toList());
@@ -881,7 +883,8 @@ class MFAMethodsServiceIntegrationTest {
                                 EMAIL, existingMethod.getMfaIdentifier(), request);
 
                 assertEquals(
-                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD, result.getLeft());
+                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD,
+                        result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
@@ -912,7 +915,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
-                        result.getLeft());
+                        result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
@@ -934,7 +937,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER,
-                        result.getLeft());
+                        result.getFailure());
 
                 var methodsInDatabase =
                         mfaMethodsService.getMfaMethods(EMAIL).getSuccess().stream()
@@ -967,7 +970,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL,
-                        result.getLeft());
+                        result.getFailure());
 
                 var methodsInDatabase =
                         mfaMethodsService.getMfaMethods(EMAIL).getSuccess().stream()
@@ -1008,7 +1011,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
-                        result.getLeft());
+                        result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
@@ -1028,7 +1031,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD,
-                        result.getLeft());
+                        result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(mfaMethodDataFrom(backupPrioritySms)), remainingMfaMethods);

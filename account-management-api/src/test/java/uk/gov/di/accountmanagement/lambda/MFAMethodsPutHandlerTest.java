@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,6 +11,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
@@ -86,7 +86,7 @@ class MFAMethodsPutHandlerTest {
                 MfaMethodData.smsMethodData(
                         MFA_IDENTIFIER, PriorityIdentifier.DEFAULT, true, phoneNumber);
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Either.right(List.of(updatedMfaMethod)));
+                .thenReturn(Result.success(List.of(updatedMfaMethod)));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
@@ -167,7 +167,7 @@ class MFAMethodsPutHandlerTest {
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Either.left(failureReason));
+                .thenReturn(Result.failure(failureReason));
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
         assertThat(result, hasStatus(expectedStatus));
