@@ -58,11 +58,11 @@ public class MFAMethodsService {
                         .map(
                                 mfaMethod -> {
                                     var mfaMethodData = MfaMethodData.from(mfaMethod);
-                                    if (mfaMethodData.isLeft()) {
+                                    if (mfaMethodData.isFailure()) {
                                         LOG.error(
                                                 "Error converting mfa method with type {} to mfa method data: {}",
                                                 mfaMethod.getMfaMethodType(),
-                                                mfaMethodData.getLeft());
+                                                mfaMethodData.getFailure());
                                         return Result
                                                 .<MfaRetrieveFailureReason, MfaMethodData>failure(
                                                         MfaRetrieveFailureReason
@@ -70,7 +70,7 @@ public class MFAMethodsService {
                                     } else {
                                         return Result
                                                 .<MfaRetrieveFailureReason, MfaMethodData>success(
-                                                        mfaMethodData.get());
+                                                        mfaMethodData.getSuccess());
                                     }
                                 })
                         .toList();
@@ -319,7 +319,9 @@ public class MFAMethodsService {
                         mfaMethods ->
                                 Either.sequenceRight(
                                                 io.vavr.collection.List.ofAll(mfaMethods.stream())
-                                                        .map(MfaMethodData::from))
+                                                        .map(
+                                                                MfaMethodsService
+                                                                        ::getMfaMethodAsEither))
                                         .map(Value::toJavaList)
                                         .map(list -> list.stream().sorted().toList()));
 
@@ -328,6 +330,16 @@ public class MFAMethodsService {
                     LOG.error(errorString);
                     return MfaUpdateFailureReason.UNEXPECTED_ERROR;
                 });
+    }
+
+    // temporary helper while we migrate away from vavr
+    private static Either<String, MfaMethodData> getMfaMethodAsEither(MFAMethod mfaMethod) {
+        var asMaybeMethodData = MfaMethodData.from(mfaMethod);
+        if (asMaybeMethodData.isFailure()) {
+            return Either.left(asMaybeMethodData.getFailure());
+        } else {
+            return Either.right(asMaybeMethodData.getSuccess());
+        }
     }
 
     private Either<MfaUpdateFailureReason, List<MfaMethodData>> handleDefaultMethodUpdate(

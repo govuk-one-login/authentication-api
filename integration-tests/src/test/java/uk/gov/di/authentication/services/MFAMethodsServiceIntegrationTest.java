@@ -654,7 +654,8 @@ class MFAMethodsServiceIntegrationTest {
                                 true,
                                 AUTH_APP_CREDENTIAL_TWO);
 
-                var expectedUnchangedBackupMethod = MfaMethodData.from(backupPrioritySms).get();
+                var expectedUnchangedBackupMethod =
+                        MfaMethodData.from(backupPrioritySms).getSuccess();
 
                 assertEquals(
                         List.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod)
@@ -694,7 +695,8 @@ class MFAMethodsServiceIntegrationTest {
                                 true,
                                 aThirdPhoneNumber);
 
-                var expectedUnchangedBackupMethod = MfaMethodData.from(backupPrioritySms).get();
+                var expectedUnchangedBackupMethod =
+                        MfaMethodData.from(backupPrioritySms).getSuccess();
 
                 assertEquals(
                         List.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod)
