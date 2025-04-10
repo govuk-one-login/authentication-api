@@ -752,7 +752,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
-            session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
+            orchSession.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
             withExistingSession(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
