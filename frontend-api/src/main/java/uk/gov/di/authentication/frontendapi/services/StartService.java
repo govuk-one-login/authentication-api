@@ -56,15 +56,6 @@ public class StartService {
         this.sessionService = sessionService;
     }
 
-    public Session createNewSessionWithExistingIdAndClientSession(
-            String sessionId, String clientSessionId) {
-        LOG.info("Creating new session with existing sessionID");
-        Session session = new Session();
-        session.addClientSession(clientSessionId);
-        sessionService.storeOrUpdateSession(session, sessionId);
-        return session;
-    }
-
     public UserContext buildUserContext(
             Session session, ClientSession clientSession, AuthSessionItem authSession) {
         var builder =
