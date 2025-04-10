@@ -32,6 +32,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -40,7 +41,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -52,6 +52,7 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -87,7 +88,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -120,6 +120,7 @@ class AuthCodeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -188,7 +189,8 @@ class AuthCodeHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService);
+                        dynamoService,
+                        dynamoClientService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
@@ -213,6 +215,12 @@ class AuthCodeHandlerTest {
                         SESSION_ID,
                         orchSessionService,
                         orchSession);
+        when(dynamoClientService.getClient(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withClientID(CLIENT_ID.getValue())
+                                        .withSubjectType("pairwise")));
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -231,7 +239,7 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel,
             MFAMethodType mfaMethodType)
-            throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
+            throws Json.JsonException, JOSEException, ParseException {
         generateAuthUserInfo();
         if (Objects.nonNull(mfaMethodType)) {
             when(authCodeResponseService.getDimensions(
@@ -274,7 +282,8 @@ class AuthCodeHandlerTest {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
 
         // TODO: ATO-1218: Remove the following stub for the auth code service.
@@ -383,7 +392,7 @@ class AuthCodeHandlerTest {
     @ParameterizedTest
     @MethodSource("docAppTestParameters")
     void shouldGenerateSuccessfulAuthResponseForDocAppJourney(CredentialTrustLevel requestedLevel)
-            throws Json.JsonException, ClientNotFoundException, JOSEException {
+            throws Json.JsonException, JOSEException {
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, true);
         session.setNewAccount(AccountState.UNKNOWN);
@@ -399,7 +408,8 @@ class AuthCodeHandlerTest {
 
         when(orchClientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
-        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
 
         // TODO: ATO-1218: Remove the following stub for the auth code service.
@@ -526,10 +536,11 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
-            throws ClientNotFoundException, JOSEException, ParseException {
+            throws JOSEException, ParseException {
         generateAuthUserInfo();
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
-        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(false);
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
@@ -543,7 +554,7 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenClientIsNotFound()
-            throws ClientNotFoundException, Json.JsonException, JOSEException, ParseException {
+            throws Json.JsonException, JOSEException, ParseException {
         generateAuthUserInfo();
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
@@ -555,9 +566,7 @@ class AuthCodeHandlerTest {
                         any(State.class)))
                 .thenReturn(authenticationErrorResponse);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
-        doThrow(ClientNotFoundException.class)
-                .when(orchestrationAuthorizationService)
-                .isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI));
+        when(dynamoClientService.getClient(anyString())).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
@@ -576,8 +585,9 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenAuthUserInfoIsNotFound()
-            throws Json.JsonException, JOSEException, ClientNotFoundException {
-        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+            throws Json.JsonException, JOSEException {
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
@@ -612,10 +622,11 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseWhenOrchSessionHasNoInternalCommonSubjectId()
-            throws Json.JsonException, JOSEException, ParseException, ClientNotFoundException {
+            throws Json.JsonException, JOSEException, ParseException {
         generateAuthUserInfo();
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
-        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(orchClientSession));
@@ -719,7 +730,7 @@ class AuthCodeHandlerTest {
     }
 
     @Test
-    void shouldUpdateOrchSession() throws JOSEException, ClientNotFoundException, ParseException {
+    void shouldUpdateOrchSession() throws JOSEException, ParseException {
         generateAuthUserInfo();
 
         var authorizationCode = new AuthorizationCode();
@@ -739,7 +750,8 @@ class AuthCodeHandlerTest {
 
         when(orchClientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
-        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
 
         // TODO: ATO-1218: Remove the following stub for the auth code service.

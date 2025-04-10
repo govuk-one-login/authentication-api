@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
+
 @DynamoDbBean
 public class OrchClientSessionItem {
     private static final String ATTRIBUTE_CLIENT_SESSION_ID = "ClientSessionId";
@@ -204,5 +206,13 @@ public class OrchClientSessionItem {
 
     public String getVtrLocsAsCommaSeparatedString() {
         return VtrListUtils.getVtrLocsAsCommaSeparatedString(vtrList);
+    }
+
+    public String getCorrectPairwiseIdGivenSubjectType(String subjectType) {
+        if (PUBLIC.toString().equalsIgnoreCase(subjectType)) {
+            return this.getPublicSubjectId();
+        } else {
+            return this.getRpPairwiseId();
+        }
     }
 }

@@ -122,19 +122,22 @@ public class LogoutService {
             var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
             logIfClientSessionsAreNotEqual(
                     clientSessionOpt.orElse(null), orchClientSessionOpt.orElse(null));
-            if (orchClientSessionOpt.isPresent()) {
-                var rpPairwiseId = orchClientSessionOpt.get().getRpPairwiseId();
-                orchClientSessionOpt.get().getAuthRequestParams().get("client_id").stream()
-                        .findFirst()
-                        .flatMap(dynamoClientService::getClient)
-                        .ifPresent(
-                                clientRegistry ->
-                                        backChannelLogoutService.sendLogoutMessage(
-                                                clientRegistry,
-                                                request.getEmailAddress(),
-                                                configurationService.getInternalSectorURI(),
-                                                rpPairwiseId));
-            }
+            orchClientSessionOpt.ifPresent(
+                    orchClientSessionItem ->
+                            orchClientSessionItem.getAuthRequestParams().get("client_id").stream()
+                                    .findFirst()
+                                    .flatMap(dynamoClientService::getClient)
+                                    .ifPresent(
+                                            clientRegistry ->
+                                                    backChannelLogoutService.sendLogoutMessage(
+                                                            clientRegistry,
+                                                            request.getEmailAddress(),
+                                                            configurationService
+                                                                    .getInternalSectorURI(),
+                                                            orchClientSessionItem
+                                                                    .getCorrectPairwiseIdGivenSubjectType(
+                                                                            clientRegistry
+                                                                                    .getSubjectType()))));
 
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);

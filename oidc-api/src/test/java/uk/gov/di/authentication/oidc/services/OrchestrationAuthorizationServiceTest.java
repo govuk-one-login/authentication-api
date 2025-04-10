@@ -167,6 +167,20 @@ class OrchestrationAuthorizationServiceTest {
     }
 
     @Test
+    void shouldReturnTrueIfRedirectUriIsValidWhenClientIsPassedIn() {
+        var client = generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString());
+        assertTrue(
+                orchestrationAuthorizationService.isClientRedirectUriValid(client, REDIRECT_URI));
+    }
+
+    @Test
+    void shouldReturnFalseIfRedirectUriIsInvalidWhenClientIsPassedIn() {
+        var client = generateClientRegistry("http://localhost//", CLIENT_ID.toString());
+        assertFalse(
+                orchestrationAuthorizationService.isClientRedirectUriValid(client, REDIRECT_URI));
+    }
+
+    @Test
     void shouldGenerateSuccessfulAuthResponse() {
         AuthorizationCode authCode = new AuthorizationCode();
         Scope scope = new Scope();

@@ -569,6 +569,14 @@ public class TokenHandler
                             clientRegistry,
                             dynamoService,
                             configurationService.getInternalSectorURI());
+
+            LOG.info(
+                    "is correct pairwiseId for client the same on clientSession as calculated: {}",
+                    Objects.equals(
+                            rpPairwiseSubject.getValue(),
+                            orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
+                                    clientRegistry.getSubjectType())));
+
             Subject internalPairwiseSubject =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
