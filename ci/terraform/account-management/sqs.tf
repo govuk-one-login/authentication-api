@@ -176,11 +176,14 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      FRONTEND_BASE_URL     = "https://${local.frontend_fqdn}/"
-      CONTACT_US_LINK_ROUTE = var.contact_us_link_route
-      NOTIFY_API_KEY        = var.notify_api_key
-      NOTIFY_URL            = var.notify_url
-      JAVA_TOOL_OPTIONS     = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      FRONTEND_BASE_URL        = "https://${local.frontend_fqdn}/"
+      CONTACT_US_LINK_ROUTE    = var.contact_us_link_route
+      NOTIFY_API_KEY           = var.notify_api_key
+      NOTIFY_URL               = var.notify_url
+      JAVA_TOOL_OPTIONS        = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      NOTIFY_TEST_DESTINATIONS = "07700900000,07700900111,07700900222,07700900333,07700900444,07700900555,07700900666,07700900777,07700900888,simulate-delivered@notifications.service.gov.uk,simulate-delivered-2@notifications.service.gov.uk,simulate-delivered-3@notifications.service.gov.uk,+447700900000,+447700900111,+447700900222"
+
+      ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION = aws_s3_bucket.am-api-acceptance-tests-otp-bucket.id
     })
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
