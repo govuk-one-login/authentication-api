@@ -1,0 +1,64 @@
+name: "SP - DEV: Build and deploy API modules to Dev"
+run-name: "DEV: Build and deploy API modules to ${{ inputs.environment }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run against"
+        type: environment
+        required: true
+
+env:
+  AWS_REGION: eu-west-2
+  JAVA_VERSION: 17
+  JAVA_DISTRIBUTION: corretto
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up SAM cli
+        uses: aws-actions/setup-sam@819220f63fb333a9a394dd0a5cab2d8303fd17e2 # v2
+        with:
+          use-installer: true
+
+      - name: Set up AWS creds
+        uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722 # v4.1.0
+        with:
+          role-to-assume: ${{ secrets.GH_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 #v4.7.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+
+      - name: SAM build
+        run: |
+          ./gradlew --no-daemon --parallel :auth-external-api:buildZip
+          sam validate -t backend-template.yaml
+          sam build --parallel -t backend-template.yaml
+
+      - name: Deploy SAM app
+        uses: govuk-one-login/devplatform-upload-action@f6188fc96fe860179f87bfc5bdeebc17eb3e1e4f # v3.9.4
+        with:
+          artifact-bucket-name: ${{ secrets.ARTIFACT_SOURCE_BUCKET_NAME }}
+          signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
+          working-directory: .aws-sam/build
