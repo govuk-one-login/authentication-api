@@ -572,6 +572,12 @@ variable "orch_ipv_jwks_enabled" {
   default     = false
 }
 
+variable "use_strongly_consistent_reads" {
+  default     = false
+  description = "Whether to use strongly consistent reads when getting items from DynamoDB"
+  type        = bool
+}
+
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool

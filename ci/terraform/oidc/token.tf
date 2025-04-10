@@ -69,6 +69,7 @@ module "token" {
     EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
     HEADERS_CASE_INSENSITIVE             = "false"
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
+    USE_STRONGLY_CONSISTENT_READS        = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest"
 

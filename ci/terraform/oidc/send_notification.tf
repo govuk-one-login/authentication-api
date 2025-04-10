@@ -48,6 +48,7 @@ module "send_notification" {
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri
     SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
     SUPPORT_REAUTH_SIGNOUT_ENABLED         = var.support_reauth_signout_enabled
+    USE_STRONGLY_CONSISTENT_READS          = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest"
 
