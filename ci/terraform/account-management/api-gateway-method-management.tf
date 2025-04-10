@@ -90,6 +90,10 @@ resource "aws_lambda_permission" "account-management-method_management_openapi_e
   principal     = "apigateway.amazonaws.com"
   qualifier     = each.value.endpoint_lambda_alias.name
   source_arn    = "${module.account-management-method_management_gateway.api_gateway_execution_arn}/*/*"
+
+  depends_on = [
+    module.account-management-method_management_gateway
+  ]
 }
 
 module "dashboard_account-management-method_management_openapi" {
