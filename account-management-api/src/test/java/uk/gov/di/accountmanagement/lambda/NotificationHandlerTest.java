@@ -45,7 +45,7 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_N
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.EMAIL_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_SENDING_WITH_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET;
-import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.NOT_WRITING_TO_BUCKET_IS_NOTIFY_DESTINATION_IS_OTPNOTIFICATION_TYPE;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.TEXT_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.UNEXPECTED_ERROR_SENDING_NOTIFICATION;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.WRITING_OTP_TO_S_3_BUCKET;
@@ -109,14 +109,6 @@ class NotificationHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 formatMessage(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_EMAIL))));
-        assertThat(
-                logging.events(),
-                hasItem(
-                        withMessageContaining(
-                                formatMessage(
-                                        NOT_WRITING_TO_BUCKET_IS_NOTIFY_DESTINATION_IS_OTPNOTIFICATION_TYPE,
-                                        false,
-                                        true))));
     }
 
     @Test
@@ -272,6 +264,34 @@ class NotificationHandlerTest {
                                 formatMessage(
                                         NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
                                         VERIFY_PHONE_NUMBER))));
+    }
+
+    @Test
+    void shouldDoNothingForTestUserOnTheListSendingNonOTPNotification()
+            throws Json.JsonException, NotificationClientException {
+        when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        EMAIL_UPDATED,
+                        "654321",
+                        SupportedLanguage.EN,
+                        true,
+                        TEST_EMAIL_ADDRESS);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(s3Client, never()).putObject((PutObjectRequest) any(), (RequestBody) any());
+        verify(notificationService, never()).sendText(any(), any(), any());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION,
+                                        EMAIL_UPDATED))));
     }
 
     @Test

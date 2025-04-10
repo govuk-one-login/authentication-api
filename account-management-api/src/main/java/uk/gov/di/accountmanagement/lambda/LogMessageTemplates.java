@@ -3,8 +3,8 @@ package uk.gov.di.accountmanagement.lambda;
 public class LogMessageTemplates {
     public static final String NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET =
             "Notify Test Destination used in request. Writing to S3 bucket for notification type {}";
-    public static final String NOT_WRITING_TO_BUCKET_IS_NOTIFY_DESTINATION_IS_OTPNOTIFICATION_TYPE =
-            "Not writing to bucket isNotifyDestination {} isOTPNotificationType {}.";
+    public static final String NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION =
+            "Not writing to bucket as notification type {} is not an otp notification type.";
     public static final String WRITING_OTP_TO_S_3_BUCKET = "Writing OTP to S3 bucket: {}";
 
     private LogMessageTemplates() {}

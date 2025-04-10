@@ -173,49 +173,76 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             NotifyRequest notifyRequest,
             Map<String, Object> personalisation,
             String notificationType) {
-        try {
-            notificationService.sendEmail(
-                    notifyRequest.getDestination(),
-                    personalisation,
-                    NotificationType.valueOf(notificationType));
-            LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
-            writeTestClientOtpToS3(
-                    notifyRequest.getNotificationType(),
-                    notifyRequest.getCode(),
-                    notifyRequest.getDestination(),
-                    notifyRequest.getEmail());
-        } catch (NotificationClientException e) {
-            LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
-        } catch (RuntimeException e) {
-            LOG.error(UNEXPECTED_ERROR_SENDING_NOTIFICATION, notificationType, e.getMessage());
-        }
+        sendNotification(
+                notifyRequest,
+                personalisation,
+                notificationType,
+                (destination, per, type) -> {
+                    try {
+                        notificationService.sendEmail(
+                                destination, per, NotificationType.valueOf(type));
+                        LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                    } catch (NotificationClientException e) {
+                        LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                    } catch (RuntimeException e) {
+                        LOG.error(
+                                UNEXPECTED_ERROR_SENDING_NOTIFICATION,
+                                notificationType,
+                                e.getMessage());
+                    }
+                });
     }
 
     private void sendTextNotification(
             NotifyRequest notifyRequest,
             Map<String, Object> personalisation,
             String notificationType) {
+        sendNotification(
+                notifyRequest,
+                personalisation,
+                notificationType,
+                (destination, per, type) -> {
+                    try {
+                        notificationService.sendText(
+                                destination, per, NotificationType.valueOf(type));
+                        LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                    } catch (NotificationClientException e) {
+                        LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                    } catch (RuntimeException e) {
+                        LOG.error(
+                                UNEXPECTED_ERROR_SENDING_NOTIFICATION,
+                                notificationType,
+                                e.getMessage());
+                    }
+                });
+    }
 
-        if (!notifyRequest.isTestClient()) {
-            try {
-                LOG.info("Sending {} text using Notify", notificationType);
-                notificationService.sendText(
-                        notifyRequest.getDestination(),
-                        personalisation,
-                        NotificationType.valueOf(notificationType));
-                LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
-            } catch (NotificationClientException e) {
-                LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
-            } catch (RuntimeException e) {
-                LOG.error(UNEXPECTED_ERROR_SENDING_NOTIFICATION, notificationType, e.getMessage());
-            }
-        } else {
+    @FunctionalInterface
+    private interface NotificationSender {
+        void send(String destination, Map<String, Object> personalisation, String notificationType);
+    }
+
+    private void sendNotification(
+            NotifyRequest notifyRequest,
+            Map<String, Object> personalisation,
+            String notificationType,
+            NotificationSender sender) {
+        var isDestinationOnTestDestinationsList =
+                configurationService
+                        .getNotifyTestDestinations()
+                        .contains(notifyRequest.getDestination());
+
+        var isTestUserThatShouldNotInvokeNotify =
+                notifyRequest.isTestClient() && isDestinationOnTestDestinationsList;
+
+        if (isTestUserThatShouldNotInvokeNotify) {
             LOG.info("Test client detected writing code to S3");
             writeTestClientOtpToS3(
                     notifyRequest.getNotificationType(),
                     notifyRequest.getCode(),
-                    notifyRequest.getDestination(),
                     notifyRequest.getEmail());
+        } else {
+            sender.send(notifyRequest.getDestination(), personalisation, notificationType);
         }
     }
 
@@ -226,10 +253,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 .toString();
     }
 
-    void writeTestClientOtpToS3(
-            NotificationType notificationType, String otp, String destination, String email) {
-        var isNotifyDestination =
-                configurationService.getNotifyTestDestinations().contains(destination);
+    void writeTestClientOtpToS3(NotificationType notificationType, String otp, String email) {
         var isOTPNotificationType =
                 List.of(
                                 VERIFY_EMAIL,
@@ -238,7 +262,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                 RESET_PASSWORD_WITH_CODE,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         .contains(notificationType);
-        if (isNotifyDestination && isOTPNotificationType) {
+
+        if (isOTPNotificationType) {
             LOG.info(
                     LogMessageTemplates.NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
                     notificationType);
@@ -256,10 +281,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         } else {
             LOG.info(
-                    LogMessageTemplates
-                            .NOT_WRITING_TO_BUCKET_IS_NOTIFY_DESTINATION_IS_OTPNOTIFICATION_TYPE,
-                    isNotifyDestination,
-                    isOTPNotificationType);
+                    LogMessageTemplates.NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION,
+                    notificationType);
         }
     }
 }
