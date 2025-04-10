@@ -38,7 +38,7 @@ public class MFAMethodsService {
         this.persistentService = new DynamoService(configurationService);
     }
 
-    public Either<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethods(String email) {
+    public Result<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
@@ -49,9 +49,9 @@ public class MFAMethodsService {
         }
     }
 
-    private Either<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethodsForMigratedUser(
+    private Result<MfaRetrieveFailureReason, List<MfaMethodData>> getMfaMethodsForMigratedUser(
             UserCredentials userCredentials) {
-        List<Either<MfaRetrieveFailureReason, MfaMethodData>> mfaMethodDataResults =
+        List<Result<MfaRetrieveFailureReason, MfaMethodData>> mfaMethodDataResults =
                 Optional.ofNullable(userCredentials.getMfaMethods())
                         .orElse(new ArrayList<>())
                         .stream()
@@ -63,18 +63,18 @@ public class MFAMethodsService {
                                                 "Error converting mfa method with type {} to mfa method data: {}",
                                                 mfaMethod.getMfaMethodType(),
                                                 mfaMethodData.getLeft());
-                                        return Either.<MfaRetrieveFailureReason, MfaMethodData>left(
-                                                MfaRetrieveFailureReason
-                                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA);
+                                        return Result
+                                                .<MfaRetrieveFailureReason, MfaMethodData>failure(
+                                                        MfaRetrieveFailureReason
+                                                                .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA);
                                     } else {
-                                        return Either
-                                                .<MfaRetrieveFailureReason, MfaMethodData>right(
+                                        return Result
+                                                .<MfaRetrieveFailureReason, MfaMethodData>success(
                                                         mfaMethodData.get());
                                     }
                                 })
                         .toList();
-        return Either.sequenceRight(io.vavr.collection.List.ofAll(mfaMethodDataResults))
-                .map(Value::toJavaList);
+        return Result.sequenceSuccess(mfaMethodDataResults);
     }
 
     public Result<MfaDeleteFailureReason, String> deleteMfaMethod(
@@ -106,7 +106,7 @@ public class MFAMethodsService {
         return Result.success(mfaIdentifier);
     }
 
-    private Either<MfaRetrieveFailureReason, Optional<MfaMethodData>>
+    private Result<MfaRetrieveFailureReason, Optional<MfaMethodData>>
             getMfaMethodForNonMigratedUser(
                     UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
@@ -124,12 +124,12 @@ public class MFAMethodsService {
                     LOG.error(
                             "Unexpected error updating non migrated auth app mfa identifier: {}",
                             result.getLeft());
-                    return Either.left(
+                    return Result.failure(
                             MfaRetrieveFailureReason
                                     .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP);
                 }
             }
-            return Either.right(
+            return Result.success(
                     Optional.of(
                             MfaMethodData.authAppMfaData(
                                     mfaIdentifier,
@@ -145,7 +145,7 @@ public class MFAMethodsService {
                 persistentService.setMfaIdentifierForNonMigratedSmsMethod(
                         userProfile.getEmail(), mfaIdentifier);
             }
-            return Either.right(
+            return Result.success(
                     Optional.of(
                             MfaMethodData.smsMethodData(
                                     mfaIdentifier,
@@ -153,7 +153,7 @@ public class MFAMethodsService {
                                     true,
                                     userProfile.getPhoneNumber())));
         } else {
-            return Either.right(Optional.empty());
+            return Result.success(Optional.empty());
         }
     }
 
@@ -164,13 +164,13 @@ public class MFAMethodsService {
         }
 
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
-        Either<MfaRetrieveFailureReason, List<MfaMethodData>> mfaMethodsResult =
+        Result<MfaRetrieveFailureReason, List<MfaMethodData>> mfaMethodsResult =
                 getMfaMethodsForMigratedUser(userCredentials);
-        if (mfaMethodsResult.isLeft()) {
+        if (mfaMethodsResult.isFailure()) {
             return Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
         }
 
-        var mfaMethods = mfaMethodsResult.get();
+        var mfaMethods = mfaMethodsResult.getSuccess();
 
         if (mfaMethods.size() >= 2) {
             return Result.failure(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
@@ -412,11 +412,11 @@ public class MFAMethodsService {
         var nonMigratedRetrieveResult =
                 getMfaMethodForNonMigratedUser(userProfile, userCredentials);
 
-        if (nonMigratedRetrieveResult.isLeft()) {
+        if (nonMigratedRetrieveResult.isFailure()) {
             return Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
         }
 
-        var maybeNonMigratedMfaMethod = nonMigratedRetrieveResult.get();
+        var maybeNonMigratedMfaMethod = nonMigratedRetrieveResult.getSuccess();
 
         // Bail if no MFA methods to migrate
         if (maybeNonMigratedMfaMethod.isEmpty()) {

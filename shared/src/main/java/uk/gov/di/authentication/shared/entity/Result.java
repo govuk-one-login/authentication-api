@@ -1,5 +1,9 @@
 package uk.gov.di.authentication.shared.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+
 public sealed interface Result<F, S> permits Result.Failure, Result.Success {
     boolean isFailure();
 
@@ -16,6 +20,20 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
     static <F, S> Result<F, S> success(S value) {
         return new Success<>(value);
     }
+
+    static <F, S> Result<F, List<S>> sequenceSuccess(List<Result<F, S>> results) {
+        List<S> values = new ArrayList<>();
+        for (Result<F, S> result : results) {
+            if (result.isFailure()) {
+                return Result.failure(result.getFailure()); // short-circuit on first failure
+            } else {
+                values.add(result.getSuccess());
+            }
+        }
+        return Result.success(values);
+    }
+
+    <T> Result<F, T> map(Function<S, T> mapper);
 
     record Failure<F, S>(F value) implements Result<F, S> {
         @Override
@@ -36,6 +54,11 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         @Override
         public S getSuccess() {
             throw new IllegalStateException("No success value present in Failure");
+        }
+
+        @Override
+        public <T> Result<F, T> map(Function<S, T> mapper) {
+            return new Failure<>(value);
         }
     }
 
@@ -58,6 +81,11 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         @Override
         public S getSuccess() {
             return value;
+        }
+
+        @Override
+        public <T> Result<F, T> map(Function<S, T> mapper) {
+            return new Success<>(mapper.apply(value));
         }
     }
 }
