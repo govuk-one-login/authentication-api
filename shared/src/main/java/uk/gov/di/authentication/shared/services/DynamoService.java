@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -847,11 +846,11 @@ public class DynamoService implements AuthenticationService {
                 });
     }
 
-    private Either<String, Void> validateMfaMethods(List<MFAMethod> methods) {
+    private Result<String, Void> validateMfaMethods(List<MFAMethod> methods) {
         if (methods.isEmpty()) {
-            return Either.left("Mfa methods cannot be empty");
+            return Result.failure("Mfa methods cannot be empty");
         } else if (methods.size() > 2) {
-            return Either.left("Cannot have more than two mfa methods");
+            return Result.failure("Cannot have more than two mfa methods");
         } else if (methods.stream()
                         .filter(
                                 m ->
@@ -861,25 +860,25 @@ public class DynamoService implements AuthenticationService {
                         .toList()
                         .size()
                 > 1) {
-            return Either.left("Cannot have two auth app mfa methods");
+            return Result.failure("Cannot have two auth app mfa methods");
         }
         var backupMethods =
                 methods.stream().filter(m -> BACKUP.name().equals(m.getPriority())).toList();
         var defaultMethods =
                 methods.stream().filter(m -> DEFAULT.name().equals(m.getPriority())).toList();
         if (defaultMethods.size() > 1 || backupMethods.size() > 1) {
-            return Either.left("Cannot have two mfa methods with the same priority");
+            return Result.failure("Cannot have two mfa methods with the same priority");
         }
         if (defaultMethods.isEmpty()) {
-            return Either.left("Must have default priority mfa method defined");
+            return Result.failure("Must have default priority mfa method defined");
         }
         var uniqueIdentifiers =
                 methods.stream().map(MFAMethod::getMfaIdentifier).collect(Collectors.toSet());
         if (uniqueIdentifiers.size() < methods.size()) {
-            return Either.left("Cannot have mfa methods with the same identifier");
+            return Result.failure("Cannot have mfa methods with the same identifier");
         }
 
-        return Either.right(null);
+        return Result.success(null);
     }
 
     @Override
@@ -887,21 +886,22 @@ public class DynamoService implements AuthenticationService {
             String email, List<MFAMethod> updatedMfaMethods) {
         var validationResult = validateMfaMethods(updatedMfaMethods);
 
-        if (validationResult.isLeft()) {
-            return Result.failure(validationResult.getLeft());
-        } else {
-            var userCredentials =
-                    dynamoUserCredentialsTable.getItem(
-                            Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-            var dateTime = NowHelper.toTimestampString(NowHelper.now());
-            var updatedUserCredentials =
-                    dynamoUserCredentialsTable.updateItem(
-                            userCredentials
-                                    .withUpdated(dateTime)
-                                    .withMfaMethods(updatedMfaMethods));
+        return validationResult.map(
+                success -> {
+                    var userCredentials =
+                            dynamoUserCredentialsTable.getItem(
+                                    Key.builder()
+                                            .partitionValue(email.toLowerCase(Locale.ROOT))
+                                            .build());
+                    var dateTime = NowHelper.toTimestampString(NowHelper.now());
+                    var updatedUserCredentials =
+                            dynamoUserCredentialsTable.updateItem(
+                                    userCredentials
+                                            .withUpdated(dateTime)
+                                            .withMfaMethods(updatedMfaMethods));
 
-            return Result.success(updatedUserCredentials.getMfaMethods());
-        }
+                    return updatedUserCredentials.getMfaMethods();
+                });
     }
 
     @Override
