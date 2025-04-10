@@ -2,13 +2,13 @@ package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
 import io.vavr.control.Either;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.result.Result;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -100,7 +100,7 @@ public interface AuthenticationService {
     Either<String, List<MFAMethod>> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier);
 
-    Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
+    Result<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods);
 
     Result<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(

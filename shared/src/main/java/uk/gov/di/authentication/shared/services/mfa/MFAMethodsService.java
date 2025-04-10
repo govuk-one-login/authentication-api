@@ -309,9 +309,34 @@ public class MFAMethodsService {
                                 defaultMethod.withPriority(BACKUP.name()),
                                 backupMethod.withPriority(DEFAULT.name())));
 
-        return updateMfaResultToMfaMethodData(databaseUpdateResult);
+        var result = updateMfaResultToMfaMethodData(databaseUpdateResult);
+
+        if (result.isFailure()) {
+            return Either.left(result.getFailure());
+        } else {
+            return Either.right(result.getSuccess());
+        }
     }
 
+    private Result<MfaUpdateFailureReason, List<MfaMethodData>> updateMfaResultToMfaMethodData(
+            Result<String, List<MFAMethod>> updateResult) {
+        Result<String, List<MfaMethodData>> returnedMfaMethods =
+                updateResult.flatMap(
+                        mfaMethods ->
+                                Result.sequenceSuccess(
+                                                mfaMethods.stream()
+                                                        .map(MfaMethodData::from)
+                                                        .toList())
+                                        .map(list -> list.stream().sorted().toList()));
+
+        return returnedMfaMethods.mapFailure(
+                errorString -> {
+                    LOG.error(errorString);
+                    return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                });
+    }
+
+    // To deprecate when we've fully switched over everything to be a Result
     private Either<MfaUpdateFailureReason, List<MfaMethodData>> updateMfaResultToMfaMethodData(
             Either<String, List<MFAMethod>> updateResult) {
         Either<String, List<MfaMethodData>> returnedMfaMethods =
@@ -320,7 +345,7 @@ public class MFAMethodsService {
                                 Either.sequenceRight(
                                                 io.vavr.collection.List.ofAll(mfaMethods.stream())
                                                         .map(
-                                                                MfaMethodsService
+                                                                MFAMethodsService
                                                                         ::getMfaMethodAsEither))
                                         .map(Value::toJavaList)
                                         .map(list -> list.stream().sorted().toList()));

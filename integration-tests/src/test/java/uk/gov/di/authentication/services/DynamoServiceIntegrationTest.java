@@ -484,7 +484,7 @@ class DynamoServiceIntegrationTest {
                     dynamoService.updateAllMfaMethodsForUser(
                             TEST_EMAIL, List.of(promotedBackupMethod, demotedDefaultMethod));
 
-            var returnedMethods = result.get();
+            var returnedMethods = result.getSuccess();
             var defaultMethodAfterUpdate =
                     returnedMethods.stream()
                             .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
@@ -545,8 +545,8 @@ class DynamoServiceIntegrationTest {
             var result =
                     dynamoService.updateAllMfaMethodsForUser(TEST_EMAIL, invalidMethodCombination);
 
-            assertTrue(result.isLeft());
-            assertEquals(expectedErrorString, result.getLeft());
+            assertTrue(result.isFailure());
+            assertEquals(expectedErrorString, result.getFailure());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 

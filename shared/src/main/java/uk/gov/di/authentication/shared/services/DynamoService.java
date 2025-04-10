@@ -17,13 +17,13 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.result.Result;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -883,27 +883,25 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
+    public Result<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods) {
         var validationResult = validateMfaMethods(updatedMfaMethods);
 
-        return validationResult.bimap(
-                err -> err,
-                success -> {
-                    var userCredentials =
-                            dynamoUserCredentialsTable.getItem(
-                                    Key.builder()
-                                            .partitionValue(email.toLowerCase(Locale.ROOT))
-                                            .build());
-                    var dateTime = NowHelper.toTimestampString(NowHelper.now());
-                    var updatedUserCredentials =
-                            dynamoUserCredentialsTable.updateItem(
-                                    userCredentials
-                                            .withUpdated(dateTime)
-                                            .withMfaMethods(updatedMfaMethods));
+        if (validationResult.isLeft()) {
+            return Result.failure(validationResult.getLeft());
+        } else {
+            var userCredentials =
+                    dynamoUserCredentialsTable.getItem(
+                            Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+            var dateTime = NowHelper.toTimestampString(NowHelper.now());
+            var updatedUserCredentials =
+                    dynamoUserCredentialsTable.updateItem(
+                            userCredentials
+                                    .withUpdated(dateTime)
+                                    .withMfaMethods(updatedMfaMethods));
 
-                    return updatedUserCredentials.getMfaMethods();
-                });
+            return Result.success(updatedUserCredentials.getMfaMethods());
+        }
     }
 
     @Override

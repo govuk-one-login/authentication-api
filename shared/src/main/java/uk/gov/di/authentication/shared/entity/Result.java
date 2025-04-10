@@ -35,6 +35,10 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
 
     <T> Result<F, T> map(Function<S, T> mapper);
 
+    <T> Result<F, T> flatMap(Function<S, Result<F, T>> mapper);
+
+    <T> Result<T, S> mapFailure(Function<F, T> mapper);
+
     record Failure<F, S>(F value) implements Result<F, S> {
         @Override
         public boolean isFailure() {
@@ -59,6 +63,16 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         @Override
         public <T> Result<F, T> map(Function<S, T> mapper) {
             return new Failure<>(value);
+        }
+
+        @Override
+        public <T> Result<F, T> flatMap(Function<S, Result<F, T>> mapper) {
+            return new Failure<>(value);
+        }
+
+        @Override
+        public <T> Result<T, S> mapFailure(Function<F, T> mapper) {
+            return new Failure<>(mapper.apply(value));
         }
     }
 
@@ -86,6 +100,16 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         @Override
         public <T> Result<F, T> map(Function<S, T> mapper) {
             return new Success<>(mapper.apply(value));
+        }
+
+        @Override
+        public <T> Result<F, T> flatMap(Function<S, Result<F, T>> mapper) {
+            return mapper.apply(value);
+        }
+
+        @Override
+        public <T> Result<T, S> mapFailure(Function<F, T> mapper) {
+            return new Success<>(value);
         }
     }
 }

@@ -3,7 +3,7 @@ package uk.gov.di.authentication.shared.entity.mfa;
 import com.google.gson.annotations.Expose;
 import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.result.Result;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public record MfaMethodData(

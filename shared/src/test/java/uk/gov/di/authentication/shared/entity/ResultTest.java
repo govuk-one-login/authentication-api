@@ -113,4 +113,79 @@ class ResultTest {
             assertEquals(0, logs.size());
         }
     }
+
+    @Nested
+    class FlatMapTests {
+        @Test
+        void flatMapShouldSuccessfullyTransformASuccessIntoANewResultAndCarryOutAnySideEffects() {
+            var number = 1;
+            var success = Result.success(number);
+            var logs = new ArrayList<>();
+
+            var result =
+                    success.flatMap(
+                            n -> {
+                                logs.add(format("Processing number %d", n));
+                                return Result.success(n + 1);
+                            });
+            assertEquals(Result.success(2), result);
+            assertEquals(1, logs.size());
+            assertEquals("Processing number 1", logs.get(0));
+        }
+
+        @Test
+        void flatMapShouldReturnAFailureWithNoOtherEffectsWhenActingOnAFailure() {
+            var failureString = "This is a failure";
+            var failure = Result.<String, Integer>failure(failureString);
+            var logs = new ArrayList<>();
+
+            var result =
+                    failure.flatMap(
+                            n -> {
+                                logs.add(format("Processing number %d", n));
+                                return Result.success(n + 1);
+                            });
+            assertEquals(failure, result);
+            assertEquals(0, logs.size());
+        }
+    }
+
+    @Nested
+    class MapFailureTests {
+        @Test
+        void shouldReturnASuccessWithNoSideEffects() {
+            var successValue = 1;
+            var success = Result.<String, Integer>success(successValue);
+            var failureLogs = new ArrayList<>();
+
+            var mapFailureResult =
+                    success.mapFailure(
+                            s -> {
+                                failureLogs.add(format("Found failure %s", s));
+                                return s.length();
+                            });
+
+            assertEquals(0, failureLogs.size());
+            assertEquals(Result.<Integer, Integer>success(successValue), mapFailureResult);
+        }
+
+        @Test
+        void shouldSuccessfullyTransformALeftHandValue() {
+            var failureString = "abc";
+            var failure = Result.<String, Integer>failure(failureString);
+            var failureLogs = new ArrayList<>();
+
+            var mapFailureResult =
+                    failure.mapFailure(
+                            s -> {
+                                failureLogs.add(format("Found failure %s", s));
+                                return s.length();
+                            });
+
+            assertEquals(1, failureLogs.size());
+            assertEquals("Found failure abc", failureLogs.get(0));
+            assertEquals(
+                    Result.<Integer, Integer>failure(failureString.length()), mapFailureResult);
+        }
+    }
 }
