@@ -32,7 +32,6 @@ ext {
         junit: "5.11.4",
         xray: "2.18.2",
         pact: "4.6.17",
-        vavr: "0.10.6"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -113,7 +112,6 @@ subprojects {
         xray
         pact_consumer
         pact_provider
-        vavr
     }
 
     // Check dependencies using:
@@ -223,8 +221,6 @@ subprojects {
         pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
-
-        vavr "io.vavr:vavr:${dependencyVersions.vavr}"
     }
 }
 

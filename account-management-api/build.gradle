@@ -19,8 +19,7 @@ dependencies {
 
     implementation configurations.nimbus,
             configurations.govuk_notify,
-            configurations.gson,
-            configurations.vavr
+            configurations.gson
 
     implementation project(":shared")
 
