@@ -80,3 +80,4 @@ orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:8160
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:816047645251:key/590f841e-3eec-45f1-a9bc-4b32b2edece4"
 
 cmk_for_back_channel_logout_enabled = true
+use_strongly_consistent_reads       = true

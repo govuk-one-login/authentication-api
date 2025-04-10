@@ -131,4 +131,5 @@ performance_tuning = {
     scaling_trigger = 0
   }
 }
-lambda_min_concurrency = 1
+lambda_min_concurrency        = 1
+use_strongly_consistent_reads = true

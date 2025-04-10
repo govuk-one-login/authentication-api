@@ -31,12 +31,13 @@ module "update_profile" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT              = var.environment
-    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
-    REDIS_KEY                = local.redis_key
-    TERMS_CONDITIONS_VERSION = var.terms_and_conditions
-    HEADERS_CASE_INSENSITIVE = "false"
-    INTERNAl_SECTOR_URI      = var.internal_sector_uri
+    ENVIRONMENT                   = var.environment
+    TXMA_AUDIT_QUEUE_URL          = module.oidc_txma_audit.queue_url
+    REDIS_KEY                     = local.redis_key
+    TERMS_CONDITIONS_VERSION      = var.terms_and_conditions
+    HEADERS_CASE_INSENSITIVE      = "false"
+    INTERNAl_SECTOR_URI           = var.internal_sector_uri
+    USE_STRONGLY_CONSISTENT_READS = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler::handleRequest"
 

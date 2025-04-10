@@ -37,6 +37,7 @@ module "reverification_result" {
     ENVIRONMENT                                   = var.environment
     IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.arn
     IPV_BACKEND_URI                               = var.ipv_backend_uri
+    USE_STRONGLY_CONSISTENT_READS                 = var.use_strongly_consistent_reads
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler::handleRequest"
