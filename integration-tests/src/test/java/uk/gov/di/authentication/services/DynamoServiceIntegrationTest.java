@@ -302,7 +302,7 @@ class DynamoServiceIntegrationTest {
                             PriorityIdentifier.valueOf(defaultPrioritySmsData.getPriority()),
                             defaultPrioritySmsData.getMfaIdentifier());
 
-            var returnedMethods = result.get();
+            var returnedMethods = result.getSuccess();
             var updatedDefaultMethod =
                     returnedMethods.stream()
                             .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
@@ -344,7 +344,7 @@ class DynamoServiceIntegrationTest {
                             PriorityIdentifier.valueOf(defaultPriorityAuthAppData.getPriority()),
                             defaultPriorityAuthAppData.getMfaIdentifier());
 
-            var returnedMethods = result.get();
+            var returnedMethods = result.getSuccess();
             var updatedDefaultPriorityMethod =
                     returnedMethods.stream()
                             .filter(m -> m.getPriority().equals(PriorityIdentifier.DEFAULT.name()))
@@ -380,7 +380,7 @@ class DynamoServiceIntegrationTest {
 
             assertEquals(
                     "Mfa method with identifier some-other-identifier does not exist",
-                    result.getLeft());
+                    result.getFailure());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
@@ -402,7 +402,7 @@ class DynamoServiceIntegrationTest {
 
             assertEquals(
                     "Mfa method with identifier some-other-identifier does not exist",
-                    result.getLeft());
+                    result.getFailure());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
@@ -427,7 +427,7 @@ class DynamoServiceIntegrationTest {
                     format(
                             "Attempted to update phone number for non sms method with identifier %s",
                             defaultPriorityAuthAppData.getMfaIdentifier()),
-                    result.getLeft());
+                    result.getFailure());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
@@ -452,7 +452,7 @@ class DynamoServiceIntegrationTest {
                     format(
                             "Attempted to update auth app credential for non auth app method with identifier %s",
                             defaultPrioritySmsData.getMfaIdentifier()),
-                    result.getLeft());
+                    result.getFailure());
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 

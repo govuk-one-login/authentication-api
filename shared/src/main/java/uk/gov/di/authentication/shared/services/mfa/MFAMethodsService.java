@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.services.mfa;
 
-import io.vavr.Value;
 import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -336,37 +335,6 @@ public class MFAMethodsService {
                 });
     }
 
-    // To deprecate when we've fully switched over everything to be a Result
-    private Either<MfaUpdateFailureReason, List<MfaMethodData>> updateMfaResultToMfaMethodData(
-            Either<String, List<MFAMethod>> updateResult) {
-        Either<String, List<MfaMethodData>> returnedMfaMethods =
-                updateResult.flatMap(
-                        mfaMethods ->
-                                Either.sequenceRight(
-                                                io.vavr.collection.List.ofAll(mfaMethods.stream())
-                                                        .map(
-                                                                MFAMethodsService
-                                                                        ::getMfaMethodAsEither))
-                                        .map(Value::toJavaList)
-                                        .map(list -> list.stream().sorted().toList()));
-
-        return returnedMfaMethods.mapLeft(
-                errorString -> {
-                    LOG.error(errorString);
-                    return MfaUpdateFailureReason.UNEXPECTED_ERROR;
-                });
-    }
-
-    // temporary helper while we migrate away from vavr
-    private static Either<String, MfaMethodData> getMfaMethodAsEither(MFAMethod mfaMethod) {
-        var asMaybeMethodData = MfaMethodData.from(mfaMethod);
-        if (asMaybeMethodData.isFailure()) {
-            return Either.left(asMaybeMethodData.getFailure());
-        } else {
-            return Either.right(asMaybeMethodData.getSuccess());
-        }
-    }
-
     private Either<MfaUpdateFailureReason, List<MfaMethodData>> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
             MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
@@ -378,7 +346,7 @@ public class MFAMethodsService {
             return Either.left(MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD);
         }
 
-        Either<String, List<MFAMethod>> databaseUpdateResult;
+        Result<String, List<MFAMethod>> databaseUpdateResult;
 
         if (updatedMethod.method() instanceof SmsMfaDetail updatedSmsDetail) {
             var isExistingDefaultPhoneNumber =
@@ -419,7 +387,12 @@ public class MFAMethodsService {
             }
         }
 
-        return updateMfaResultToMfaMethodData(databaseUpdateResult);
+        var updateResult = updateMfaResultToMfaMethodData(databaseUpdateResult);
+        if (updateResult.isFailure()) {
+            return Either.left(updateResult.getFailure());
+        } else {
+            return Either.right(updateResult.getSuccess());
+        }
     }
 
     private boolean updateRequestChangesMethodType(

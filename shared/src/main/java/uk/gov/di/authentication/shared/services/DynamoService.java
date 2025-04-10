@@ -768,7 +768,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
+    public Result<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
             String email, String updatedPhoneNumber, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -777,12 +777,12 @@ public class DynamoService implements AuthenticationService {
         return maybeExistingMethod.flatMap(
                 existingMethod -> {
                     if (!existingMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
-                        return Either.left(
+                        return Result.failure(
                                 format(
                                         "Attempted to update phone number for non sms method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    return Either.right(
+                    return Result.success(
                             updateMigratedMfaMethod(
                                     existingMethod.withDestination(updatedPhoneNumber),
                                     mfaMethodIdentifier,
@@ -804,7 +804,7 @@ public class DynamoService implements AuthenticationService {
         return updatedUserCredentials.getMfaMethods();
     }
 
-    private Either<String, MFAMethod> getMfaMethodByIdentifier(
+    private Result<String, MFAMethod> getMfaMethodByIdentifier(
             UserCredentials userCredentials, String mfaMethodIdentifier) {
         var maybeExistingMethod =
                 userCredentials.getMfaMethods().stream()
@@ -813,17 +813,17 @@ public class DynamoService implements AuthenticationService {
                                         mfaMethod.getMfaIdentifier().equals(mfaMethodIdentifier))
                         .findFirst();
         return maybeExistingMethod
-                .<Either<String, MFAMethod>>map(Either::right)
+                .<Result<String, MFAMethod>>map(Result::success)
                 .orElseGet(
                         () ->
-                                Either.left(
+                                Result.failure(
                                         format(
                                                 "Mfa method with identifier %s does not exist",
                                                 mfaMethodIdentifier)));
     }
 
     @Override
-    public Either<String, List<MFAMethod>> updateMigratedAuthAppCredential(
+    public Result<String, List<MFAMethod>> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -834,12 +834,12 @@ public class DynamoService implements AuthenticationService {
                     if (!existingMethod
                             .getMfaMethodType()
                             .equals(MFAMethodType.AUTH_APP.getValue())) {
-                        return Either.left(
+                        return Result.failure(
                                 format(
                                         "Attempted to update auth app credential for non auth app method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    return Either.right(
+                    return Result.success(
                             updateMigratedMfaMethod(
                                     existingMethod.withCredentialValue(updatedCredential),
                                     mfaMethodIdentifier,
