@@ -11,6 +11,7 @@ import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -50,6 +51,7 @@ class OrchSessionServiceTest {
         var session = new OrchSessionItem(SESSION_ID);
         assertThat(session.getProcessingIdentityAttempts(), equalTo(0));
         assertThat(session.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.UNKNOWN));
+        assertThat(session.getClientSessions(), equalTo(new ArrayList<>()));
     }
 
     @Test
