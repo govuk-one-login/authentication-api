@@ -80,3 +80,57 @@ resource "aws_cloudwatch_log_subscription_filter" "mfa_method_analysis_log_subsc
     create_before_destroy = false
   }
 }
+
+data "aws_iam_policy_document" "invoke_mfa_method_analysis_lambda" {
+  statement {
+    sid    = "AllowInvokingMfaMethodAnalysisLambda"
+    effect = "Allow"
+
+    actions = [
+      "lambda:InvokeFunction",
+    ]
+
+    resources = [
+      aws_lambda_function.mfa_method_analysis_lambda.arn,
+      "${aws_lambda_function.mfa_method_analysis_lambda.arn}:*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "invoke_mfa_method_analysis_lambda" {
+  name_prefix = "invoke-mfa-method-analysis-lambda-policy"
+  description = "IAM policy for invoking the MFA method analysis lambda"
+
+  policy = data.aws_iam_policy_document.invoke_mfa_method_analysis_lambda.json
+}
+
+data "aws_iam_policy_document" "scheduler_can_assume_role" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "scheduler.amazonaws.com"
+      ]
+      type = "Service"
+    }
+    actions = [
+      "sts:AssumeRole"
+    ]
+  }
+}
+
+resource "aws_iam_role" "scheduler_can_assume_role" {
+  name               = "${var.environment}-scheduler-can-invoke-mfa-method-analysis-lambda-role"
+  path               = "/${var.environment}/scheduler-can-invoke-mfa-method-analysis-lambda-role/"
+  assume_role_policy = data.aws_iam_policy_document.scheduler_can_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "provided_policies" {
+  role       = aws_iam_role.scheduler_can_assume_role.name
+  policy_arn = aws_iam_policy.invoke_mfa_method_analysis_lambda.arn
+  depends_on = [
+    aws_iam_role.scheduler_can_assume_role
+  ]
+}
