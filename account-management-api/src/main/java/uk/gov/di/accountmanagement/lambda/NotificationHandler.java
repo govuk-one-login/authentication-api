@@ -6,6 +6,10 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.NotificationService;
@@ -17,14 +21,20 @@ import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.CONTACT_US_LINK_PERSONALISATION;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.EMAIL_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_SENDING_WITH_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.TEXT_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.UNEXPECTED_ERROR_SENDING_NOTIFICATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
@@ -33,14 +43,20 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
     public static final String VALIDATION_CODE_PERSONALISATION = "validation-code";
     public static final String EMAIL_ADDRESS_PERSONALISATION = "email-address";
+    public static final String EXCEPTION_THROWN_WHEN_WRITING_TO_S_3_BUCKET =
+            "Exception thrown when writing to S3 bucket: {}";
     private final NotificationService notificationService;
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService;
+    private final S3Client s3Client;
 
     public NotificationHandler(
-            NotificationService notificationService, ConfigurationService configService) {
+            NotificationService notificationService,
+            ConfigurationService configService,
+            S3Client s3Client) {
         this.notificationService = notificationService;
         this.configurationService = configService;
+        this.s3Client = s3Client;
     }
 
     public NotificationHandler() {
@@ -60,6 +76,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                 new NotificationClient(
                                         this.configurationService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client, configurationService);
+        this.s3Client =
+                S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
     }
 
     @Override
@@ -103,17 +121,14 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         emailPersonalisation.put(VALIDATION_CODE_PERSONALISATION, notifyRequest.getCode());
         emailPersonalisation.put(EMAIL_ADDRESS_PERSONALISATION, notifyRequest.getDestination());
         emailPersonalisation.put(CONTACT_US_LINK_PERSONALISATION, buildContactUsUrl());
-        sendEmailNotification(
-                notifyRequest, emailPersonalisation, String.valueOf(NotificationType.VERIFY_EMAIL));
+        sendEmailNotification(notifyRequest, emailPersonalisation, String.valueOf(VERIFY_EMAIL));
     }
 
     private void sendVerifyPhoneNotification(NotifyRequest notifyRequest) {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put(VALIDATION_CODE_PERSONALISATION, notifyRequest.getCode());
         sendTextNotification(
-                notifyRequest,
-                phonePersonalisation,
-                String.valueOf(NotificationType.VERIFY_PHONE_NUMBER));
+                notifyRequest, phonePersonalisation, String.valueOf(VERIFY_PHONE_NUMBER));
     }
 
     private void sendEmailUpdatedNotification(NotifyRequest notifyRequest) {
@@ -159,12 +174,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             Map<String, Object> personalisation,
             String notificationType) {
         try {
-            LOG.info("Sending {} email using Notify", notificationType);
             notificationService.sendEmail(
                     notifyRequest.getDestination(),
                     personalisation,
                     NotificationType.valueOf(notificationType));
             LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+            writeTestClientOtpToS3(
+                    notifyRequest.getNotificationType(),
+                    notifyRequest.getCode(),
+                    notifyRequest.getDestination(),
+                    notifyRequest.getEmail());
         } catch (NotificationClientException e) {
             LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
         } catch (RuntimeException e) {
@@ -176,17 +195,27 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             NotifyRequest notifyRequest,
             Map<String, Object> personalisation,
             String notificationType) {
-        try {
-            LOG.info("Sending {} text using Notify", notificationType);
-            notificationService.sendText(
+
+        if (!notifyRequest.isTestClient()) {
+            try {
+                LOG.info("Sending {} text using Notify", notificationType);
+                notificationService.sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        NotificationType.valueOf(notificationType));
+                LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+            } catch (NotificationClientException e) {
+                LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+            } catch (RuntimeException e) {
+                LOG.error(UNEXPECTED_ERROR_SENDING_NOTIFICATION, notificationType, e.getMessage());
+            }
+        } else {
+            LOG.info("Test client detected writing code to S3");
+            writeTestClientOtpToS3(
+                    notifyRequest.getNotificationType(),
+                    notifyRequest.getCode(),
                     notifyRequest.getDestination(),
-                    personalisation,
-                    NotificationType.valueOf(notificationType));
-            LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
-        } catch (NotificationClientException e) {
-            LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
-        } catch (RuntimeException e) {
-            LOG.error(UNEXPECTED_ERROR_SENDING_NOTIFICATION, notificationType, e.getMessage());
+                    notifyRequest.getEmail());
         }
     }
 
@@ -195,5 +224,42 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         configurationService.getFrontendBaseUrl(),
                         configurationService.getContactUsLinkRoute())
                 .toString();
+    }
+
+    void writeTestClientOtpToS3(
+            NotificationType notificationType, String otp, String destination, String email) {
+        var isNotifyDestination =
+                configurationService.getNotifyTestDestinations().contains(destination);
+        var isOTPNotificationType =
+                List.of(
+                                VERIFY_EMAIL,
+                                MFA_SMS,
+                                VERIFY_PHONE_NUMBER,
+                                RESET_PASSWORD_WITH_CODE,
+                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                        .contains(notificationType);
+        if (isNotifyDestination && isOTPNotificationType) {
+            LOG.info(
+                    LogMessageTemplates.NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
+                    notificationType);
+            String bucketName = configurationService.getAccountManagementNotifyBucketDestination();
+
+            try {
+                var putObjectRequest =
+                        PutObjectRequest.builder().bucket(bucketName).key(email).build();
+                s3Client.putObject(putObjectRequest, RequestBody.fromString(otp));
+                if ("integration".equals(configurationService.getEnvironment())) {
+                    LOG.info(LogMessageTemplates.WRITING_OTP_TO_S_3_BUCKET, otp);
+                }
+            } catch (Exception e) {
+                LOG.error(EXCEPTION_THROWN_WHEN_WRITING_TO_S_3_BUCKET, e.getMessage(), e);
+            }
+        } else {
+            LOG.info(
+                    LogMessageTemplates
+                            .NOT_WRITING_TO_BUCKET_IS_NOTIFY_DESTINATION_IS_OTPNOTIFICATION_TYPE,
+                    isNotifyDestination,
+                    isOTPNotificationType);
+        }
     }
 }

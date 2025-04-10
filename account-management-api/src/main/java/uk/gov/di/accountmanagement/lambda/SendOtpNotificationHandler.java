@@ -293,7 +293,13 @@ public class SendOtpNotificationHandler
                         : codeGeneratorService.sixDigitCode();
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(destination, notificationType, code, language);
+                new NotifyRequest(
+                        destination,
+                        notificationType,
+                        code,
+                        language,
+                        isTestUserRequest,
+                        sendNotificationRequest.getEmail());
 
         codeStorageService.saveOtpCode(
                 sendNotificationRequest.getEmail(),
@@ -301,16 +307,11 @@ public class SendOtpNotificationHandler
                 configurationService.getDefaultOtpCodeExpiry(),
                 sendNotificationRequest.getNotificationType());
 
-        if (isTestUserRequest) {
-            LOG.info(
-                    "Test user journey for notificationType: {}. Code saved in code storage service, but no notification will be sent via SQS",
-                    sendNotificationRequest.getNotificationType());
-        } else {
-            LOG.info(
-                    "Sending message to SQS queue for notificationType: {}",
-                    sendNotificationRequest.getNotificationType());
-            emailSqsClient.send(serialiseRequest(notifyRequest));
-        }
+        LOG.info(
+                "Sending message to SQS queue for notificationType: {} for client type: {}",
+                sendNotificationRequest.getNotificationType(),
+                isTestUserRequest);
+        emailSqsClient.send(serialiseRequest(notifyRequest));
 
         var auditContext =
                 new AuditContext(
@@ -345,7 +346,6 @@ public class SendOtpNotificationHandler
     }
 
     private String getOtpCodeForTestClient(NotificationType notificationType) {
-        LOG.info("Using TestClient with NotificationType {}", notificationType);
         switch (notificationType) {
             case VERIFY_EMAIL:
                 return configurationService.getTestClientVerifyEmailOTP().orElse("");

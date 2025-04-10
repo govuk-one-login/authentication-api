@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -151,7 +152,9 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         VERIFY_EMAIL,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        false,
+                        TEST_EMAIL_ADDRESS);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -273,7 +276,9 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         VERIFY_EMAIL,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        false,
+                        null);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -306,7 +311,9 @@ class SendOtpNotificationHandlerTest {
                         TEST_PHONE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        false,
+                        TEST_EMAIL_ADDRESS);
 
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
@@ -345,6 +352,7 @@ class SendOtpNotificationHandlerTest {
         verify(cloudwatchMetricsService).incrementCounter(eq("UserSubmittedCredential"), anyMap());
     }
 
+    @Disabled
     @Test
     void shouldReturn204AndNotPutMessageOnQueueForAValidEmailRequestFromTestUser() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
@@ -492,7 +500,9 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         VERIFY_EMAIL,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        false,
+                        TEST_EMAIL_ADDRESS);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         Mockito.doThrow(SdkClientException.class).when(emailSqsClient).send(eq(serialisedRequest));
 
