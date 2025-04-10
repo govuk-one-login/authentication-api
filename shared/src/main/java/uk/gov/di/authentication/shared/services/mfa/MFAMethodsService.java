@@ -77,10 +77,10 @@ public class MFAMethodsService {
                 .map(Value::toJavaList);
     }
 
-    public Either<MfaDeleteFailureReason, String> deleteMfaMethod(
+    public Result<MfaDeleteFailureReason, String> deleteMfaMethod(
             String mfaIdentifier, UserProfile userProfile) {
         if (!userProfile.getMfaMethodsMigrated()) {
-            return Either.left(
+            return Result.failure(
                     MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER);
         }
 
@@ -95,15 +95,15 @@ public class MFAMethodsService {
                         .findFirst();
 
         if (maybeMethodToDelete.isEmpty()) {
-            return Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST);
+            return Result.failure(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST);
         }
 
         if (!BACKUP.name().equals(maybeMethodToDelete.get().getPriority())) {
-            return Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
+            return Result.failure(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD);
         }
 
         persistentService.deleteMfaMethodByIdentifier(userProfile.getEmail(), mfaIdentifier);
-        return Either.right(mfaIdentifier);
+        return Result.success(mfaIdentifier);
     }
 
     private Either<MfaRetrieveFailureReason, Optional<MfaMethodData>>

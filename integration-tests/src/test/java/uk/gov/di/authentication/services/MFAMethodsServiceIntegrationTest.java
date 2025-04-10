@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -11,6 +10,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -1044,7 +1044,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
-            assertEquals(Either.right(identifierToDelete), result);
+            assertEquals(Result.success(identifierToDelete), result);
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).get();
 
@@ -1062,7 +1062,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
-            assertEquals(Either.right(identifierToDelete), result);
+            assertEquals(Result.success(identifierToDelete), result);
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).get();
 
@@ -1080,7 +1080,8 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
-            assertEquals(Either.left(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD), result);
+            assertEquals(
+                    Result.failure(MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD), result);
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).get();
 
@@ -1102,7 +1103,8 @@ class MFAMethodsServiceIntegrationTest {
             var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
             assertEquals(
-                    Either.left(MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST),
+                    Result.failure(
+                            MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST),
                     result);
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).get();
@@ -1124,7 +1126,7 @@ class MFAMethodsServiceIntegrationTest {
             var result = mfaMethodsService.deleteMfaMethod(mfaIdentifier, userProfile);
 
             assertEquals(
-                    Either.left(
+                    Result.failure(
                             MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER),
                     result);
 
