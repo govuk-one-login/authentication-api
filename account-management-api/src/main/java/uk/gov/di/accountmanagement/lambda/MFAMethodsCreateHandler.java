@@ -92,7 +92,7 @@ public class MFAMethodsCreateHandler
             MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
                     readMfaMethodCreateRequest(input);
 
-            LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest.mfaMethod());
+            LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
 
             Either<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
                     mfaMethodsService.addBackupMfa(
