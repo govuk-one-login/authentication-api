@@ -177,9 +177,3 @@ variable "support_email_check_enabled" {
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
 }
-
-variable "mfa_method_analysis_enabled" {
-  default     = false
-  type        = bool
-  description = "Feature flag which toggles the deployment of the MFA method analysis lambda"
-}

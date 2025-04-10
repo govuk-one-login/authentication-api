@@ -30,6 +30,8 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
@@ -66,6 +68,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
@@ -1680,14 +1683,31 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
     }
 
-    @Test
-    void shouldForwardRequestQueryParamsAsClaimsToAuthFrontendApi() {
+    private static Stream<Arguments> vtrParams() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("Cl"), LOW_LEVEL, LevelOfConfidence.NONE),
+                Arguments.of(jsonArrayOf("Cl.Cm.P2"), MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm.PCL200", "Cl.Cm.P2"),
+                        MEDIUM_LEVEL,
+                        LevelOfConfidence.HMRC200),
+                Arguments.of(null, MEDIUM_LEVEL, LevelOfConfidence.NONE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("vtrParams")
+    void shouldForwardRequestQueryParamsAsClaimsToAuthFrontendApi(
+            String vtrString,
+            CredentialTrustLevel expectedCredentialStrength,
+            LevelOfConfidence expectedLevelOfConfidence) {
         setupForAuthJourney();
-        var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "");
+        var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", null);
         Map<String, String> queryParams = new HashMap<>(baseParams);
         queryParams.put("_ga", "12345");
         queryParams.put("cookie_consent", "approve");
-        queryParams.put("vtr", jsonArrayOf("Cl.Cm", "Cl"));
+        if (vtrString != null) {
+            queryParams.put("vtr", vtrString);
+        }
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -1698,8 +1718,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertResponseJarHasClaimsWithValues(
                 response,
                 Map.of(
-                        "vtr",
-                        List.of("Cl.Cm", "Cl"),
+                        "confidence",
+                        expectedCredentialStrength.getValue(),
+                        "requested_credential_strength",
+                        expectedCredentialStrength.getValue(),
+                        "requested_level_of_confidence",
+                        expectedLevelOfConfidence.getValue(),
                         "_ga",
                         "12345",
                         "cookie_consent",
@@ -1713,15 +1737,20 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertResponseJarHasClaims(response, List.of("state"));
     }
 
-    @Test
-    void shouldForwardRequestObjectParamsAsClaimsToAuthFrontendApi() throws JOSEException {
+    @ParameterizedTest
+    @MethodSource("vtrParams")
+    void shouldForwardRequestObjectParamsAsClaimsToAuthFrontendApi(
+            String vtrString,
+            CredentialTrustLevel expectedCredentialStrength,
+            LevelOfConfidence expectedLevelOfConfidence)
+            throws JOSEException {
         setupForAuthJourney();
         Map<String, String> extraParams = new HashMap<>();
         extraParams.put("_ga", "12345");
         extraParams.put("cookie_consent", "approve");
-        extraParams.put("vtr", jsonArrayOf("Cl.Cm", "Cl"));
         var requestObject =
-                createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, extraParams);
+                createSignedJWT(
+                        "", CLAIMS, List.of("openid"), null, null, null, vtrString, extraParams);
         Map<String, String> requestParams =
                 Map.of(
                         "client_id",
@@ -1742,8 +1771,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertResponseJarHasClaimsWithValues(
                 response,
                 Map.of(
-                        "vtr",
-                        List.of("Cl.Cm", "Cl"),
+                        "confidence",
+                        expectedCredentialStrength.getValue(),
+                        "requested_credential_strength",
+                        expectedCredentialStrength.getValue(),
+                        "requested_level_of_confidence",
+                        expectedLevelOfConfidence.getValue(),
                         "_ga",
                         "12345",
                         "cookie_consent",
@@ -1986,7 +2019,14 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             CodeChallengeMethod codeChallengeMethod)
             throws JOSEException {
         return createSignedJWT(
-                uiLocales, claims, scopes, maxAge, codeChallenge, codeChallengeMethod, Map.of());
+                uiLocales,
+                claims,
+                scopes,
+                maxAge,
+                codeChallenge,
+                codeChallengeMethod,
+                jsonArrayOf("P2.Cl.Cm", "PCL200.Cl.Cm"),
+                Map.of());
     }
 
     private SignedJWT createSignedJWT(
@@ -1996,6 +2036,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Integer maxAge,
             CodeChallenge codeChallenge,
             CodeChallengeMethod codeChallengeMethod,
+            String vtrString,
             Map<String, String> extraClaims)
             throws JOSEException {
         var jwtClaimsSetBuilder =
@@ -2014,9 +2055,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("nonce", new Nonce().getValue())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State().getValue())
-                        .claim("vtr", List.of("P2.Cl.Cm", "PCL200.Cl.Cm"))
                         .issuer(CLIENT_ID);
 
+        if (vtrString != null) {
+            jwtClaimsSetBuilder.claim("vtr", vtrString);
+        }
         if (claims != null && !claims.isBlank()) {
             jwtClaimsSetBuilder.claim("claims", claims);
         }

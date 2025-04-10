@@ -1,5 +1,4 @@
 data "aws_iam_policy_document" "mfa_method_analysis_dynamo_access" {
-  count = var.mfa_method_analysis_enabled ? 1 : 0
   statement {
     sid    = "AllowAccessToFetchUserTablesData"
     effect = "Allow"
@@ -26,29 +25,26 @@ data "aws_iam_policy_document" "mfa_method_analysis_dynamo_access" {
 }
 
 resource "aws_iam_policy" "mfa_method_analysis_dynamo_access" {
-  count       = var.mfa_method_analysis_enabled ? 1 : 0
   name_prefix = "account-metrics-dynamo-access-policy"
   description = "IAM policy for managing permissions to for the MFA method analysis lambda"
 
-  policy = data.aws_iam_policy_document.mfa_method_analysis_dynamo_access[0].json
+  policy = data.aws_iam_policy_document.mfa_method_analysis_dynamo_access.json
 }
 
 module "mfa_method_analysis_lambda_role" {
-  count  = var.mfa_method_analysis_enabled ? 1 : 0
   source = "../modules/lambda-role"
 
   environment = var.environment
   role_name   = "mfa-method-analysis-lambda-role"
 
   policies_to_attach = [
-    aws_iam_policy.mfa_method_analysis_dynamo_access[0].arn,
+    aws_iam_policy.mfa_method_analysis_dynamo_access.arn,
   ]
 }
 
 resource "aws_lambda_function" "mfa_method_analysis_lambda" {
-  count         = var.mfa_method_analysis_enabled ? 1 : 0
   function_name = "${var.environment}-mfa-method-analysis-lambda"
-  role          = module.mfa_method_analysis_lambda_role[0].arn
+  role          = module.mfa_method_analysis_lambda_role.arn
   handler       = "uk.gov.di.authentication.utils.lambda.MFAMethodAnalysisHandler::handleRequest"
   timeout       = 900
   memory_size   = 4096
@@ -67,21 +63,74 @@ resource "aws_lambda_function" "mfa_method_analysis_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "mfa_method_analysis_lambda_log_group" {
-  count             = var.mfa_method_analysis_enabled ? 1 : 0
-  name              = "/aws/lambda/${aws_lambda_function.mfa_method_analysis_lambda[0].function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.mfa_method_analysis_lambda.function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 }
 
 
 resource "aws_cloudwatch_log_subscription_filter" "mfa_method_analysis_log_subscription" {
-  count           = (var.mfa_method_analysis_enabled && length(var.logging_endpoint_arns) > 0) ? length(var.logging_endpoint_arns) : 0
-  name            = "${aws_lambda_function.mfa_method_analysis_lambda[0].function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.mfa_method_analysis_lambda_log_group[0].name
+  count           = length(var.logging_endpoint_arns)
+  name            = "${aws_lambda_function.mfa_method_analysis_lambda.function_name}-log-subscription-${count.index}"
+  log_group_name  = aws_cloudwatch_log_group.mfa_method_analysis_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
   lifecycle {
     create_before_destroy = false
   }
+}
+
+data "aws_iam_policy_document" "invoke_mfa_method_analysis_lambda" {
+  statement {
+    sid    = "AllowInvokingMfaMethodAnalysisLambda"
+    effect = "Allow"
+
+    actions = [
+      "lambda:InvokeFunction",
+    ]
+
+    resources = [
+      aws_lambda_function.mfa_method_analysis_lambda.arn,
+      "${aws_lambda_function.mfa_method_analysis_lambda.arn}:*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "invoke_mfa_method_analysis_lambda" {
+  name_prefix = "invoke-mfa-method-analysis-lambda-policy"
+  description = "IAM policy for invoking the MFA method analysis lambda"
+
+  policy = data.aws_iam_policy_document.invoke_mfa_method_analysis_lambda.json
+}
+
+data "aws_iam_policy_document" "scheduler_can_assume_role" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "scheduler.amazonaws.com"
+      ]
+      type = "Service"
+    }
+    actions = [
+      "sts:AssumeRole"
+    ]
+  }
+}
+
+resource "aws_iam_role" "scheduler_can_assume_role" {
+  name               = "${var.environment}-scheduler-can-invoke-mfa-method-analysis-lambda-role"
+  path               = "/${var.environment}/scheduler-can-invoke-mfa-method-analysis-lambda-role/"
+  assume_role_policy = data.aws_iam_policy_document.scheduler_can_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "provided_policies" {
+  role       = aws_iam_role.scheduler_can_assume_role.name
+  policy_arn = aws_iam_policy.invoke_mfa_method_analysis_lambda.arn
+  depends_on = [
+    aws_iam_role.scheduler_can_assume_role
+  ]
 }
