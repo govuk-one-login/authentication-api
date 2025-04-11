@@ -120,7 +120,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     false,
                     authCodeRequest.sectorIdentifier(),
                     authCodeRequest.isNewAccount(),
-                    authCodeRequest.passwordResetTime());
+                    authCodeRequest.passwordResetTime(),
+                    userContext.getClientSessionId());
 
             var state = State.parse(authCodeRequest.state());
             var redirectUri = URI.create(authCodeRequest.redirectUri());

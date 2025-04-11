@@ -235,7 +235,8 @@ class AuthenticationAuthCodeHandlerTest {
                         eq(false),
                         anyString(),
                         eq(false),
-                        eq(null));
+                        eq(null),
+                        eq(CLIENT_SESSION_ID));
         assertThat(result, hasStatus(200));
         var jsonBody = new JSONObject(result.getBody());
         assertTrue(jsonBody.has(LOCATION));
@@ -412,7 +413,8 @@ class AuthenticationAuthCodeHandlerTest {
                         eq(false),
                         anyString(),
                         eq(false),
-                        eq(PASSWORD_RESET_TIME));
+                        eq(PASSWORD_RESET_TIME),
+                        eq(CLIENT_SESSION_ID));
         assertThat(result, hasStatus(200));
     }
 

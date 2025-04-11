@@ -65,10 +65,18 @@ public class AuthCodeExtension extends DynamoExtension implements AfterEachCallb
             List<String> claims,
             boolean hasBeenUsed,
             String sectorIdentifier,
-            boolean isNewAccount) {
+            boolean isNewAccount,
+            String journeyId) {
 
         dynamoAuthCodeService.saveAuthCode(
-                subjectID, authCode, claims, hasBeenUsed, sectorIdentifier, isNewAccount, null);
+                subjectID,
+                authCode,
+                claims,
+                hasBeenUsed,
+                sectorIdentifier,
+                isNewAccount,
+                null,
+                journeyId);
     }
 
     private void createAuthCodeStoreTable() {

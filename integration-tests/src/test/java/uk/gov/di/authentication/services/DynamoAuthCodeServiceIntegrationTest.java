@@ -24,6 +24,7 @@ class DynamoAuthCodeServiceIntegrationTest {
     private static final boolean IS_NEW_ACCOUNT = false;
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
     private static final Long PASSWORD_RESET_TIME = 1696869005821L;
+    private static final String TEST_JOURNEY_ID = "client-session-id";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeExtension = new AuthCodeExtension(180);
@@ -38,7 +39,8 @@ class DynamoAuthCodeServiceIntegrationTest {
                 List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                 HAS_BEEN_USED,
                 TEST_SECTOR_IDENTIFIER,
-                IS_NEW_ACCOUNT);
+                IS_NEW_ACCOUNT,
+                TEST_JOURNEY_ID);
     }
 
     @Test
@@ -71,7 +73,8 @@ class DynamoAuthCodeServiceIntegrationTest {
                 HAS_BEEN_USED,
                 TEST_SECTOR_IDENTIFIER,
                 IS_NEW_ACCOUNT,
-                null);
+                null,
+                TEST_JOURNEY_ID);
 
         var updatedAuthCode = dynamoAuthCodeService.getAuthCodeStore(AUTH_CODE).get();
         assertEquals(AUTH_CODE, updatedAuthCode.getAuthCode());
@@ -87,7 +90,8 @@ class DynamoAuthCodeServiceIntegrationTest {
                 HAS_BEEN_USED,
                 TEST_SECTOR_IDENTIFIER,
                 IS_NEW_ACCOUNT,
-                PASSWORD_RESET_TIME);
+                PASSWORD_RESET_TIME,
+                TEST_JOURNEY_ID);
 
         var updatedAuthCode = dynamoAuthCodeService.getAuthCodeStore(AUTH_CODE).get();
         assertEquals(AUTH_CODE, updatedAuthCode.getAuthCode());

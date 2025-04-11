@@ -52,6 +52,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password-1";
+    private static final String TEST_JOURNEY_ID = "client-session-id";
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
@@ -78,7 +79,8 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                 TEST_CLAIMS,
                 false,
                 TEST_SECTOR_IDENTIFIER,
-                false);
+                false,
+                TEST_JOURNEY_ID);
 
         txmaAuditQueue.clear();
     }
