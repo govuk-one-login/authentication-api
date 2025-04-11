@@ -57,6 +57,9 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         }
         var redirectURI = authRequest.getRedirectionURI();
 
+        var responseMode = Optional.ofNullable(authRequest.getResponseMode());
+        responseMode.ifPresent(mode -> validateResponseMode(mode.getValue()));
+
         if (authRequest.getState() == null) {
             logErrorInProdElseWarn("State is missing from authRequest");
             return Optional.of(
@@ -175,10 +178,6 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             redirectURI,
                             state));
         }
-
-        var responseMode = Optional.ofNullable(authRequest.getResponseMode());
-
-        responseMode.ifPresent(mode -> validateResponseMode(mode.getValue()));
 
         return Optional.empty();
     }

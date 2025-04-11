@@ -97,6 +97,12 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
 
+            var responseMode = jwtClaimsSet.getStringClaim("response_mode");
+
+            if (Objects.nonNull(responseMode)) {
+                validateResponseMode(responseMode);
+            }
+
             if (Objects.isNull(jwtClaimsSet.getClaim("state"))) {
                 logErrorInProdElseWarn("State is missing from authRequest");
                 return errorResponse(
@@ -224,12 +230,6 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
             if (maxAgeError.isPresent()) {
                 return errorResponse(redirectURI, maxAgeError.get(), state);
-            }
-
-            var responseMode = jwtClaimsSet.getStringClaim("response_mode");
-
-            if (Objects.nonNull(responseMode)) {
-                validateResponseMode(responseMode);
             }
 
             LOG.info("RequestObject has passed initial validation");
