@@ -60,7 +60,6 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -96,7 +95,6 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -167,8 +165,6 @@ public class TokenHandlerTest {
             mock(TokenClientAuthValidatorFactory.class);
     private final TokenClientAuthValidator tokenClientAuthValidator =
             mock(TokenClientAuthValidator.class);
-    private final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
@@ -193,7 +189,6 @@ public class TokenHandlerTest {
                         tokenService,
                         dynamoService,
                         configurationService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         clientSessionService,
                         orchClientSessionService,
@@ -690,8 +685,6 @@ public class TokenHandlerTest {
                         anyString(), any()))
                 .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(Optional.empty());
         when(orchAuthCodeService.getExchangeDataForCode(authCode)).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result =
@@ -707,10 +700,7 @@ public class TokenHandlerTest {
                                 CLIENT.getValue(),
                                 CLIENT_ID));
 
-        // TODO: ATO-1205: Update this to call assertAuthCodeExchangeDataRetrieved instead. We can't
-        // make this assertion at present as no call is made to orchAuthCodeService (as we fail when
-        // the call to authorisationCodeService fails).
-        verify(authorisationCodeService, times(1)).getExchangeDataForCode(eq(authCode));
+        assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -1463,10 +1453,8 @@ public class TokenHandlerTest {
         assertClaimsRequestIfPresent(oidcClaimsRequest, true);
     }
 
-    // TODO: ATO-1205: Update this test to handle new behaviour when unchecked exceptions are
-    // encountered -- see TODO comment in the handler.
     @Test
-    void shouldCatchAnyUncheckedOrchAuthCodeGetExchangeDataForCodeExceptions()
+    void shouldReturn500ForTokenRequestIfOrchAuthCodeGetExchangeDataThrowsException()
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
@@ -1515,8 +1503,13 @@ public class TokenHandlerTest {
                         new RuntimeException(
                                 "Some unchecked exception during orch auth code exchange data retrieval."));
 
-        assertDoesNotThrow(
-                () -> generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true));
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasBody("Internal server error"));
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -1544,8 +1537,6 @@ public class TokenHandlerTest {
                         .setClientSessionId(CLIENT_SESSION_ID)
                         .setAuthTime(AUTH_TIME)
                         .setClientId(clientId);
-        when(authorisationCodeService.getExchangeDataForCode(authCode))
-                .thenReturn(Optional.of(authCodeExchangeData));
         when(orchAuthCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(Optional.of(authCodeExchangeData));
         var orchClientSession =
@@ -1568,8 +1559,6 @@ public class TokenHandlerTest {
                         .setClientSessionId(CLIENT_SESSION_ID)
                         .setAuthTime(AUTH_TIME)
                         .setClientId(CLIENT_ID);
-        when(authorisationCodeService.getExchangeDataForCode(anyString()))
-                .thenReturn(Optional.of(authCodeExchangeData));
         when(orchAuthCodeService.getExchangeDataForCode(anyString()))
                 .thenReturn(Optional.of(authCodeExchangeData));
 
@@ -1784,8 +1773,6 @@ public class TokenHandlerTest {
     }
 
     private void assertAuthCodeExchangeDataRetrieved(String authCode) {
-        verify(authorisationCodeService, times(1)).getExchangeDataForCode(eq(authCode));
-
         verify(orchAuthCodeService, times(1)).getExchangeDataForCode(eq(authCode));
     }
 }

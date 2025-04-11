@@ -58,6 +58,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
@@ -132,6 +133,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchClientSessionExtension orchClientSessionExtension =
             new OrchClientSessionExtension();
+
+    @RegisterExtension
+    public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
 
     @BeforeEach
     void setup() {
@@ -562,7 +566,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
                         Optional.of("test-client-1"),
-                        "test-auth-code-2",
                         CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithClientSecretPost(
@@ -592,7 +595,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
                         Optional.of("test-client-1"),
-                        "test-auth-code-2",
                         CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithPrivateKeyJWT(
@@ -618,7 +620,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of(CLIENT_ID),
-                        new AuthorizationCode().toString(),
                         invalidCodeVerifier.getValue());
 
         var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
@@ -768,12 +769,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> clientId)
             throws Json.JsonException {
         return constructBaseTokenRequest(
-                scope,
-                vtr,
-                oidcClaimsRequest,
-                clientId,
-                new AuthorizationCode().toString(),
-                CODE_VERIFIER.getValue());
+                scope, vtr, oidcClaimsRequest, clientId, CODE_VERIFIER.getValue());
     }
 
     private Map<String, List<String>> constructBaseTokenRequest(
@@ -781,7 +777,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId,
-            String code,
             String codeVerifier)
             throws Json.JsonException {
         List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
@@ -802,12 +797,16 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         creationDate,
                         vtrList,
                         "client-name"));
-        redis.addAuthCode(code, CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
+
+        AuthorizationCode code =
+                orchAuthCodeExtension.generateAndSaveAuthorisationCode(
+                        CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
+
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
-        customParams.put("code", Collections.singletonList(code));
+        customParams.put("code", Collections.singletonList(code.getValue()));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
         customParams.put("code_verifier", Collections.singletonList(codeVerifier));
         return customParams;
