@@ -26,8 +26,7 @@ dependencies {
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache,
-            configurations.vavr
-    implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
+            implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 
     testImplementation configurations.tests,
             configurations.lambda_tests,

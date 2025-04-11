@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -14,6 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
@@ -129,7 +129,7 @@ class MFAMethodsCreateHandlerTest {
     void shouldReturn200AndCreateMfaSmsMfaMethod() {
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
-                        Either.right(
+                        Result.success(
                                 new MfaMethodData(
                                         TEST_SMS_MFA_ID,
                                         PriorityIdentifier.BACKUP,
@@ -177,7 +177,7 @@ class MFAMethodsCreateHandlerTest {
     void shouldReturn200AndCreateAuthAppMfa() {
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
-                        Either.right(
+                        Result.success(
                                 new MfaMethodData(
                                         TEST_AUTH_APP_ID,
                                         PriorityIdentifier.BACKUP,
@@ -295,7 +295,7 @@ class MFAMethodsCreateHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
-                        Either.left(
+                        Result.failure(
                                 MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
 
         var result = handler.handleRequest(event, context);
@@ -314,7 +314,7 @@ class MFAMethodsCreateHandlerTest {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Either.left(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
+                .thenReturn(Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
 
         var result = handler.handleRequest(event, context);
 
@@ -332,7 +332,7 @@ class MFAMethodsCreateHandlerTest {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Either.left(MfaCreateFailureReason.AUTH_APP_EXISTS));
+                .thenReturn(Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS));
 
         var result = handler.handleRequest(event, context);
 
@@ -350,7 +350,7 @@ class MFAMethodsCreateHandlerTest {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Either.left(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS));
+                .thenReturn(Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS));
 
         var result = handler.handleRequest(event, context);
 

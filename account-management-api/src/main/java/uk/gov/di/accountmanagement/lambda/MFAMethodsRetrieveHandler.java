@@ -99,15 +99,15 @@ public class MFAMethodsRetrieveHandler
 
         var retrieveResult = mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());
 
-        if (retrieveResult.isLeft()) {
-            return switch (retrieveResult.getLeft()) {
+        if (retrieveResult.isFailure()) {
+            return switch (retrieveResult.getFailure()) {
                 case ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA -> generateApiGatewayProxyErrorResponse(
                         500, ErrorResponse.ERROR_1064);
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
                         500, ErrorResponse.ERROR_1078);
             };
         }
-        var retrievedMethods = retrieveResult.get();
+        var retrievedMethods = retrieveResult.getSuccess();
 
         var serialisationService = SerializationService.getInstance();
         var response = serialisationService.writeValueAsStringCamelCase(retrievedMethods);

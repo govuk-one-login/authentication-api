@@ -3,7 +3,6 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -11,6 +10,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
@@ -77,7 +77,7 @@ class MFAMethodsRetrieveHandlerTest {
                         PriorityIdentifier.DEFAULT,
                         true,
                         new SmsMfaDetail("+44123456789"));
-        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Either.right(List.of(method)));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(method)));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
 
@@ -144,7 +144,7 @@ class MFAMethodsRetrieveHandlerTest {
             ErrorResponse expectedErrorResponse) {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Either.left(error));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.failure(error));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
 

@@ -3,13 +3,13 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -63,7 +63,7 @@ class MFAMethodsDeleteHandlerTest {
     @Test
     void shouldReturn204WhenFeatureFlagEnabled() {
         when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
-                .thenReturn(Either.right(MFA_IDENTIFIER_TO_DELETE));
+                .thenReturn(Result.success(MFA_IDENTIFIER_TO_DELETE));
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
@@ -96,7 +96,7 @@ class MFAMethodsDeleteHandlerTest {
             int expectedStatusCode,
             ErrorResponse expectedErrorResponse) {
         when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
-                .thenReturn(Either.left(failureReason));
+                .thenReturn(Result.failure(failureReason));
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 

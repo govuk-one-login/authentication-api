@@ -103,8 +103,8 @@ public class MFAMethodsDeleteHandler
 
         var deleteResult = mfaMethodsService.deleteMfaMethod(mfaIdentifier, userProfile);
 
-        if (deleteResult.isLeft()) {
-            var failureReason = deleteResult.getLeft();
+        if (deleteResult.isFailure()) {
+            var failureReason = deleteResult.getFailure();
             LOG.warn(
                     "Attempted to delete mfa with identifier {} but failed for reason {}",
                     mfaIdentifier,
