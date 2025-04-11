@@ -78,6 +78,7 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
+import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -116,7 +117,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CREDENTIAL_JWT_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
-import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withThrownMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerTest {
@@ -193,6 +194,10 @@ class IPVCallbackHandlerTest {
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(IPVCallbackHandler.class);
+
+    @RegisterExtension
+    private final CaptureLoggingExtension redirectLogging =
+            new CaptureLoggingExtension(RedirectService.class);
 
     private final Session session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
 
@@ -1062,9 +1067,9 @@ class IPVCallbackHandlerTest {
 
         assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
         assertThat(
-                logging.events(),
+                redirectLogging.events(),
                 hasItem(
-                        withMessageContaining(
+                        withThrownMessageContaining(
                                 "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false")));
 
         verifyNoInteractions(ipvTokenService);

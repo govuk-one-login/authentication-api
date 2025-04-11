@@ -1554,6 +1554,75 @@ Resources:
             ]
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  DocAppCallbackFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-doc-app-callback-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref DocAppCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-doc-app-callback-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  DocAppCallbackFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} doc app callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmName: !Sub ${Environment}-doc-app-callback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-doc-app-callback-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 20
+
+  DocAppCallbackFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-doc-app-callback-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} doc app callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-DocAppCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-DocAppCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
   #endregion
 
   #region Token Lambda
@@ -2268,7 +2337,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "15 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-authentication-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -2276,7 +2345,7 @@ Resources:
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
-      Threshold: 15
+      Threshold: 20
 
   AuthenticationCallbackFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
