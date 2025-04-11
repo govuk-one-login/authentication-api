@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 
 import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.shared.tracing.TracingHttpClient.newHttpClient;
 
 public class AccountInterventionService {
 
@@ -39,7 +40,7 @@ public class AccountInterventionService {
     public AccountInterventionService(ConfigurationService configService) {
         this(
                 configService,
-                HttpClient.newHttpClient(),
+                newHttpClient(),
                 new CloudwatchMetricsService(),
                 new AuditService(configService));
     }
@@ -48,7 +49,7 @@ public class AccountInterventionService {
             ConfigurationService configService,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
-        this(configService, HttpClient.newHttpClient(), cloudwatchMetricsService, auditService);
+        this(configService, newHttpClient(), cloudwatchMetricsService, auditService);
     }
 
     public AccountInterventionService(

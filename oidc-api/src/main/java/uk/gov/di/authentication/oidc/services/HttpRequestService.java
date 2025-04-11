@@ -11,8 +11,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Map;
 
-import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
+import static uk.gov.di.orchestration.shared.tracing.TracingHttpClient.newHttpClient;
 
 public class HttpRequestService {
 
