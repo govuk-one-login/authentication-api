@@ -1,7 +1,6 @@
 shared_state_bucket = "di-auth-staging-tfstate"
 
-# FMS Flag
-fms_enabled                = true
+# FMS
 frontend_api_fms_tag_value = "authfrontendstaging"
 
 # App-specific

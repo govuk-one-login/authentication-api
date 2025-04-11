@@ -17,7 +17,6 @@ lambda_min_concurrency = 1
 
 # Feature flags
 mfa_method_management_api_enabled = true
-fms_enabled                       = true
 test_clients_enabled              = true
 
 #Vpc endpoint IDs
