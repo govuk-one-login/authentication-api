@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -46,6 +47,7 @@ class OrchSessionServiceIntegrationTest {
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(OrchSessionItem.AccountState.UNKNOWN));
+        assertThat(retrievedSession.get().getClientSessions(), equalTo(new ArrayList<>()));
     }
 
     @Test

@@ -4,6 +4,9 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @DynamoDbBean
 public class OrchSessionItem {
 
@@ -18,6 +21,7 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "CurrentCredentialStrength";
     public static final String ATTRIBUTE_PROCESSING_IDENTITY_ATTEMPTS =
             "ProcessingIdentityAttempts";
+    public static final String ATTRIBUTE_CLIENT_SESSIONS = "ClientSessions";
 
     public enum AccountState {
         NEW,
@@ -37,6 +41,7 @@ public class OrchSessionItem {
     private Long authTime;
     private CredentialTrustLevel currentCredentialStrength;
     private int processingIdentityAttempts;
+    private List<String> clientSessions;
 
     public OrchSessionItem() {}
 
@@ -44,6 +49,7 @@ public class OrchSessionItem {
         this.sessionId = sessionId;
         this.isNewAccount = AccountState.UNKNOWN;
         this.processingIdentityAttempts = 0;
+        this.clientSessions = new ArrayList<>();
     }
 
     public OrchSessionItem(OrchSessionItem orchSessionItem) {
@@ -58,6 +64,7 @@ public class OrchSessionItem {
         this.authTime = orchSessionItem.authTime;
         this.currentCredentialStrength = orchSessionItem.currentCredentialStrength;
         this.processingIdentityAttempts = orchSessionItem.processingIdentityAttempts;
+        this.clientSessions = orchSessionItem.clientSessions;
     }
 
     @DynamoDbPartitionKey
@@ -218,5 +225,22 @@ public class OrchSessionItem {
     public int incrementProcessingIdentityAttempts() {
         this.processingIdentityAttempts += 1;
         return processingIdentityAttempts;
+    }
+
+    public List<String> getClientSessions() {
+        return clientSessions;
+    }
+
+    public void setClientSessions(List<String> clientSessions) {
+        this.clientSessions = clientSessions;
+    }
+
+    public OrchSessionItem addClientSession(String clientSessionId) {
+        this.clientSessions.add(clientSessionId);
+        return this;
+    }
+
+    public void resetClientSessions() {
+        this.clientSessions = new ArrayList<>();
     }
 }
