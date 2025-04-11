@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -80,6 +81,7 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -202,8 +204,7 @@ class StartHandlerTest {
                         null,
                         TEST_PREVIOUS_SIGN_IN_JOURNEY_ID,
                         TEST_RP_PAIRWISE_ID,
-                        isAuthenticated,
-                        null);
+                        isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
@@ -246,7 +247,7 @@ class StartHandlerTest {
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
-        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated, null);
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
@@ -265,7 +266,7 @@ class StartHandlerTest {
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
-        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated, null);
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
@@ -447,7 +448,7 @@ class StartHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
-        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated, null);
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
 
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
 
@@ -536,7 +537,7 @@ class StartHandlerTest {
 
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated)
             throws Json.JsonException {
-        return makeRequestBody(null, null, null, authenticated, null);
+        return makeRequestBody(null, null, null, authenticated);
     }
 
     private void usingValidClientSession() {
@@ -571,9 +572,12 @@ class StartHandlerTest {
                                 responseType, scope, new ClientID(TEST_CLIENT_ID), REDIRECT_URL)
                         .customParameter("cookie_consent", COOKIE_CONSENT)
                         .customParameter("state", STATE.toString())
+                        .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"))
                         .build();
-        return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
+        VectorOfTrust vtr = mock(VectorOfTrust.class);
+        when(vtr.getLevelOfConfidence()).thenReturn(LevelOfConfidence.LOW_LEVEL);
+        when(vtr.getCredentialTrustLevel()).thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
+        return new ClientSession(authRequest.toParameters(), null, vtr, TEST_CLIENT_NAME);
     }
 
     private ClientStartInfo getClientStartInfo() {
@@ -631,8 +635,7 @@ class StartHandlerTest {
             String previousSessionId,
             String previousGovUkSignInJourneyId,
             String rpPairwiseIdForReauth,
-            boolean authenticated,
-            CredentialTrustLevel currentCredentialStrength)
+            boolean authenticated)
             throws Json.JsonException {
         return objectMapper.writeValueAsString(
                 new StartRequest(
@@ -640,10 +643,11 @@ class StartHandlerTest {
                         rpPairwiseIdForReauth,
                         previousGovUkSignInJourneyId,
                         authenticated,
-                        currentCredentialStrength,
+                        null,
                         COOKIE_CONSENT,
                         null,
-                        null,
+                        CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
+                        LevelOfConfidence.NONE.getValue(),
                         STATE.toString(),
                         TEST_CLIENT_ID,
                         REDIRECT_URL.toString(),
