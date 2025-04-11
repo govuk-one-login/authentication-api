@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.JsonParser;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import io.vavr.control.Either;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,11 +16,14 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
 import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -38,28 +43,28 @@ class MFAMethodsPutHandlerTest {
 
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
-    private static final MfaMethodsService mfaMethodsService = mock(MfaMethodsService.class);
+    private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
-    private static final UserProfile userProfile = mock(UserProfile.class);
     private static final Context context = mock(Context.class);
-    private static final String MFA_IDENTIFIER = "some-mfa-identifier";
-    private static final String PUBLIC_SUBJECT_ID = "some-subject-id";
+    private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
+    private static final String TEST_CLIENT = "test-client";
+    private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final UserProfile userProfile =
+            new UserProfile().withSubjectID(TEST_PUBLIC_SUBJECT).withEmail(EMAIL);
+    private static final String TEST_INTERNAL_SUBJECT =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
+    private static final String MFA_IDENTIFIER = "some-mfa-identifier";
 
     private MFAMethodsPutHandler handler;
-
-    private final APIGatewayProxyRequestEvent event =
-            new APIGatewayProxyRequestEvent()
-                    .withPathParameters(
-                            Map.ofEntries(
-                                    Map.entry("publicSubjectId", PUBLIC_SUBJECT_ID),
-                                    Map.entry("mfaIdentifier", MFA_IDENTIFIER)))
-                    .withHeaders(VALID_HEADERS);
 
     @BeforeEach
     void setUp() {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         handler =
                 new MFAMethodsPutHandler(
                         configurationService, mfaMethodsService, authenticationService);
@@ -71,10 +76,10 @@ class MFAMethodsPutHandlerTest {
         var updateRequest =
                 MfaMethodCreateOrUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new SmsMfaDetail(phoneNumber));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
 
-        when(userProfile.getEmail()).thenReturn(EMAIL);
-        when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
         var updatedMfaMethod =
@@ -151,8 +156,7 @@ class MFAMethodsPutHandlerTest {
             MfaUpdateFailureReason failureReason,
             int expectedStatus,
             Optional<ErrorResponse> maybeErrorResponse) {
-        when(userProfile.getEmail()).thenReturn(EMAIL);
-        when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
         var phoneNumber = "123456789";
@@ -160,6 +164,7 @@ class MFAMethodsPutHandlerTest {
                 MfaMethodCreateOrUpdateRequest.from(
                         PriorityIdentifier.DEFAULT, new SmsMfaDetail(phoneNumber));
 
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
                 .thenReturn(Either.left(failureReason));
@@ -172,8 +177,8 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldReturn400WhenJsonIsInvalid() {
-        event.withBody("Invalid JSON");
-        when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody("Invalid JSON");
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
         var result = handler.handleRequest(event, context);
@@ -184,8 +189,14 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldReturn400WhenPathParameterIsEmpty() {
-        event.withPathParameters(
-                Map.of("mfaIdentifier", "some-mfa-identifier", "publicSubjectId", ""));
+        var event =
+                generateApiGatewayEvent(TEST_INTERNAL_SUBJECT)
+                        .withPathParameters(
+                                Map.of(
+                                        "mfaIdentifier",
+                                        "some-mfa-identifier",
+                                        "publicSubjectId",
+                                        ""));
 
         var result = handler.handleRequest(event, context);
 
@@ -195,8 +206,14 @@ class MFAMethodsPutHandlerTest {
 
     @Test
     void shouldReturn400WhenMfaIdentifierParameterIsEmpty() {
-        event.withPathParameters(
-                Map.of("publicSubjectId", "some-public-subject-id", "mfaIdentifier", ""));
+        var event =
+                generateApiGatewayEvent(TEST_INTERNAL_SUBJECT)
+                        .withPathParameters(
+                                Map.of(
+                                        "publicSubjectId",
+                                        "some-public-subject-id",
+                                        "mfaIdentifier",
+                                        ""));
 
         var result = handler.handleRequest(event, context);
 
@@ -205,11 +222,34 @@ class MFAMethodsPutHandlerTest {
     }
 
     @Test
-    void shouldReturn404WhenUserProfileNotFoundForPublicSubject() {
-        when(authenticationService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+    void shouldReturn400WhenFeatureFlagDisabled() {
+        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
+
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+
+        var result = handler.handleRequest(event, context);
+        assertEquals(400, result.getStatusCode());
+    }
+
+    @Test
+    void shouldReturn401WhenPrincipalIsInvalid() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+
+        var event = generateApiGatewayEvent("invalid-principal");
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(401));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+    }
+
+    @Test
+    void shouldReturn404WhenUserProfileIsNotFoundForPublicSubject() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.empty());
 
-        event.withBody(updateSmsRequest("123456789"));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
 
@@ -217,12 +257,22 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
     }
 
-    @Test
-    void shouldReturn400WhenFeatureFlagDisabled() {
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
+    private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", principal);
+        authorizerParams.put("clientId", TEST_CLIENT);
+        proxyRequestContext.setAuthorizer(authorizerParams);
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
 
-        var result = handler.handleRequest(event, context);
-        assertEquals(400, result.getStatusCode());
+        return new APIGatewayProxyRequestEvent()
+                .withPathParameters(
+                        Map.ofEntries(
+                                Map.entry("publicSubjectId", TEST_PUBLIC_SUBJECT),
+                                Map.entry("mfaIdentifier", MFA_IDENTIFIER)))
+                .withHeaders(VALID_HEADERS)
+                .withRequestContext(proxyRequestContext);
     }
 
     private String updateSmsRequest(String phoneNumber) {

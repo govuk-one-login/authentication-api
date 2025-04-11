@@ -123,7 +123,7 @@ public class UpdatePhoneNumberHandler
                                                     "User not found with given email"));
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-            if (PrincipalValidationHelper.principleIsInvalid(
+            if (PrincipalValidationHelper.principalIsInvalid(
                     userProfile,
                     configurationService.getInternalSectorUri(),
                     dynamoService,

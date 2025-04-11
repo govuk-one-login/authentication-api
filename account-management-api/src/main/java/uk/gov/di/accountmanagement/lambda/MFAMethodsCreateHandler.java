@@ -8,6 +8,7 @@ import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
@@ -16,10 +17,11 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -32,7 +34,7 @@ public class MFAMethodsCreateHandler
     private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
-    private final MfaMethodsService mfaMethodsService;
+    private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
@@ -42,13 +44,13 @@ public class MFAMethodsCreateHandler
 
     public MFAMethodsCreateHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
     }
 
     public MFAMethodsCreateHandler(
             ConfigurationService configurationService,
-            MfaMethodsService mfaMethodsService,
+            MFAMethodsService mfaMethodsService,
             DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
@@ -66,6 +68,7 @@ public class MFAMethodsCreateHandler
 
     private APIGatewayProxyResponseEvent mfaMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+
         if (!configurationService.isMfaMethodManagementApiEnabled()) {
             LOG.error(
                     "Request to create MFA method in {} environment but feature is switched off.",
@@ -79,11 +82,21 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
-        var maybeUserProfile = dynamoService.getOptionalUserProfileFromPublicSubject(subject);
+        Optional<UserProfile> maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(subject);
         if (maybeUserProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
-        var userProfile = maybeUserProfile.get();
+        UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                dynamoService,
+                authorizerParams)) {
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
+        }
 
         var maybeMigrationErrorResponse = migrateMfaCredentialsForUserIfRequired(userProfile);
         if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();

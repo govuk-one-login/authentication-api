@@ -7,12 +7,14 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
 
@@ -26,7 +28,7 @@ public class MFAMethodsRetrieveHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
-    private final MfaMethodsService mfaMethodsService;
+    private final MFAMethodsService mfaMethodsService;
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsRetrieveHandler.class);
 
@@ -37,13 +39,13 @@ public class MFAMethodsRetrieveHandler
     public MFAMethodsRetrieveHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.dynamoService = new DynamoService(configurationService);
-        this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public MFAMethodsRetrieveHandler(
             ConfigurationService configurationService,
             DynamoService dynamoService,
-            MfaMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService) {
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
         this.mfaMethodsService = mfaMethodsService;
@@ -83,6 +85,16 @@ public class MFAMethodsRetrieveHandler
         if (maybeUserProfile.isEmpty()) {
             LOG.error("Unknown public subject ID");
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+        }
+        UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                dynamoService,
+                authorizerParams)) {
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
         }
 
         var retrieveResult = mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());

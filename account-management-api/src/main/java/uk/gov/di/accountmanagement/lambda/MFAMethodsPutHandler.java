@@ -7,7 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -15,7 +17,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
 import java.util.Map;
@@ -32,7 +34,7 @@ public class MFAMethodsPutHandler
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsPutHandler.class);
     private final ConfigurationService configurationService;
-    private final MfaMethodsService mfaMethodsService;
+    private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -43,13 +45,13 @@ public class MFAMethodsPutHandler
 
     public MFAMethodsPutHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.mfaMethodsService = new MfaMethodsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
     }
 
     public MFAMethodsPutHandler(
             ConfigurationService configurationService,
-            MfaMethodsService mfaMethodsService,
+            MFAMethodsService mfaMethodsService,
             AuthenticationService authenticationService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
@@ -93,9 +95,19 @@ public class MFAMethodsPutHandler
         var maybeUserProfile =
                 authenticationService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
         if (maybeUserProfile.isEmpty()) {
+            LOG.error("Unknown public subject ID");
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
-        var userProfile = maybeUserProfile.get();
+        UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                authenticationService,
+                authorizerParams)) {
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
+        }
 
         try {
             var mfaMethodUpdateRequest =

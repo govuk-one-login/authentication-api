@@ -135,7 +135,7 @@ public class RemoveAccountHandler
     private void authoriseRequest(APIGatewayProxyRequestEvent input, UserProfile userProfile) {
         Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
 
-        if (PrincipalValidationHelper.principleIsInvalid(
+        if (PrincipalValidationHelper.principalIsInvalid(
                 userProfile,
                 configurationService.getInternalSectorUri(),
                 authenticationService,
