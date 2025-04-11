@@ -107,10 +107,10 @@ repos:
         pass_filenames: true
       - id: tfupdate-lock
         name: Update terraform provider locks
-        files: "/versions.tf$"
+        types_or:
+          - hcl
+          - terraform
         pass_filenames: false
-        types:
-          - file
         language: golang
         additional_dependencies:
           - github.com/minamijoyo/tfupdate@v0.8.5
