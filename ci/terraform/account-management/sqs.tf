@@ -176,11 +176,14 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      FRONTEND_BASE_URL     = "https://${local.frontend_fqdn}/"
-      CONTACT_US_LINK_ROUTE = var.contact_us_link_route
-      NOTIFY_API_KEY        = var.notify_api_key
-      NOTIFY_URL            = var.notify_url
-      JAVA_TOOL_OPTIONS     = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      FRONTEND_BASE_URL        = "https://${local.frontend_fqdn}/"
+      CONTACT_US_LINK_ROUTE    = var.contact_us_link_route
+      NOTIFY_API_KEY           = var.notify_api_key
+      NOTIFY_URL               = var.notify_url
+      JAVA_TOOL_OPTIONS        = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      NOTIFY_TEST_DESTINATIONS = var.notify_test_destinations
+
+      ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION = aws_s3_bucket.am-api-acceptance-tests-otp-bucket.id
     })
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn

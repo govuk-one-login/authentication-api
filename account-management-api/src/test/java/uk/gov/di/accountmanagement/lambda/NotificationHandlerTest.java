@@ -9,6 +9,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.NotificationService;
@@ -20,6 +23,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -29,6 +33,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
@@ -39,8 +44,12 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.EMAIL_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_SENDING_WITH_NOTIFY;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.TEXT_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.UNEXPECTED_ERROR_SENDING_NOTIFICATION;
+import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.WRITING_OTP_TO_S_3_BUCKET;
+import static uk.gov.di.accountmanagement.lambda.NotificationHandler.EXCEPTION_THROWN_WHEN_WRITING_TO_S_3_BUCKET;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class NotificationHandlerTest {
@@ -53,11 +62,12 @@ class NotificationHandlerTest {
             "test-notification-client-exception";
     public static final String UNEXPECTED_RUNTIME_EXCEPTION_MESSAGE =
             "unexpected-runtime-exception";
+    private final Json objectMapper = SerializationService.getInstance();
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
+    private final S3Client s3Client = mock(S3Client.class);
     private NotificationHandler handler;
-    private final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -67,7 +77,7 @@ class NotificationHandlerTest {
     void setUp() {
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
-        handler = new NotificationHandler(notificationService, configService);
+        handler = new NotificationHandler(notificationService, configService, s3Client);
     }
 
     @Test
@@ -75,7 +85,13 @@ class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        "654321",
+                        SupportedLanguage.EN,
+                        false,
+                        null);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -96,12 +112,80 @@ class NotificationHandlerTest {
     }
 
     @Test
+    void shouldHandleEventsWithMissingFieldsInSQSEvent() throws NotificationClientException {
+        var event =
+                """
+                    {
+                      "notificationType": "VERIFY_PHONE_NUMBER",
+                      "destination": "01234567890",
+                      "code": "654321",
+                      "language": "EN",
+                      "session_id": null,
+                      "client_session_id": null
+                    }
+                """;
+
+        SQSEvent sqsEvent = generateSQSEvent(event);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        TEXT_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_PHONE_NUMBER))));
+    }
+
+    @Test
+    void shouldHandleEventsWithUnexpectedFieldsInSQSEvent() throws NotificationClientException {
+        var event =
+                """
+                    {
+                      "notificationType": "VERIFY_PHONE_NUMBER",
+                      "destination": "01234567890",
+                      "code": "654321",
+                      "language": "EN",
+                      "session_id": null,
+                      "client_session_id": null,
+                      "somethingNew": "and unexpected"
+                    }
+                """;
+
+        SQSEvent sqsEvent = generateSQSEvent(event);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        TEXT_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_PHONE_NUMBER))));
+    }
+
+    @Test
     void shouldSuccessfullyProcessVerifyPhoneMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
+                        TEST_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "654321",
+                        SupportedLanguage.EN,
+                        false,
+                        null);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -218,6 +302,133 @@ class NotificationHandlerTest {
     }
 
     @Test
+    void shouldSuccessfullyWriteOTPToS3ForTestClient()
+            throws Json.JsonException, NotificationClientException {
+        when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "654321",
+                        SupportedLanguage.EN,
+                        true,
+                        TEST_EMAIL_ADDRESS);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(s3Client).putObject((PutObjectRequest) any(), (RequestBody) any());
+        verify(notificationService, never()).sendText(any(), any(), any());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
+                                        VERIFY_PHONE_NUMBER))));
+    }
+
+    @Test
+    void shouldDoNothingForTestUserOnTheListSendingNonOTPNotification()
+            throws Json.JsonException, NotificationClientException {
+        when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        EMAIL_UPDATED,
+                        "654321",
+                        SupportedLanguage.EN,
+                        true,
+                        TEST_EMAIL_ADDRESS);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(s3Client, never()).putObject((PutObjectRequest) any(), (RequestBody) any());
+        verify(notificationService, never()).sendText(any(), any(), any());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION,
+                                        EMAIL_UPDATED))));
+    }
+
+    @Test
+    void shouldSuccessfullyLogWritingToS3InIntegration()
+            throws Json.JsonException, NotificationClientException {
+        when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));
+        when(configService.getEnvironment()).thenReturn("integration");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "654321",
+                        SupportedLanguage.EN,
+                        true,
+                        TEST_EMAIL_ADDRESS);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(s3Client).putObject((PutObjectRequest) any(), (RequestBody) any());
+        verify(notificationService, never()).sendText(any(), any(), any());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
+                                        VERIFY_PHONE_NUMBER))));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining(formatMessage(WRITING_OTP_TO_S_3_BUCKET, "654321"))));
+    }
+
+    @Test
+    void shouldReportErrorWritingToS3() throws Json.JsonException, NotificationClientException {
+        when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));
+        when(configService.getEnvironment()).thenReturn("integration");
+        var s3failException = new RuntimeException("s3 failed");
+        when(s3Client.putObject((PutObjectRequest) any(), (RequestBody) any()))
+                .thenThrow(s3failException);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "654321",
+                        SupportedLanguage.EN,
+                        true,
+                        TEST_EMAIL_ADDRESS);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(s3Client).putObject((PutObjectRequest) any(), (RequestBody) any());
+        verify(notificationService, never()).sendText(any(), any(), any());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
+                                        VERIFY_PHONE_NUMBER))));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EXCEPTION_THROWN_WHEN_WRITING_TO_S_3_BUCKET,
+                                        "s3 failed",
+                                        s3failException))));
+    }
+
+    @Test
     void checkHandlesInvalidMessageWithoutEscapedException() {
         String invalidMessage =
                 """
@@ -280,7 +491,8 @@ class NotificationHandlerTest {
             Exception exception, String expectedMessage, NotificationType type)
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, type, "654321", SupportedLanguage.EN);
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER, type, "654321", SupportedLanguage.EN, false, null);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 

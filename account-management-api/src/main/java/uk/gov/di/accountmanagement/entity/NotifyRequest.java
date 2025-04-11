@@ -22,17 +22,25 @@ public class NotifyRequest {
 
     @Expose private String clientSessionId;
 
+    @Expose private String email;
+
+    @Expose private boolean isTestClient;
+
     public NotifyRequest() {}
 
     public NotifyRequest(
             String destination,
             NotificationType notificationType,
             String code,
-            SupportedLanguage language) {
+            SupportedLanguage language,
+            boolean isTestClient,
+            String email) {
         this.destination = destination;
         this.notificationType = notificationType;
         this.code = code;
         this.language = language;
+        this.isTestClient = isTestClient;
+        this.email = email;
     }
 
     public NotifyRequest(
@@ -42,14 +50,14 @@ public class NotifyRequest {
             SupportedLanguage language,
             String sessionId,
             String clientSessionId) {
-        this(destination, notificationType, code, language);
+        this(destination, notificationType, code, language, false, null);
         this.sessionId = sessionId;
         this.clientSessionId = clientSessionId;
     }
 
     public NotifyRequest(
             String destination, NotificationType notificationType, SupportedLanguage language) {
-        this(destination, notificationType, null, language);
+        this(destination, notificationType, null, language, false, null);
     }
 
     public NotifyRequest(
@@ -58,9 +66,13 @@ public class NotifyRequest {
             SupportedLanguage language,
             String sessionId,
             String clientSessionId) {
-        this(destination, notificationType, null, language);
+        this(destination, notificationType, null, language, false, null);
         this.sessionId = sessionId;
         this.clientSessionId = clientSessionId;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public NotificationType getNotificationType() {
@@ -85,5 +97,33 @@ public class NotifyRequest {
 
     public String getClientSessionId() {
         return clientSessionId;
+    }
+
+    public boolean isTestClient() {
+        return isTestClient;
+    }
+
+    @Override
+    public String toString() {
+        return "NotifyRequest{"
+                + "clientSessionId='"
+                + clientSessionId
+                + '\''
+                + ", notificationType="
+                + notificationType
+                + ", destination='"
+                + destination
+                + '\''
+                + ", code='"
+                + code
+                + '\''
+                + ", language="
+                + language
+                + ", sessionId='"
+                + sessionId
+                + '\''
+                + ", isTestClient="
+                + isTestClient
+                + '}';
     }
 }

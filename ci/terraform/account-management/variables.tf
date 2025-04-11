@@ -226,3 +226,9 @@ variable "am_api_fms_tag_value" {
   type        = string
   default     = "accountmanagement"
 }
+
+variable "notify_test_destinations" {
+  description = "The list of notify destinations that are allowed to write their otp codes to S3."
+  type        = string
+  default     = ""
+}
