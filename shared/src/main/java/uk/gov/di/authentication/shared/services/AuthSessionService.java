@@ -33,6 +33,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
         this.useConsistentReads = configurationService.isUsingStronglyConsistentReads();
+        LOG.info("Is using strongly consistent reads: {}", useConsistentReads);
     }
 
     public AuthSessionService(
@@ -43,6 +44,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
         this.useConsistentReads = configurationService.isUsingStronglyConsistentReads();
+        LOG.info("Is using strongly consistent reads: {}", useConsistentReads);
     }
 
     public AuthSessionItem generateNewAuthSession(String sessionId) {
