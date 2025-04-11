@@ -119,6 +119,57 @@ class OrchAuthCodeServiceTest {
     }
 
     @Test
+    void shouldNotGetAuthCodeExchangeDataByAuthCodeWhenNoOrchAuthCodeItemExists() {
+        var exchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
+
+        assertTrue(exchangeData.isEmpty());
+
+        verify(table).getItem(AUTH_CODE_PARTITION_KEY);
+        assertGetItemCalledWithStronglyConsistentRead();
+    }
+
+    @Test
+    void
+            shouldRetryGetOrchAuthCodeExchangeDataByAuthCodeWithStronglyConsistentReadOnceWhenItemNotFound()
+                    throws Json.JsonException {
+        var exchangeData = aAuthCodeExchangeDataEntity();
+        var exchangeDataSerialized = objectMapper.writeValueAsString(exchangeData);
+
+        OrchAuthCodeItem orchAuthCodeItem =
+                new OrchAuthCodeItem()
+                        .withAuthCode(AUTH_CODE)
+                        .withAuthCodeExchangeData(exchangeDataSerialized)
+                        .withIsUsed(false)
+                        .withTimeToLive(VALID_TTL);
+
+        when(table.getItem(
+                        GetItemEnhancedRequest.builder()
+                                .consistentRead(false)
+                                .key(AUTH_CODE_PARTITION_KEY)
+                                .build()))
+                .thenReturn(null);
+        when(table.getItem(
+                        GetItemEnhancedRequest.builder()
+                                .consistentRead(true)
+                                .key(AUTH_CODE_PARTITION_KEY)
+                                .build()))
+                .thenReturn(orchAuthCodeItem);
+
+        var actualExchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
+
+        assertTrue(actualExchangeData.isPresent());
+
+        assertEquals(exchangeData.getClientId(), actualExchangeData.get().getClientId());
+        assertEquals(
+                exchangeData.getClientSessionId(), actualExchangeData.get().getClientSessionId());
+        assertEquals(exchangeData.getEmail(), actualExchangeData.get().getEmail());
+        assertEquals(exchangeData.getAuthTime(), actualExchangeData.get().getAuthTime());
+
+        verify(table).getItem(AUTH_CODE_PARTITION_KEY);
+        assertGetItemCalledWithStronglyConsistentRead();
+    }
+
+    @Test
     void shouldMarkAuthCodeAsUsedAfterSuccessfullyGettingOrchAuthCodeExchangeData()
             throws Json.JsonException {
         var exchangeData = aAuthCodeExchangeDataEntity();
@@ -143,12 +194,12 @@ class OrchAuthCodeServiceTest {
     }
 
     @Test
-    void shouldNotGetAuthCodeExchangeDataByAuthCodeWhenNoOrchAuthCodeItemExists() {
-        var authCode = "an-unknown-auth-code";
+    void shouldThrowWhenFailingToGetAuthCodeExchangeDataByAuthCodeWithStronglyConsistentRead() {
+        withFailedGetWithStronglyConsistentRead();
 
-        var exchangeData = orchAuthCodeService.getExchangeDataForCode(authCode);
-
-        assertTrue(exchangeData.isEmpty());
+        assertThrows(
+                OrchAuthCodeException.class,
+                () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
     }
 
     @Test
@@ -190,6 +241,15 @@ class OrchAuthCodeServiceTest {
                 .setClientSessionId(CLIENT_SESSION_ID)
                 .setEmail(EMAIL)
                 .setAuthTime(AUTH_TIME);
+    }
+
+    private void assertGetItemCalledWithStronglyConsistentRead() {
+        verify(table)
+                .getItem(
+                        GetItemEnhancedRequest.builder()
+                                .consistentRead(true)
+                                .key(OrchAuthCodeServiceTest.AUTH_CODE_PARTITION_KEY)
+                                .build());
     }
 
     private void withValidOrchAuthCode(AuthCodeExchangeData exchangeData)
@@ -242,6 +302,15 @@ class OrchAuthCodeServiceTest {
 
     private void withFailedGet() {
         doThrow(DynamoDbException.builder().message("Failed to get from table").build())
+                .when(table)
+                .getItem(any(GetItemEnhancedRequest.class));
+    }
+
+    private void withFailedGetWithStronglyConsistentRead() {
+        doThrow(
+                        DynamoDbException.builder()
+                                .message("Failed to get from table with strongly consistent read")
+                                .build())
                 .when(table)
                 .getItem(any(GetItemEnhancedRequest.class));
     }
