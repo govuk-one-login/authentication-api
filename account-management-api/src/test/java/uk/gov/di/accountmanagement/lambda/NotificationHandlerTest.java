@@ -112,6 +112,69 @@ class NotificationHandlerTest {
     }
 
     @Test
+    void shouldHandleEventsWithMissingFieldsInSQSEvent() throws NotificationClientException {
+        var event =
+                """
+                    {
+                      "notificationType": "VERIFY_PHONE_NUMBER",
+                      "destination": "01234567890",
+                      "code": "654321",
+                      "language": "EN",
+                      "session_id": null,
+                      "client_session_id": null
+                    }
+                """;
+
+        SQSEvent sqsEvent = generateSQSEvent(event);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        TEXT_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_PHONE_NUMBER))));
+    }
+
+    @Test
+    void shouldHandleEventsWithUnexpectedFieldsInSQSEvent() throws NotificationClientException {
+        var event =
+                """
+                    {
+                      "notificationType": "VERIFY_PHONE_NUMBER",
+                      "destination": "01234567890",
+                      "code": "654321",
+                      "language": "EN",
+                      "session_id": null,
+                      "client_session_id": null,
+                      "somethingNew": "and unexpected"
+                    }
+                """;
+
+        SQSEvent sqsEvent = generateSQSEvent(event);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+
+        verify(notificationService)
+                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        TEXT_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_PHONE_NUMBER))));
+    }
+
+    @Test
     void shouldSuccessfullyProcessVerifyPhoneMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
