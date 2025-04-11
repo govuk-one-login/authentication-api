@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.oidc.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -9,6 +10,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
@@ -34,6 +36,7 @@ import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -91,6 +94,44 @@ class BackChannelLogoutRequestHandlerTest {
     }
 
     @Test
+    void shouldReturnBatchItemFailuresWhenSendRequestFails() {
+        var firstInput =
+                new BackChannelLogoutMessage(
+                        "client-id", "https://test-1.account.gov.uk", "some-subject-id");
+        var secondInput =
+                new BackChannelLogoutMessage(
+                        "client-id", "https://test-2.account.gov.uk", "some-subject-id");
+
+        var jwt = mock(SignedJWT.class);
+
+        when(jwt.serialize()).thenReturn("serialized-payload");
+
+        when(tokenService.generateSignedJwtUsingExternalKey(
+                        any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
+                .thenReturn(jwt);
+
+        doThrow(new PostRequestFailureException("Post request failed"))
+                .when(request)
+                .post(
+                        URI.create("https://test-2.account.gov.uk"),
+                        "logout_token=serialized-payload");
+
+        var firstMessage = getMessages(firstInput, "firstMessageId");
+        var secondMessage = getMessages(secondInput, "secondMessageId");
+
+        var event = new SQSEvent();
+        event.setRecords(firstMessage);
+        event.setRecords(secondMessage);
+
+        var result = handler.handleRequest(event, context);
+
+        List<SQSBatchResponse.BatchItemFailure> batchItemFailures =
+                List.of(new SQSBatchResponse.BatchItemFailure("secondMessageId"));
+
+        assertThat(result, is(new SQSBatchResponse(batchItemFailures)));
+    }
+
+    @Test
     void shouldCreateClaimsForBackChannelLogoutMessage() throws ParseException {
         var jwt =
                 handler.generateClaims(
@@ -129,22 +170,26 @@ class BackChannelLogoutRequestHandlerTest {
     }
 
     private SQSEvent inputEvent(BackChannelLogoutMessage payload) {
-        var messages =
-                Optional.ofNullable(payload)
-                        .map(unchecked(SerializationService.getInstance()::writeValueAsString))
-                        .map(
-                                body -> {
-                                    var message = new SQSEvent.SQSMessage();
-                                    message.setBody(body);
-
-                                    return message;
-                                })
-                        .map(List::of)
-                        .orElse(emptyList());
-
+        var messages = getMessages(payload, "messageId");
         var event = new SQSEvent();
         event.setRecords(messages);
 
         return event;
+    }
+
+    private List<SQSEvent.SQSMessage> getMessages(
+            BackChannelLogoutMessage payload, String messageId) {
+        return Optional.ofNullable(payload)
+                .map(unchecked(SerializationService.getInstance()::writeValueAsString))
+                .map(
+                        body -> {
+                            var message = new SQSEvent.SQSMessage();
+                            message.setBody(body);
+                            message.setMessageId(messageId);
+
+                            return message;
+                        })
+                .map(List::of)
+                .orElse(emptyList());
     }
 }

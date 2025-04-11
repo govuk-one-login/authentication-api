@@ -3,6 +3,7 @@ package uk.gov.di.authentication.oidc.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ObjectMessage;
+import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 
 import java.io.IOException;
@@ -31,19 +32,19 @@ public class HttpRequestService {
         try {
             var response = newHttpClient().send(request, BodyHandlers.discarding());
 
-            var logMessage =
-                    Map.of(
-                            "uri",
-                            uri.toString(),
-                            "response-code",
-                            Integer.toString(response.statusCode()));
+            var statusCode = Integer.toString(response.statusCode());
+
+            var logMessage = Map.of("uri", uri.toString(), "response-code", statusCode);
 
             LOG.info(new ObjectMessage(logMessage));
 
             METRICS.putEmbeddedValue(
-                    "BackChannelLogoutRequest",
-                    1,
-                    Map.of("StatusCode", Integer.toString(response.statusCode())));
+                    "BackChannelLogoutRequest", 1, Map.of("StatusCode", statusCode));
+
+            if (!statusCode.equals("200")) {
+                throw new PostRequestFailureException(
+                        "Unable to execute POST request successfully. Status code: " + statusCode);
+            }
 
         } catch (IOException e) {
             LOG.error("Unable to execute POST request successfully: {}", e.getMessage());
