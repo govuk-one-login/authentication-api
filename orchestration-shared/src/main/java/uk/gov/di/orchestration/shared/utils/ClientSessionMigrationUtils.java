@@ -5,7 +5,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
-import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -14,19 +13,6 @@ public class ClientSessionMigrationUtils {
     private static final Logger LOG = LogManager.getLogger(ClientSessionMigrationUtils.class);
 
     private ClientSessionMigrationUtils() {}
-
-    public static Optional<OrchClientSessionItem> getOrchClientSessionWithRetryIfNotEqual(
-            ClientSession clientSession,
-            String clientSessionId,
-            OrchClientSessionService orchClientSessionService) {
-        var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
-        if (!areClientSessionsEqual(clientSession, orchClientSessionOpt.orElse(null))) {
-            LOG.warn("Client sessions are not equal");
-            LOG.info("Refetching orch client session with strongly consistent reads");
-            orchClientSessionOpt = orchClientSessionService.forceGetClientSession(clientSessionId);
-        }
-        return orchClientSessionOpt;
-    }
 
     public static void logIfClientSessionsAreNotEqual(
             ClientSession clientSession, OrchClientSessionItem orchClientSession) {

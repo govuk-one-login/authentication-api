@@ -432,6 +432,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("USE_IPV_JWKS_ENDPOINT");
     }
 
+    public boolean isUseStronglyConsistentReads() {
+        return getFlagOrFalse("USE_STRONGLY_CONSISTENT_READS");
+    }
+
     public Optional<String> getIPVCapacity() {
         try {
             var request =

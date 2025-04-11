@@ -113,6 +113,12 @@ Conditions:
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
+  UseStronglyConsistentReads:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1501,6 +1507,10 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref DocAppCredentialTableWriteAccessPolicy
@@ -1640,7 +1650,10 @@ Resources:
             - PkceEnabled
             - true
             - false
-
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1852,6 +1865,10 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -2179,7 +2196,10 @@ Resources:
             - true
             - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
-
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -2828,6 +2848,10 @@ Resources:
             - PkceEnabled
             - true
             - false
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -3049,6 +3073,10 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -3234,6 +3262,10 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -3399,6 +3431,10 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref ClientRegistryTableWriteAccessPolicy
@@ -3560,6 +3596,10 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref ClientRegistryTableWriteAccessPolicy
@@ -3886,6 +3926,10 @@ Resources:
             - true
             - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -4094,6 +4138,10 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref OrchIdentityCredentialsTableWriteAccessPolicy

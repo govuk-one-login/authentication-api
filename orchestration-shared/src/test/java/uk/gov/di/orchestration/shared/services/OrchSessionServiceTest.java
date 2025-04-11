@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -34,7 +35,11 @@ class OrchSessionServiceTest {
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
     private static final Key SESSION_ID_PARTITION_KEY =
             Key.builder().partitionValue(SESSION_ID).build();
-
+    private static final GetItemEnhancedRequest SESSION_GET_REQUEST =
+            GetItemEnhancedRequest.builder()
+                    .key(SESSION_ID_PARTITION_KEY)
+                    .consistentRead(false)
+                    .build();
     private final DynamoDbTable<OrchSessionItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -175,12 +180,12 @@ class OrchSessionServiceTest {
 
     private OrchSessionItem withValidSession() {
         OrchSessionItem existingSession = new OrchSessionItem(SESSION_ID).withTimeToLive(VALID_TTL);
-        when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
+        when(table.getItem(SESSION_GET_REQUEST)).thenReturn(existingSession);
         return existingSession;
     }
 
     private void withExpiredSession() {
-        when(table.getItem(SESSION_ID_PARTITION_KEY))
+        when(table.getItem(SESSION_GET_REQUEST))
                 .thenReturn(new OrchSessionItem(SESSION_ID).withTimeToLive(EXPIRED_TTL));
     }
 

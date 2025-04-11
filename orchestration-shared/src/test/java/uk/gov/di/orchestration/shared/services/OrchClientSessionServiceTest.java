@@ -28,7 +28,11 @@ class OrchClientSessionServiceTest {
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
     private static final Key CLIENT_SESSION_ID_PARTITION_KEY =
             Key.builder().partitionValue(CLIENT_SESSION_ID).build();
-
+    private static final GetItemEnhancedRequest CLIENT_SESSION_GET_REQUEST =
+            GetItemEnhancedRequest.builder()
+                    .key(CLIENT_SESSION_ID_PARTITION_KEY)
+                    .consistentRead(false)
+                    .build();
     private final DynamoDbTable<OrchClientSessionItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -107,7 +111,7 @@ class OrchClientSessionServiceTest {
     void shouldDeleteClientSession() {
         var existingClientSession = withValidClientSession();
         clientSessionService.deleteStoredClientSession(CLIENT_SESSION_ID);
-        verify(table).getItem(CLIENT_SESSION_ID_PARTITION_KEY);
+        verify(table).getItem(CLIENT_SESSION_GET_REQUEST);
         verify(table).deleteItem(existingClientSession);
     }
 
@@ -131,7 +135,7 @@ class OrchClientSessionServiceTest {
                                 .key(CLIENT_SESSION_ID_PARTITION_KEY)
                                 .build()))
                 .thenReturn(existingSession);
-        when(table.getItem(CLIENT_SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
+        when(table.getItem(CLIENT_SESSION_GET_REQUEST)).thenReturn(existingSession);
         return existingSession;
     }
 
@@ -140,7 +144,7 @@ class OrchClientSessionServiceTest {
                 new OrchClientSessionItem(CLIENT_SESSION_ID)
                         .withClientName(CLIENT_NAME)
                         .withTimeToLive(EXPIRED_TTL);
-        when(table.getItem(CLIENT_SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
+        when(table.getItem(CLIENT_SESSION_GET_REQUEST)).thenReturn(existingSession);
     }
 
     private void withFailedPut() {

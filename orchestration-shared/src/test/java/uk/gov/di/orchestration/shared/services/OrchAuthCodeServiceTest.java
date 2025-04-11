@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
@@ -40,6 +41,11 @@ class OrchAuthCodeServiceTest {
     private static final long EXPIRED_TTL = CREATION_INSTANT.minusSeconds(100).getEpochSecond();
     private static final Key AUTH_CODE_PARTITION_KEY =
             Key.builder().partitionValue(AUTH_CODE).build();
+    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST =
+            GetItemEnhancedRequest.builder()
+                    .key(AUTH_CODE_PARTITION_KEY)
+                    .consistentRead(false)
+                    .build();
     private static final long AUTH_CODE_EXPIRY = 123L;
 
     private final DynamoDbTable<OrchAuthCodeItem> table = mock(DynamoDbTable.class);
@@ -197,7 +203,7 @@ class OrchAuthCodeServiceTest {
                         .withIsUsed(false)
                         .withTimeToLive(VALID_TTL);
 
-        when(table.getItem(AUTH_CODE_PARTITION_KEY)).thenReturn(orchAuthCodeItem);
+        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(orchAuthCodeItem);
     }
 
     private void withUsedOrchAuthCode() throws Json.JsonException {
@@ -211,7 +217,7 @@ class OrchAuthCodeServiceTest {
                         .withIsUsed(true)
                         .withTimeToLive(VALID_TTL);
 
-        when(table.getItem(AUTH_CODE_PARTITION_KEY)).thenReturn(orchAuthCodeItem);
+        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(orchAuthCodeItem);
     }
 
     private void withExpiredOrchAuthCode() throws Json.JsonException {
@@ -225,7 +231,7 @@ class OrchAuthCodeServiceTest {
                         .withIsUsed(false)
                         .withTimeToLive(EXPIRED_TTL);
 
-        when(table.getItem(AUTH_CODE_PARTITION_KEY)).thenReturn(orchAuthCodeItem);
+        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(orchAuthCodeItem);
     }
 
     private void withFailedPut() {
@@ -237,7 +243,7 @@ class OrchAuthCodeServiceTest {
     private void withFailedGet() {
         doThrow(DynamoDbException.builder().message("Failed to get from table").build())
                 .when(table)
-                .getItem(any(Key.class));
+                .getItem(any(GetItemEnhancedRequest.class));
     }
 
     private void withFailedUpdate() {
