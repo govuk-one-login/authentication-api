@@ -42,6 +42,7 @@ module "mfa" {
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled ? "true" : "false"
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri
     SUPPORT_REAUTH_SIGNOUT_ENABLED         = var.support_reauth_signout_enabled
+    USE_STRONGLY_CONSISTENT_READS          = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaHandler::handleRequest"
 

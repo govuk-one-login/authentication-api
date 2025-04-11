@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -18,11 +19,15 @@ import java.util.Optional;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
@@ -31,9 +36,11 @@ class AuthSessionServiceTest {
     private static final String NEW_SESSION_ID = "new-session-id";
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
-    private static final Key SESSION_ID_PARTITION_KEY =
-            Key.builder().partitionValue(SESSION_ID).build();
-
+    private static final GetItemEnhancedRequest SESSION_GET_REQUEST =
+            GetItemEnhancedRequest.builder()
+                    .key(Key.builder().partitionValue(SESSION_ID).build())
+                    .consistentRead(false)
+                    .build();
     private final DynamoDbTable<AuthSessionItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -122,7 +129,7 @@ class AuthSessionServiceTest {
         assertTrue(updatedSession.getTimeToLive() > Instant.now().getEpochSecond());
         // We call get() twice, once to check the item is present and then once when we go to
         // delete the item
-        verify(table, times(2)).getItem(Key.builder().partitionValue(SESSION_ID).build());
+        verify(table, times(2)).getItem(SESSION_GET_REQUEST);
         verify(table).deleteItem(existingSession);
     }
 
@@ -207,12 +214,12 @@ class AuthSessionServiceTest {
     private AuthSessionItem withValidSession() {
         AuthSessionItem existingSession =
                 new AuthSessionItem().withSessionId(SESSION_ID).withTimeToLive(VALID_TTL);
-        when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
+        when(table.getItem(SESSION_GET_REQUEST)).thenReturn(existingSession);
         return existingSession;
     }
 
     private void withExpiredSession() {
-        when(table.getItem(SESSION_ID_PARTITION_KEY))
+        when(table.getItem(SESSION_GET_REQUEST))
                 .thenReturn(
                         new AuthSessionItem()
                                 .withSessionId(SESSION_ID)
@@ -220,7 +227,7 @@ class AuthSessionServiceTest {
     }
 
     private void withNoSession() {
-        when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(null);
+        when(table.getItem(SESSION_GET_REQUEST)).thenReturn(null);
     }
 
     private void withFailedUpdate() {
@@ -232,6 +239,6 @@ class AuthSessionServiceTest {
     private void withFailedGet() {
         doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
                 .when(table)
-                .getItem(SESSION_ID_PARTITION_KEY);
+                .getItem(SESSION_GET_REQUEST);
     }
 }

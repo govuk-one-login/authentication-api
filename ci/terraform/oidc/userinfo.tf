@@ -40,6 +40,7 @@ module "userinfo" {
     IDENTITY_ENABLED                     = var.ipv_api_enabled
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
     OIDC_API_BASE_URL                    = local.api_base_url
+    USE_STRONGLY_CONSISTENT_READS        = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest"
 

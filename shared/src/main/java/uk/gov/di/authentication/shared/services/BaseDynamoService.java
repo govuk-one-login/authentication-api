@@ -4,6 +4,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
@@ -55,8 +56,16 @@ public class BaseDynamoService<T> {
                         Key.builder().partitionValue(partition).sortValue(sortKey).build()));
     }
 
+    public Optional<T> get(GetItemEnhancedRequest getItemEnhancedRequest) {
+        return Optional.ofNullable(dynamoTable.getItem(getItemEnhancedRequest));
+    }
+
     public void delete(String partition) {
         get(partition).ifPresent(dynamoTable::deleteItem);
+    }
+
+    public void delete(T item) {
+        dynamoTable.deleteItem(item);
     }
 
     public void delete(String partition, String sortKey) {

@@ -44,6 +44,7 @@ module "reset_password" {
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri
+    USE_STRONGLY_CONSISTENT_READS          = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler::handleRequest"
 

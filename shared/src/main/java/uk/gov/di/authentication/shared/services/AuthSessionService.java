@@ -3,6 +3,8 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -24,11 +26,14 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
     private final ConfigurationService configurationService;
 
     private final long timeToLive;
+    private final boolean useConsistentReads;
 
     public AuthSessionService(ConfigurationService configurationService) {
         super(AuthSessionItem.class, "auth-session", configurationService);
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
+        this.useConsistentReads = configurationService.isUsingStronglyConsistentReads();
+        LOG.info("Is using strongly consistent reads: {}", useConsistentReads);
     }
 
     public AuthSessionService(
@@ -38,6 +43,8 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
         this.configurationService = configurationService;
+        this.useConsistentReads = configurationService.isUsingStronglyConsistentReads();
+        LOG.info("Is using strongly consistent reads: {}", useConsistentReads);
     }
 
     public AuthSessionItem generateNewAuthSession(String sessionId) {
@@ -104,10 +111,15 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
     }
 
+    @Override
+    public void delete(String sessionId) {
+        get(requestFor(sessionId)).ifPresent(this::delete);
+    }
+
     public Optional<AuthSessionItem> getSession(String sessionId) {
         Optional<AuthSessionItem> authSession = Optional.empty();
         try {
-            authSession = get(sessionId);
+            authSession = get(requestFor(sessionId));
         } catch (Exception e) {
             logAndThrowAuthSessionException("Failed to get Auth session item", sessionId, e);
         }
@@ -165,5 +177,12 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
     private void logAndThrowAuthSessionException(String message, String sessionId, Exception e) {
         LOG.error("{}. Session ID: {}. Error message: {}", message, sessionId, e.getMessage());
         throw new AuthSessionException(message);
+    }
+
+    private GetItemEnhancedRequest requestFor(String sessionId) {
+        return GetItemEnhancedRequest.builder()
+                .key(Key.builder().partitionValue(sessionId).build())
+                .consistentRead(useConsistentReads)
+                .build();
     }
 }

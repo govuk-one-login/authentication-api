@@ -30,16 +30,17 @@ module "reset-password-request" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT             = var.environment
-    FRONTEND_BASE_URL       = "https://${local.frontend_fqdn}/"
-    RESET_PASSWORD_ROUTE    = var.reset_password_route
-    LOCKOUT_DURATION        = var.lockout_duration
-    LOCKOUT_COUNT_TTL       = var.lockout_count_ttl
-    DEFAULT_OTP_CODE_EXPIRY = var.otp_code_ttl_duration
-    EMAIL_QUEUE_URL         = aws_sqs_queue.email_queue.id
-    TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
-    REDIS_KEY               = local.redis_key
-    INTERNAl_SECTOR_URI     = var.internal_sector_uri
+    ENVIRONMENT                   = var.environment
+    FRONTEND_BASE_URL             = "https://${local.frontend_fqdn}/"
+    RESET_PASSWORD_ROUTE          = var.reset_password_route
+    LOCKOUT_DURATION              = var.lockout_duration
+    LOCKOUT_COUNT_TTL             = var.lockout_count_ttl
+    DEFAULT_OTP_CODE_EXPIRY       = var.otp_code_ttl_duration
+    EMAIL_QUEUE_URL               = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL          = module.oidc_txma_audit.queue_url
+    REDIS_KEY                     = local.redis_key
+    INTERNAl_SECTOR_URI           = var.internal_sector_uri
+    USE_STRONGLY_CONSISTENT_READS = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler::handleRequest"
 

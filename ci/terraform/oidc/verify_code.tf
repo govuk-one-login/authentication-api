@@ -54,6 +54,7 @@ module "verify_code" {
     SUPPORT_REAUTH_SIGNOUT_ENABLED           = var.support_reauth_signout_enabled
     REAUTH_ENTER_SMS_CODE_COUNT_TTL          = var.reauth_enter_sms_code_count_ttl
     AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED  = var.authentication_attempts_service_enabled
+    USE_STRONGLY_CONSISTENT_READS            = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest"
 

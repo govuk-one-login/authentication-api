@@ -46,6 +46,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -168,7 +169,7 @@ class ReverificationResultHandlerTest {
 
         @BeforeEach
         void setUp() throws ParseException {
-            when(idReverificationStateService.get(any()))
+            when(idReverificationStateService.get(anyString()))
                     .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
@@ -453,7 +454,7 @@ class ReverificationResultHandlerTest {
     class StateErrors {
         @Test
         void shouldHandleStateNotRecordedError() {
-            when(idReverificationStateService.get(any())).thenReturn(Optional.empty());
+            when(idReverificationStateService.get(anyString())).thenReturn(Optional.empty());
 
             var result =
                     handler.handleRequest(
@@ -465,7 +466,7 @@ class ReverificationResultHandlerTest {
 
         @Test
         void shouldHandleStateMismatchedClientSessionIdError() {
-            when(idReverificationStateService.get(any()))
+            when(idReverificationStateService.get(anyString()))
                     .thenReturn(
                             Optional.ofNullable(
                                     new IDReverificationState()
@@ -486,7 +487,7 @@ class ReverificationResultHandlerTest {
         @Test
         void shouldHandleIPVTokenError()
                 throws ParseException, UnsuccessfulReverificationResponseException {
-            when(idReverificationStateService.get(any()))
+            when(idReverificationStateService.get(anyString()))
                     .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getUnsuccessfulTokenResponse());
@@ -509,7 +510,7 @@ class ReverificationResultHandlerTest {
         @Test
         void shouldHandleIPVReverificationError()
                 throws ParseException, UnsuccessfulReverificationResponseException {
-            when(idReverificationStateService.get(any()))
+            when(idReverificationStateService.get(anyString()))
                     .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
@@ -539,7 +540,7 @@ class ReverificationResultHandlerTest {
             userInfo.setContentType("application/json");
             userInfo.setContent(responseContent);
 
-            when(idReverificationStateService.get(any()))
+            when(idReverificationStateService.get(anyString()))
                     .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
             when(reverificationResultService.getToken(any()))
                     .thenReturn(getSuccessfulTokenResponse());
@@ -609,7 +610,7 @@ class ReverificationResultHandlerTest {
         userInfo.setContentType("application/json");
         userInfo.setContent(responseContent);
 
-        when(idReverificationStateService.get(any()))
+        when(idReverificationStateService.get(anyString()))
                 .thenReturn(Optional.ofNullable(ID_REVERIFICATION_STATE));
         when(reverificationResultService.getToken(any())).thenReturn(getSuccessfulTokenResponse());
         when(reverificationResultService.sendIpvReverificationRequest(any())).thenReturn(userInfo);
