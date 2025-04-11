@@ -87,6 +87,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         for (SQSMessage msg : event.getRecords()) {
             LOG.info("Processing Notification message with id: {}", msg.getMessageId());
             var request = parseNotifyRequest(msg);
+            LOG.info(
+                    "Processing NotifyRequest with reference: {}",
+                    request.getUniqueNotificationReference());
             sendNotifyMessage(request);
         }
         return null;
@@ -135,19 +138,23 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
         try {
             var personalisation = getPersonalisation(request);
+            var reference =
+                    String.format(
+                            "%s/%s",
+                            request.getUniqueNotificationReference(), request.getClientSessionId());
 
             if (request.getNotificationType().isEmail()) {
                 notificationService.sendEmail(
                         request.getDestination(),
                         personalisation,
                         request.getNotificationType(),
-                        request.getClientSessionId());
+                        reference);
             } else {
                 notificationService.sendText(
                         request.getDestination(),
                         personalisation,
                         request.getNotificationType(),
-                        request.getClientSessionId());
+                        reference);
             }
             writeTestClientOtpToS3(
                     request.getNotificationType(), request.getCode(), request.getDestination());
