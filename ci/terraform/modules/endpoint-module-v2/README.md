@@ -11,17 +11,17 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.8 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | 5.75.1 |
-| <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
-| <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
-| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.75.1 |
+| <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.5.2 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6.3 |
+| <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | >= 4.0.6 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.75.1 |
 
 ## Modules
 
@@ -33,10 +33,10 @@ When we fully switch over to using OpenAPI for all API Gateways, lambdas current
 
 | Name | Type |
 |------|------|
-| [aws_api_gateway_integration.endpoint_integration](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_integration) | resource |
-| [aws_api_gateway_method.endpoint_method](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_method) | resource |
-| [aws_api_gateway_resource.endpoint_resource](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_resource) | resource |
-| [aws_lambda_permission.endpoint_execution_permission](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/lambda_permission) | resource |
+| [aws_api_gateway_integration.endpoint_integration](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_integration) | resource |
+| [aws_api_gateway_method.endpoint_method](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method) | resource |
+| [aws_api_gateway_resource.endpoint_resource](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_resource) | resource |
+| [aws_lambda_permission.endpoint_execution_permission](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
 
 ## Inputs
 

@@ -5,31 +5,31 @@
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.8 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | 5.75.1 |
-| <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
-| <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
-| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.75.1 |
+| <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.5.2 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6.3 |
+| <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | >= 4.0.6 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.75.1 |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [aws_iam_policy.txma_audit_queue_access_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_policy) | resource |
-| [aws_kms_alias.txma_audit_queue_encryption_key_alias](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/kms_alias) | resource |
-| [aws_kms_key.txma_audit_queue_encryption_key](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/kms_key) | resource |
-| [aws_sqs_queue.txma_audit_dead_letter_queue](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/sqs_queue) | resource |
-| [aws_sqs_queue.txma_audit_queue](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/sqs_queue) | resource |
-| [aws_sqs_queue_policy.txma_audit_queue_subscription](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/sqs_queue_policy) | resource |
-| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/data-sources/caller_identity) | data source |
-| [aws_iam_policy_document.txma_audit_queue_access_policy_document](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/data-sources/iam_policy_document) | data source |
-| [aws_iam_policy_document.txma_audit_queue_encryption_key_access_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy.txma_audit_queue_access_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [aws_kms_alias.txma_audit_queue_encryption_key_alias](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_alias) | resource |
+| [aws_kms_key.txma_audit_queue_encryption_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key) | resource |
+| [aws_sqs_queue.txma_audit_dead_letter_queue](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue) | resource |
+| [aws_sqs_queue.txma_audit_queue](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue) | resource |
+| [aws_sqs_queue_policy.txma_audit_queue_subscription](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue_policy) | resource |
+| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
+| [aws_iam_policy_document.txma_audit_queue_access_policy_document](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.txma_audit_queue_encryption_key_access_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
 ## Inputs
 

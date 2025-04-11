@@ -13,37 +13,37 @@ This module is intended to be used alongside multiple [endpoint-lambdas](../endp
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.8 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | 5.75.1 |
-| <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
-| <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
-| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.75.1 |
+| <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.5.2 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6.3 |
+| <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | >= 4.0.6 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.75.1 |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [aws_api_gateway_deployment.deployment](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_deployment) | resource |
-| [aws_api_gateway_method_settings.logging_settings](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_method_settings) | resource |
-| [aws_api_gateway_rest_api.rest_api](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_rest_api) | resource |
-| [aws_api_gateway_rest_api_policy.rest_api_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_rest_api_policy) | resource |
-| [aws_api_gateway_stage.stage](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_stage) | resource |
-| [aws_api_gateway_usage_plan.api_usage_plan](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/api_gateway_usage_plan) | resource |
-| [aws_cloudwatch_log_group.access_logs](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_group) | resource |
-| [aws_cloudwatch_log_group.execution_logs](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_group) | resource |
-| [aws_cloudwatch_log_group.waf_logs](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_group) | resource |
-| [aws_cloudwatch_log_subscription_filter.execution_log_subscription](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_subscription_filter) | resource |
-| [aws_cloudwatch_log_subscription_filter.stage_access_log_subscription](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_subscription_filter) | resource |
-| [aws_cloudwatch_log_subscription_filter.waf_log_subscription](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_subscription_filter) | resource |
-| [aws_wafv2_web_acl_association.waf_association](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/wafv2_web_acl_association) | resource |
-| [aws_wafv2_web_acl_logging_configuration.waf_logging_configuration](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/wafv2_web_acl_logging_configuration) | resource |
-| [aws_iam_policy_document.rest_api_policy_document](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/data-sources/iam_policy_document) | data source |
+| [aws_api_gateway_deployment.deployment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_deployment) | resource |
+| [aws_api_gateway_method_settings.logging_settings](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method_settings) | resource |
+| [aws_api_gateway_rest_api.rest_api](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_rest_api) | resource |
+| [aws_api_gateway_rest_api_policy.rest_api_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_rest_api_policy) | resource |
+| [aws_api_gateway_stage.stage](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_stage) | resource |
+| [aws_api_gateway_usage_plan.api_usage_plan](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_usage_plan) | resource |
+| [aws_cloudwatch_log_group.access_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
+| [aws_cloudwatch_log_group.execution_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
+| [aws_cloudwatch_log_group.waf_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
+| [aws_cloudwatch_log_subscription_filter.execution_log_subscription](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
+| [aws_cloudwatch_log_subscription_filter.stage_access_log_subscription](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
+| [aws_cloudwatch_log_subscription_filter.waf_log_subscription](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
+| [aws_wafv2_web_acl_association.waf_association](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl_association) | resource |
+| [aws_wafv2_web_acl_logging_configuration.waf_logging_configuration](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl_logging_configuration) | resource |
+| [aws_iam_policy_document.rest_api_policy_document](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
 ## Inputs
 

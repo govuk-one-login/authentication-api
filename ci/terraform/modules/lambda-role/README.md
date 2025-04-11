@@ -11,32 +11,32 @@ It is designed to be used to create the lambda role passed to a lambda via endpo
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.8 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | 5.75.1 |
-| <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
-| <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
-| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.75.1 |
+| <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.5.2 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6.3 |
+| <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | >= 4.0.6 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.75.1 |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [aws_iam_policy.endpoint_xray_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_policy) | resource |
-| [aws_iam_policy.logging_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_policy) | resource |
-| [aws_iam_policy.networking_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_policy) | resource |
-| [aws_iam_role.lambda_role](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_role) | resource |
-| [aws_iam_role_policy_attachment.endpoint_xray_policy_attachment](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_role_policy_attachment) | resource |
-| [aws_iam_role_policy_attachment.lambda_logs](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_role_policy_attachment) | resource |
-| [aws_iam_role_policy_attachment.networking_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_role_policy_attachment) | resource |
-| [aws_iam_role_policy_attachment.provided_policies](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/iam_role_policy_attachment) | resource |
-| [aws_iam_policy_document.endpoint_xray_policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/data-sources/iam_policy_document) | data source |
-| [aws_iam_policy_document.lambda_can_assume_role](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy.endpoint_xray_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [aws_iam_policy.logging_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [aws_iam_policy.networking_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [aws_iam_role.lambda_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role_policy_attachment.endpoint_xray_policy_attachment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.lambda_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.networking_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.provided_policies](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_policy_document.endpoint_xray_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.lambda_can_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
 ## Inputs
 

@@ -14,33 +14,33 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.8 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | 5.75.1 |
-| <a name="requirement_local"></a> [local](#requirement\_local) | 2.5.2 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | 3.6.3 |
-| <a name="requirement_time"></a> [time](#requirement\_time) | 0.12.1 |
-| <a name="requirement_tls"></a> [tls](#requirement\_tls) | 4.0.6 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.75.1 |
+| <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.5.2 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.6.3 |
+| <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | >= 4.0.6 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.75.1 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.75.1 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [aws_appautoscaling_policy.provisioned-concurrency-policy](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/appautoscaling_policy) | resource |
-| [aws_appautoscaling_target.lambda_target](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/appautoscaling_target) | resource |
-| [aws_cloudwatch_log_group.lambda_log_group](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_group) | resource |
-| [aws_cloudwatch_log_metric_filter.lambda_error_metric_filter](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_metric_filter) | resource |
-| [aws_cloudwatch_log_subscription_filter.log_subscription](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_log_subscription_filter) | resource |
-| [aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_metric_alarm) | resource |
-| [aws_cloudwatch_metric_alarm.lambda_error_rate_cloudwatch_alarm](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/cloudwatch_metric_alarm) | resource |
-| [aws_lambda_alias.endpoint_lambda](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/lambda_alias) | resource |
-| [aws_lambda_function.endpoint_lambda](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/lambda_function) | resource |
-| [aws_lambda_provisioned_concurrency_config.endpoint_lambda_concurrency_config](https://registry.terraform.io/providers/hashicorp/aws/5.75.1/docs/resources/lambda_provisioned_concurrency_config) | resource |
+| [aws_appautoscaling_policy.provisioned-concurrency-policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/appautoscaling_policy) | resource |
+| [aws_appautoscaling_target.lambda_target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/appautoscaling_target) | resource |
+| [aws_cloudwatch_log_group.lambda_log_group](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
+| [aws_cloudwatch_log_metric_filter.lambda_error_metric_filter](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_metric_filter) | resource |
+| [aws_cloudwatch_log_subscription_filter.log_subscription](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
+| [aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.lambda_error_rate_cloudwatch_alarm](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_lambda_alias.endpoint_lambda](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_alias) | resource |
+| [aws_lambda_function.endpoint_lambda](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function) | resource |
+| [aws_lambda_provisioned_concurrency_config.endpoint_lambda_concurrency_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_provisioned_concurrency_config) | resource |
 | [terraform_data.wait_for_alias](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 
 ## Inputs
