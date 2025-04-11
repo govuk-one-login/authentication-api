@@ -1685,13 +1685,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static Stream<Arguments> vtrParams() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl"), LOW_LEVEL, LevelOfConfidence.NONE),
+                Arguments.of(jsonArrayOf("Cl"), LOW_LEVEL, null),
                 Arguments.of(jsonArrayOf("Cl.Cm.P2"), MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm.PCL200", "Cl.Cm.P2"),
                         MEDIUM_LEVEL,
                         LevelOfConfidence.HMRC200),
-                Arguments.of(null, MEDIUM_LEVEL, LevelOfConfidence.NONE));
+                Arguments.of(null, MEDIUM_LEVEL, null));
     }
 
     @ParameterizedTest
@@ -1715,25 +1715,28 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         queryParams,
                         Optional.of("GET"));
         assertThat(response, hasStatus(302));
-        assertResponseJarHasClaimsWithValues(
-                response,
-                Map.of(
-                        "confidence",
-                        expectedCredentialStrength.getValue(),
-                        "requested_credential_strength",
-                        expectedCredentialStrength.getValue(),
-                        "requested_level_of_confidence",
-                        expectedLevelOfConfidence.getValue(),
-                        "_ga",
-                        "12345",
-                        "cookie_consent",
-                        "approve",
-                        "client_id",
-                        configuration.getOrchestrationClientId(),
-                        "scope",
-                        "openid",
-                        "redirect_uri",
-                        configuration.getOrchestrationRedirectURI()));
+        var expectedClaims =
+                new HashMap<String, Object>(
+                        Map.of(
+                                "confidence",
+                                expectedCredentialStrength.getValue(),
+                                "requested_credential_strength",
+                                expectedCredentialStrength.getValue(),
+                                "_ga",
+                                "12345",
+                                "cookie_consent",
+                                "approve",
+                                "client_id",
+                                configuration.getOrchestrationClientId(),
+                                "scope",
+                                "openid",
+                                "redirect_uri",
+                                configuration.getOrchestrationRedirectURI()));
+        if (expectedLevelOfConfidence != null) {
+            expectedClaims.put(
+                    "requested_level_of_confidence", expectedLevelOfConfidence.getValue());
+        }
+        assertResponseJarHasClaimsWithValues(response, expectedClaims);
         assertResponseJarHasClaims(response, List.of("state"));
     }
 
@@ -1768,25 +1771,28 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         requestParams,
                         Optional.of("GET"));
         assertThat(response, hasStatus(302));
-        assertResponseJarHasClaimsWithValues(
-                response,
-                Map.of(
-                        "confidence",
-                        expectedCredentialStrength.getValue(),
-                        "requested_credential_strength",
-                        expectedCredentialStrength.getValue(),
-                        "requested_level_of_confidence",
-                        expectedLevelOfConfidence.getValue(),
-                        "_ga",
-                        "12345",
-                        "cookie_consent",
-                        "approve",
-                        "client_id",
-                        configuration.getOrchestrationClientId(),
-                        "scope",
-                        "openid",
-                        "redirect_uri",
-                        configuration.getOrchestrationRedirectURI()));
+        var expectedClaims =
+                new HashMap<String, Object>(
+                        Map.of(
+                                "confidence",
+                                expectedCredentialStrength.getValue(),
+                                "requested_credential_strength",
+                                expectedCredentialStrength.getValue(),
+                                "_ga",
+                                "12345",
+                                "cookie_consent",
+                                "approve",
+                                "client_id",
+                                configuration.getOrchestrationClientId(),
+                                "scope",
+                                "openid",
+                                "redirect_uri",
+                                configuration.getOrchestrationRedirectURI()));
+        if (expectedLevelOfConfidence != null) {
+            expectedClaims.put(
+                    "requested_level_of_confidence", expectedLevelOfConfidence.getValue());
+        }
+        assertResponseJarHasClaimsWithValues(response, expectedClaims);
         assertResponseJarHasClaims(response, List.of("state"));
     }
 

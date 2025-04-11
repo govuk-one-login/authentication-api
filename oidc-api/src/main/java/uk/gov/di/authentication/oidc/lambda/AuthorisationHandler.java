@@ -49,7 +49,6 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -931,6 +930,7 @@ public class AuthorisationHandler
                 Optional.ofNullable(authenticationRequest.getCustomParameter("_ga"))
                         .map(List::stream)
                         .flatMap(Stream::findFirst);
+        var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
@@ -954,11 +954,6 @@ public class AuthorisationHandler
                         .claim(
                                 "requested_credential_strength",
                                 requestedVtr.getCredentialTrustLevel().getValue())
-                        .claim(
-                                "requested_level_of_confidence",
-                                requestedVtr.containsLevelOfConfidence()
-                                        ? requestedVtr.getLevelOfConfidence().getValue()
-                                        : LevelOfConfidence.NONE.getValue())
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
@@ -975,6 +970,10 @@ public class AuthorisationHandler
         gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
         cookieConsentOpt.ifPresent(
                 cookieConsent -> claimsBuilder.claim("cookie_consent", cookieConsent));
+        levelOfConfidenceOpt.ifPresent(
+                levelOfConfidence ->
+                        claimsBuilder.claim(
+                                "requested_level_of_confidence", levelOfConfidence.getValue()));
 
         var claimsSetRequest =
                 constructAdditionalAuthenticationClaims(client, authenticationRequest);
