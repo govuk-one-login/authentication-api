@@ -584,29 +584,11 @@ public class AuthenticationCallbackHandler
                 }
 
                 var authCode =
-                        authorisationCodeService.generateAndSaveAuthorisationCode(
+                        orchAuthCodeService.generateAndSaveAuthorisationCode(
                                 clientId,
                                 clientSessionId,
                                 userInfo.getEmailAddress(),
                                 orchSession.getAuthTime());
-
-                /*
-                    TODO: ATO-1218:
-                     - Move the catch clause below to the bottom of this method and return the result of redirectToFrontendErrorPage (similar to the other catch clauses).
-                     - Update the log in the catch clause to be level 'error' and remove Redis references (as by this point the DynamoDB store will be the primary).
-                */
-                try {
-                    orchAuthCodeService.generateAndSaveAuthorisationCode(
-                            authCode,
-                            clientId,
-                            clientSessionId,
-                            userInfo.getEmailAddress(),
-                            orchSession.getAuthTime());
-                } catch (OrchAuthCodeException e) {
-                    LOG.warn(
-                            "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
-                            e.getMessage());
-                }
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
@@ -680,7 +662,7 @@ public class AuthenticationCallbackHandler
                         e.getMessage());
                 return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
-        } catch (AuthenticationCallbackException e) {
+        } catch (AuthenticationCallbackException | OrchAuthCodeException e) {
             LOG.warn(e.getMessage());
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
