@@ -11,6 +11,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -53,6 +55,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MFAMethodsCreateHandlerTest {
+    public static final String TEST_OTP = "123456";
+
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(MFAMethodsCreateHandler.class);
@@ -67,6 +71,7 @@ class MFAMethodsCreateHandlerTest {
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
+    private static final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
@@ -83,7 +88,8 @@ class MFAMethodsCreateHandlerTest {
         reset(mfaMethodsService);
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
-                new MFAMethodsCreateHandler(configurationService, mfaMethodsService, dynamoService);
+                new MFAMethodsCreateHandler(
+                        configurationService, mfaMethodsService, dynamoService, codeStorageService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
@@ -116,7 +122,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -140,7 +146,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -152,7 +158,7 @@ class MFAMethodsCreateHandlerTest {
         var capturedRequest = mfaMethodCaptor.getValue();
 
         assertEquals(
-                new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"), capturedRequest.method());
+                new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP), capturedRequest.method());
         assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
 
         assertThat(result, hasStatus(200));
@@ -276,7 +282,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                         TEST_INTERNAL_SUBJECT);
         event.setBody("Invalid JSON");
 
@@ -305,8 +311,11 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                         TEST_INTERNAL_SUBJECT);
+        when(codeStorageService.isValidOtpCode(
+                        TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
@@ -321,11 +330,34 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
+    void shouldReturn400WhenOTPIsInvalid() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                        TEST_INTERNAL_SUBJECT);
+        when(codeStorageService.isValidOtpCode(
+                        TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(false);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.addBackupMfa(any(), any()))
+                .thenReturn(
+                        Result.failure(
+                                MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+    }
+
+    @Test
     void shouldReturn400WhenMfaMethodServiceReturnsSmsMfaAlreadyExistsError() {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                         TEST_INTERNAL_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));

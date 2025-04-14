@@ -7,16 +7,20 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
+import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
@@ -35,6 +39,7 @@ public class MFAMethodsCreateHandler
     private final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService;
+    private final CodeStorageService codeStorageService;
     private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
@@ -47,15 +52,19 @@ public class MFAMethodsCreateHandler
         this.configurationService = configurationService;
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
+        this.codeStorageService =
+                new CodeStorageService(new RedisConnectionService(configurationService));
     }
 
     public MFAMethodsCreateHandler(
             ConfigurationService configurationService,
             MFAMethodsService mfaMethodsService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            CodeStorageService codeStorageService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
+        this.codeStorageService = codeStorageService;
     }
 
     @Override
@@ -111,6 +120,19 @@ public class MFAMethodsCreateHandler
             if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier()
                     == PriorityIdentifier.DEFAULT) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1080);
+            }
+
+
+            if (mfaMethodCreateRequest.mfaMethod().method()
+                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+                boolean isValidOtpCode =
+                        codeStorageService.isValidOtpCode(
+                                userProfile.getEmail(),
+                                requestSmsMfaDetail.otp(),
+                                NotificationType.VERIFY_PHONE_NUMBER);
+                if (!isValidOtpCode) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+                }
             }
 
             Result<MfaCreateFailureReason, MfaMethodResponse> addBackupMfaResult =

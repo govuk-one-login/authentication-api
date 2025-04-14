@@ -90,13 +90,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     void shouldReturn200AndMfaMethodDataWhenAuthAppUserAddsSmsMfa() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"))),
+                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -246,13 +247,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"))),
+                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -266,13 +268,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     void shouldReturn400ErrorResponseWhenSmsUserAddsSmsMfaWithSamePhoneNumber() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"))),
+                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
