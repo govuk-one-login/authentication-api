@@ -29,7 +29,6 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -60,7 +59,6 @@ public class IPVCallbackHelper {
     protected final Json objectMapper;
     private final AuditService auditService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
-    private final AuthorisationCodeService authorisationCodeService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoClientService dynamoClientService;
@@ -74,7 +72,6 @@ public class IPVCallbackHelper {
     public IPVCallbackHelper(ConfigurationService configurationService) {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
@@ -96,9 +93,6 @@ public class IPVCallbackHelper {
             ConfigurationService configurationService, RedisConnectionService redis) {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authorisationCodeService =
-                new AuthorisationCodeService(
-                        configurationService, redis, SerializationService.getInstance());
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
@@ -119,7 +113,6 @@ public class IPVCallbackHelper {
     public IPVCallbackHelper(
             AuditService auditService,
             AuthCodeResponseGenerationService authCodeResponseService,
-            AuthorisationCodeService authorisationCodeService,
             OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoClientService dynamoClientService,
@@ -132,7 +125,6 @@ public class IPVCallbackHelper {
             OrchSessionService orchSessionService) {
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
-        this.authorisationCodeService = authorisationCodeService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.dynamoClientService = dynamoClientService;
