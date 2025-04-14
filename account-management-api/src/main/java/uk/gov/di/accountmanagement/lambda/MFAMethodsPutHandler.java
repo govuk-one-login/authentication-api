@@ -10,7 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;

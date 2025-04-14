@@ -15,11 +15,12 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
-import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
+import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -115,7 +116,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(TEST_PHONE_NUMBER),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -130,16 +131,16 @@ class MFAMethodsCreateHandlerTest {
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Result.success(
-                                new MfaMethodData(
+                                new MfaMethodResponse(
                                         TEST_SMS_MFA_ID,
                                         PriorityIdentifier.BACKUP,
                                         true,
-                                        new SmsMfaDetail(TEST_PHONE_NUMBER))));
+                                        new ResponseSmsMfaDetail(TEST_PHONE_NUMBER))));
 
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(TEST_PHONE_NUMBER),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -150,7 +151,8 @@ class MFAMethodsCreateHandlerTest {
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
 
-        assertEquals(new SmsMfaDetail(TEST_PHONE_NUMBER), capturedRequest.method());
+        assertEquals(
+                new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"), capturedRequest.method());
         assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
 
         assertThat(result, hasStatus(200));
@@ -178,16 +180,16 @@ class MFAMethodsCreateHandlerTest {
         when(mfaMethodsService.addBackupMfa(any(), any()))
                 .thenReturn(
                         Result.success(
-                                new MfaMethodData(
+                                new MfaMethodResponse(
                                         TEST_AUTH_APP_ID,
                                         PriorityIdentifier.BACKUP,
                                         true,
-                                        new AuthAppMfaDetail(TEST_CREDENTIAL))));
+                                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL))));
 
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -198,7 +200,7 @@ class MFAMethodsCreateHandlerTest {
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
 
-        assertEquals(new AuthAppMfaDetail(TEST_CREDENTIAL), capturedRequest.method());
+        assertEquals(new RequestAuthAppMfaDetail(TEST_CREDENTIAL), capturedRequest.method());
         assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
 
         assertThat(result, hasStatus(200));
@@ -228,7 +230,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -260,7 +262,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
@@ -274,7 +276,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(TEST_PHONE_NUMBER),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
                         TEST_INTERNAL_SUBJECT);
         event.setBody("Invalid JSON");
 
@@ -303,7 +305,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(TEST_PHONE_NUMBER),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
                         TEST_INTERNAL_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
@@ -323,7 +325,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new SmsMfaDetail(TEST_PHONE_NUMBER),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"),
                         TEST_INTERNAL_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
@@ -341,7 +343,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_INTERNAL_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
@@ -359,7 +361,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_INTERNAL_SUBJECT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
@@ -377,7 +379,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
-                        new AuthAppMfaDetail(TEST_CREDENTIAL),
+                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
                         "invalid");
 
         var result = handler.handleRequest(event, context);
@@ -390,18 +392,22 @@ class MFAMethodsCreateHandlerTest {
             PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String principal) {
 
         String body =
-                mfaDetail instanceof SmsMfaDetail
+                mfaDetail instanceof RequestSmsMfaDetail
                         ? format(
                                 """
                                 { "mfaMethod": {
                                     "priorityIdentifier": "%s",
                                     "method": {
                                         "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s" }
+                                        "phoneNumber": "%s",
+                                        "otp": "%s"
+                                    }
                                     }
                                 }
                                """,
-                                priorityIdentifier, ((SmsMfaDetail) mfaDetail).phoneNumber())
+                                priorityIdentifier,
+                                ((RequestSmsMfaDetail) mfaDetail).phoneNumber(),
+                                ((RequestSmsMfaDetail) mfaDetail).otp())
                         : format(
                                 """
                                 { "mfaMethod": {
@@ -412,7 +418,8 @@ class MFAMethodsCreateHandlerTest {
                                     }
                                 }
                                """,
-                                priorityIdentifier, ((AuthAppMfaDetail) mfaDetail).credential());
+                                priorityIdentifier,
+                                ((RequestAuthAppMfaDetail) mfaDetail).credential());
 
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();

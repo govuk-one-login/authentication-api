@@ -13,9 +13,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
-import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -75,15 +75,15 @@ class MFAMethodsPutHandlerTest {
         var phoneNumber = "123456789";
         var updateRequest =
                 MfaMethodCreateOrUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new SmsMfaDetail(phoneNumber));
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, "123456"));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, "123456"));
 
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
         var updatedMfaMethod =
-                MfaMethodData.smsMethodData(
+                MfaMethodResponse.smsMethodData(
                         MFA_IDENTIFIER, PriorityIdentifier.DEFAULT, true, phoneNumber);
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
                 .thenReturn(Result.success(List.of(updatedMfaMethod)));
@@ -162,10 +162,10 @@ class MFAMethodsPutHandlerTest {
         var phoneNumber = "123456789";
         var updateRequest =
                 MfaMethodCreateOrUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new SmsMfaDetail(phoneNumber));
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, "123456"));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber));
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, "123456"));
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
                 .thenReturn(Result.failure(failureReason));
         var result = handler.handleRequest(eventWithUpdateRequest, context);
@@ -275,7 +275,7 @@ class MFAMethodsPutHandlerTest {
                 .withRequestContext(proxyRequestContext);
     }
 
-    private String updateSmsRequest(String phoneNumber) {
+    private String updateSmsRequest(String phoneNumber, String otp) {
         return format(
                 """
         {
@@ -283,11 +283,12 @@ class MFAMethodsPutHandlerTest {
             "priorityIdentifier": "DEFAULT",
             "method": {
                 "mfaMethodType": "SMS",
-                "phoneNumber": "%s"
+                "phoneNumber": "%s",
+                "otp": "%s"
             }
           }
         }
         """,
-                phoneNumber);
+                phoneNumber, otp);
     }
 }
