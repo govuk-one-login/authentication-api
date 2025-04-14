@@ -52,6 +52,7 @@ module "login" {
     SUPPORT_REAUTH_SIGNOUT_ENABLED          = var.support_reauth_signout_enabled
     AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED = var.authentication_attempts_service_enabled
     REAUTH_ENTER_PASSWORD_COUNT_TTL         = var.reauth_enter_password_count_ttl
+    USE_STRONGLY_CONSISTENT_READS           = var.use_strongly_consistent_reads
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 

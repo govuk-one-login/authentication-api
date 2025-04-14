@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -95,11 +95,11 @@ public class IDReverificationStateHandlerTest {
                 new IDReverificationState()
                         .withClientSessionId(CLIENT_SESSION_ID)
                         .withOrchestrationRedirectUrl(ORCHESTRATION_REDIRECT_URL);
-        when(idReverificationStateService.get(any()))
+        when(idReverificationStateService.get(anyString()))
                 .thenReturn(Optional.of(idReverificationState));
     }
 
     private void givenThereIsNoStoredStateEntry() {
-        when(idReverificationStateService.get(any())).thenReturn(Optional.empty());
+        when(idReverificationStateService.get(anyString())).thenReturn(Optional.empty());
     }
 }
