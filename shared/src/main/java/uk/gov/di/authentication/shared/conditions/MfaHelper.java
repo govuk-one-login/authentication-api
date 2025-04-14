@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 
 public class MfaHelper {
     private static final Logger LOG = LogManager.getLogger(MfaHelper.class);
@@ -39,6 +40,13 @@ public class MfaHelper {
         return Optional.ofNullable(userCredentials.getMfaMethods())
                 .flatMap(
                         mfaMethods -> mfaMethods.stream().filter(MFAMethod::isEnabled).findFirst());
+    }
+
+    public static Optional<MFAMethod> getDefaultMfaMethodForMigratedUser(
+            UserCredentials userCredentials) {
+        return userCredentials.getMfaMethods().stream()
+                .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
+                .findFirst();
     }
 
     public static UserMfaDetail getUserMFADetail(

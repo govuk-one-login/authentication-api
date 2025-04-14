@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -199,6 +201,79 @@ class MfaHelperTest {
                     hasItem(
                             withMessageContaining(
                                     "Unverified auth app mfa method present and no verified phone number")));
+        }
+    }
+
+    @Nested
+    class RetrieveDefaultMethodForMigratedUser {
+        private static final MFAMethod defaultPriorityAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        "some-credential-1",
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        "some-auth-app-identifier-1");
+        private static final MFAMethod backupPriorityAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        "some-credential-2",
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        "some-auth-app-identifier-1");
+        private static final MFAMethod defaultPrioritySms =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        "some-sms-identifier-1");
+        private static final MFAMethod backupPrioritySms =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        "+447900000100",
+                        PriorityIdentifier.BACKUP,
+                        "some-sms-identifier-2");
+
+        private static Stream<Arguments> mfaMethodsCombinations() {
+            return Stream.of(
+                    Arguments.of(
+                            List.of(defaultPriorityAuthApp, backupPriorityAuthApp),
+                            defaultPriorityAuthApp),
+                    Arguments.of(
+                            List.of(defaultPrioritySms, backupPrioritySms), defaultPrioritySms),
+                    Arguments.of(
+                            List.of(defaultPriorityAuthApp, backupPrioritySms),
+                            defaultPriorityAuthApp),
+                    Arguments.of(
+                            List.of(defaultPrioritySms, backupPriorityAuthApp),
+                            defaultPrioritySms));
+        }
+
+        @ParameterizedTest
+        @MethodSource("mfaMethodsCombinations")
+        void shouldReturnADefaultMethod(
+                List<MFAMethod> mfaMethods, MFAMethod expectedRetrievedDefault) {
+            var userCredentialsWithMigratedMethods =
+                    new UserCredentials().withMfaMethods(mfaMethods);
+
+            var result =
+                    MfaHelper.getDefaultMfaMethodForMigratedUser(
+                            userCredentialsWithMigratedMethods);
+
+            assertEquals(Optional.of(expectedRetrievedDefault), result);
+        }
+
+        @Test
+        void shouldReturnAFailureIfNoDefaultMethodExists() {
+            var userCredentialsWithBackupMethodOnly =
+                    new UserCredentials().withMfaMethods(List.of(backupPrioritySms));
+
+            var result =
+                    MfaHelper.getDefaultMfaMethodForMigratedUser(
+                            userCredentialsWithBackupMethodOnly);
+
+            assertEquals(Optional.empty(), result);
         }
     }
 
