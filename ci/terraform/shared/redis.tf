@@ -93,7 +93,7 @@ resource "aws_elasticache_replication_group" "frontend_sessions_store" {
 
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
-  auth_token                 = random_password.redis_password.result
+  auth_token                 = random_password.frontend_redis_password.result
   apply_immediately          = true
 
   subnet_group_name = aws_elasticache_subnet_group.frontend_redis_session_store.name
