@@ -117,8 +117,8 @@ public class MFAMethodsPutHandler
                     mfaMethodsService.updateMfaMethod(
                             userProfile.getEmail(), mfaIdentifier, mfaMethodUpdateRequest);
 
-            if (result.isLeft()) {
-                var failureReason = result.getLeft();
+            if (result.isFailure()) {
+                var failureReason = result.getFailure();
                 var response = handleUpdateMfaFailureReason(failureReason);
                 if (response.getStatusCode() >= 500) {
                     LOG.error("Update failed due to unexpected error {}", failureReason);
@@ -130,7 +130,7 @@ public class MFAMethodsPutHandler
                 return response;
             }
 
-            var successfulUpdate = result.get();
+            var successfulUpdate = result.getSuccess();
 
             return generateApiGatewayProxyResponse(200, successfulUpdate, true);
         } catch (Json.JsonException e) {

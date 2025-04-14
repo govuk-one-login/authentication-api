@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -17,6 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -767,7 +767,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
+    public Result<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
             String email, String updatedPhoneNumber, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -776,12 +776,12 @@ public class DynamoService implements AuthenticationService {
         return maybeExistingMethod.flatMap(
                 existingMethod -> {
                     if (!existingMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
-                        return Either.left(
+                        return Result.failure(
                                 format(
                                         "Attempted to update phone number for non sms method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    return Either.right(
+                    return Result.success(
                             updateMigratedMfaMethod(
                                     existingMethod.withDestination(updatedPhoneNumber),
                                     mfaMethodIdentifier,
@@ -803,7 +803,7 @@ public class DynamoService implements AuthenticationService {
         return updatedUserCredentials.getMfaMethods();
     }
 
-    private Either<String, MFAMethod> getMfaMethodByIdentifier(
+    private Result<String, MFAMethod> getMfaMethodByIdentifier(
             UserCredentials userCredentials, String mfaMethodIdentifier) {
         var maybeExistingMethod =
                 userCredentials.getMfaMethods().stream()
@@ -812,17 +812,17 @@ public class DynamoService implements AuthenticationService {
                                         mfaMethod.getMfaIdentifier().equals(mfaMethodIdentifier))
                         .findFirst();
         return maybeExistingMethod
-                .<Either<String, MFAMethod>>map(Either::right)
+                .<Result<String, MFAMethod>>map(Result::success)
                 .orElseGet(
                         () ->
-                                Either.left(
+                                Result.failure(
                                         format(
                                                 "Mfa method with identifier %s does not exist",
                                                 mfaMethodIdentifier)));
     }
 
     @Override
-    public Either<String, List<MFAMethod>> updateMigratedAuthAppCredential(
+    public Result<String, List<MFAMethod>> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -833,12 +833,12 @@ public class DynamoService implements AuthenticationService {
                     if (!existingMethod
                             .getMfaMethodType()
                             .equals(MFAMethodType.AUTH_APP.getValue())) {
-                        return Either.left(
+                        return Result.failure(
                                 format(
                                         "Attempted to update auth app credential for non auth app method with identifier %s",
                                         mfaMethodIdentifier));
                     }
-                    return Either.right(
+                    return Result.success(
                             updateMigratedMfaMethod(
                                     existingMethod.withCredentialValue(updatedCredential),
                                     mfaMethodIdentifier,
@@ -846,11 +846,11 @@ public class DynamoService implements AuthenticationService {
                 });
     }
 
-    private Either<String, Void> validateMfaMethods(List<MFAMethod> methods) {
+    private Result<String, Void> validateMfaMethods(List<MFAMethod> methods) {
         if (methods.isEmpty()) {
-            return Either.left("Mfa methods cannot be empty");
+            return Result.failure("Mfa methods cannot be empty");
         } else if (methods.size() > 2) {
-            return Either.left("Cannot have more than two mfa methods");
+            return Result.failure("Cannot have more than two mfa methods");
         } else if (methods.stream()
                         .filter(
                                 m ->
@@ -860,34 +860,33 @@ public class DynamoService implements AuthenticationService {
                         .toList()
                         .size()
                 > 1) {
-            return Either.left("Cannot have two auth app mfa methods");
+            return Result.failure("Cannot have two auth app mfa methods");
         }
         var backupMethods =
                 methods.stream().filter(m -> BACKUP.name().equals(m.getPriority())).toList();
         var defaultMethods =
                 methods.stream().filter(m -> DEFAULT.name().equals(m.getPriority())).toList();
         if (defaultMethods.size() > 1 || backupMethods.size() > 1) {
-            return Either.left("Cannot have two mfa methods with the same priority");
+            return Result.failure("Cannot have two mfa methods with the same priority");
         }
         if (defaultMethods.isEmpty()) {
-            return Either.left("Must have default priority mfa method defined");
+            return Result.failure("Must have default priority mfa method defined");
         }
         var uniqueIdentifiers =
                 methods.stream().map(MFAMethod::getMfaIdentifier).collect(Collectors.toSet());
         if (uniqueIdentifiers.size() < methods.size()) {
-            return Either.left("Cannot have mfa methods with the same identifier");
+            return Result.failure("Cannot have mfa methods with the same identifier");
         }
 
-        return Either.right(null);
+        return Result.success(null);
     }
 
     @Override
-    public Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
+    public Result<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods) {
         var validationResult = validateMfaMethods(updatedMfaMethods);
 
-        return validationResult.bimap(
-                err -> err,
+        return validationResult.map(
                 success -> {
                     var userCredentials =
                             dynamoUserCredentialsTable.getItem(
@@ -906,7 +905,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Either<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+    public Result<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
             String email, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -930,9 +929,9 @@ public class DynamoService implements AuthenticationService {
                                     .setMfaMethod(
                                             method.get().withMfaIdentifier(mfaMethodIdentifier)))
                     .withUpdated(dateTime);
-            return Either.right(null);
+            return Result.success(null);
         } else {
-            return Either.left(
+            return Result.failure(
                     "Attempted to set mfa identifier for mfa method in user credentials but no enabled method found");
         }
     }

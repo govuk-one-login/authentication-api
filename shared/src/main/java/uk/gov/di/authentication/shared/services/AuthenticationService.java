@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import io.vavr.control.Either;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -93,16 +93,16 @@ public interface AuthenticationService {
 
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 
-    Either<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
+    Result<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
             String email, String updatedPhoneNumber, String mfaMethodIdentifier);
 
-    Either<String, List<MFAMethod>> updateMigratedAuthAppCredential(
+    Result<String, List<MFAMethod>> updateMigratedAuthAppCredential(
             String email, String updatedCredential, String mfaMethodIdentifier);
 
-    Either<String, List<MFAMethod>> updateAllMfaMethodsForUser(
+    Result<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods);
 
-    Either<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+    Result<String, Void> setMfaIdentifierForNonMigratedUserEnabledAuthApp(
             String email, String mfaMethodIdentifier);
 
     void setMfaIdentifierForNonMigratedSmsMethod(String email, String smsMfaIdentifier);

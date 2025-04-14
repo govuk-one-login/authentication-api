@@ -18,7 +18,6 @@ dependencies {
             configurations.sqs,
             configurations.ssm,
             configurations.cloudwatch,
-            configurations.vavr,
             "org.eclipse.jetty:jetty-server:12.0.18",
             "com.google.code.gson:gson:2.12.1"
 
