@@ -27,7 +27,6 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
-import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -366,12 +365,6 @@ public class IPVCallbackHandler
                         Objects.equals(
                                 userProfile.getPhoneNumber(), authUserInfo.getPhoneNumber()));
             }
-            LOG.info(
-                    "is subjectId the same on authUserInfo as on UserProfile: {}",
-                    Objects.equals(
-                            userProfile.getSubjectID(),
-                            authUserInfo.getClaim(AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue())));
-
             //
 
             var tokenResponse =
