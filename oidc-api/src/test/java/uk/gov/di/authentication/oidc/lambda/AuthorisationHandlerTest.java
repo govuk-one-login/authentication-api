@@ -2862,7 +2862,6 @@ class AuthorisationHandlerTest {
                         .storeOrUpdateSession(newSharedSesisonCaptor.capture(), anyString());
                 OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
                 OrchSessionItem newOrchSession = addSessionCaptor.getAllValues().get(1);
-                Session newSharedSession = newSharedSesisonCaptor.getValue();
 
                 assertNotEquals(updatedPreviousSession.getSessionId(), orchSession.getSessionId());
                 assertNotEquals(
@@ -2875,7 +2874,6 @@ class AuthorisationHandlerTest {
                                 > timeNow + configService.getSessionExpiry() - 100);
                 assertTrue(updatedPreviousSession.getAuthenticated());
                 assertEquals(updatedPreviousSession.getAuthTime(), authTime);
-                assertEquals(0, newSharedSession.getProcessingIdentityAttempts());
 
                 verify(orchSessionService).deleteSession(orchSession.getSessionId());
 
