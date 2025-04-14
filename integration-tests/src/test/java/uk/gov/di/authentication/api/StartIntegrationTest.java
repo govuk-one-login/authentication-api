@@ -31,6 +31,7 @@ import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -126,10 +127,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
         var requestedVtr = VectorOfTrust.parseFromAuthRequestAttribute(List.of(vtrStringList));
-        var levelOfConfidence =
-                requestedVtr.containsLevelOfConfidence()
-                        ? requestedVtr.getLevelOfConfidence()
-                        : LevelOfConfidence.NONE;
+        var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
         var credentialTrustLevel = requestedVtr.getCredentialTrustLevel();
         var response =
                 makeRequest(
@@ -137,7 +135,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 makeRequestBody(
                                         isAuthenticated,
                                         authRequest,
-                                        levelOfConfidence.getValue(),
+                                        levelOfConfidenceOpt,
                                         credentialTrustLevel.getValue())),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
@@ -179,6 +177,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
+        var actualAuthSession = authSessionExtension.getSession(sessionId).orElseThrow();
+        assertThat(
+                actualAuthSession.getRequestedCredentialStrength(), equalTo(credentialTrustLevel));
+        assertThat(
+                actualAuthSession.getRequestedLevelOfConfidence(),
+                equalTo(levelOfConfidenceOpt.orElse(null)));
+        assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
     }
 
     @Test
@@ -209,7 +214,12 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(true, authRequest, "P1", "Cl.Cm")),
+                        Optional.of(
+                                makeRequestBody(
+                                        true,
+                                        authRequest,
+                                        Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                        "Cl.Cm")),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -451,27 +461,49 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private String makeRequestBody(boolean isAuthenticated, AuthenticationRequest authRequest) {
-        return makeRequestBody(isAuthenticated, authRequest, "P0", "Cl.Cm");
+        return makeRequestBody(isAuthenticated, authRequest, Optional.empty(), "Cl.Cm");
     }
 
     private String makeRequestBody(
             boolean isAuthenticated,
             AuthenticationRequest authRequest,
-            String levelOfConfidence,
+            Optional<LevelOfConfidence> levelOfConfidenceOpt,
             String credentialStrength) {
-        return String.format(
-                REQUEST_BODY,
-                isAuthenticated,
-                authRequest.getState().getValue(),
-                Optional.ofNullable(authRequest.getCustomParameter("client_id"))
-                        .map(l -> l.get(0))
-                        .orElse(null),
-                Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
-                        .map(l -> l.get(0))
-                        .orElse(null),
-                levelOfConfidence,
-                credentialStrength,
-                authRequest.getScope().toString());
+        return makeRequestBody(
+                isAuthenticated, authRequest, levelOfConfidenceOpt, credentialStrength, Map.of());
+    }
+
+    private String makeRequestBody(
+            boolean isAuthenticated,
+            AuthenticationRequest authRequest,
+            Optional<LevelOfConfidence> levelOfConfidenceOpt,
+            String credentialStrength,
+            Map<String, Object> paramOverrides) {
+        Map<String, Object> requestBodyMap =
+                new HashMap<>(
+                        Map.of(
+                                "previous-session-id",
+                                "4waJ14KA9IyxKzY7bIGIA3hUDos",
+                                "authenticated",
+                                isAuthenticated,
+                                "state",
+                                authRequest.getState().getValue(),
+                                "requested_credential_strength",
+                                credentialStrength,
+                                "scope",
+                                authRequest.getScope().toString()));
+        Optional.ofNullable(authRequest.getCustomParameter("client_id"))
+                .map(l -> l.get(0))
+                .ifPresent(clientId -> requestBodyMap.put("client_id", clientId));
+        Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
+                .map(l -> l.get(0))
+                .ifPresent(redirectUri -> requestBodyMap.put("redirect_uri", redirectUri));
+        levelOfConfidenceOpt.ifPresent(
+                levelOfConfidence ->
+                        requestBodyMap.put(
+                                "requested_level_of_confidence", levelOfConfidence.getValue()));
+        requestBodyMap.putAll(paramOverrides);
+        return SerializationService.getInstance().writeValueAsString(requestBodyMap);
     }
 
     private String makeRequestBody(boolean isAuthenticated, Map<String, Object> customAuthParams) {
