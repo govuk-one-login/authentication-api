@@ -427,6 +427,25 @@ class RequestObjectAuthorizeValidatorTest {
         assertThrows(InvalidResponseModeException.class, () -> service.validate(authRequest));
     }
 
+    @Test
+    void shouldThrowErrorForInvalidResponseModeBeforeValidatingARedirectingError()
+            throws JOSEException {
+        // No state is an error we redirect back to the  RP for
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("response_mode", "code")
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        assertThrows(InvalidResponseModeException.class, () -> service.validate(authRequest));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"query", "fragment"})
     void shouldNotErrorIfResponseModeValid(String responseMode)
