@@ -124,8 +124,6 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
 
-            var pairwiseSubjectId = (String) userInfo.getClaim("rp_pairwise_id");
-
             int processingIdentityAttempts =
                     userSession.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
