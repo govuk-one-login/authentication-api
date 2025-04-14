@@ -244,7 +244,7 @@ resource "aws_ssm_parameter" "frontend_redis_password" {
   name   = "${var.environment}-${local.frontend_redis_key}-redis-password"
   type   = "SecureString"
   key_id = aws_kms_alias.frontend_parameter_store_key_alias.id
-  value  = random_password.redis_password.result
+  value  = random_password.frontend_redis_password.result
   lifecycle {
     ignore_changes = [value]
   }

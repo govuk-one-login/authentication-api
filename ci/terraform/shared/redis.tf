@@ -65,6 +65,16 @@ resource "aws_elasticache_subnet_group" "frontend_redis_session_store" {
 }
 
 
+resource "random_password" "frontend_redis_password" {
+  length = 32
+
+  override_special = "!&#$^<>-"
+  min_lower        = 3
+  min_numeric      = 3
+  min_special      = 3
+  min_upper        = 3
+}
+
 resource "aws_elasticache_replication_group" "frontend_sessions_store" {
   automatic_failover_enabled  = true
   preferred_cache_cluster_azs = data.aws_availability_zones.available.names
@@ -93,7 +103,7 @@ resource "aws_elasticache_replication_group" "frontend_sessions_store" {
 
   lifecycle {
     ignore_changes = [
-      engine_version
+      engine_version, auth_token
     ]
   }
 }
