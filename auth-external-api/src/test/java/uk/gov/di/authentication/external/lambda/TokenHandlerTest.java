@@ -54,6 +54,7 @@ class TokenHandlerTest {
     private static final String SUBJECT_ID = "any";
     private static final String CLIENT_ID = "test-client-id";
     private static final Long PASSWORD_RESET_TIME = 1710255274L;
+    private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final UserProfile USER_PROFILE =
             new UserProfile().withSubjectID("any").withSalt(ByteBuffer.allocateDirect(12345));
     private static final AuthCodeStore VALID_AUTH_CODE_STORE =
@@ -65,7 +66,8 @@ class TokenHandlerTest {
                     .withSubjectID("any")
                     .withHasBeenUsed(false)
                     .withTimeToExist(UNIX_TIME_16_08_2099)
-                    .withPasswordResetTime(PASSWORD_RESET_TIME);
+                    .withPasswordResetTime(PASSWORD_RESET_TIME)
+                    .withJourneyID(CLIENT_SESSION_ID);
     private static final String USED_AUTH_CODE = "used-auth-code";
     private static final AuthCodeStore USED_AUTH_CODE_STORE =
             new AuthCodeStore()
@@ -237,7 +239,7 @@ class TokenHandlerTest {
                         AuthExternalApiAuditableEvent.AUTH_TOKEN_SENT_TO_ORCHESTRATION,
                         new AuditContext(
                                 CLIENT_ID,
-                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
                                 AuditService.UNKNOWN,
                                 internalPairwiseId,
                                 AuditService.UNKNOWN,
