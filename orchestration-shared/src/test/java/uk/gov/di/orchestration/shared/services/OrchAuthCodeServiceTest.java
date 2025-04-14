@@ -1,6 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -74,31 +73,6 @@ class OrchAuthCodeServiceTest {
 
     @Test
     void shouldStoreOrchAuthCodeItem() throws Json.JsonException {
-        AuthorizationCode authorizationCode = new AuthorizationCode();
-
-        orchAuthCodeService.generateAndSaveAuthorisationCode(
-                authorizationCode, CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
-
-        var orchAuthCodeItemCaptor = ArgumentCaptor.forClass(OrchAuthCodeItem.class);
-        verify(table).putItem(orchAuthCodeItemCaptor.capture());
-        var capturedRequest = orchAuthCodeItemCaptor.getValue();
-
-        assertNotNull(capturedRequest.getAuthCode());
-
-        var expectedExchangeData = aAuthCodeExchangeDataEntity();
-        var expectedExchangeDataSerialized = objectMapper.writeValueAsString(expectedExchangeData);
-        assertEquals(expectedExchangeDataSerialized, capturedRequest.getAuthCodeExchangeData());
-
-        assertFalse(capturedRequest.getIsUsed());
-
-        var expectedTimeToLive = CREATION_INSTANT.plusSeconds(AUTH_CODE_EXPIRY).getEpochSecond();
-        assertEquals(expectedTimeToLive, capturedRequest.getTimeToLive());
-    }
-
-    // TODO: ATO-1579: Remove this test once there is only one implementation of the
-    // generateAndSaveAuthorisationCode method (currently we are overloading it).
-    @Test
-    void shouldStoreOrchAuthCodeItemWithoutAuthorizationCodeParameter() throws Json.JsonException {
         orchAuthCodeService.generateAndSaveAuthorisationCode(
                 CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
 
@@ -120,15 +94,13 @@ class OrchAuthCodeServiceTest {
 
     @Test
     void shouldThrowWhenFailingToStoreOrchAuthCode() {
-        AuthorizationCode authorizationCode = new AuthorizationCode();
-
         withFailedPut();
 
         assertThrows(
                 OrchAuthCodeException.class,
                 () ->
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
-                                authorizationCode, CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME));
+                                CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME));
     }
 
     @Test
