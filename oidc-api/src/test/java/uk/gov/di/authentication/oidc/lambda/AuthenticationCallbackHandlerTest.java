@@ -65,7 +65,6 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -136,10 +135,6 @@ class AuthenticationCallbackHandlerTest {
             mock(AuthenticationUserInfoStorageService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-
-    // TODO: ATO-1218: Remove the following mock for the auth code service.
-    private static final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
@@ -277,7 +272,6 @@ class AuthenticationCallbackHandlerTest {
                         auditService,
                         userInfoStorageService,
                         cloudwatchMetricsService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         clientService,
                         initiateIPVAuthorisationService,
