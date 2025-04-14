@@ -25,7 +25,7 @@ ext {
         aws_sdk_v2_version: "2.31.10",
         aws_lambda_core_version: "1.2.3",
         aws_lambda_events_version: "3.15.0",
-        gson: "2.12.1",
+        gson: "2.13.0",
         jetbrains_annotations: "26.0.2",
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "10.0.2",

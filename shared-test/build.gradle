@@ -19,7 +19,7 @@ dependencies {
             configurations.ssm,
             configurations.cloudwatch,
             "org.eclipse.jetty:jetty-server:12.0.18",
-            "com.google.code.gson:gson:2.12.1"
+            "com.google.code.gson:gson:2.13.0"
 
     implementation project(":shared")
     implementation project(":frontend-api")
