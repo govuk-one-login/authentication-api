@@ -106,7 +106,6 @@ class AuthOrchSerializationServicesIntegrationTest {
     void authCanResetSharedFieldsWithoutOverridingUnsharedFields() {
         var orchSession = orchSessionService.generateSession();
         orchSession.addClientSession(CLIENT_SESSION_ID);
-        orchSession.incrementProcessingIdentityAttempts();
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = new Session();
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);

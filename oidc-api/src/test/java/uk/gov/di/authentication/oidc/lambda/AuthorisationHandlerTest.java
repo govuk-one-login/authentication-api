@@ -2664,7 +2664,7 @@ class AuthorisationHandlerTest {
         void setup() {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
-            session.incrementProcessingIdentityAttempts();
+            orchSession.incrementProcessingIdentityAttempts();
             withExistingSession(session);
             when(sessionService.copySessionForMaxAge(any(Session.class))).thenCallRealMethod();
         }
