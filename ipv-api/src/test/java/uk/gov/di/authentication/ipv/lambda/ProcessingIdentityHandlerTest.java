@@ -197,7 +197,6 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
-        assertThat(session.getProcessingIdentityAttempts(), equalTo(1));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(1));
     }
 
@@ -315,7 +314,7 @@ class ProcessingIdentityHandlerTest {
     @Test
     void shouldReturnERRORStatusWhenNoEntryIsFoundInDynamoAfterSecondAttempt()
             throws Json.JsonException {
-        session.incrementProcessingIdentityAttempts();
+        orchSession.incrementProcessingIdentityAttempts();
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());

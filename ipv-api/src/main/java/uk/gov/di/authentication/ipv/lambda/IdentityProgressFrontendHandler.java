@@ -124,23 +124,18 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
 
-            var pairwiseSubjectId = (String) userInfo.getClaim("rp_pairwise_id");
-
-            int processingAttempts = userSession.getSession().incrementProcessingIdentityAttempts();
-            // ATO-1514: Introducing this unused var, we will swap usages over to it in a future PR
-            int orchSessionProcessingIdentityAttempts =
+            int processingIdentityAttempts =
                     userSession.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
-                    processingAttempts);
+                    processingIdentityAttempts);
             var identityCredentials =
                     dynamoIdentityService.getIdentityCredentials(userSession.getClientSessionId());
 
             var processingStatus = IdentityProgressStatus.PROCESSING;
             if (identityCredentials.isEmpty()
-                    && userSession.getSession().getProcessingIdentityAttempts() == 1) {
+                    && userSession.getOrchSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = IdentityProgressStatus.NO_ENTRY;
-                userSession.getSession().resetProcessingIdentityAttempts();
                 userSession.getOrchSession().resetProcessingIdentityAttempts();
             } else if (identityCredentials.isEmpty()) {
                 processingStatus = IdentityProgressStatus.ERROR;
@@ -170,9 +165,6 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                             .map(OrchestrationUserSession::getClientId)
                             .orElse(AuditService.UNKNOWN),
                     user);
-
-            sessionService.storeOrUpdateSession(
-                    userSession.getSession(), userSession.getSessionId());
 
             orchSessionService.updateSession(userSession.getOrchSession());
 

@@ -195,7 +195,6 @@ public class IdentityProgressFrontendHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, CLIENT_ID, USER);
-        assertThat(session.getProcessingIdentityAttempts(), equalTo(1));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(1));
     }
 
@@ -240,7 +239,7 @@ public class IdentityProgressFrontendHandlerTest {
     @Test
     void shouldReturnERRORStatusWhenNoEntryIsFoundInDynamoAfterSecondAttempt()
             throws Json.JsonException {
-        session.incrementProcessingIdentityAttempts();
+        orchSession.incrementProcessingIdentityAttempts();
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());

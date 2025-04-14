@@ -14,9 +14,7 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
-import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -138,12 +136,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userProfile.getSubjectID(),
                             URI.create(configurationService.getInternalSectorURI()),
                             authenticationService.getOrGenerateSalt(userProfile));
-            int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
-            // ATO-1514: Introducing this unused var, we will swap usages over to it in a future PR
-            int orchSessionProcessingIdentityAttempts =
+            int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
-            // ATO-1514: Temporary logging to check the values are in sync.
-            logProcessingIdentityAttempts(userContext.getSession(), userContext.getOrchSession());
             LOG.info(
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
                     processingAttempts);
@@ -152,9 +146,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     dynamoIdentityService.getIdentityCredentials(userContext.getClientSessionId());
             var processingStatus = ProcessingIdentityStatus.PROCESSING;
             if (identityCredentials.isEmpty()
-                    && userContext.getSession().getProcessingIdentityAttempts() == 1) {
+                    && userContext.getOrchSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = ProcessingIdentityStatus.NO_ENTRY;
-                userContext.getSession().resetProcessingIdentityAttempts();
                 userContext.getOrchSession().resetProcessingIdentityAttempts();
             } else if (identityCredentials.isEmpty()) {
                 processingStatus = ProcessingIdentityStatus.ERROR;
@@ -186,8 +179,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
             orchSessionService.updateSession(userContext.getOrchSession());
-            sessionService.storeOrUpdateSession(
-                    userContext.getSession(), userContext.getSessionId());
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
@@ -238,28 +229,5 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 200,
                 new ProcessingIdentityInterventionResponse(
                         ProcessingIdentityStatus.INTERVENTION, redirectUrl));
-    }
-
-    private void logProcessingIdentityAttempts(Session session, OrchSessionItem orchSession) {
-        try {
-
-            LOG.info(
-                    "Are processing identity attempts equal in both session stores: {}",
-                    Objects.equals(
-                            session.getProcessingIdentityAttempts(),
-                            orchSession.getProcessingIdentityAttempts()));
-
-            LOG.info(
-                    "Shared session processing identity attempts: {}",
-                    session.getProcessingIdentityAttempts());
-            LOG.info(
-                    "Orch session processing identity attempts: {}",
-                    orchSession.getProcessingIdentityAttempts());
-
-        } catch (Exception e) {
-            LOG.warn(
-                    "Exception when logging processing identity attempts: {}. Continuing as normal",
-                    e.getMessage());
-        }
     }
 }
