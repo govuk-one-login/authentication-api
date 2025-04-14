@@ -60,8 +60,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
-import java.nio.ByteBuffer;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -355,18 +353,6 @@ public class IPVCallbackHandler
                         "is phone number the same on authUserInfo as on UserProfile: {}",
                         Objects.equals(
                                 userProfile.getPhoneNumber(), authUserInfo.getPhoneNumber()));
-            }
-            var saltFromAuthUserInfo = authUserInfo.getStringClaim("salt");
-            if (saltFromAuthUserInfo != null && !saltFromAuthUserInfo.isBlank()) {
-                var saltDecoded = Base64.getDecoder().decode(saltFromAuthUserInfo);
-                var saltBuffer = ByteBuffer.wrap(saltDecoded).asReadOnlyBuffer();
-                LOG.info(
-                        "is salt the same on authUserInfo as on UserProfile: {}",
-                        Objects.equals(userProfile.getSalt(), saltBuffer));
-            } else {
-                LOG.info(
-                        "salt on authUserInfo is null or blank. Is salt on UserProfile defined: {}",
-                        userProfile.getSalt() != null);
             }
             LOG.info(
                     "is subjectId the same on authUserInfo as on UserProfile: {}",
