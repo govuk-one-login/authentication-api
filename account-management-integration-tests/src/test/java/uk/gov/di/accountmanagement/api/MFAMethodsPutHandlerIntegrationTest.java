@@ -142,6 +142,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
 
         var backupMfaIdentifier = backupPrioritySms.getMfaIdentifier();
+        var otp = "123456";
         var updateRequest =
                 format(
                         """
@@ -150,12 +151,13 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     "priorityIdentifier": "DEFAULT",
                                     "method": {
                                         "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s"
+                                        "phoneNumber": "%s",
+                                        "otp": "%s"
                                     }
                                   }
                                 }
                                 """,
-                        backupPrioritySms.getDestination());
+                        backupPrioritySms.getDestination(), otp);
 
         var response =
                 makeRequest(
@@ -225,6 +227,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
         var mfaIdentifier = defaultPrioritySms.getMfaIdentifier();
         var updatedPhoneNumber = "111222333";
+        var otp = "123456";
         var updateRequest =
                 format(
                         """
@@ -233,12 +236,13 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     "priorityIdentifier": "DEFAULT",
                                     "method": {
                                         "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s"
+                                        "phoneNumber": "%s",
+                                        "otp": "%s"
                                     }
                                   }
                                 }
                                 """,
-                        updatedPhoneNumber);
+                        updatedPhoneNumber, otp);
 
         var response =
                 makeRequest(
@@ -379,6 +383,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
         var mfaIdentifierOfBackup = backupPrioritySms.getMfaIdentifier();
+        var otp = "123456";
         var updateRequest =
                 format(
                         """
@@ -387,12 +392,13 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     "priorityIdentifier": "DEFAULT",
                                     "method": {
                                         "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s"
+                                        "phoneNumber": "%s",
+                                        "otp": "%s"
                                     }
                                   }
                                 }
                                 """,
-                        backupPrioritySms.getDestination());
+                        backupPrioritySms.getDestination(), otp);
 
         var requestPathParams =
                 Map.ofEntries(

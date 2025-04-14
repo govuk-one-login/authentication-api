@@ -11,8 +11,8 @@ import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
-import uk.gov.di.authentication.shared.entity.mfa.MfaMethodData;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -107,7 +107,7 @@ public class MFAMethodsCreateHandler
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
 
-            Result<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
+            Result<MfaCreateFailureReason, MfaMethodResponse> addBackupMfaResult =
                     mfaMethodsService.addBackupMfa(
                             userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
