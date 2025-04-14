@@ -63,7 +63,6 @@ public class SessionService {
     public Session updateWithNewSessionId(
             Session session, String oldSessionId, String newSessionId) {
         try {
-            session.resetProcessingIdentityAttempts();
             storeOrUpdateSession(session, oldSessionId, newSessionId);
             redisConnectionService.deleteValue(oldSessionId);
             return session;
