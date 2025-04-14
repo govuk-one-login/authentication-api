@@ -41,7 +41,6 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -83,10 +82,6 @@ class IPVCallbackHelperTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
-
-    // TODO: ATO-1218: Remove the following mock for the auth code service.
-    private final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -163,7 +158,6 @@ class IPVCallbackHelperTest {
                 new IPVCallbackHelper(
                         auditService,
                         authCodeResponseService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
                         dynamoClientService,
@@ -316,7 +310,6 @@ class IPVCallbackHelperTest {
                 new IPVCallbackHelper(
                         auditService,
                         authCodeResponseService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
                         dynamoClientService,
