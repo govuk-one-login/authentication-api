@@ -67,7 +67,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -158,7 +157,6 @@ class IPVCallbackHelperTest {
 
     @BeforeEach
     void setUp() {
-        clearInvocations(authorisationCodeService);
         clearInvocations(orchAuthCodeService);
 
         helper =
@@ -187,12 +185,7 @@ class IPVCallbackHelperTest {
                         new AccountIntervention(
                                 new AccountInterventionState(false, true, false, false)));
 
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        anyString(), anyString(), anyString(), anyLong()))
-                .thenReturn(AUTH_CODE);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
@@ -489,16 +482,8 @@ class IPVCallbackHelperTest {
     }
 
     private void assertAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(TEST_EMAIL_ADDRESS),
-                        eq(AUTH_TIME));
-
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
@@ -506,11 +491,7 @@ class IPVCallbackHelperTest {
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
-
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class), any(), any(), any(), any());
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
     }
 }
