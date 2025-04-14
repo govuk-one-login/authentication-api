@@ -24,7 +24,6 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -217,28 +216,11 @@ public class IPVCallbackHelper {
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
 
         var authCode =
-                authorisationCodeService.generateAndSaveAuthorisationCode(
+                orchAuthCodeService.generateAndSaveAuthorisationCode(
                         clientId,
                         clientSessionId,
                         userProfile.getEmail(),
                         orchSession.getAuthTime());
-        /*
-            TODO: ATO-1218:
-             - Move the catch clause below to the bottom of the IPVCallbackHandler "handleRequest" method and return the result of redirectToFrontendErrorPage (similar to the other catch clauses).
-             - Update the log in the catch clause to be level 'error' and remove Redis references (as by this point the DynamoDB store will be the primary).
-        */
-        try {
-            orchAuthCodeService.generateAndSaveAuthorisationCode(
-                    authCode,
-                    clientId,
-                    clientSessionId,
-                    userProfile.getEmail(),
-                    orchSession.getAuthTime());
-        } catch (OrchAuthCodeException e) {
-            LOG.warn(
-                    "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
-                    e.getMessage());
-        }
 
         var authenticationResponse =
                 new AuthenticationSuccessResponse(

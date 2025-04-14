@@ -33,6 +33,7 @@ import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -553,6 +554,11 @@ public class IPVCallbackHandler
         } catch (UserNotFoundException e) {
             LOG.error(e.getMessage());
             throw new RuntimeException(e);
+        } catch (OrchAuthCodeException e) {
+            LOG.error(
+                    "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: {}",
+                    e.getMessage());
+            return RedirectService.redirectToFrontendErrorPage(frontend.errorURI());
         }
     }
 
