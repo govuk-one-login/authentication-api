@@ -195,7 +195,6 @@ public class IdentityProgressFrontendHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, CLIENT_ID, USER);
-        assertThat(session.getProcessingIdentityAttempts(), equalTo(1));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(1));
     }
 
