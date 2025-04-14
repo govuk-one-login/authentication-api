@@ -10,7 +10,6 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
 import static uk.gov.di.orchestration.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisExtension
@@ -173,20 +171,6 @@ public class RedisExtension
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection.sync().flushall();
         }
-    }
-
-    public void addAuthCode(
-            String authCode, String clientId, String clientSessionId, String email, Long authTime)
-            throws Json.JsonException {
-        redis.saveWithExpiry(
-                AUTH_CODE_PREFIX.concat(authCode),
-                objectMapper.writeValueAsString(
-                        new AuthCodeExchangeData()
-                                .setClientSessionId(clientSessionId)
-                                .setEmail(email)
-                                .setAuthTime(authTime)
-                                .setClientId(clientId)),
-                300);
     }
 
     public void createClientSession(
