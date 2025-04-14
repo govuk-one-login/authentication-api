@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.api;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -76,6 +78,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     + "\"requested_credential_strength\": \"%s\", "
                     + "\"scope\": \"%s\""
                     + "}";
+    private static final Gson GSON = new GsonBuilder().create();
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -126,10 +129,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
         var requestedVtr = VectorOfTrust.parseFromAuthRequestAttribute(List.of(vtrStringList));
-        var levelOfConfidence =
-                requestedVtr.containsLevelOfConfidence()
-                        ? requestedVtr.getLevelOfConfidence()
-                        : LevelOfConfidence.NONE;
+        var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
         var credentialTrustLevel = requestedVtr.getCredentialTrustLevel();
         var response =
                 makeRequest(
@@ -137,7 +137,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 makeRequestBody(
                                         isAuthenticated,
                                         authRequest,
-                                        levelOfConfidence.getValue(),
+                                        levelOfConfidenceOpt,
                                         credentialTrustLevel.getValue())),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
@@ -209,7 +209,12 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(true, authRequest, "P1", "Cl.Cm")),
+                        Optional.of(
+                                makeRequestBody(
+                                        true,
+                                        authRequest,
+                                        Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                        "Cl.Cm")),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -451,27 +456,38 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private String makeRequestBody(boolean isAuthenticated, AuthenticationRequest authRequest) {
-        return makeRequestBody(isAuthenticated, authRequest, "P0", "Cl.Cm");
+        return makeRequestBody(isAuthenticated, authRequest, Optional.empty(), "Cl.Cm");
     }
 
     private String makeRequestBody(
             boolean isAuthenticated,
             AuthenticationRequest authRequest,
-            String levelOfConfidence,
+            Optional<LevelOfConfidence> levelOfConfidenceOpt,
             String credentialStrength) {
-        return String.format(
-                REQUEST_BODY,
-                isAuthenticated,
-                authRequest.getState().getValue(),
-                Optional.ofNullable(authRequest.getCustomParameter("client_id"))
-                        .map(l -> l.get(0))
-                        .orElse(null),
-                Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
-                        .map(l -> l.get(0))
-                        .orElse(null),
-                levelOfConfidence,
-                credentialStrength,
-                authRequest.getScope().toString());
+        var requestBodyMap =
+                new HashMap<>(
+                        Map.of(
+                                "previous-session-id",
+                                "4waJ14KA9IyxKzY7bIGIA3hUDos",
+                                "authenticated",
+                                isAuthenticated,
+                                "state",
+                                authRequest.getState().getValue(),
+                                "requested_credential_strength",
+                                credentialStrength,
+                                "scope",
+                                authRequest.getScope().toString()));
+        Optional.ofNullable(authRequest.getCustomParameter("client_id"))
+                .map(l -> l.get(0))
+                .ifPresent(clientId -> requestBodyMap.put("client_id", clientId));
+        Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
+                .map(l -> l.get(0))
+                .ifPresent(redirectUri -> requestBodyMap.put("redirect_uri", redirectUri));
+        levelOfConfidenceOpt.ifPresent(
+                levelOfConfidence ->
+                        requestBodyMap.put(
+                                "requested_level_of_confidence", levelOfConfidence.getValue()));
+        return GSON.toJson(requestBodyMap);
     }
 
     private String makeRequestBody(boolean isAuthenticated, Map<String, Object> customAuthParams) {
