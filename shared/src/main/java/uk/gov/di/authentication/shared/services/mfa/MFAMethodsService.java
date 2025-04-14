@@ -108,7 +108,7 @@ public class MFAMethodsService {
             getMfaMethodForNonMigratedUser(
                     UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
-        if (enabledAuthAppMethod.isPresent()) {
+        if (enabledAuthAppMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             var method = enabledAuthAppMethod.get();
             String mfaIdentifier;
             if (Objects.nonNull(method.getMfaIdentifier())) {

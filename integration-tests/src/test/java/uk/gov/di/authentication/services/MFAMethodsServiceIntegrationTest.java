@@ -189,6 +189,16 @@ class MFAMethodsServiceIntegrationTest {
 
         @ParameterizedTest
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
+        void shouldReturnNoMethodsWhenAuthAppMethodNotVerified(String email) {
+            userStoreExtension.addAuthAppMethod(email, false, true, AUTH_APP_CREDENTIAL);
+
+            var result = mfaMethodsService.getMfaMethods(email).getSuccess();
+
+            assertEquals(List.of(), result);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void shouldReturnNoMethodsWhenSmsMethodNotVerified(String email) {
             userStoreExtension.setPhoneNumberAndVerificationStatus(
                     email, PHONE_NUMBER, false, true);
