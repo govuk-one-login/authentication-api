@@ -197,7 +197,6 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
-        assertThat(session.getProcessingIdentityAttempts(), equalTo(1));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(1));
     }
 
