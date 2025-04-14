@@ -122,7 +122,6 @@ public class MFAMethodsCreateHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1080);
             }
 
-
             if (mfaMethodCreateRequest.mfaMethod().method()
                     instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
                 boolean isValidOtpCode =

@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -43,6 +45,7 @@ class MFAMethodsPutHandlerTest {
 
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
+    private static final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
@@ -57,6 +60,7 @@ class MFAMethodsPutHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
     private static final String MFA_IDENTIFIER = "some-mfa-identifier";
+    public static final String TEST_OTP = "123456";
 
     private MFAMethodsPutHandler handler;
 
@@ -67,7 +71,10 @@ class MFAMethodsPutHandlerTest {
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         handler =
                 new MFAMethodsPutHandler(
-                        configurationService, mfaMethodsService, authenticationService);
+                        configurationService,
+                        mfaMethodsService,
+                        authenticationService,
+                        codeStorageService);
     }
 
     @Test
@@ -75,9 +82,9 @@ class MFAMethodsPutHandlerTest {
         var phoneNumber = "123456789";
         var updateRequest =
                 MfaMethodCreateOrUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, "123456"));
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, "123456"));
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
 
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
@@ -158,14 +165,17 @@ class MFAMethodsPutHandlerTest {
             Optional<ErrorResponse> maybeErrorResponse) {
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
 
         var phoneNumber = "123456789";
         var updateRequest =
                 MfaMethodCreateOrUpdateRequest.from(
-                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, "123456"));
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, "123456"));
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
                 .thenReturn(Result.failure(failureReason));
         var result = handler.handleRequest(eventWithUpdateRequest, context);
@@ -255,6 +265,24 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(404));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+    }
+
+    @Test
+    void shouldReturnClientErrorWhenOTPInvalid() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(false);
+
+        var phoneNumber = "123456789";
+
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {

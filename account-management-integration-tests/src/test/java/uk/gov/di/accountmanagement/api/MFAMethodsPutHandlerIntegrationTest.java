@@ -140,9 +140,9 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             shouldReturn200AndSwitchMfaMethodPrioritiesWhenAUserSwitchesTheirBackupMethodWithTheirDefault() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var backupMfaIdentifier = backupPrioritySms.getMfaIdentifier();
-        var otp = "123456";
         var updateRequest =
                 format(
                         """
@@ -225,9 +225,10 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldReturn200AndMfaMethodDataWhenSmsUserUpdatesTheirPhoneNumber() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+
         var mfaIdentifier = defaultPrioritySms.getMfaIdentifier();
         var updatedPhoneNumber = "111222333";
-        var otp = "123456";
         var updateRequest =
                 format(
                         """
@@ -382,23 +383,9 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void duplicateUpdatesShouldBeIdempotentForUpdateToBackupMethod() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
+
         var mfaIdentifierOfBackup = backupPrioritySms.getMfaIdentifier();
-        var otp = "123456";
-        var updateRequest =
-                format(
-                        """
-                                {
-                                  "mfaMethod": {
-                                    "priorityIdentifier": "DEFAULT",
-                                    "method": {
-                                        "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s",
-                                        "otp": "%s"
-                                    }
-                                  }
-                                }
-                                """,
-                        backupPrioritySms.getDestination(), otp);
+        var updateRequest = buildUpdateRequestWithOtp();
 
         var requestPathParams =
                 Map.ofEntries(
@@ -428,6 +415,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 backupPrioritySms, retrievedDefaultAfterFirstRequest, DEFAULT);
 
         for (int i = 0; i < 5; i++) {
+            updateRequest = buildUpdateRequestWithOtp();
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
@@ -449,6 +437,24 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertEquals(retrievedBackupAfterFirstRequest, retrievedBackup);
             assertEquals(retrievedDefaultAfterFirstRequest, retrievedDefault);
         }
+    }
+
+    private static String buildUpdateRequestWithOtp() {
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+        return format(
+                """
+                        {
+                          "mfaMethod": {
+                            "priorityIdentifier": "DEFAULT",
+                            "method": {
+                                "mfaMethodType": "SMS",
+                                "phoneNumber": "%s",
+                                "otp": "%s"
+                            }
+                          }
+                        }
+                        """,
+                backupPrioritySms.getDestination(), otp);
     }
 
     @Test

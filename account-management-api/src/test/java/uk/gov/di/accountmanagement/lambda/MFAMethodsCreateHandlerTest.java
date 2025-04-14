@@ -297,7 +297,7 @@ class MFAMethodsCreateHandlerTest {
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.DEFAULT,
-                        new SmsMfaDetail(TEST_PHONE_NUMBER),
+                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                         TEST_INTERNAL_SUBJECT);
 
         var result = handler.handleRequest(event, context);
