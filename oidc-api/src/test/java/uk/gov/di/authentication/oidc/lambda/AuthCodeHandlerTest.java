@@ -285,16 +285,7 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
-
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class)))
-                .thenReturn(authorizationCode);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
@@ -352,12 +343,7 @@ class AuthCodeHandlerTest {
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
 
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class));
+        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
 
         var dimensions =
                 Map.of(
@@ -411,17 +397,8 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
-
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
-                .thenReturn(authorizationCode);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        any(Long.class)))
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -482,9 +459,8 @@ class AuthCodeHandlerTest {
                         pair("rpPairwiseId", AuditService.UNKNOWN),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class));
+
+        assertAuthorisationCodeGeneratedAndSaved(null);
 
         var expectedDimensions =
                 Map.of(
@@ -753,20 +729,8 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
-
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class)))
-                .thenReturn(authorizationCode);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class)))
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -899,16 +863,8 @@ class AuthCodeHandlerTest {
     }
 
     private void assertAuthorisationCodeGeneratedAndSaved(String expectedEmail) {
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(expectedEmail),
-                        anyLong());
-
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(expectedEmail),
@@ -916,15 +872,7 @@ class AuthCodeHandlerTest {
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(0))
-                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
-
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyLong());
+                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
     }
 }
