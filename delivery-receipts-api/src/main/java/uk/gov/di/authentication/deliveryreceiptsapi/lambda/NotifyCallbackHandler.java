@@ -37,15 +37,19 @@ public class NotifyCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
+
+    // region Logging
+    private static final String NOTIFICATION_ID = "notificationId";
+    private static final String UNIQUE_NOTIFICATION_REFERENCE = "uniqueNotificationReference";
     private static final String JOURNEY_ID = "journeyId";
+    private static final Logger LOG = LogManager.getLogger(NotifyCallbackHandler.class);
+    // endregion
+
     private final ConfigurationService configurationService;
     private DynamoService dynamoService = null;
-
     private BulkEmailUsersService bulkEmailUsersService = null;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Json objectMapper = SerializationService.getInstance();
-
-    private static final Logger LOG = LogManager.getLogger(NotifyCallbackHandler.class);
 
     public NotifyCallbackHandler(
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -91,7 +95,11 @@ public class NotifyCallbackHandler
             deliveryReceipt = objectMapper.readValue(input.getBody(), NotifyDeliveryReceipt.class);
             var notifyReference = new NotifyReference(deliveryReceipt.reference());
 
-            ThreadContext.remove(JOURNEY_ID);
+            ThreadContext.clearMap();
+            ThreadContext.put(NOTIFICATION_ID, deliveryReceipt.id());
+            ThreadContext.put(
+                    UNIQUE_NOTIFICATION_REFERENCE,
+                    notifyReference.getUniqueNotificationReference());
             ThreadContext.put(JOURNEY_ID, notifyReference.getClientSessionId());
 
             if (deliveryReceipt.notificationType().equals("sms")) {
@@ -132,10 +140,10 @@ public class NotifyCallbackHandler
             }
         } catch (JsonException e) {
             LOG.error("Unable to parse Notify Delivery Receipt");
-            ThreadContext.remove(JOURNEY_ID);
+            ThreadContext.clearMap();
             throw new RuntimeException("Unable to parse Notify Delivery Receipt");
         }
-        ThreadContext.remove(JOURNEY_ID);
+        ThreadContext.clearMap();
         return generateEmptySuccessApiGatewayResponse();
     }
 
