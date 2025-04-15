@@ -27,6 +27,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import org.apache.http.client.utils.URIBuilder;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -213,1587 +214,1718 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 }
             };
 
-    @Test
-    void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
-                        Optional.of("GET"));
-        assertThat(response, hasStatus(302));
-        assertThat(
-                getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginUriWhenNoCookieIsPresentButIdentityVectorsArePresent() {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
-                        Optional.of("GET"));
-        assertThat(response, hasStatus(302));
-
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid")
-                        .isPresent());
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginWithSamePersistentCookieValueInRequest() {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                PERSISTENT_SESSION_ID))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        assertThat(
-                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(3));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid")
-                        .isPresent());
-        var persistentCookie =
-                getHttpCookieFromMultiValueResponseHeaders(
-                        response.getMultiValueHeaders(), "di-persistent-session-id");
-        assertTrue(persistentCookie.isPresent());
-        assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
-        assertTrue(
-                isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                        persistentCookie.get().getValue()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginWithLanguageCookieSetWhenUILocalesPopulated() {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                PERSISTENT_SESSION_ID))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm", "en"),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        assertThat(
-                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(4));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid")
-                        .isPresent());
-        var persistentCookie =
-                getHttpCookieFromMultiValueResponseHeaders(
-                        response.getMultiValueHeaders(), "di-persistent-session-id");
-        assertTrue(persistentCookie.isPresent());
-        assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
-        assertTrue(
-                isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                        persistentCookie.get().getValue()));
-        var languageCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "lng");
-        assertTrue(languageCookie.isPresent());
-        assertThat(languageCookie.get().getValue(), equalTo("en"));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginUriForAccountManagementClient() {
-        setupForAuthJourney();
-        registerClient(
-                AM_CLIENT_ID,
-                "am-client-name",
-                List.of("openid", "am"),
-                ClientType.WEB,
-                false,
-                false);
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(AM_CLIENT_ID, null, "openid am", null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid")
-                        .isPresent());
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldReturnInvalidScopeErrorToRPWhenNotAccountManagementClient() {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid am", null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, containsString(OAuth2Error.INVALID_SCOPE.getCode()));
-        assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
-    }
-
-    @Test
-    void shouldRedirectToLoginUriWhenBadSessionIdCookieIsPresent() {
-        setupForAuthJourney();
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    new HttpCookie("gs", "this is bad"),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginUriWhenCookieHasUnknownSessionId() {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
-        setupForAuthJourney();
-        String previousSessionId = givenAnExistingSession(LOW_LEVEL);
-        registerUser();
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", "some-other-browser-session-id")
-                                }),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        System.out.println(response.getMultiValueHeaders());
-
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie, previousSessionId);
-
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
-        setupForAuthJourney();
-        String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        registerUser();
-        withExistingOrchSessionAndBsid(previousSessionId);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie, previousSessionId);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), equalTo(BROWSER_SESSION_ID));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity() throws Exception {
-        setupForAuthJourney();
-        String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        registerUser();
-        withExistingOrchSessionAndBsid(previousSessionId);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie, previousSessionId);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), equalTo(BROWSER_SESSION_ID));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors()
-            throws Exception {
-        setupForAuthJourney();
-        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        registerUser();
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, null, "openid", "[P2.Cl.Cm,Cl.Cm]"),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        var redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
-        assertThat(URI.create(redirectUri).getQuery(), containsString("error=invalid_request"));
-        assertThat(
-                URI.create(redirectUri).getQuery(),
-                containsString("error_description=Request+vtr+not+valid"));
-    }
-
-    @Test
-    void shouldRedirectToFrontendWhenPromptNoneAndUserUnauthenticated() {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, NONE.toString(), "openid", null),
-                        Optional.of("GET"));
-        assertThat(response, hasStatus(302));
-
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
-        setupForAuthJourney();
-        String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        registerUser();
-        withExistingOrchSessionAndBsid(previousSessionId);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, NONE.toString(), OPENID.getValue(), null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie, previousSessionId);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), startsWith(BROWSER_SESSION_ID));
-
-        assertThat(
-                getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
-        setupForAuthJourney();
-        String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        registerUser();
-        withExistingOrchSessionAndBsid(previousSessionId);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, LOGIN.toString(), OPENID.getValue(), null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie, previousSessionId);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), startsWith(BROWSER_SESSION_ID));
-
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), containsString("prompt=login"));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
-        setupForAuthJourney();
-        String previousSessionId = givenAnExistingSession(LOW_LEVEL);
-        registerUser();
-        withExistingOrchSessionAndBsid(previousSessionId);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie, previousSessionId);
-        assertTrue(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent());
-
-        Optional<HttpCookie> browserSessionIdCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
-        assertTrue(browserSessionIdCookie.isPresent());
-        assertThat(browserSessionIdCookie.get().getValue(), startsWith(BROWSER_SESSION_ID));
-
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(
-                redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "en", "cy", "en cy", "es fr ja", "cy-AR"})
-    void shouldCallAuthorizeAsDocAppClient(String uiLocales) throws JOSEException, ParseException {
-        setupForDocAppJourney();
-        registerClient(
-                CLIENT_ID,
-                "test-client",
-                List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
-                ClientType.APP,
-                false,
-                false);
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-        var signedJWT = createSignedJWT(uiLocales);
-        var queryStringParameters =
-                new HashMap<>(
-                        Map.of(
-                                "response_type",
-                                "code",
-                                "client_id",
-                                CLIENT_ID,
-                                "scope",
-                                "openid",
-                                "request",
-                                signedJWT.serialize()));
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        queryStringParameters,
-                        Optional.of("GET"));
-        assertThat(response, hasStatus(302));
-        assertThat(getLocationResponseHeader(response), startsWith(AUTHORIZE_URI.toString()));
-        var sessionCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertOnSessionCookie(sessionCookie);
-        var languageCookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "lng");
-        if (uiLocales.contains("en")) {
+    @Nested
+    class AuthJourney {
+        @Test
+        void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                            Optional.of("GET"));
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenNoCookieIsPresentButIdentityVectorsArePresent() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
+                            Optional.of("GET"));
+            assertThat(response, hasStatus(302));
+
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "bsid")
+                            .isPresent());
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginWithSamePersistentCookieValueInRequest() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    PERSISTENT_SESSION_ID))),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            assertThat(
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(),
+                    equalTo(3));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "bsid")
+                            .isPresent());
+            var persistentCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "di-persistent-session-id");
+            assertTrue(persistentCookie.isPresent());
+            assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
+            assertTrue(
+                    isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+                            persistentCookie.get().getValue()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginWithLanguageCookieSetWhenUILocalesPopulated() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    PERSISTENT_SESSION_ID))),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "Cl.Cm", "en"),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            assertThat(
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(),
+                    equalTo(4));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "bsid")
+                            .isPresent());
+            var persistentCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "di-persistent-session-id");
+            assertTrue(persistentCookie.isPresent());
+            assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
+            assertTrue(
+                    isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+                            persistentCookie.get().getValue()));
+            var languageCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "lng");
             assertTrue(languageCookie.isPresent());
             assertThat(languageCookie.get().getValue(), equalTo("en"));
-        } else if (uiLocales.contains("cy")) {
-            assertTrue(languageCookie.isPresent());
-            assertThat(languageCookie.get().getValue(), equalTo("cy"));
-        } else {
-            assertThat(languageCookie.isPresent(), equalTo(false));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
         }
-        var clientSessionID = sessionCookie.get().getValue().split("\\.")[1];
-        var clientSession = redis.getClientSession(clientSessionID);
-        var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
-        assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
-        assertThat(
-                authRequest.getCustomParameter("vtr"),
-                equalTo(List.of("[\"P2.Cl.Cm\",\"PCL200.Cl.Cm\"]")));
-        assertThat(
-                clientSession.getVtrList(),
-                equalTo(
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
 
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        DOC_APP_AUTHORISATION_REQUESTED));
-    }
-
-    @Test
-    void shouldGenerateCorrectResponseGivenAValidRequestWhenOnDocAppJourney() throws JOSEException {
-        setupForDocAppJourney();
-        SignedJWT signedJWT = createSignedJWT("");
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        var expectedQueryStringRegex = "response_type=code&request=.*&client_id=doc-app-client-id";
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        DOC_APP_AUTHORISATION_REQUESTED));
-    }
-
-    @Test
-    void shouldRedirectToLoginWithValidRequestObjectNonDocApp()
-            throws JOSEException, ParseException {
-        setupForAuthJourney();
-        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"));
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        assertThat(
-                getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        var clientSessionID = getClientSessionId(response);
-        var clientSession = redis.getClientSession(clientSessionID);
-        var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-        JsonElement actualClaims =
-                JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
-        JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
-        assertThat(actualClaims, equalTo(expectedClaims));
-
-        assertThat(
-                authRequest
-                        .getOIDCClaims()
-                        .getUserInfoClaimsRequest()
-                        .get(CORE_IDENTITY_JWT.getValue())
-                        .getClaimRequirement(),
-                equalTo(ClaimRequirement.ESSENTIAL));
-
-        assertThat(
-                authRequest
-                        .getOIDCClaims()
-                        .getUserInfoClaimsRequest()
-                        .get(ADDRESS.getValue())
-                        .getClaimRequirement(),
-                equalTo(ClaimRequirement.ESSENTIAL));
-    }
-
-    @Test
-    void shouldStoreStateInNoSessionOrchestrationService()
-            throws ParseException, JOSEException, java.text.ParseException {
-        setupForAuthJourney();
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
-                        Optional.of("GET"));
-        assertNoSessionObjectStored(response);
-    }
-
-    private void assertNoSessionObjectStored(APIGatewayProxyResponseEvent response)
-            throws ParseException, JOSEException, java.text.ParseException {
-        var authRequest = extractAuthRequestFromResponse(response);
-        var decryptedJWT = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
-        var orchToAuthState = decryptedJWT.getJWTClaimsSet().getStringClaim("state");
-        var noSessionObject = redis.getFromRedis("state:" + orchToAuthState);
-
-        var clientSessionId = getClientSessionId(response);
-
-        assertEquals(clientSessionId, noSessionObject);
-    }
-
-    @Test
-    void
-            shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
-        handler = new AuthorisationHandler(configuration);
-        txmaAuditQueue.clear();
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        var expectedQueryStringRegex =
-                "error=access_denied&error_description=JAR[+]required[+]for[+]client[+]but[+]request[+]does[+]not[+]contain[+]Request[+]Object.*";
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
-    }
-
-    @Test
-    void
-            shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
-        handler = new AuthorisationHandler(configuration);
-        txmaAuditQueue.clear();
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(
-                                CLIENT_ID,
-                                null,
-                                "openid",
-                                "Cl.Cm",
-                                URI.create("invalid-redirect-uri")),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(400));
-        assertThat(response.getBody(), equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
-    }
-
-    @Test
-    void shouldUpdateOrchSessionWhenMaxAgeHasExpired() throws Exception {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        var previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
-                        Optional.of("GET"));
-        var newSessionId = getSessionId(response);
-
-        var newSession = orchSessionExtension.getSession(newSessionId);
-        assertTrue(newSession.isPresent());
-        assertFalse(newSession.get().getAuthenticated());
-        assertEquals(newSession.get().getSessionId(), newSessionId);
-    }
-
-    @Test
-    void shouldUpdateSharedSessionWhenMaxAgeExpired() throws Exception {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        var previousClientSessionId = "a-previous-client-session";
-        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
-                        Optional.of("GET"));
-        var newSessionId = getSessionId(response);
-        var newSession = redis.getSession(newSessionId);
-        assertNotNull(newSession);
-        assertEquals(1, newSession.getClientSessions().size());
-        assertFalse(newSession.getClientSessions().contains(previousClientSessionId));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestForNegativeMaxAge() throws Exception {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        var previousClientSessionId = "a-previous-client-session";
-        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, null, "openid", "P2.Cl.Cm", -100L),
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Max+age+is+negative+in+query+params"));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestForNegativeMaxAgeInRequestObject() throws JOSEException {
-        setupForAuthJourney();
-        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), -100);
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Max+age+is+negative+in+request+object"));
-    }
-
-    @Test
-    void shouldRedirectToFrontendWhenCodeChallengeIsNotProvided() throws Exception {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        var previousClientSessionId = "a-previous-client-session";
-        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        assertThat(
-                getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToFrontendWhenCodeChallengeIsNotProvidedInRequestObject()
-            throws JOSEException {
-        setupForAuthJourney();
-
-        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(
-                locationHeaderUri.toString(),
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedAndIsMissing()
-            throws Exception {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        var previousClientSessionId = "a-previous-client-session";
-        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, null, "openid", "P2.Cl.Cm", codeChallenge, null),
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
-    }
-
-    @Test
-    void shouldReturnBadRequestUnsupportedResponseMode() {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
-        queryParams.put("response_mode", "form_post");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        queryParams,
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedInRequestObjectAndIsMissing()
-            throws JOSEException, ParseException {
-        setupForAuthJourney();
-
-        var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
-
-        SignedJWT signedJWT =
-                createSignedJWT("", CLAIMS, List.of("openid"), null, aCodeChallenge, null);
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestWhenCodeChallengeMethodIsInvalid() throws Exception {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        var previousClientSessionId = "a-previous-client-session";
-        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-        var codeChallengeMethod = CodeChallengeMethod.PLAIN;
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID,
-                                null,
-                                "openid",
-                                "P2.Cl.Cm",
-                                codeChallenge,
-                                codeChallengeMethod),
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestWhenCodeChallengeMethodInRequestObjectIsInvalid()
-            throws JOSEException, ParseException {
-        setupForAuthJourney();
-
-        var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
-        var codeChallengeMethod = CodeChallengeMethod.PLAIN;
-
-        SignedJWT signedJWT =
-                createSignedJWT(
-                        "", CLAIMS, List.of("openid"), null, aCodeChallenge, codeChallengeMethod);
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
-    }
-
-    @Test
-    void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValid() throws Exception {
-        registerClient(
-                CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-        var previousClientSessionId = "a-previous-client-session";
-        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-        var codeChallengeMethod = CodeChallengeMethod.S256;
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID,
-                                null,
-                                "openid",
-                                "P2.Cl.Cm",
-                                codeChallenge,
-                                codeChallengeMethod),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-        assertThat(
-                getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValidInRequestObject()
-            throws JOSEException, ParseException {
-        setupForAuthJourney();
-
-        var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-        var codeChallengeMethod = CodeChallengeMethod.S256;
-
-        SignedJWT signedJWT =
-                createSignedJWT(
-                        "", CLAIMS, List.of("openid"), null, codeChallenge, codeChallengeMethod);
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(
-                locationHeaderUri.toString(),
-                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestWhenCodeChallengeIsMissingAndPKCEEnforced() throws Exception {
-        registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList("openid"),
-                ClientType.WEB,
-                false,
-                true,
-                emptyList(),
-                true);
-        var previousClientSessionId = "a-previous-client-session";
-        var previousSessionId = givenAnExistingSessionWithClientSession(previousClientSessionId);
-        orchSessionExtension.addSession(
-                new OrchSessionItem(previousSessionId)
-                        .withAuthenticated(true)
-                        .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-
-        var previousSession = orchSessionExtension.getSession(previousSessionId);
-        assertTrue(previousSession.isPresent());
-        assertTrue(previousSession.get().getAuthenticated());
-        assertNull(previousSession.get().getPreviousSessionId());
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                new HttpCookie[] {
-                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                }),
-                        constructQueryStringParameters(
-                                CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
-    }
-
-    @Test
-    void shouldReturnInvalidRequestWhenCodeChallengeIsMissingInRequestObjectAndPKCEEnforced()
-            throws JOSEException, ParseException {
-        setupForAuthJourneyWithPKCEEnforced();
-
-        SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
-
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        signedJWT.serialize(),
-                        "scope",
-                        "openid");
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        new HttpCookie(
-                                                "di-persistent-session-id",
-                                                "persistent-id-value"))),
-                        requestParams,
-                        Optional.of("GET"));
-
-        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-        assertThat(response, hasStatus(302));
-        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-        assertThat(
-                locationHeaderUri.getQuery(),
-                containsString(
-                        "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
-    }
-
-    private static Stream<Arguments> vtrParams() {
-        return Stream.of(
-                Arguments.of(jsonArrayOf("Cl"), LOW_LEVEL, null),
-                Arguments.of(jsonArrayOf("Cl.Cm.P2"), MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                Arguments.of(
-                        jsonArrayOf("Cl.Cm.PCL200", "Cl.Cm.P2"),
-                        MEDIUM_LEVEL,
-                        LevelOfConfidence.HMRC200),
-                Arguments.of(null, MEDIUM_LEVEL, null));
-    }
-
-    @ParameterizedTest
-    @MethodSource("vtrParams")
-    void shouldForwardRequestQueryParamsAsClaimsToAuthFrontendApi(
-            String vtrString,
-            CredentialTrustLevel expectedCredentialStrength,
-            LevelOfConfidence expectedLevelOfConfidence) {
-        setupForAuthJourney();
-        var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", null);
-        Map<String, String> queryParams = new HashMap<>(baseParams);
-        queryParams.put("_ga", "12345");
-        queryParams.put("cookie_consent", "approve");
-        if (vtrString != null) {
-            queryParams.put("vtr", vtrString);
+        @Test
+        void shouldRedirectToLoginUriForAccountManagementClient() {
+            setupForAuthJourney();
+            registerClient(
+                    AM_CLIENT_ID,
+                    "am-client-name",
+                    List.of("openid", "am"),
+                    ClientType.WEB,
+                    false,
+                    false);
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(AM_CLIENT_ID, null, "openid am", null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "bsid")
+                            .isPresent());
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
         }
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        queryParams,
-                        Optional.of("GET"));
-        assertThat(response, hasStatus(302));
-        var expectedClaims =
-                new HashMap<String, Object>(
-                        Map.of(
-                                "confidence",
-                                expectedCredentialStrength.getValue(),
-                                "requested_credential_strength",
-                                expectedCredentialStrength.getValue(),
-                                "_ga",
-                                "12345",
-                                "cookie_consent",
-                                "approve",
-                                "client_id",
-                                configuration.getOrchestrationClientId(),
-                                "scope",
-                                "openid",
-                                "redirect_uri",
-                                configuration.getOrchestrationRedirectURI()));
-        if (expectedLevelOfConfidence != null) {
-            expectedClaims.put(
-                    "requested_level_of_confidence", expectedLevelOfConfidence.getValue());
+
+        @Test
+        void shouldReturnInvalidScopeErrorToRPWhenNotAccountManagementClient() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid am", null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(redirectUri, containsString(OAuth2Error.INVALID_SCOPE.getCode()));
+            assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
         }
-        assertResponseJarHasClaimsWithValues(response, expectedClaims);
-        assertResponseJarHasClaims(response, List.of("state"));
+
+        @Test
+        void shouldRedirectToLoginUriWhenBadSessionIdCookieIsPresent() {
+            setupForAuthJourney();
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        new HttpCookie("gs", "this is bad"),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenCookieHasUnknownSessionId() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
+            setupForAuthJourney();
+            String previousSessionId = givenAnExistingSession(LOW_LEVEL);
+            registerUser();
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", "some-other-browser-session-id")
+                                    }),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            System.out.println(response.getMultiValueHeaders());
+
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie, previousSessionId);
+
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
+            setupForAuthJourney();
+            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            registerUser();
+            withExistingOrchSessionAndBsid(previousSessionId);
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie, previousSessionId);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), equalTo(BROWSER_SESSION_ID));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity()
+                throws Exception {
+            setupForAuthJourney();
+            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            registerUser();
+            withExistingOrchSessionAndBsid(previousSessionId);
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie, previousSessionId);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), equalTo(BROWSER_SESSION_ID));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void
+                shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors()
+                        throws Exception {
+            setupForAuthJourney();
+            String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            registerUser();
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "[P2.Cl.Cm,Cl.Cm]"),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            var redirectUri = getLocationResponseHeader(response);
+            assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
+            assertThat(URI.create(redirectUri).getQuery(), containsString("error=invalid_request"));
+            assertThat(
+                    URI.create(redirectUri).getQuery(),
+                    containsString("error_description=Request+vtr+not+valid"));
+        }
+
+        @Test
+        void shouldRedirectToFrontendWhenPromptNoneAndUserUnauthenticated() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, NONE.toString(), "openid", null),
+                            Optional.of("GET"));
+            assertThat(response, hasStatus(302));
+
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
+            setupForAuthJourney();
+            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            registerUser();
+            withExistingOrchSessionAndBsid(previousSessionId);
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, NONE.toString(), OPENID.getValue(), null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie, previousSessionId);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), startsWith(BROWSER_SESSION_ID));
+
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
+            setupForAuthJourney();
+            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            registerUser();
+            withExistingOrchSessionAndBsid(previousSessionId);
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, LOGIN.toString(), OPENID.getValue(), null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie, previousSessionId);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), startsWith(BROWSER_SESSION_ID));
+
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            assertThat(URI.create(redirectUri).getQuery(), containsString("prompt=login"));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
+            setupForAuthJourney();
+            String previousSessionId = givenAnExistingSession(LOW_LEVEL);
+            registerUser();
+            withExistingOrchSessionAndBsid(previousSessionId);
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie, previousSessionId);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "di-persistent-session-id")
+                            .isPresent());
+
+            Optional<HttpCookie> browserSessionIdCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "bsid");
+            assertTrue(browserSessionIdCookie.isPresent());
+            assertThat(browserSessionIdCookie.get().getValue(), startsWith(BROWSER_SESSION_ID));
+
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginWithValidRequestObjectNonDocApp()
+                throws JOSEException, ParseException {
+            setupForAuthJourney();
+            SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"));
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            var clientSessionID = getClientSessionId(response);
+            var clientSession = redis.getClientSession(clientSessionID);
+            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+            JsonElement actualClaims =
+                    JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
+            JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
+            assertThat(actualClaims, equalTo(expectedClaims));
+
+            assertThat(
+                    authRequest
+                            .getOIDCClaims()
+                            .getUserInfoClaimsRequest()
+                            .get(CORE_IDENTITY_JWT.getValue())
+                            .getClaimRequirement(),
+                    equalTo(ClaimRequirement.ESSENTIAL));
+
+            assertThat(
+                    authRequest
+                            .getOIDCClaims()
+                            .getUserInfoClaimsRequest()
+                            .get(ADDRESS.getValue())
+                            .getClaimRequirement(),
+                    equalTo(ClaimRequirement.ESSENTIAL));
+        }
+
+        @ParameterizedTest
+        @MethodSource("vtrParams")
+        void shouldForwardRequestQueryParamsAsClaimsToAuthFrontendApi(
+                String vtrString,
+                CredentialTrustLevel expectedCredentialStrength,
+                LevelOfConfidence expectedLevelOfConfidence) {
+            setupForAuthJourney();
+            var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", null);
+            Map<String, String> queryParams = new HashMap<>(baseParams);
+            queryParams.put("_ga", "12345");
+            queryParams.put("cookie_consent", "approve");
+            if (vtrString != null) {
+                queryParams.put("vtr", vtrString);
+            }
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            queryParams,
+                            Optional.of("GET"));
+            assertThat(response, hasStatus(302));
+            var expectedClaims =
+                    new HashMap<String, Object>(
+                            Map.of(
+                                    "confidence",
+                                    expectedCredentialStrength.getValue(),
+                                    "requested_credential_strength",
+                                    expectedCredentialStrength.getValue(),
+                                    "_ga",
+                                    "12345",
+                                    "cookie_consent",
+                                    "approve",
+                                    "client_id",
+                                    configuration.getOrchestrationClientId(),
+                                    "scope",
+                                    "openid",
+                                    "redirect_uri",
+                                    configuration.getOrchestrationRedirectURI()));
+            if (expectedLevelOfConfidence != null) {
+                expectedClaims.put(
+                        "requested_level_of_confidence", expectedLevelOfConfidence.getValue());
+            }
+            assertResponseJarHasClaimsWithValues(response, expectedClaims);
+            assertResponseJarHasClaims(response, List.of("state"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("vtrParams")
+        void shouldForwardRequestObjectParamsAsClaimsToAuthFrontendApi(
+                String vtrString,
+                CredentialTrustLevel expectedCredentialStrength,
+                LevelOfConfidence expectedLevelOfConfidence)
+                throws JOSEException {
+            setupForAuthJourney();
+            Map<String, String> extraParams = new HashMap<>();
+            extraParams.put("_ga", "12345");
+            extraParams.put("cookie_consent", "approve");
+            var requestObject =
+                    createSignedJWT(
+                            "",
+                            CLAIMS,
+                            List.of("openid"),
+                            null,
+                            null,
+                            null,
+                            vtrString,
+                            extraParams);
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            requestObject.serialize(),
+                            "scope",
+                            "openid");
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            requestParams,
+                            Optional.of("GET"));
+            assertThat(response, hasStatus(302));
+            var expectedClaims =
+                    new HashMap<String, Object>(
+                            Map.of(
+                                    "confidence",
+                                    expectedCredentialStrength.getValue(),
+                                    "requested_credential_strength",
+                                    expectedCredentialStrength.getValue(),
+                                    "_ga",
+                                    "12345",
+                                    "cookie_consent",
+                                    "approve",
+                                    "client_id",
+                                    configuration.getOrchestrationClientId(),
+                                    "scope",
+                                    "openid",
+                                    "redirect_uri",
+                                    configuration.getOrchestrationRedirectURI()));
+            if (expectedLevelOfConfidence != null) {
+                expectedClaims.put(
+                        "requested_level_of_confidence", expectedLevelOfConfidence.getValue());
+            }
+            assertResponseJarHasClaimsWithValues(response, expectedClaims);
+            assertResponseJarHasClaims(response, List.of("state"));
+        }
+
+        private static Stream<Arguments> vtrParams() {
+            return Stream.of(
+                    Arguments.of(jsonArrayOf("Cl"), LOW_LEVEL, null),
+                    Arguments.of(
+                            jsonArrayOf("Cl.Cm.P2"), MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                    Arguments.of(
+                            jsonArrayOf("Cl.Cm.PCL200", "Cl.Cm.P2"),
+                            MEDIUM_LEVEL,
+                            LevelOfConfidence.HMRC200),
+                    Arguments.of(null, MEDIUM_LEVEL, null));
+        }
     }
 
-    @ParameterizedTest
-    @MethodSource("vtrParams")
-    void shouldForwardRequestObjectParamsAsClaimsToAuthFrontendApi(
-            String vtrString,
-            CredentialTrustLevel expectedCredentialStrength,
-            LevelOfConfidence expectedLevelOfConfidence)
-            throws JOSEException {
-        setupForAuthJourney();
-        Map<String, String> extraParams = new HashMap<>();
-        extraParams.put("_ga", "12345");
-        extraParams.put("cookie_consent", "approve");
-        var requestObject =
-                createSignedJWT(
-                        "", CLAIMS, List.of("openid"), null, null, null, vtrString, extraParams);
-        Map<String, String> requestParams =
-                Map.of(
-                        "client_id",
-                        CLIENT_ID,
-                        "response_type",
-                        "code",
-                        "request",
-                        requestObject.serialize(),
-                        "scope",
-                        "openid");
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        requestParams,
-                        Optional.of("GET"));
-        assertThat(response, hasStatus(302));
-        var expectedClaims =
-                new HashMap<String, Object>(
-                        Map.of(
-                                "confidence",
-                                expectedCredentialStrength.getValue(),
-                                "requested_credential_strength",
-                                expectedCredentialStrength.getValue(),
-                                "_ga",
-                                "12345",
-                                "cookie_consent",
-                                "approve",
-                                "client_id",
-                                configuration.getOrchestrationClientId(),
-                                "scope",
-                                "openid",
-                                "redirect_uri",
-                                configuration.getOrchestrationRedirectURI()));
-        if (expectedLevelOfConfidence != null) {
-            expectedClaims.put(
-                    "requested_level_of_confidence", expectedLevelOfConfidence.getValue());
+    @Nested
+    class DocAppJourney {
+        @ParameterizedTest
+        @ValueSource(strings = {"", "en", "cy", "en cy", "es fr ja", "cy-AR"})
+        void shouldCallAuthorizeAsDocAppClient(String uiLocales)
+                throws JOSEException, ParseException {
+            setupForDocAppJourney();
+            registerClient(
+                    CLIENT_ID,
+                    "test-client",
+                    List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
+                    ClientType.APP,
+                    false,
+                    false);
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+            var signedJWT = createSignedJWT(uiLocales);
+            var queryStringParameters =
+                    new HashMap<>(
+                            Map.of(
+                                    "response_type",
+                                    "code",
+                                    "client_id",
+                                    CLIENT_ID,
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    signedJWT.serialize()));
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            queryStringParameters,
+                            Optional.of("GET"));
+            assertThat(response, hasStatus(302));
+            assertThat(getLocationResponseHeader(response), startsWith(AUTHORIZE_URI.toString()));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            var languageCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "lng");
+            if (uiLocales.contains("en")) {
+                assertTrue(languageCookie.isPresent());
+                assertThat(languageCookie.get().getValue(), equalTo("en"));
+            } else if (uiLocales.contains("cy")) {
+                assertTrue(languageCookie.isPresent());
+                assertThat(languageCookie.get().getValue(), equalTo("cy"));
+            } else {
+                assertThat(languageCookie.isPresent(), equalTo(false));
+            }
+            var clientSessionID = sessionCookie.get().getValue().split("\\.")[1];
+            var clientSession = redis.getClientSession(clientSessionID);
+            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
+            assertThat(
+                    authRequest.getCustomParameter("vtr"),
+                    equalTo(List.of("[\"P2.Cl.Cm\",\"PCL200.Cl.Cm\"]")));
+            assertThat(
+                    clientSession.getVtrList(),
+                    equalTo(
+                            List.of(
+                                    VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                    VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            DOC_APP_AUTHORISATION_REQUESTED));
         }
-        assertResponseJarHasClaimsWithValues(response, expectedClaims);
-        assertResponseJarHasClaims(response, List.of("state"));
+
+        @Test
+        void shouldGenerateCorrectResponseGivenAValidRequestWhenOnDocAppJourney()
+                throws JOSEException {
+            setupForDocAppJourney();
+            SignedJWT signedJWT = createSignedJWT("");
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            var expectedQueryStringRegex =
+                    "response_type=code&request=.*&client_id=doc-app-client-id";
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            DOC_APP_AUTHORISATION_REQUESTED));
+        }
+
+        private void setupForDocAppJourney() {
+            registerClient(
+                    CLIENT_ID,
+                    "test-client",
+                    List.of("openid", "doc-checking-app"),
+                    ClientType.APP,
+                    false,
+                    false);
+            handler = new AuthorisationHandler(configuration);
+            txmaAuditQueue.clear();
+
+            var jwkKey =
+                    new RSAKey.Builder((RSAPublicKey) DCMAW_ENCRYPTION_KEY_PAIR.getPublic())
+                            .keyUse(KeyUse.ENCRYPTION)
+                            .keyID(ENCRYPTION_KEY_ID)
+                            .build();
+            jwksExtension.init(new JWKSet(jwkKey));
+        }
+    }
+
+    @Nested
+    class CrossBrowser {
+        @Test
+        void shouldStoreStateInNoSessionOrchestrationService()
+                throws ParseException, JOSEException, java.text.ParseException {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                            Optional.of("GET"));
+            assertNoSessionObjectStored(response);
+        }
+
+        private void assertNoSessionObjectStored(APIGatewayProxyResponseEvent response)
+                throws ParseException, JOSEException, java.text.ParseException {
+            var authRequest = extractAuthRequestFromResponse(response);
+            var decryptedJWT = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
+            var orchToAuthState = decryptedJWT.getJWTClaimsSet().getStringClaim("state");
+            var noSessionObject = redis.getFromRedis("state:" + orchToAuthState);
+
+            var clientSessionId = getClientSessionId(response);
+
+            assertEquals(clientSessionId, noSessionObject);
+        }
+    }
+
+    @Nested
+    class InvalidRequest {
+        @Test
+        void
+                shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
+            handler = new AuthorisationHandler(configuration);
+            txmaAuditQueue.clear();
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            var expectedQueryStringRegex =
+                    "error=access_denied&error_description=JAR[+]required[+]for[+]client[+]but[+]request[+]does[+]not[+]contain[+]Request[+]Object.*";
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+        }
+
+        @Test
+        void
+                shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
+            handler = new AuthorisationHandler(configuration);
+            txmaAuditQueue.clear();
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(
+                                    CLIENT_ID,
+                                    null,
+                                    "openid",
+                                    "Cl.Cm",
+                                    URI.create("invalid-redirect-uri")),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response.getBody(), equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+        }
+
+        @Test
+        void shouldReturnBadRequestUnsupportedResponseMode() {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
+            queryParams.put("response_mode", "form_post");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            queryParams,
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
+        }
+    }
+
+    @Nested
+    class MaxAge {
+        @Test
+        void shouldUpdateOrchSessionWhenMaxAgeHasExpired() throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
+                            Optional.of("GET"));
+            var newSessionId = getSessionId(response);
+
+            var newSession = orchSessionExtension.getSession(newSessionId);
+            assertTrue(newSession.isPresent());
+            assertFalse(newSession.get().getAuthenticated());
+            assertEquals(newSession.get().getSessionId(), newSessionId);
+        }
+
+        @Test
+        void shouldUpdateSharedSessionWhenMaxAgeExpired() throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
+                            Optional.of("GET"));
+            var newSessionId = getSessionId(response);
+            var newSession = redis.getSession(newSessionId);
+            assertNotNull(newSession);
+            assertEquals(1, newSession.getClientSessions().size());
+            assertFalse(newSession.getClientSessions().contains(previousClientSessionId));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestForNegativeMaxAge() throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", -100L),
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Max+age+is+negative+in+query+params"));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestForNegativeMaxAgeInRequestObject() throws JOSEException {
+            setupForAuthJourney();
+            SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), -100);
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Max+age+is+negative+in+request+object"));
+        }
+    }
+
+    @Nested
+    class PKCE {
+        @Test
+        void shouldRedirectToFrontendWhenCodeChallengeIsNotProvided() throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToFrontendWhenCodeChallengeIsNotProvidedInRequestObject()
+                throws JOSEException {
+            setupForAuthJourney();
+
+            SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    locationHeaderUri.toString(),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedAndIsMissing()
+                throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", codeChallenge, null),
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
+        }
+
+        @Test
+        void
+                shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedInRequestObjectAndIsMissing()
+                        throws JOSEException, ParseException {
+            setupForAuthJourney();
+
+            var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
+
+            SignedJWT signedJWT =
+                    createSignedJWT("", CLAIMS, List.of("openid"), null, aCodeChallenge, null);
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestWhenCodeChallengeMethodIsInvalid() throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+            var codeChallengeMethod = CodeChallengeMethod.PLAIN;
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID,
+                                    null,
+                                    "openid",
+                                    "P2.Cl.Cm",
+                                    codeChallenge,
+                                    codeChallengeMethod),
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestWhenCodeChallengeMethodInRequestObjectIsInvalid()
+                throws JOSEException, ParseException {
+            setupForAuthJourney();
+
+            var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
+            var codeChallengeMethod = CodeChallengeMethod.PLAIN;
+
+            SignedJWT signedJWT =
+                    createSignedJWT(
+                            "",
+                            CLAIMS,
+                            List.of("openid"),
+                            null,
+                            aCodeChallenge,
+                            codeChallengeMethod);
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
+        }
+
+        @Test
+        void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValid() throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+            var codeChallengeMethod = CodeChallengeMethod.S256;
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID,
+                                    null,
+                                    "openid",
+                                    "P2.Cl.Cm",
+                                    codeChallenge,
+                                    codeChallengeMethod),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValidInRequestObject()
+                throws JOSEException, ParseException {
+            setupForAuthJourney();
+
+            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+            var codeChallengeMethod = CodeChallengeMethod.S256;
+
+            SignedJWT signedJWT =
+                    createSignedJWT(
+                            "",
+                            CLAIMS,
+                            List.of("openid"),
+                            null,
+                            codeChallenge,
+                            codeChallengeMethod);
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    locationHeaderUri.toString(),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestWhenCodeChallengeIsMissingAndPKCEEnforced()
+                throws Exception {
+            registerClient(
+                    CLIENT_ID,
+                    "test-client",
+                    singletonList("openid"),
+                    ClientType.WEB,
+                    false,
+                    true,
+                    emptyList(),
+                    true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestWhenCodeChallengeIsMissingInRequestObjectAndPKCEEnforced()
+                throws JOSEException, ParseException {
+            setupForAuthJourneyWithPKCEEnforced();
+
+            SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
+        }
+
+        private void setupForAuthJourneyWithPKCEEnforced() {
+            registerClient(
+                    CLIENT_ID,
+                    "test-client",
+                    singletonList("openid"),
+                    ClientType.WEB,
+                    false,
+                    false,
+                    List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
+                    true);
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+        }
     }
 
     private Map<String, String> constructQueryStringParameters(
@@ -1895,39 +2027,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 false);
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
-    }
-
-    private void setupForAuthJourneyWithPKCEEnforced() {
-        registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList("openid"),
-                ClientType.WEB,
-                false,
-                false,
-                List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
-                true);
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
-        txmaAuditQueue.clear();
-    }
-
-    private void setupForDocAppJourney() {
-        registerClient(
-                CLIENT_ID,
-                "test-client",
-                List.of("openid", "doc-checking-app"),
-                ClientType.APP,
-                false,
-                false);
-        handler = new AuthorisationHandler(configuration);
-        txmaAuditQueue.clear();
-
-        var jwkKey =
-                new RSAKey.Builder((RSAPublicKey) DCMAW_ENCRYPTION_KEY_PAIR.getPublic())
-                        .keyUse(KeyUse.ENCRYPTION)
-                        .keyID(ENCRYPTION_KEY_ID)
-                        .build();
-        jwksExtension.init(new JWKSet(jwkKey));
     }
 
     private String givenAnExistingSessionWithClientSession(String clientSessionId)
