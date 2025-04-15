@@ -300,7 +300,7 @@ public class AuthCodeHandler
                             isTestJourney,
                             isDocAppJourney);
 
-            var rpPairwiseId = AuditService.UNKNOWN;
+            String rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonSubjectId;
             if (isDocAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
