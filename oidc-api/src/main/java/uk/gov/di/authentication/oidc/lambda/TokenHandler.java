@@ -34,7 +34,6 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodExcep
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -84,7 +83,6 @@ public class TokenHandler
     private final TokenService tokenService;
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
-    private final AuthorisationCodeService authorisationCodeService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
@@ -100,7 +98,6 @@ public class TokenHandler
             TokenService tokenService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
-            AuthorisationCodeService authorisationCodeService,
             OrchAuthCodeService orchAuthCodeService,
             ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
@@ -111,7 +108,6 @@ public class TokenHandler
         this.tokenService = tokenService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
-        this.authorisationCodeService = authorisationCodeService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
@@ -130,9 +126,6 @@ public class TokenHandler
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
-        this.authorisationCodeService =
-                new AuthorisationCodeService(
-                        configurationService, redisConnectionService, objectMapper);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
@@ -156,9 +149,6 @@ public class TokenHandler
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
-        this.authorisationCodeService =
-                new AuthorisationCodeService(
-                        configurationService, redisConnectionService, objectMapper);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
@@ -227,60 +217,25 @@ public class TokenHandler
                                     getSigningAlgorithm(clientRegistry)));
         }
 
-        Optional<AuthCodeExchangeData> authCodeExchangeDataMaybe =
-                segmentedFunctionCall(
-                        "authorisationCodeService",
-                        () ->
-                                authorisationCodeService.getExchangeDataForCode(
-                                        requestBody.get("code")));
+        Optional<AuthCodeExchangeData> authCodeExchangeDataMaybe;
+
+        try {
+            authCodeExchangeDataMaybe =
+                    orchAuthCodeService.getExchangeDataForCode(requestBody.get("code"));
+        } catch (Exception e) {
+            LOG.error(
+                    "Failed to retrieve authorisation code from orch auth code DynamoDB store. Error: {}",
+                    e.getMessage());
+            return generateApiGatewayProxyResponse(500, "Internal server error");
+        }
+
         if (authCodeExchangeDataMaybe.isEmpty()) {
             LOG.warn("Could not retrieve session data from code");
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
+
         AuthCodeExchangeData authCodeExchangeData = authCodeExchangeDataMaybe.get();
-
-        try {
-            Optional<AuthCodeExchangeData> orchAuthCodeExchangeDataMaybe =
-                    orchAuthCodeService.getExchangeDataForCode(requestBody.get("code"));
-
-            // TODO: ATO-1205: Remove these logs after consistency checks are complete.
-            if (orchAuthCodeExchangeDataMaybe.isEmpty()) {
-                LOG.warn(
-                        "OrchAuthCode consistency check error: Record present in Redis but not in DynamoDB. ClientId: {}. ClientSessionId: {}. NOTE: Redis is still the primary at present.",
-                        authCodeExchangeData.getClientId(),
-                        authCodeExchangeData.getClientSessionId());
-            } else {
-                AuthCodeExchangeData orchAuthCodeExchangeData = orchAuthCodeExchangeDataMaybe.get();
-
-                LOG.info(
-                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode client ID equal? {}",
-                        Objects.equals(
-                                authCodeExchangeData.getClientId(),
-                                orchAuthCodeExchangeData.getClientId()));
-                LOG.info(
-                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode client session ID equal? {}",
-                        Objects.equals(
-                                authCodeExchangeData.getClientSessionId(),
-                                orchAuthCodeExchangeData.getClientSessionId()));
-                LOG.info(
-                        "OrchAuthCode consistency check: AuthCode and OrchAuthCode auth time equal? {}",
-                        Objects.equals(
-                                authCodeExchangeData.getAuthTime(),
-                                orchAuthCodeExchangeData.getAuthTime()));
-            }
-
-            /*
-                TODO: ATO-1205:
-                 - Need to rethrow exceptions (as RuntimeException?) or return a 500 api gateway proxy response ourselves.
-                 - Update the log in the catch clause to be level 'error' and remove Redis references (as by this point the DynamoDB store will be the primary).
-                 - Following the above updates, ensure the unit test which ensures unchecked exceptions are caught during consistency checks is updated.
-            */
-        } catch (Exception e) {
-            LOG.warn(
-                    "Failed to retrieve authorisation code from orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
-                    e.getMessage());
-        }
 
         if (!Objects.equals(authCodeExchangeData.getClientId(), clientRegistry.getClientID())) {
             LOG.warn("Client ID from auth code does not match client ID from request body");

@@ -41,11 +41,4 @@ class AuthorisationCodeServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(startsWith("auth-code-"), eq(expectedJson), eq(123L));
     }
-
-    @Test
-    void shouldPrefixAuthCodeWhenLoadingFromRedis() {
-        authCodeService.getExchangeDataForCode("test");
-
-        verify(redisConnectionService).popValue("auth-code-test");
-    }
 }

@@ -77,8 +77,8 @@ public class OrchAuthCodeExtension extends DynamoExtension implements AfterEachC
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
             String clientId, String clientSessionId, String email, Long authTime) {
-        // TODO: ATO-1205: Remove generation of this authorisation code after consistency checks are
-        // complete - the method in orchAuthCodeService needs to generate this itself.
+        // TODO: ATO-1579: Move the generation of this authorisation code into the
+        // orchAuthCodeService.
         AuthorizationCode authorizationCode = new AuthorizationCode();
 
         return orchAuthCodeService.generateAndSaveAuthorisationCode(
