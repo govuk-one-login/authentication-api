@@ -308,13 +308,9 @@ public class AuthCodeHandler
             } else {
                 authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
-                rpPairwiseId = orchClientSession.getRpPairwiseId();
-                LOG.info(
-                        "is rpPairwiseId the same as pairwiseIdForClient: {}",
-                        Objects.equals(
-                                rpPairwiseId,
-                                orchClientSession.getCorrectPairwiseIdGivenSubjectType(
-                                        client.getSubjectType())));
+                rpPairwiseId =
+                        orchClientSession.getCorrectPairwiseIdGivenSubjectType(
+                                client.getSubjectType());
             }
 
             var metadataPairs = new ArrayList<AuditService.MetadataPair>();
