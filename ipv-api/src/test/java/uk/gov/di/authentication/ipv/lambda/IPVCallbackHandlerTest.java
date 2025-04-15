@@ -739,6 +739,7 @@ class IPVCallbackHandlerTest {
                         any(),
                         anyString(),
                         eq(userProfile),
+                        eq(authUserInfo),
                         eq(expectedRpPairwiseSub),
                         any(UserInfo.class),
                         eq(CLIENT_ID.getValue()));
