@@ -152,6 +152,9 @@ class IPVCallbackHandlerTest {
             URI.create("https://example.com/ipv-callback");
     private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
+    private static final String RP_SECTOR_URI = "https://test.com";
+    private static final String RP_SECTOR_HOST = "test.com";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -193,7 +196,7 @@ class IPVCallbackHandlerTest {
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    TEST_SUBJECT.getValue(), "test.account.gov.uk", salt);
+                    TEST_SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -1276,7 +1279,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(RP_SECTOR_URI)
                 .withSubjectType("pairwise");
     }
 
@@ -1285,7 +1288,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(RP_SECTOR_URI)
                 .withSubjectType("pairwise")
                 .withClaims(List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
