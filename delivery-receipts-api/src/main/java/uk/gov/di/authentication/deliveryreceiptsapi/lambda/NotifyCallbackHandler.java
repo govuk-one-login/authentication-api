@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
+import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyReference;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -88,8 +89,11 @@ public class NotifyCallbackHandler
         NotifyDeliveryReceipt deliveryReceipt;
         try {
             deliveryReceipt = objectMapper.readValue(input.getBody(), NotifyDeliveryReceipt.class);
+            var notifyReference = new NotifyReference(deliveryReceipt.reference());
+
             ThreadContext.remove(JOURNEY_ID);
-            ThreadContext.put(JOURNEY_ID, deliveryReceipt.reference());
+            ThreadContext.put(JOURNEY_ID, notifyReference.getClientSessionId());
+
             if (deliveryReceipt.notificationType().equals("sms")) {
                 LOG.info("Sms delivery receipt received");
                 var countryCode = getCountryCodeFromNumber(deliveryReceipt.to());
