@@ -46,6 +46,16 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
         this.objectMapper = SerializationService.getInstance();
     }
 
+    // TODO: ATO-1205 (final PR): Remove this method once all other usages of the overloaded method
+    // have been addressed (see comment on the method below).
+    public AuthorizationCode generateAndSaveAuthorisationCode(
+            String clientId, String clientSessionId, String email, Long authTime) {
+        AuthorizationCode authorizationCode = new AuthorizationCode();
+
+        return generateAndSaveAuthorisationCode(
+                authorizationCode, clientId, clientSessionId, email, authTime);
+    }
+
     // TODO: ATO-1579: Move generation of the authorisation code back into this method (removing the
     // parameter).
     public AuthorizationCode generateAndSaveAuthorisationCode(
