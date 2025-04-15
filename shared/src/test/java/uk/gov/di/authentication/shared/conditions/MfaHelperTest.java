@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -48,6 +49,7 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 class MfaHelperTest {
     private static final UserCredentials userCredentials = mock(UserCredentials.class);
     private static final String PHONE_NUMBER = "+44123456789";
+    private static final UserProfile userProfile = mock(UserProfile.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHelper.class);
@@ -65,8 +67,10 @@ class MfaHelperTest {
         void isMfaRequiredShouldReflectLevelOfTrustRequested(
                 CredentialTrustLevel trustLevel, boolean expectedMfaRequired) {
             var userContext = userContextWithLevelOfTrustRequested(trustLevel);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
 
-            var result = getUserMFADetail(userContext, userCredentials, PHONE_NUMBER, true);
+            var result =
+                    getUserMFADetail(userContext, userCredentials, PHONE_NUMBER, true, userProfile);
 
             assertEquals(expectedMfaRequired, result.isMfaRequired());
         }
@@ -75,6 +79,7 @@ class MfaHelperTest {
         void shouldReturnAVerifiedSmsMethodWhenNoAuthAppExists() {
             var userContext =
                     userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
 
             var isPhoneNumberVerified = true;
 
@@ -82,7 +87,11 @@ class MfaHelperTest {
 
             var result =
                     getUserMFADetail(
-                            userContext, userCredentials, PHONE_NUMBER, isPhoneNumberVerified);
+                            userContext,
+                            userCredentials,
+                            PHONE_NUMBER,
+                            isPhoneNumberVerified,
+                            userProfile);
             var expectedResult = new UserMfaDetail(true, isPhoneNumberVerified, SMS, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
@@ -96,6 +105,7 @@ class MfaHelperTest {
         void shouldReturnAVerifiedSmsMethodWhenAuthAppExistsButIsNotEnabled() {
             var userContext =
                     userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
 
             var isPhoneNumberVerified = true;
             var isAuthAppEnabled = false;
@@ -105,7 +115,11 @@ class MfaHelperTest {
 
             var result =
                     getUserMFADetail(
-                            userContext, userCredentials, PHONE_NUMBER, isPhoneNumberVerified);
+                            userContext,
+                            userCredentials,
+                            PHONE_NUMBER,
+                            isPhoneNumberVerified,
+                            userProfile);
             var expectedResult = new UserMfaDetail(true, isPhoneNumberVerified, SMS, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
@@ -115,6 +129,7 @@ class MfaHelperTest {
         void shouldReturnMethodTypeOfNoneWhenSmsMethodNotVerified() {
             var userContext =
                     userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
 
             var isPhoneNumberVerified = false;
 
@@ -122,7 +137,11 @@ class MfaHelperTest {
 
             var result =
                     getUserMFADetail(
-                            userContext, userCredentials, PHONE_NUMBER, isPhoneNumberVerified);
+                            userContext,
+                            userCredentials,
+                            PHONE_NUMBER,
+                            isPhoneNumberVerified,
+                            userProfile);
             var expectedResult = new UserMfaDetail(true, false, NONE, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
@@ -139,6 +158,7 @@ class MfaHelperTest {
                         boolean isPhoneNumberVerified) {
             var userContext =
                     userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
 
             var isAuthAppVerified = true;
 
@@ -147,7 +167,11 @@ class MfaHelperTest {
 
             var result =
                     getUserMFADetail(
-                            userContext, userCredentials, PHONE_NUMBER, isPhoneNumberVerified);
+                            userContext,
+                            userCredentials,
+                            PHONE_NUMBER,
+                            isPhoneNumberVerified,
+                            userProfile);
             var expectedResult =
                     new UserMfaDetail(true, true, MFAMethodType.AUTH_APP, PHONE_NUMBER);
 
@@ -164,6 +188,7 @@ class MfaHelperTest {
         void shouldReturnVerifiedSMSMethodWhenAuthAppExistsButIsNotVerified() {
             var userContext =
                     userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
 
             var isPhoneNumberVerified = true;
 
@@ -172,7 +197,11 @@ class MfaHelperTest {
 
             var result =
                     getUserMFADetail(
-                            userContext, userCredentials, PHONE_NUMBER, isPhoneNumberVerified);
+                            userContext,
+                            userCredentials,
+                            PHONE_NUMBER,
+                            isPhoneNumberVerified,
+                            userProfile);
             var expectedResult = new UserMfaDetail(true, isPhoneNumberVerified, SMS, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
@@ -182,6 +211,7 @@ class MfaHelperTest {
         void shouldReturnUnVerifiedAuthMethodWhenPhoneNumberIsNotVerified() {
             var userContext =
                     userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
 
             var isAuthAppVerified = false;
             var isPhoneNumberVerified = false;
@@ -191,7 +221,11 @@ class MfaHelperTest {
 
             var result =
                     getUserMFADetail(
-                            userContext, userCredentials, PHONE_NUMBER, isPhoneNumberVerified);
+                            userContext,
+                            userCredentials,
+                            PHONE_NUMBER,
+                            isPhoneNumberVerified,
+                            userProfile);
             var expectedResult = new UserMfaDetail(true, false, AUTH_APP, PHONE_NUMBER);
 
             assertEquals(expectedResult, result);
@@ -201,6 +235,44 @@ class MfaHelperTest {
                     hasItem(
                             withMessageContaining(
                                     "Unverified auth app mfa method present and no verified phone number")));
+        }
+
+        @Test
+        void shouldReturnRelevantMethodForAMigratedUser() {
+            var userContext =
+                    userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(true);
+
+            var phoneNumberOfMigratedMethod = "+447900000000";
+
+            var isPhoneNumberVerified = false;
+
+            when(userCredentials.getMfaMethods())
+                    .thenReturn(
+                            List.of(
+                                    MFAMethod.smsMfaMethod(
+                                            true,
+                                            true,
+                                            phoneNumberOfMigratedMethod,
+                                            PriorityIdentifier.DEFAULT,
+                                            "some-mfa-identifier"),
+                                    MFAMethod.authAppMfaMethod(
+                                            "some-credential",
+                                            true,
+                                            true,
+                                            PriorityIdentifier.BACKUP,
+                                            "auth-app-mfa-id")));
+
+            var result =
+                    getUserMFADetail(
+                            userContext,
+                            userCredentials,
+                            PHONE_NUMBER,
+                            isPhoneNumberVerified,
+                            userProfile);
+            var expectedResult = new UserMfaDetail(true, true, SMS, phoneNumberOfMigratedMethod);
+
+            assertEquals(expectedResult, result);
         }
     }
 

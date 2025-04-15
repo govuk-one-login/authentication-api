@@ -286,7 +286,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                             authenticationService.getUserCredentialsFromEmail(
                                                     resetPasswordRequest.getEmail()),
                                             userProfile.getPhoneNumber(),
-                                            userProfile.isPhoneNumberVerified());
+                                            userProfile.isPhoneNumberVerified(),
+                                            userProfile);
 
                             return new ResetPasswordRequestHandlerResponse(
                                     userMfaDetail.mfaMethodType(),

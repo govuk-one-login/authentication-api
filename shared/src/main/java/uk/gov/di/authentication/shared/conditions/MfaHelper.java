@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -53,8 +54,23 @@ public class MfaHelper {
             UserContext userContext,
             UserCredentials userCredentials,
             String phoneNumber,
-            boolean isPhoneNumberVerified) {
+            boolean isPhoneNumberVerified,
+            UserProfile userProfile) {
         var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
+        if (userProfile.getMfaMethodsMigrated()) {
+            var defaultMethod = getDefaultMfaMethodForMigratedUser(userCredentials).get(); // TODO
+            var phoneNumberForMigratedMethod = phoneNumber;
+            var isPhoneNumberVerifiedForMigratedMethod = isPhoneNumberVerified;
+            if (defaultMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
+                phoneNumberForMigratedMethod = defaultMethod.getDestination();
+                isPhoneNumberVerifiedForMigratedMethod = defaultMethod.isMethodVerified();
+            }
+            return new UserMfaDetail(
+                    isMfaRequired,
+                    isPhoneNumberVerifiedForMigratedMethod,
+                    MFAMethodType.valueOf(defaultMethod.getMfaMethodType()),
+                    phoneNumberForMigratedMethod);
+        }
 
         var enabledMethod = getPrimaryMFAMethod(userCredentials);
 

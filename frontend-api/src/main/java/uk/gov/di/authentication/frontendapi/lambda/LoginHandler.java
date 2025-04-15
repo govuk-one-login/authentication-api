@@ -303,7 +303,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userContext,
                         userCredentials,
                         userProfile.getPhoneNumber(),
-                        userProfile.isPhoneNumberVerified());
+                        userProfile.isPhoneNumberVerified(),
+                        userProfile);
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
 

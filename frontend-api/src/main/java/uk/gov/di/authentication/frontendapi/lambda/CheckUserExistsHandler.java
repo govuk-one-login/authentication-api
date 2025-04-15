@@ -186,7 +186,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 userContext,
                                 userCredentials,
                                 userProfile.get().getPhoneNumber(),
-                                isPhoneNumberVerified);
+                                isPhoneNumberVerified,
+                                userProfile.get());
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
             } else {
                 authSession.setInternalCommonSubjectId(null);
