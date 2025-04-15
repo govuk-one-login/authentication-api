@@ -723,12 +723,6 @@ locals {
   }
 }
 
-variable "fms_enabled" {
-  default     = false
-  description = "To enable FMS WAF on Auth API gateway , this flag will remove existing waf Assocaition on resource"
-  type        = bool
-}
-
 variable "frontend_api_fms_tag_value" {
   default     = "authenticationfrontend"
   description = "Tag value to be used for FMS WAF association for frontend API"

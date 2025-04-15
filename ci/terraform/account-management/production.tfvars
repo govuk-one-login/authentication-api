@@ -1,7 +1,6 @@
 common_state_bucket = "digital-identity-prod-tfstate"
 
-# FMS Flag
-fms_enabled          = true
+# FMS
 am_api_fms_tag_value = "accountmanagementprod"
 
 # URIs
