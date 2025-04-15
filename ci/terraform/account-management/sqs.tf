@@ -155,6 +155,9 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
   ]
 }
 
+locals {
+  account_mgmt_notify_alternative_dest = local.create_resource ? aws_s3_bucket.am_api_acceptance_tests_otp_bucket[0].id : ""
+}
 resource "aws_lambda_function" "email_sqs_lambda" {
   function_name = "${var.environment}-account-management-sqs-lambda"
   role          = module.account_management_sqs_role.arn
@@ -183,7 +186,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       JAVA_TOOL_OPTIONS        = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
       NOTIFY_TEST_DESTINATIONS = var.notify_test_destinations
 
-      ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION = aws_s3_bucket.am-api-acceptance-tests-otp-bucket.id
+      ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION = local.account_mgmt_notify_alternative_dest
     })
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
