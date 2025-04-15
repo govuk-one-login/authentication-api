@@ -1,5 +1,15 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: AWS::Serverless-2016-10-31
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W8003
+        - E3033
+
 Description: >
   Auth API template for backend
 
@@ -28,12 +38,67 @@ Parameters:
       - integration
       - dev
 
+  SubEnvironment:
+    Type: String
+    Description: >
+      When deploying to dev, optionally configure which sub-environment to deploy to
+      i.e. authdev1, authdev2. This feature is not available for route-to-live environments
+    Default: none
+
   LambdaDeploymentPreference:
     Type: String
     Description: Specifies the configuration to enable gradual Lambda deployments
-    Default: None
+    Default: AllAtOnce
+
+  LoggingSubscriptionEndpointArn:
+    Type: String
+    Description: The ARN of the subscription endpoint to send logs to splunk
+    Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
+  IsNotProduction:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref Environment
+          - production
+
+  IsSplunkEnabled:
+    Fn::Equals:
+      - !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          IsSplunkEnabled,
+          DefaultValue: "No",
+        ]
+      - "Yes"
+
+  NotSubEnvironment:
+    Fn::Equals:
+      - !Ref SubEnvironment
+      - none
+
+  UseAlarmActions:
+    Fn::Or:
+      - Fn::And:
+          - !Condition UseSubEnvironment
+          - Fn::Equals:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref SubEnvironment,
+                  UseAlarmActions,
+                  DefaultValue: "No",
+                ]
+              - "Yes"
+      - Fn::And:
+          - !Condition NotSubEnvironment
+          - Fn::Equals:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  UseAlarmActions,
+                  DefaultValue: "No",
+                ]
+              - "Yes"
   UseCodeSigning:
     Fn::Not:
       - Fn::Equals:
@@ -46,18 +111,79 @@ Conditions:
           - !Ref PermissionsBoundary
           - "none"
 
+  UseSubEnvironment:
+    Fn::And:
+      - Fn::Equals:
+          - !Ref Environment
+          - dev
+      - Fn::Not:
+          - Fn::Equals:
+              - !Ref SubEnvironment
+              - none
+
 Mappings:
   EnvironmentConfiguration:
+    authdev1:
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
+      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
+    authdev2:
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
+      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
     dev:
+      accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/af458b1c-b949-48ee-bc2d-a5a7931113d8
+      authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/7c60a855-8b61-4d0e-be99-f12a22bd2001
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e4c701a9-4073-4143-9f12-ddf110b9c720
+      dataStoreAccountId: 653994557586
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
+      cloudwatchLogRetentionInDays: 1
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
+      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
+      UseAlarmActions: "Yes"
     build:
+      accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:761723964695:key/c00f8047-6688-4f72-a887-4ba6810f1ccb
+      authCodeStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/ce2114cb-cfe3-4108-a738-4790dbe99f64
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/91e74f45-3473-4fa3-b35e-b6a1a1fe7a6d
+      dataStoreAccountId: 761723964695
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
+      cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      IsSplunkEnabled: "Yes"
+      orchApiVpcEndpointId: vpce-0867442e4d95fb43e
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
+      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
     staging:
+      cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      IsSplunkEnabled: "Yes"
+      lambdaMinConcurrency: 3
+      lambdaMaxConcurrency: 10
+      orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
+      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
     integration:
+      cloudwatchLogRetentionInDays: 30
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      IsSplunkEnabled: "Yes"
+      orchApiVpcEndpointId: vpce-0704b783d794cea52
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
     production:
+      cloudwatchLogRetentionInDays: 30
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      IsSplunkEnabled: "Yes"
+      lambdaMinConcurrency: 3
+      lambdaMaxConcurrency: 10
+      orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
+  LambdaConfiguration:
+    auth-token:
+      RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -67,6 +193,7 @@ Globals:
       Role: !GetAtt CodeDeployServiceRole.Arn
     Environment:
       Variables:
+        ENVIRONMENT: !Ref Environment
         AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
         DT_CONNECTION_AUTH_TOKEN: !Sub
           - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}"
@@ -155,3 +282,1365 @@ Resources:
           !Ref PermissionsBoundary,
           !Ref AWS::NoValue,
         ]
+
+  # -----------------
+  # auth-external-api
+  # -----------------
+
+  AuthExternalApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub ${Environment}-di-auth-ext-api
+      StageName: !Ref Environment
+      AccessLogSetting:
+        DestinationArn: !GetAtt AuthExternalApiLogGroup.Arn
+        Format: >-
+          {
+          "requestId":"$context.requestId",
+          "ip":"$context.identity.sourceIp",
+          "userAgent":"$context.identity.userAgent",
+          "requestTime":"$context.requestTime",
+          "httpMethod":"$context.httpMethod",
+          "resourcePath":"$context.resourcePath",
+          "status":"$context.status",
+          "protocol":"$context.protocol",
+          "responseLength":"$context.responseLength",
+          "integrationStatus":"$context.integration.integrationStatus",
+          "integrationLatency":"$context.integration.latency",
+          "integrationRequestId":"$context.integration.requestId"
+          }
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: Allow
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource:
+                - "execute-api:/*"
+            - Effect: Deny
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource:
+                - "execute-api:/*"
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce:
+                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      CacheClusterEnabled: false
+      DefinitionBody:
+        openapi: "3.0.1" # workaround to get `sam validate` to work
+        paths: # workaround to get `sam validate` to work
+          /never-created:
+            options: {} # workaround to get `sam validate` to work
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: "./openAPI/AuthExternalApi.yaml"
+      OpenApiVersion: 3.0.1
+      EndpointConfiguration:
+        Type: PRIVATE
+        VPCEndpointIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      MethodSettings:
+        - CachingEnabled: false
+          DataTraceEnabled: false
+          HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      TracingEnabled: true
+
+  AuthExternalApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub "${Environment}-AuthExternalApi-access-logs"
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AuthTokenFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/backend-template.yaml
+
+  AuthExternalApiSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthExternalApiLogGroup
+
+  AuthExternalApiDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub "${Environment}-di-auth-ext-api-dashboard"
+      DashboardBody:
+        Fn::Sub: |-
+          {
+            "start": "-PT336H",
+            "widgets": [
+              {
+                "height": 6,
+                "width": 12,
+                "y": 6,
+                "x": 0,
+                "type": "metric",
+                "properties": {
+                  "metrics": [
+                    [
+                      {
+                        "expression": "FILL(m1, 0)",
+                        "label": "",
+                        "id": "e1",
+                        "region": "${AWS::Region}",
+                        "period": 900
+                      }
+                    ],
+                    [
+                      "AWS/ApiGateway",
+                      "Latency",
+                      "ApiName",
+                      "${Environment}-di-auth-ext-api",
+                      {
+                        "id": "m1",
+                        "visible": false
+                      }
+                    ]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "period": 900,
+                  "stat": "Average",
+                  "title": "Latency",
+                  "yAxis": {
+                    "left": {
+                      "label": "Millis",
+                      "showUnits": false,
+                      "min": 0
+                    },
+                    "right": {
+                      "showUnits": false
+                    }
+                  },
+                  "setPeriodToTimeRange": true,
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "liveData": false
+                }
+              },
+              {
+                "height": 6,
+                "width": 12,
+                "y": 0,
+                "x": 0,
+                "type": "metric",
+                "properties": {
+                  "metrics": [
+                    [
+                      {
+                        "expression": "FILL(m1, 0)",
+                        "label": "",
+                        "id": "e1",
+                        "region": "${AWS::Region}",
+                        "period": 900
+                      }
+                    ],
+                    [
+                      "AWS/ApiGateway",
+                      "Count",
+                      "ApiName",
+                      "${Environment}-di-auth-ext-api",
+                      {
+                        "id": "m1",
+                        "visible": false
+                      }
+                    ]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "period": 900,
+                  "stat": "Sum",
+                  "title": "Requests (sum/hr)",
+                  "yAxis": {
+                    "left": {
+                      "label": "Requests",
+                      "showUnits": false
+                    },
+                    "right": {
+                      "showUnits": false
+                    }
+                  }
+                }
+              },
+              {
+                "height": 6,
+                "width": 12,
+                "y": 0,
+                "x": 12,
+                "type": "metric",
+                "properties": {
+                  "metrics": [
+                    [
+                      {
+                        "expression": "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100",
+                        "label": "",
+                        "id": "e2",
+                        "region": "${AWS::Region}",
+                        "period": 900
+                      }
+                    ],
+                    [
+                      "AWS/ApiGateway",
+                      "5XXError",
+                      "ApiName",
+                      "${Environment}-di-auth-ext-api",
+                      {
+                        "id": "m1",
+                        "visible": false
+                      }
+                    ],
+                    [
+                      ".",
+                      "Count",
+                      ".",
+                      ".",
+                      {
+                        "id": "m2",
+                        "visible": false
+                      }
+                    ]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "period": 900,
+                  "stat": "Sum",
+                  "title": "Successful requests",
+                  "yAxis": {
+                    "left": {
+                      "label": "",
+                      "showUnits": false,
+                      "min": 0,
+                      "max": 100
+                    },
+                    "right": {
+                      "showUnits": false
+                    }
+                  },
+                  "setPeriodToTimeRange": true,
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "liveData": false
+                }
+              }
+            ]
+          }
+
+  # ----------------------
+  # /token lambda function
+  # ----------------------
+
+  AuthTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Environment}-auth-token-lambda
+      AutoPublishAlias: active
+      CodeUri: ./auth-external-api/build/distributions/auth-external-api.zip
+      Handler: uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest
+      Environment:
+        Variables:
+          AUTHENTICATION_AUTHORIZATION_CALLBACK_URI: ""
+          AUTHENTICATION_BACKEND_URI: ""
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          ORCHESTRATION_BACKEND_URI: ""
+          ORCH_CLIENT_ID: "orchestrationAuth"
+          ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                orchToAuthSigningPublicKey,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                orchToAuthSigningPublicKey,
+              ]
+          ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                orchStubToAuthSigningPublicKey,
+                DefaultValue: "",
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                orchStubToAuthSigningPublicKey,
+                DefaultValue: "",
+              ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthExternalApiTxMAAuditQueue.QueueUrl
+      LoggingConfig:
+        LogGroup: !Ref AuthTokenFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditEventsSnsPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref DynamoAuthCodeStoreAccessPolicy
+        - !Ref DynamoAccessTokenStoreAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref TxMAAuditQueueAccessPolicy
+      # ProvisionedConcurrencyConfig: !If
+      #   - NotSubEnvironment
+      #   - ProvisionedConcurrentExecutions:
+      #       !FindInMap [
+      #         EnvironmentConfiguration,
+      #         !Ref Environment,
+      #         lambdaMinConcurrency,
+      #         DefaultValue: 1,
+      #       ]
+      #   - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  AuthTokenFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt AuthTokenFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  AuthTokenFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthTokenFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  AuthTokenFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-auth-token-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AuthTokenFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/backend-template.yaml
+
+  AuthTokenFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-auth-token-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AuthTokenFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-auth-token-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthTokenFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Environment}-auth-token-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "auth-token",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub ${Environment}-auth-token-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-auth-token-error-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  AuthTokenFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Environment}-auth-token-lambda. ${RunbookLink}"
+        - ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "auth-token",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub ${Environment}-auth-token-error-rate-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-auth-token-lambda
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-auth-token-lambda
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  AuthTokenFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthTokenFunctionLogGroup
+
+  AuthTokenFunctionScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Condition: NotSubEnvironment
+    # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
+    DependsOn: AuthTokenFunctionAliasactive
+    Properties:
+      MinCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMinConcurrency,
+          DefaultValue: 0,
+        ]
+      MaxCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMaxConcurrency,
+          DefaultValue: 5,
+        ]
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt AuthTokenFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+
+  AuthTokenFunctionAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: NotSubEnvironment
+    DependsOn: AuthTokenFunctionScalableTarget
+    Properties:
+      PolicyName: !Sub "LambdaProvisionedConcurrency:${Environment}-auth-token-lambda"
+      PolicyType: TargetTrackingScaling
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt AuthTokenFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        TargetValue:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaAutoscalingTargetValue,
+            DefaultValue: "0.7",
+          ]
+
+  # -------------------------
+  # /userinfo lambda function
+  # -------------------------
+
+  AuthUserInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Environment}-auth-userinfo-lambda
+      AutoPublishAlias: active
+      CodeUri: ./auth-external-api/build/distributions/auth-external-api.zip
+      Handler: uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          REDIS_KEY: "session"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthExternalApiTxMAAuditQueue.QueueUrl
+      LoggingConfig:
+        LogGroup: !Ref AuthUserInfoFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditEventsSnsPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref DynamoAccessTokenStoreAccessPolicy
+        - !Ref DynamoAuthSessionStoreAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref TxMAAuditQueueAccessPolicy
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+    # TODO
+    # aws_iam_policy.redis_parameter_policy.arn,
+
+  AuthUserInfoFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt AuthUserInfoFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  AuthUserInfoFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthUserInfoFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  AuthUserInfoFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-auth-userinfo-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AuthUserInfoFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/backend-template.yaml
+
+  AuthUserInfoFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-auth-userinfo-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AuthUserInfoFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-auth-userinfo-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthUserInfoFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Environment}-auth-userinfo-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "auth-userinfo",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub ${Environment}-auth-userinfo-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-auth-userinfo-error-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  AuthUserInfoFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Environment}-auth-userinfo-lambda. ${RunbookLink}"
+        - ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "auth-userinfo",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub ${Environment}-auth-userinfo-error-rate-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-auth-userinfo-lambda
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-auth-userinfo-lambda
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  AuthUserInfoFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthUserInfoFunctionLogGroup
+
+  AuthUserInfoFunctionScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Condition: NotSubEnvironment
+    # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
+    DependsOn: AuthUserInfoFunctionAliasactive
+    Properties:
+      MinCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMinConcurrency,
+          DefaultValue: 0,
+        ]
+      MaxCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMaxConcurrency,
+          DefaultValue: 5,
+        ]
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt AuthUserInfoFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+
+  AuthUserInfoFunctionAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: NotSubEnvironment
+    DependsOn: AuthUserInfoFunctionScalableTarget
+    Properties:
+      PolicyName: !Sub "LambdaProvisionedConcurrency:${Environment}-auth-token-lambda"
+      PolicyType: TargetTrackingScaling
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt AuthUserInfoFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        TargetValue:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaAutoscalingTargetValue,
+            DefaultValue: "0.7",
+          ]
+
+  # ----------------
+  # TxMA audit queue
+  # ----------------
+
+  AuthExternalApiTxMAAuditQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-auth-external-api-txma-audit-queue
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AuthExternalApiTxMAAuditDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 70
+      Tags:
+        - Key: Service
+          Value: auth-external-api
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/backend-template.yaml
+
+  AuthExternalApiTxMAAuditQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AuthExternalApiTxMAAuditQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ReceiveMessage
+            Resource:
+              - !GetAtt AuthExternalApiTxMAAuditQueue.Arn
+            Principal:
+              AWS: !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  AuthExternalApiTxMAAuditDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-auth-external-api-txma-audit-dlq
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
+      MessageRetentionPeriod: 604800
+      Tags:
+        - Key: Service
+          Value: auth-external-api
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/backend-template.yaml
+
+  AuthExternalApiTxMAAuditQueueEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for encrypting auth-external-api TxMA audit queue at rest
+      PendingWindowInDays: 30
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowTxmaAccessToKmsAuditEncryptionKey
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+            Action:
+              - kms:Decrypt
+            Resource: "*"
+      Tags:
+        - Key: Service
+          Value: auth-external-api
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/backend-template.yaml
+
+  AuthExternalApiTxMAAuditQueueEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${Environment}-auth-external-api-audit-kms-alias
+      TargetKeyId: !Ref AuthExternalApiTxMAAuditQueueEncryptionKey
+
+  # ----------------
+  # Common Resources
+  # ----------------
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda Security Group permissions ruleset
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          DestinationSecurityGroupId:
+            Fn::ImportValue: !Sub ${VpcStackName}-AWSServicesEndpointSecurityGroupId
+        - Description: Allow outbound traffic to elasticache
+          IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.0.0.0/16
+        - DestinationPrefixListId: pl-b3a742da # See https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html
+          Description: Allow outgoing HTTPS requests to AWS DynamoDB route from security group
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+
+  MainKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS Key that Lambda uses to encrypt and decrypt function's environment variables and logs
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Effect: Allow
+            Principal:
+              Service: !Sub logs.${AWS::Region}.amazonaws.com
+            Action:
+              - kms:Encrypt*
+              - kms:Decrypt*
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:Describe*
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+
+  # ----------------
+  # Managed policies
+  # ----------------
+
+  LambdaBasicExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for Lambda Basic Execution"
+      Path: !Sub /${Environment}/auth-ext-default/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: LoggingFromLambda
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - arn:aws:logs:*:*:*
+          - Sid: ManagingVPCConnection
+            Effect: Allow
+            Action:
+              - ec2:DescribeNetworkInterfaces
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+            Condition:
+              ArnLikeIfExists:
+                ec2:Vpc: !Sub
+                  - arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc/${VpcId}
+                  - VpcId:
+                      Fn::ImportValue: !Sub "${VpcStackName}-VpcId"
+          - Sid: XRay
+            Effect: Allow
+            Action: xray:*
+            Resource: "*"
+
+  AuditEventsSnsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing KMS connection for a lambda"
+      Path: !Sub /${Environment}/auth-ext-default/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: GiveEventsSnsTopicPolicyPublish
+            Effect: Allow
+            Action:
+              - SNS:Publish
+              - SNS:RemovePermission
+              - SNS:SetTopicAttributes
+              - SNS:DeleteTopic
+              - SNS:ListSubscriptionsByTopic
+              - SNS:GetTopicAttributes
+              - SNS:Receive
+              - SNS:AddPermission
+              - SNS:Subscribe
+            Resource: !Sub
+              - arn:aws:sns:${AWS::Region}:${DataStoreAccountId}:${Env}-events
+              - DataStoreAccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    dataStoreAccountId,
+                  ]
+                Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowLambdasToEncryptWithCustomKey
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                eventsTopicEncryptionKey,
+              ]
+
+  AuditSigningKeyLambdaKmsSigningPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
+      Path: !Sub /${Environment}/auth-ext-default/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToKmsAuditSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+              - kms:Verify
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                auditPayloadSigningKey,
+              ]
+
+  DynamoAuthCodeStoreAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read and write permissions to the Dynamo Auth Code table"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToAuthCodeTableKmsEncryptionKey
+            Effect: Allow
+            Action: kms:Decrypt*
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authCodeStoreSigningKey,
+              ]
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-auth-code-store
+              - DataStoreAccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    dataStoreAccountId,
+                  ]
+                Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  DynamoAccessTokenStoreAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read and write permissions to the Dynamo Access Token Store table"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToAccessTokenStoreKmsSigningKey
+            Effect: Allow
+            Action: kms:Decrypt*
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                accessTokenStoreSigningKey,
+              ]
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-access-token-store
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-access-token-store/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  DynamoUserReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the Dynamo User tables"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-user-profile/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-user-profile
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-user-credentials/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-user-credentials
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    userProfileTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    userProfileTableEncryptionKey,
+                  ]
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    userCredentialsTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    userCredentialsTableEncryptionKey,
+                  ]
+
+  DynamoAuthSessionStoreAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read and write permissions to the auth session table"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-auth-session
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-auth-session/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authSessionTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authSessionTableEncryptionKey,
+                  ]
+
+  TxMAAuditQueueAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM Policy for write access to the TxMA audit queue"
+      Path: !Sub /${Environment}/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToTxmaAuditQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt AuthExternalApiTxMAAuditQueue.Arn
+          - Sid: AllowAccessToKeyForEncryptingPayloads
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
