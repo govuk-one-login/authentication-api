@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenErrorResponse;
@@ -84,6 +85,7 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -159,6 +161,7 @@ class IPVCallbackHandlerTest {
     private static final String PERSISTENT_SESSION_ID =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final String TEST_PHONE_NUMBER = "012345678902";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final State RP_STATE = new State();
     private static final URI IPV_URI = URI.create("http://ipv/");
@@ -174,6 +177,7 @@ class IPVCallbackHandlerTest {
     private IPVCallbackHandler handler;
     private static final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+    private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private final URI accessDeniedURI =
             new AuthenticationErrorResponse(
@@ -184,6 +188,7 @@ class IPVCallbackHandlerTest {
                     .toURI();
     private final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
     private final UserProfile userProfile = generateUserProfile();
+    private final UserInfo authUserInfo = generateAuthUserInfo();
 
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
@@ -321,10 +326,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled()
-            throws UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException, ParseException {
         when(configService.isIdentityEnabled()).thenReturn(false);
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
         var response = handler.handleRequest(request, context);
@@ -335,9 +341,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldMakeAISCallAndReturnAccessDeniedErrorToRPWhenP0()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -379,8 +387,11 @@ class IPVCallbackHandlerTest {
             ClientRegistry clientRegistry, OIDCClaimsRequest claimsRequest, URI expectedURI)
             throws UnsuccessfulCredentialResponseException,
                     IpvCallbackException,
-                    UserNotFoundException {
+                    UserNotFoundException,
+                    ParseException {
         usingValidSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -452,8 +463,11 @@ class IPVCallbackHandlerTest {
         void shouldCallHelperWithFeatureFlag(boolean isFlagEnabled)
                 throws UnsuccessfulCredentialResponseException,
                         IpvCallbackException,
-                        UserNotFoundException {
+                        UserNotFoundException,
+                        ParseException {
             usingValidSession();
+            usingValidAuthUserInfo();
+
             var claimsSetRequest =
                     new ClaimsSetRequest()
                             .add(ValidClaims.ADDRESS.getValue())
@@ -544,8 +558,11 @@ class IPVCallbackHandlerTest {
     void shouldReturnAuthCodeToRPWhenP0AndReturnCodePresentPermittedAndRequested()
             throws UnsuccessfulCredentialResponseException,
                     IpvCallbackException,
-                    UserNotFoundException {
+                    UserNotFoundException,
+                    ParseException {
         usingValidSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -615,7 +632,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         new AuthenticationSuccessResponse(
                                 FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));
-
         var response =
                 makeHandlerRequest(
                         getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry));
@@ -641,9 +657,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldNotInvokeSPOTAndReturnAccessDeniedErrorToRPWhenP0()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -680,9 +698,10 @@ class IPVCallbackHandlerTest {
     @MethodSource("additionalClaims")
     void shouldInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2(
             Map<String, String> additionalClaims)
-            throws Json.JsonException, UnsuccessfulCredentialResponseException {
+            throws Json.JsonException, UnsuccessfulCredentialResponseException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         Map<String, Object> userIdentityAdditionalClaims = new HashMap<>();
 
@@ -736,9 +755,11 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldNotInvokeSPOTAndShouldRedirectToFrontendErrorPageWhenVTMMismatch()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var userIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -790,7 +811,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() {
+    void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() throws ParseException {
         usingValidSession();
         usingValidClientSession();
         Map<String, String> responseHeaders = new HashMap<>();
@@ -806,6 +827,9 @@ class IPVCallbackHandlerTest {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.setQueryStringParameters(responseHeaders);
         request.setHeaders(Map.of(COOKIE, buildCookieString()));
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.empty());
 
         var response = handler.handleRequest(request, context);
         assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
@@ -816,9 +840,10 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails()
-            throws UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         var claims =
                 new HashMap<String, Object>(
@@ -849,9 +874,12 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldMakeAISCallBeforeRedirectingToRpWhenAuthResponseContainsError() {
+    void shouldMakeAISCallBeforeRedirectingToRpWhenAuthResponseContainsError()
+            throws ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -890,9 +918,11 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToRpWhenAuthResponseContainsError() {
+    void shouldRedirectToRpWhenAuthResponseContainsError() throws ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -926,8 +956,10 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() {
+    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() throws ParseException {
         usingValidSession();
+        usingValidAuthUserInfo();
+
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -947,9 +979,10 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound()
-            throws UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
 
@@ -964,12 +997,14 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
+    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() throws ParseException {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
         var clientRegistry = generateClientRegistryNoClaims();
         var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var unsuccessfulTokenResponse =
                 new TokenErrorResponse(new ErrorObject("Test error response"));
         Map<String, String> responseHeaders = new HashMap<>();
@@ -983,6 +1018,9 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(authUserInfo));
 
         var request = new APIGatewayProxyRequestEvent();
         request.setQueryStringParameters(responseHeaders);
@@ -1001,9 +1039,10 @@ class IPVCallbackHandlerTest {
     @Test
     void
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
-                    throws NoSessionException {
+                    throws NoSessionException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put("state", STATE.getValue());
@@ -1040,9 +1079,10 @@ class IPVCallbackHandlerTest {
     @Test
     void
             shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
-                    throws NoSessionException {
+                    throws NoSessionException, ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
 
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
@@ -1083,9 +1123,11 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldLogoutUserWhenAISReturnsBlockedAccountInAuthStep() {
+    void shouldLogoutUserWhenAISReturnsBlockedAccountInAuthStep() throws ParseException {
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -1119,12 +1161,15 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldLogoutUserWhenAISReturnsBlockedAccountInTokenStep() throws IpvCallbackException {
+    void shouldLogoutUserWhenAISReturnsBlockedAccountInTokenStep()
+            throws IpvCallbackException, ParseException {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
         var clientRegistry = generateClientRegistryNoClaims();
         var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
+        usingValidAuthUserInfo();
+
         when(ipvCallbackHelper.validateUserIdentityResponse(any(), eq(VTR_LIST)))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         Map<String, String> responseHeaders = new HashMap<>();
@@ -1192,14 +1237,38 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(orchClientSession));
     }
 
+    private void usingValidAuthUserInfo() throws ParseException {
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(authUserInfo));
+    }
+
     private UserProfile generateUserProfile() {
         return new UserProfile()
                 .withEmail(TEST_EMAIL_ADDRESS)
                 .withEmailVerified(true)
-                .withPhoneNumber("012345678902")
+                .withPhoneNumber(TEST_PHONE_NUMBER)
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
                 .withSubjectID(TEST_SUBJECT.getValue());
+    }
+
+    private UserInfo generateAuthUserInfo() {
+        return new UserInfo(
+                new JSONObject(
+                        Map.of(
+                                "sub",
+                                TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                                "client_session_id",
+                                CLIENT_SESSION_ID,
+                                "email",
+                                TEST_EMAIL_ADDRESS,
+                                "phone_number",
+                                TEST_PHONE_NUMBER,
+                                "salt",
+                                BASE_64_ENCODED_SALT,
+                                "local_account_id",
+                                TEST_SUBJECT.getValue())));
     }
 
     private static ClientRegistry generateClientRegistryNoClaims() {
