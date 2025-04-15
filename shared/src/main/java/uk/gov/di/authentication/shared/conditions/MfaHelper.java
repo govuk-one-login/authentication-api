@@ -51,16 +51,14 @@ public class MfaHelper {
     }
 
     public static UserMfaDetail getUserMFADetail(
-            UserContext userContext,
-            UserCredentials userCredentials,
-            String phoneNumber,
-            boolean isPhoneNumberVerified,
-            UserProfile userProfile) {
+            UserContext userContext, UserCredentials userCredentials, UserProfile userProfile) {
         var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
         if (userProfile.getMfaMethodsMigrated()) {
             var defaultMethod = getDefaultMfaMethodForMigratedUser(userCredentials).get(); // TODO
-            var phoneNumberForMigratedMethod = phoneNumber;
-            var isPhoneNumberVerifiedForMigratedMethod = isPhoneNumberVerified;
+            var phoneNumberForMigratedMethod =
+                    userProfile.getPhoneNumber(); // TODO don't return for auth app
+            var isPhoneNumberVerifiedForMigratedMethod =
+                    userProfile.isPhoneNumberVerified(); // TODO don't return for auth app
             if (defaultMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
                 phoneNumberForMigratedMethod = defaultMethod.getDestination();
                 isPhoneNumberVerifiedForMigratedMethod = defaultMethod.isMethodVerified();
@@ -77,16 +75,22 @@ public class MfaHelper {
         if (enabledMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             LOG.info("User has verified method from user credentials");
             var mfaMethodType = MFAMethodType.valueOf(enabledMethod.get().getMfaMethodType());
-            return new UserMfaDetail(isMfaRequired, true, mfaMethodType, phoneNumber);
-        } else if (!isPhoneNumberVerified && enabledMethod.isPresent()) {
+            return new UserMfaDetail(
+                    isMfaRequired, true, mfaMethodType, userProfile.getPhoneNumber());
+        } else if (!userProfile.isPhoneNumberVerified() && enabledMethod.isPresent()) {
             LOG.info("Unverified auth app mfa method present and no verified phone number");
             var mfaMethodType = MFAMethodType.valueOf(enabledMethod.get().getMfaMethodType());
-            return new UserMfaDetail(isMfaRequired, false, mfaMethodType, phoneNumber);
+            return new UserMfaDetail(
+                    isMfaRequired, false, mfaMethodType, userProfile.getPhoneNumber());
         } else {
-            var mfaMethodType = isPhoneNumberVerified ? MFAMethodType.SMS : MFAMethodType.NONE;
+            var mfaMethodType =
+                    userProfile.isPhoneNumberVerified() ? MFAMethodType.SMS : MFAMethodType.NONE;
             LOG.info("User has mfa method {}", mfaMethodType);
             return new UserMfaDetail(
-                    isMfaRequired, isPhoneNumberVerified, mfaMethodType, phoneNumber);
+                    isMfaRequired,
+                    userProfile.isPhoneNumberVerified(),
+                    mfaMethodType,
+                    userProfile.getPhoneNumber());
         }
     }
 }
