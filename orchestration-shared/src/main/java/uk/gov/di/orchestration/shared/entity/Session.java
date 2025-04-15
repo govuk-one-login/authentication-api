@@ -112,19 +112,6 @@ public class Session {
         return this;
     }
 
-    public int getProcessingIdentityAttempts() {
-        return processingIdentityAttempts;
-    }
-
-    public void resetProcessingIdentityAttempts() {
-        this.processingIdentityAttempts = 0;
-    }
-
-    public int incrementProcessingIdentityAttempts() {
-        this.processingIdentityAttempts += 1;
-        return processingIdentityAttempts;
-    }
-
     private void initializeCodeRequestMap() {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);

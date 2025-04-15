@@ -292,7 +292,6 @@ public class IdentityProgressFrontendHandlerTest {
                                         CLIENT_NAME,
                                         REDIRECT_URI,
                                         STATE))));
-        assertThat(session.getProcessingIdentityAttempts(), equalTo(0));
         assertThat(orchSession.getProcessingIdentityAttempts(), equalTo(0));
         verify(cloudwatchMetricsService)
                 .incrementCounter(

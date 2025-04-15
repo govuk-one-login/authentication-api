@@ -9,7 +9,6 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 class AuthOrchSerializationServicesIntegrationTest {
@@ -89,18 +88,6 @@ class AuthOrchSerializationServicesIntegrationTest {
     }
 
     @Test
-    void orchCanReadUnsharedFieldAfterAuthUpdatesSession() {
-        var orchSession = orchSessionService.generateSession();
-        orchSession.incrementProcessingIdentityAttempts();
-        orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
-        var authSession = authSessionService.getSession(SESSION_ID).get();
-        authSession.addClientSession(CLIENT_SESSION_ID);
-        authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
-        orchSession = orchSessionService.getSession(SESSION_ID).get();
-        assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));
-    }
-
-    @Test
     void authCanReadSessionAfterSessionIdIsUpdated() {
         var oldSessionId = SESSION_ID;
         var newSessionId = "new-session-id";
@@ -119,12 +106,10 @@ class AuthOrchSerializationServicesIntegrationTest {
     void authCanResetSharedFieldsWithoutOverridingUnsharedFields() {
         var orchSession = orchSessionService.generateSession();
         orchSession.addClientSession(CLIENT_SESSION_ID);
-        orchSession.incrementProcessingIdentityAttempts();
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = new Session();
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertThat(orchSession.getClientSessions(), is(empty()));
-        assertThat(orchSession.getProcessingIdentityAttempts(), is(equalTo(1)));
     }
 }
