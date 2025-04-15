@@ -53,6 +53,8 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +100,7 @@ class IPVCallbackHelperTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final String TEST_PHONE_NUMBER = "012345678902";
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final Subject SUBJECT = new Subject("subject-id");
@@ -105,6 +108,9 @@ class IPVCallbackHelperTest {
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID_WITH_INTERVENTION =
             "internal-common-subject-id-with-intervention";
+    private static final byte[] salt =
+            "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+    private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
     private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2 =
             List.of(
                     VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
@@ -121,6 +127,8 @@ class IPVCallbackHelperTest {
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final Long AUTH_TIME = 1234L;
     private static final UserProfile userProfile = generateUserProfile();
+    private static final UserInfo authUserInfo = generateAuthUserInfo();
+
     private static final UserInfo p0VotUserIdentityUserInfo =
             new UserInfo(
                     new JSONObject(
@@ -454,10 +462,28 @@ class IPVCallbackHelperTest {
         return new UserProfile()
                 .withEmail(TEST_EMAIL_ADDRESS)
                 .withEmailVerified(true)
-                .withPhoneNumber("012345678902")
+                .withPhoneNumber(TEST_PHONE_NUMBER)
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
                 .withSubjectID(SUBJECT.getValue());
+    }
+
+    private static UserInfo generateAuthUserInfo() {
+        return new UserInfo(
+                new JSONObject(
+                        Map.of(
+                                "sub",
+                                TEST_INTERNAL_COMMON_SUBJECT_ID,
+                                "client_session_id",
+                                CLIENT_SESSION_ID,
+                                "email",
+                                TEST_EMAIL_ADDRESS,
+                                "phone_number",
+                                TEST_PHONE_NUMBER,
+                                "salt",
+                                BASE_64_ENCODED_SALT,
+                                "local_account_id",
+                                SUBJECT.getValue())));
     }
 
     public static AuthenticationRequest generateAuthRequest(OIDCClaimsRequest oidcClaimsRequest) {
