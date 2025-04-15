@@ -233,13 +233,12 @@ class AccountInterventionsHandlerTest {
     void
             shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsServiceActionDisabledAndAccountHasInterventions()
                     throws UnsuccessfulAccountInterventionsResponseException {
+        usingValidSession(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -256,13 +255,12 @@ class AccountInterventionsHandlerTest {
     @CsvSource({"true", "false"})
     void checkInvokesTICFLambdaWhenFeatureSwitchOn(boolean featureSwitch)
             throws UnsuccessfulAccountInterventionsResponseException {
+        usingValidSession(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(featureSwitch);
 
@@ -291,14 +289,14 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
                 Arguments.of(
                         false,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
 
                 // Testing initial registration combinations
                 Arguments.of(
@@ -307,14 +305,14 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
                 Arguments.of(
                         false,
                         AccountState.NEW,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":false,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":false,\"accountState\":\"NEW\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
 
                 // Testing password reset combinations
                 Arguments.of(
@@ -323,14 +321,14 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.SUCCEEDED,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"SUCCEEDED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"SUCCEEDED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
                 Arguments.of(
                         false,
                         AccountState.EXISTING,
                         ResetPasswordState.ATTEMPTED,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"ATTEMPTED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"ATTEMPTED\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
 
                 // Testing mfa reset combinations
                 Arguments.of(
@@ -339,21 +337,21 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.SUCCEEDED,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"SUCCEEDED\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"SUCCEEDED\",\"mfaMethodType\":\"NONE\"}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.ATTEMPTED,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\"}"),
                 Arguments.of(
                         false,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.ATTEMPTED,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":false,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"ATTEMPTED\",\"mfaMethodType\":\"NONE\"}"),
 
                 // Testing mfa method combinations
                 Arguments.of(
@@ -362,28 +360,28 @@ class AccountInterventionsHandlerTest {
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.NONE,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"NONE\"}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.EMAIL,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"EMAIL\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"EMAIL\"}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.SMS,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"SMS\"}"),
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"SMS\"}"),
                 Arguments.of(
                         true,
                         AccountState.EXISTING,
                         ResetPasswordState.NONE,
                         ResetMfaState.NONE,
                         MFAMethodType.AUTH_APP,
-                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"AUTH_APP\"}"));
+                        "{\"internalCommonSubjectIdentifier\":\"urn:fdc:gov.uk:2022:mSm2hCZ-klPlOON7Z_KbaheBxJu88nDWbUn7fR6xD2g\",\"vtr\":[\"Cl\"],\"authenticated\":true,\"accountState\":\"EXISTING\",\"resetPasswordState\":\"NONE\",\"resetMfaState\":\"NONE\",\"mfaMethodType\":\"AUTH_APP\"}"));
     }
 
     @ParameterizedTest
@@ -396,20 +394,20 @@ class AccountInterventionsHandlerTest {
             MFAMethodType usedMfaMethodType,
             String expectedPayload)
             throws UnsuccessfulAccountInterventionsResponseException {
+        usingValidSession(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
         var authSessionWithChanges =
                 authSession
                         .withAccountState(accountState)
                         .withResetPasswordState(resetPasswordState)
                         .withResetMfaState(resetMfaState)
-                        .withVerifiedMfaMethodType(usedMfaMethodType);
+                        .withVerifiedMfaMethodType(usedMfaMethodType)
+                        .withRequestedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSessionWithChanges));
 
@@ -429,13 +427,12 @@ class AccountInterventionsHandlerTest {
     @MethodSource("authenticatedUserSource")
     void checkDoesNotInvokesTICFLambdaForUsersWithUnknownAuthenticationStatus(Boolean authenticated)
             throws UnsuccessfulAccountInterventionsResponseException {
+        usingValidSession(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
 
@@ -458,13 +455,12 @@ class AccountInterventionsHandlerTest {
     @Test
     void checkMissingVTRDoesNotImpactUserJourney()
             throws UnsuccessfulAccountInterventionsResponseException {
+        usingValidSession(CredentialTrustLevel.LOW_LEVEL);
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
         when(userContext.getClientSession()).thenReturn(null);
@@ -565,6 +561,7 @@ class AccountInterventionsHandlerTest {
             boolean resetPassword,
             FrontendAuditableEvent expectedEvent)
             throws UnsuccessfulAccountInterventionsResponseException {
+        usingValidSession(CredentialTrustLevel.LOW_LEVEL);
         var event = apiRequestEventWithEmail();
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
@@ -572,9 +569,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(
                         generateAccountInterventionResponse(
                                 blocked, suspended, reproveIdentity, resetPassword));
-
-        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
 
@@ -677,6 +671,11 @@ class AccountInterventionsHandlerTest {
                         .build();
         return new ClientSession(
                 authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+    }
+
+    private void usingValidSession(CredentialTrustLevel credentialTrustLevel) {
+        when(userContext.getAuthSession())
+                .thenReturn(authSession.withRequestedCredentialStrength(credentialTrustLevel));
     }
 
     private static Stream<Arguments> httpErrorCodesAndAssociatedResponses() {

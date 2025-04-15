@@ -22,6 +22,7 @@ import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -98,8 +99,12 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = new Session();
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private static final String CLIENT_ID = "test-client-id";
+    private final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
+                    .withClientId(CLIENT_ID);
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";

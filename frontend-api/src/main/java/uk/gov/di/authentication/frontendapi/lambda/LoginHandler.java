@@ -300,7 +300,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var userMfaDetail =
                 getUserMFADetail(
-                        userContext,
+                        authSessionItem.getRequestedCredentialStrength(),
                         userCredentials,
                         userProfile.getPhoneNumber(),
                         userProfile.isPhoneNumberVerified());

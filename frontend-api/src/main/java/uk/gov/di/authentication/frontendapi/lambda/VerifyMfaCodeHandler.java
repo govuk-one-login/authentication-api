@@ -399,11 +399,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             AuthSessionItem authSession,
             Session session) {
-        var clientSession = userContext.getClientSession();
         var levelOfConfidence =
-                clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
-                        ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
-                        : NONE;
+                Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
         LOG.info(
                 "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",

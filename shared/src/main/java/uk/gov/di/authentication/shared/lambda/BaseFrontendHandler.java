@@ -214,11 +214,7 @@ public abstract class BaseFrontendHandler<T>
 
         userContextBuilder.withClientSessionId(clientSessionId);
 
-        var clientID =
-                clientSession
-                        .map(ClientSession::getAuthRequestParams)
-                        .map(t -> t.get(CLIENT_ID))
-                        .flatMap(v -> v.stream().findFirst());
+        var clientID = Optional.ofNullable(authSession.get().getClientId());
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 
