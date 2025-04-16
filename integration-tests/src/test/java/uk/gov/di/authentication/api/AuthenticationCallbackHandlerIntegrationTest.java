@@ -945,7 +945,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupMaxAgeSession() throws Json.JsonException {
             var session = new Session();
-            session.addClientSession(CLIENT_SESSION_ID);
             redis.addSessionWithId(session, SESSION_ID);
             redis.addStateToRedis(
                     AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
@@ -968,7 +967,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     NowHelper.nowMinus(1, ChronoUnit.HOURS)
                                             .toInstant()
                                             .getEpochSecond());
-            PREVIOUS_CLIENT_SESSIONS.forEach(session::addClientSession);
             PREVIOUS_CLIENT_SESSIONS.forEach(orchSession::addClientSession);
             redis.addSessionWithId(session, PREVIOUS_SESSION_ID);
             redis.addStateToRedis(
