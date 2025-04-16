@@ -313,7 +313,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, session),
+                            new DestroySessionsRequest(sessionId, session, orchSession),
                             orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId,
@@ -432,7 +432,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, session),
+                            new DestroySessionsRequest(sessionId, session, orchSession),
                             orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId,
