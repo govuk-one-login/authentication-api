@@ -585,6 +585,7 @@ public class AuthorisationHandler
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
 
         session.addClientSession(clientSessionId);
+        orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session, newSessionId);
@@ -745,9 +746,11 @@ public class AuthorisationHandler
         orchClientSessionService.storeClientSession(orchClientSession);
 
         session.addClientSession(clientSessionId);
+        orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session, newSessionId);
+        orchSessionService.updateSession(orchSession);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
                 newSessionId,
