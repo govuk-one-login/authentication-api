@@ -526,7 +526,7 @@ public class AuthenticationCallbackHandler
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    new DestroySessionsRequest(sessionId, session),
+                                    new DestroySessionsRequest(sessionId, session, orchSession),
                                     orchSession.getInternalCommonSubjectId(),
                                     input,
                                     clientId,
@@ -535,7 +535,7 @@ public class AuthenticationCallbackHandler
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        new DestroySessionsRequest(sessionId, session),
+                                        new DestroySessionsRequest(sessionId, session, orchSession),
                                         orchSession.getInternalCommonSubjectId(),
                                         input,
                                         clientId,
@@ -851,7 +851,7 @@ public class AuthenticationCallbackHandler
 
         if (exception.getLogoutRequired()) {
             return logoutService.handleReauthenticationFailureLogout(
-                    new DestroySessionsRequest(sessionId, session),
+                    new DestroySessionsRequest(sessionId, session, orchSession),
                     orchSession.getInternalCommonSubjectId(),
                     input,
                     authenticationRequest.getClientID().getValue(),
@@ -939,7 +939,10 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
             logoutService.handleMaxAgeLogout(
-                    new DestroySessionsRequest(previousSessionId, previousSharedSession.get()),
+                    new DestroySessionsRequest(
+                            previousSessionId,
+                            previousSharedSession.get(),
+                            previousOrchSession.get()),
                     previousOrchSession.get(),
                     user);
         }

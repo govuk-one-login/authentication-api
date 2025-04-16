@@ -163,6 +163,10 @@ class AuthenticationCallbackHandlerTest {
                     .setAuthenticated(false)
                     .setCurrentCredentialStrength(null)
                     .setEmailAddress(TEST_EMAIL_ADDRESS);
+    public static final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID)
+                    .withAuthenticated(false)
+                    .withCurrentCredentialStrength(null);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -298,6 +302,7 @@ class AuthenticationCallbackHandlerTest {
                         authFrontend,
                         noSessionOrchestrationService);
         session.resetClientSessions();
+        orchSession.resetClientSessions();
     }
 
     @Test
@@ -512,7 +517,7 @@ class AuthenticationCallbackHandlerTest {
                                         SESSION_ID,
                                         List.of(CLIENT_SESSION_ID),
                                         TEST_EMAIL_ADDRESS)),
-                        eq(null),
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_ID),
                         eq(event),
                         eq(CLIENT_ID.toString()),
                         any());
@@ -1464,12 +1469,7 @@ class AuthenticationCallbackHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
-        when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new OrchSessionItem(SESSION_ID)
-                                        .withAuthenticated(false)
-                                        .withCurrentCredentialStrength(null)));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
     private void usingValidClientSession() {
@@ -1477,7 +1477,7 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(Optional.of(clientSession));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSession));
-        session.addClientSession(CLIENT_SESSION_ID);
+        orchSession.addClientSession(CLIENT_SESSION_ID);
     }
 
     private void usingValidClient() {
