@@ -42,7 +42,6 @@ import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -427,7 +426,7 @@ public class AuthenticationCallbackHandler
                 if (configurationService.supportMaxAgeEnabled()
                         && Objects.nonNull(orchSession.getPreviousSessionId())) {
                     LOG.info("Previous session id is present - handling max age");
-                    handleMaxAgeSession(session, orchSession, user);
+                    handleMaxAgeSession(orchSession, user);
                 }
 
                 session.setAuthenticated(true);
@@ -867,8 +866,7 @@ public class AuthenticationCallbackHandler
         orchSessionService.updateSession(updatedOrchSession);
     }
 
-    private void handleMaxAgeSession(
-            Session currentSharedSession, OrchSessionItem currentOrchSession, TxmaAuditUser user) {
+    private void handleMaxAgeSession(OrchSessionItem currentOrchSession, TxmaAuditUser user) {
         var previousSessionId = currentOrchSession.getPreviousSessionId();
         var previousSharedSession = sessionService.getSession(previousSessionId);
         var previousOrchSession = orchSessionService.getSession(previousSessionId);
@@ -887,10 +885,6 @@ public class AuthenticationCallbackHandler
                 .getInternalCommonSubjectId()
                 .equals(previousInternalCommonSubjectId)) {
             LOG.info("Previous OrchSession InternalCommonSubjectId matches Auth UserInfo response");
-            previousSharedSession
-                    .get()
-                    .getClientSessions()
-                    .forEach(currentSharedSession::addClientSession);
 
             previousOrchSession
                     .get()
