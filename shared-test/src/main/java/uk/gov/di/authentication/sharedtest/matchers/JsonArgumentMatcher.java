@@ -1,24 +1,40 @@
 package uk.gov.di.authentication.sharedtest.matchers;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import org.mockito.ArgumentMatcher;
 
 public class JsonArgumentMatcher implements ArgumentMatcher<String> {
 
-    private final JsonElement expected;
+    private final JsonObject expected;
+    private final String[] fieldsToIgnore;
+    private static final Gson gson = new Gson();
 
-    public JsonArgumentMatcher(String expected) {
-        this.expected = JsonParser.parseString(expected);
+    private static JsonObject parseJson(String json) {
+        return gson.fromJson(json, JsonObject.class);
+    }
+
+    private JsonObject removeFieldsFromJson(JsonObject json) {
+        for (String fieldToIgnore : this.fieldsToIgnore) {
+            json.remove(fieldToIgnore);
+        }
+        return json;
+    }
+
+    public JsonArgumentMatcher(String expected, String... fieldsToIgnore) {
+        this.fieldsToIgnore = fieldsToIgnore;
+        this.expected = removeFieldsFromJson(parseJson(expected));
     }
 
     @Override
     public boolean matches(String argument) {
-        var actual = JsonParser.parseString(argument);
+        var actual = removeFieldsFromJson(parseJson(argument));
+
         return actual.equals(expected);
     }
 
-    public static JsonArgumentMatcher containsJsonString(String expected) {
-        return new JsonArgumentMatcher(expected);
+    public static JsonArgumentMatcher partiallyContainsJsonString(
+            String expected, String... fieldsToIgnore) {
+        return new JsonArgumentMatcher(expected, fieldsToIgnore);
     }
 }

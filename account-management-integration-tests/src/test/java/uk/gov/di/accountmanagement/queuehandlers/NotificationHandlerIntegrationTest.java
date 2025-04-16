@@ -2,8 +2,8 @@ package uk.gov.di.accountmanagement.queuehandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.NotificationHandler;
-import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
@@ -14,8 +14,8 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasField;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 
@@ -31,7 +31,8 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE, SupportedLanguage.EN);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE, SupportedLanguage.EN, false, null);
 
         handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
 
@@ -54,7 +55,12 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     void shouldCallNotifyWhenValidPhoneNumberRequestIsAddedToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE, SupportedLanguage.EN);
+                        TEST_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        CODE,
+                        SupportedLanguage.EN,
+                        false,
+                        null);
 
         handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
 
