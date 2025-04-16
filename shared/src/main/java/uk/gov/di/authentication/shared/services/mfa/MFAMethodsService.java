@@ -157,10 +157,6 @@ public class MFAMethodsService {
 
     public Result<MfaCreateFailureReason, MfaMethodData> addBackupMfa(
             String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
-        if (mfaMethod.priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            return Result.failure(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER);
-        }
-
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
         Result<MfaRetrieveFailureReason, List<MfaMethodData>> mfaMethodsResult =
                 getMfaMethodsForMigratedUser(userCredentials);

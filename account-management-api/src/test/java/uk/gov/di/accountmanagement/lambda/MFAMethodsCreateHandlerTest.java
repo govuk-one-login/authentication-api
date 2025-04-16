@@ -285,6 +285,20 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
+    void shouldReturn400WhenRequestToCreateNewDefault() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.DEFAULT,
+                        new SmsMfaDetail(TEST_PHONE_NUMBER),
+                        TEST_INTERNAL_SUBJECT);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1080));
+    }
+
+    @Test
     void shouldReturn400WhenMfaMethodServiceReturnsBackupAndDefaultExistError() {
         var event =
                 generateApiGatewayEvent(

@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MfaMethodCreateOrUpdateRequest;
@@ -107,14 +108,17 @@ public class MFAMethodsCreateHandler
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
 
+            if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier()
+                    == PriorityIdentifier.DEFAULT) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1080);
+            }
+
             Result<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
                     mfaMethodsService.addBackupMfa(
                             userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
             if (addBackupMfaResult.isFailure()) {
                 return switch (addBackupMfaResult.getFailure()) {
-                    case INVALID_PRIORITY_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1001);
                     case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1068);
                     case PHONE_NUMBER_ALREADY_EXISTS -> generateApiGatewayProxyErrorResponse(

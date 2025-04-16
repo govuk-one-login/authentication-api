@@ -523,24 +523,6 @@ class MFAMethodsServiceIntegrationTest {
         }
 
         @Test
-        void shouldErrorWhenPriorityIdentifierIsDefault() {
-            userStoreExtension.addAuthAppMethod(
-                    MFAMethodsServiceIntegrationTest.EMAIL, true, true, AUTH_APP_CREDENTIAL);
-            SmsMfaDetail smsMfaDetail = new SmsMfaDetail(PHONE_NUMBER);
-
-            MfaMethodCreateOrUpdateRequest request =
-                    new MfaMethodCreateOrUpdateRequest(
-                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
-                                    PriorityIdentifier.DEFAULT, smsMfaDetail));
-
-            var result =
-                    mfaMethodsService.addBackupMfa(
-                            MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
-
-            assertEquals(MfaCreateFailureReason.INVALID_PRIORITY_IDENTIFIER, result.getFailure());
-        }
-
-        @Test
         void shouldReturnAtMaximumMfaErrorWhenAddingBackupWithTwoExistingMfaMethods() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
