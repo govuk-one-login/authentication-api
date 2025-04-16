@@ -11,10 +11,6 @@ public class DestroySessionsRequest {
         this(sessionId, orchSession.getClientSessions());
     }
 
-    public DestroySessionsRequest(String sessionId, Session session) {
-        this(sessionId, session.getClientSessions());
-    }
-
     public DestroySessionsRequest(String sessionId, List<String> clientSessions) {
         this.sessionId = sessionId;
         this.clientSessions = clientSessions;
