@@ -39,7 +39,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -91,8 +90,6 @@ class DocAppCallbackHandlerTest {
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
-    private static final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
@@ -139,16 +136,8 @@ class DocAppCallbackHandlerTest {
 
     @BeforeEach
     void setUp() {
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        CLIENT_ID.getValue(), CLIENT_SESSION_ID, null, null))
-                .thenReturn(AUTH_CODE);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        eq(null)))
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null)))
                 .thenReturn(AUTH_CODE);
 
         handler =
@@ -159,7 +148,6 @@ class DocAppCallbackHandlerTest {
                         orchClientSessionService,
                         auditService,
                         dynamoDocAppService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
@@ -642,24 +630,13 @@ class DocAppCallbackHandlerTest {
     }
 
     private void assertAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null));
-
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        eq(AUTH_CODE),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        eq(null));
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null));
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
-
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any(), any());
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
     }
 }
