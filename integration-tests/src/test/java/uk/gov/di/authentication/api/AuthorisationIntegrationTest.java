@@ -1992,10 +1992,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
     }
 
-    private String givenAnExistingSessionWithClientSession(String clientSessionId)
-            throws Json.JsonException {
-        var sessionId = redis.createSession();
-        redis.addClientSessionIdToSession(clientSessionId, sessionId);
+    private String givenAnExistingSessionWithClientSession(String clientSessionId) {
+        var sessionId = IdGenerator.generate();
+        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
+        orchSessionExtension.addClientSessionIdToSession(sessionId, clientSessionId);
         return sessionId;
     }
 
