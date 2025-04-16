@@ -275,12 +275,12 @@ class ResetPasswordRequestHandlerTest {
                             new UserCredentials()
                                     .withMfaMethods(
                                             List.of(
-                                                    MFAMethod.
-                                                            smsMfaMethod(true,
-                                                                    true,
-                                                                    CommonTestVariables.UK_MOBILE_NUMBER,
-                                                                    PriorityIdentifier.DEFAULT, "1"))));
-
+                                                    MFAMethod.smsMfaMethod(
+                                                            true,
+                                                            true,
+                                                            CommonTestVariables.UK_MOBILE_NUMBER,
+                                                            PriorityIdentifier.DEFAULT,
+                                                            "1"))));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
@@ -313,13 +313,12 @@ class ResetPasswordRequestHandlerTest {
                             new UserCredentials()
                                     .withMfaMethods(
                                             List.of(
-                                                    MFAMethod.
-                                                            authAppMfaMethod("cred",
-                                                                    true,
-                                                                    true,
-                                                                    PriorityIdentifier.DEFAULT,
-                                                                    "auth-app-id"))));
-
+                                                    MFAMethod.authAppMfaMethod(
+                                                            "cred",
+                                                            true,
+                                                            true,
+                                                            PriorityIdentifier.DEFAULT,
+                                                            "auth-app-id"))));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
@@ -686,10 +685,9 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private UserProfile migratedUserProfileWithoutPhoneNumber() {
-        return new UserProfile()
-                .withEmail(CommonTestVariables.EMAIL)
-                .withMfaMethodsMigrated(true);
+        return new UserProfile().withEmail(CommonTestVariables.EMAIL).withMfaMethodsMigrated(true);
     }
+
     private UserProfile userProfileWithPhoneNumber() {
         return new UserProfile()
                 .withEmail(CommonTestVariables.EMAIL)
