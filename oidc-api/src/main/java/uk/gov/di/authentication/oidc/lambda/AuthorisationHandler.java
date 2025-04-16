@@ -119,7 +119,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttache
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
-import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -585,7 +584,7 @@ public class AuthorisationHandler
                 s -> orchSessionService.updateSession(orchSession),
                 () -> orchSessionService.addSession(orchSession));
         LOG.info("Session saved successfully");
-        logIfClientSessionListOnSessionsAreEqual(session, orchSession);
+
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
@@ -751,7 +750,6 @@ public class AuthorisationHandler
         sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionService.addSession(orchSession);
         LOG.info("Session saved successfully");
-        logIfClientSessionListOnSessionsAreEqual(session, orchSession);
         return generateAuthRedirect(
                 newSessionId,
                 clientSessionId,

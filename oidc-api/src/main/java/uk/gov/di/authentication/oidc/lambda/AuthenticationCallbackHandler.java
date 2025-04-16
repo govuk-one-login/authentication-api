@@ -100,7 +100,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSession
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
-import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -445,7 +444,6 @@ public class AuthenticationCallbackHandler
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
-                logIfClientSessionListOnSessionsAreEqual(session, orchSession);
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
