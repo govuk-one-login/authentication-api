@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -339,7 +338,7 @@ class AuthAppCodeProcessorTest {
         when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockDynamoService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(mock(UserCredentials.class));
+                .thenReturn(new UserCredentials().withMfaMethods(List.of()));
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
@@ -359,14 +358,13 @@ class AuthAppCodeProcessorTest {
         when(mockConfigurationService.getAuthAppCodeAllowedWindows()).thenReturn(9);
         when(mockConfigurationService.getAuthAppCodeWindowLength()).thenReturn(30);
 
-        UserCredentials mockUserCredentials = mock(UserCredentials.class);
-        MFAMethod mockMfaMethod = mock(MFAMethod.class);
-        when(mockMfaMethod.getMfaMethodType()).thenReturn(MFAMethodType.AUTH_APP.getValue());
-        when(mockMfaMethod.getCredentialValue()).thenReturn(AUTH_APP_SECRET);
-        when(mockMfaMethod.isEnabled()).thenReturn(true);
-        List<MFAMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
-        when(mockUserCredentials.getMfaMethods()).thenReturn(mockMfaMethodList);
-        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(mockUserCredentials);
+        var mfaMethod =
+                new MFAMethod()
+                        .withMfaMethodType(MFAMethodType.AUTH_APP.name())
+                        .withCredentialValue(AUTH_APP_SECRET)
+                        .withEnabled(true);
+        var userCredentials = new UserCredentials().withMfaMethods(List.of(mfaMethod));
+        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
