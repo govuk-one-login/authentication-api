@@ -65,7 +65,6 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -136,10 +135,6 @@ class AuthenticationCallbackHandlerTest {
             mock(AuthenticationUserInfoStorageService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-
-    // TODO: ATO-1218: Remove the following mock for the auth code service.
-    private static final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
@@ -216,21 +211,6 @@ class AuthenticationCallbackHandlerTest {
                         new AccountIntervention(
                                 new AccountInterventionState(false, false, false, false)));
 
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(TEST_EMAIL_ADDRESS),
-                        any(Long.class)))
-                .thenReturn(AUTH_CODE_RP_TO_ORCH);
-        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(TEST_EMAIL_ADDRESS),
-                        any(Long.class)))
-                .thenReturn(AUTH_CODE_RP_TO_ORCH);
-
         when(UNSUCCESSFUL_TOKEN_RESPONSE.indicatesSuccess()).thenReturn(false);
         when(UNSUCCESSFUL_TOKEN_RESPONSE.toErrorResponse())
                 .thenReturn(new TokenErrorResponse(new ErrorObject("1", TEST_ERROR_MESSAGE)));
@@ -258,7 +238,6 @@ class AuthenticationCallbackHandlerTest {
         reset(authorizationService);
         reset(noSessionOrchestrationService);
 
-        clearInvocations(authorisationCodeService);
         clearInvocations(orchAuthCodeService);
 
         session.setCurrentCredentialStrength(null);
@@ -276,6 +255,11 @@ class AuthenticationCallbackHandlerTest {
                                                     ResponseHeaders.LOCATION,
                                                     errorRedirectUri.toString()));
                         });
+
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(AUTH_CODE_RP_TO_ORCH);
+
         handler =
                 new AuthenticationCallbackHandler(
                         configurationService,
@@ -288,7 +272,6 @@ class AuthenticationCallbackHandlerTest {
                         auditService,
                         userInfoStorageService,
                         cloudwatchMetricsService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         clientService,
                         initiateIPVAuthorisationService,
@@ -780,18 +763,16 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
                         anyLong()))
-                .thenThrow(OrchAuthCodeException.class);
+                .thenThrow(new OrchAuthCodeException("Some generation error"));
 
         assertDoesNotThrow(() -> handler.handleRequest(event, CONTEXT));
 
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
@@ -1513,16 +1494,8 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void assertAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(TEST_EMAIL_ADDRESS),
-                        anyLong());
-
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        eq(AUTH_CODE_RP_TO_ORCH),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
@@ -1530,16 +1503,8 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(0))
-                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
-
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyLong());
+                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
     }
 
     private void assertSessionUpdatedAuthJourney() {

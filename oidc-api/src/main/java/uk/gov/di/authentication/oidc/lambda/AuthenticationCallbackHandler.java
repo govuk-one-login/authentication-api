@@ -55,7 +55,6 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -69,7 +68,6 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
@@ -117,7 +115,6 @@ public class AuthenticationCallbackHandler
     private final AuditService auditService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final AuthorisationCodeService authorisationCodeService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final ClientService clientService;
     private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
@@ -146,7 +143,6 @@ public class AuthenticationCallbackHandler
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
 
@@ -190,11 +186,6 @@ public class AuthenticationCallbackHandler
         this.userInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authorisationCodeService =
-                new AuthorisationCodeService(
-                        configurationService,
-                        redisConnectionService,
-                        SerializationService.getInstance());
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.initiateIPVAuthorisationService =
@@ -231,7 +222,6 @@ public class AuthenticationCallbackHandler
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuthorisationCodeService authorisationCodeService,
             OrchAuthCodeService orchAuthCodeService,
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
@@ -249,7 +239,6 @@ public class AuthenticationCallbackHandler
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.authorisationCodeService = authorisationCodeService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.clientService = clientService;
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
@@ -584,29 +573,11 @@ public class AuthenticationCallbackHandler
                 }
 
                 var authCode =
-                        authorisationCodeService.generateAndSaveAuthorisationCode(
+                        orchAuthCodeService.generateAndSaveAuthorisationCode(
                                 clientId,
                                 clientSessionId,
                                 userInfo.getEmailAddress(),
                                 orchSession.getAuthTime());
-
-                /*
-                    TODO: ATO-1218:
-                     - Move the catch clause below to the bottom of this method and return the result of redirectToFrontendErrorPage (similar to the other catch clauses).
-                     - Update the log in the catch clause to be level 'error' and remove Redis references (as by this point the DynamoDB store will be the primary).
-                */
-                try {
-                    orchAuthCodeService.generateAndSaveAuthorisationCode(
-                            authCode,
-                            clientId,
-                            clientSessionId,
-                            userInfo.getEmailAddress(),
-                            orchSession.getAuthTime());
-                } catch (OrchAuthCodeException e) {
-                    LOG.warn(
-                            "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
-                            e.getMessage());
-                }
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
@@ -680,7 +651,7 @@ public class AuthenticationCallbackHandler
                         e.getMessage());
                 return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
-        } catch (AuthenticationCallbackException e) {
+        } catch (AuthenticationCallbackException | OrchAuthCodeException e) {
             LOG.warn(e.getMessage());
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
