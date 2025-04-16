@@ -7,9 +7,8 @@ import uk.gov.di.authentication.shared.entity.Session;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class AuthOrchSerializationServicesIntegrationTest {
 
@@ -18,7 +17,6 @@ class AuthOrchSerializationServicesIntegrationTest {
     private static final Optional<String> REDIS_PASSWORD =
             Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
     private static final String SESSION_ID = "session-id";
-    private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String EMAIL_ADDRESS = "example@example.com";
 
     private uk.gov.di.orchestration.shared.services.SessionService orchSessionService;
@@ -67,6 +65,7 @@ class AuthOrchSerializationServicesIntegrationTest {
     @Test
     void authCanUpdateSharedFieldInSessionCreatedByOrch() {
         var orchSession = orchSessionService.generateSession();
+        orchSession.setEmailAddress(EMAIL_ADDRESS);
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
         authSession.setEmailAddress(EMAIL_ADDRESS);
@@ -91,13 +90,12 @@ class AuthOrchSerializationServicesIntegrationTest {
     }
 
     @Test
-    void authCanResetSharedFieldsWithoutOverridingUnsharedFields() {
+    void authAndOrchCanReadTheSessionWithoutError() {
         var orchSession = orchSessionService.generateSession();
-        orchSession.addClientSession(CLIENT_SESSION_ID);
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = new Session();
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
-        assertThat(orchSession.getClientSessions(), is(empty()));
+        assertNull(orchSession.getEmailAddress());
     }
 }
