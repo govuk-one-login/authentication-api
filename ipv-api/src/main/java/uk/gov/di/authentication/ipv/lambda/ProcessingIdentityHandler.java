@@ -43,7 +43,6 @@ import java.util.Objects;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIdentityRequest> {
 
@@ -179,8 +178,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
-            logIfClientSessionListOnSessionsAreEqual(
-                    userContext.getSession(), userContext.getOrchSession());
             orchSessionService.updateSession(userContext.getOrchSession());
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
@@ -222,7 +219,9 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         var logoutResult =
                 logoutService.handleAccountInterventionLogout(
                         new DestroySessionsRequest(
-                                userContext.getSessionId(), userContext.getSession()),
+                                userContext.getSessionId(),
+                                userContext.getSession(),
+                                userContext.getOrchSession()),
                         userContext.getOrchSession().getInternalCommonSubjectId(),
                         input,
                         client.getClientID(),

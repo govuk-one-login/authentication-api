@@ -73,9 +73,10 @@ public class LogoutRequest {
                         .withGovukSigninJourneyId(clientSessionIdFromCookie.orElse(null))
                         .withUserId(internalCommonSubjectId.orElse(null));
 
-        if (sessionId.isPresent() && session.isPresent()) {
+        if (sessionId.isPresent() && session.isPresent() && orchSession.isPresent()) {
             destroySessionsRequest =
-                    session.map(s -> new DestroySessionsRequest(sessionId.get(), s));
+                    session.map(
+                            s -> new DestroySessionsRequest(sessionId.get(), s, orchSession.get()));
             auditUser = auditUser.withSessionId(sessionId.get());
         }
 

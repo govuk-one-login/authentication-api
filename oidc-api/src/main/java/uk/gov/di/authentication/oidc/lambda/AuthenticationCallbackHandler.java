@@ -102,7 +102,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSession
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
-import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -453,7 +452,6 @@ public class AuthenticationCallbackHandler
                 orchSessionService.updateSession(orchSession);
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
-                logIfClientSessionListOnSessionsAreEqual(session, orchSession);
 
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
@@ -528,7 +526,7 @@ public class AuthenticationCallbackHandler
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    new DestroySessionsRequest(sessionId, session),
+                                    new DestroySessionsRequest(sessionId, session, orchSession),
                                     orchSession.getInternalCommonSubjectId(),
                                     input,
                                     clientId,
@@ -537,7 +535,7 @@ public class AuthenticationCallbackHandler
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        new DestroySessionsRequest(sessionId, session),
+                                        new DestroySessionsRequest(sessionId, session, orchSession),
                                         orchSession.getInternalCommonSubjectId(),
                                         input,
                                         clientId,
@@ -853,7 +851,7 @@ public class AuthenticationCallbackHandler
 
         if (exception.getLogoutRequired()) {
             return logoutService.handleReauthenticationFailureLogout(
-                    new DestroySessionsRequest(sessionId, session),
+                    new DestroySessionsRequest(sessionId, session, orchSession),
                     orchSession.getInternalCommonSubjectId(),
                     input,
                     authenticationRequest.getClientID().getValue(),
@@ -927,10 +925,6 @@ public class AuthenticationCallbackHandler
                 .getInternalCommonSubjectId()
                 .equals(previousInternalCommonSubjectId)) {
             LOG.info("Previous OrchSession InternalCommonSubjectId matches Auth UserInfo response");
-            previousSharedSession
-                    .get()
-                    .getClientSessions()
-                    .forEach(currentSharedSession::addClientSession);
 
             previousOrchSession
                     .get()
@@ -941,7 +935,10 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
             logoutService.handleMaxAgeLogout(
-                    new DestroySessionsRequest(previousSessionId, previousSharedSession.get()),
+                    new DestroySessionsRequest(
+                            previousSessionId,
+                            previousSharedSession.get(),
+                            previousOrchSession.get()),
                     previousOrchSession.get(),
                     user);
         }
