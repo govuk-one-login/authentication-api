@@ -78,6 +78,7 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -1226,7 +1227,12 @@ class AuthenticationCallbackHandlerTest {
                     redirectLocation,
                     equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
-            assertEquals(PREVIOUS_CLIENT_SESSIONS, sharedSession.getClientSessions());
+            var expectedClientSessions = new ArrayList<>(List.of(CLIENT_SESSION_ID));
+            expectedClientSessions.addAll(PREVIOUS_CLIENT_SESSIONS);
+
+            assertEquals(
+                    sharedSession.getClientSessions(), expectedClientSessions.stream().toList());
+            assertEquals(orchSession.getClientSessions(), expectedClientSessions.stream().toList());
             assertNull(orchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
@@ -1234,7 +1240,11 @@ class AuthenticationCallbackHandlerTest {
                     .updateSession(argThat(s -> s.getPreviousSessionId() == null));
             verify(sessionService, times(2))
                     .storeOrUpdateSession(
-                            argThat(s -> s.getClientSessions().equals(PREVIOUS_CLIENT_SESSIONS)),
+                            argThat(
+                                    s ->
+                                            s.getClientSessions().size() == 4
+                                                    && s.getClientSessions()
+                                                            .equals(expectedClientSessions)),
                             anyString());
         }
 
@@ -1261,15 +1271,26 @@ class AuthenticationCallbackHandlerTest {
                     redirectLocation,
                     equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
-            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
-                    .updateSession(argThat(s -> s.getPreviousSessionId() == null));
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            s.getPreviousSessionId() == null
+                                                    && s.getClientSessions().size() == 1
+                                                    && s.getClientSessions()
+                                                            .equals(List.of(CLIENT_SESSION_ID))));
             verify(sessionService, times(2))
                     .storeOrUpdateSession(
-                            argThat(s -> s.getClientSessions().equals(List.of())), anyString());
+                            argThat(
+                                    s ->
+                                            s.getClientSessions().equals(List.of(CLIENT_SESSION_ID))
+                                                    && s.getClientSessions().size() == 1),
+                            anyString());
         }
 
         @Test
@@ -1295,15 +1316,26 @@ class AuthenticationCallbackHandlerTest {
                     redirectLocation,
                     equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
-            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
-                    .updateSession(argThat(s -> s.getPreviousSessionId() == null));
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            s.getPreviousSessionId() == null
+                                                    && s.getClientSessions().size() == 1
+                                                    && s.getClientSessions()
+                                                            .equals(List.of(CLIENT_SESSION_ID))));
             verify(sessionService, times(2))
                     .storeOrUpdateSession(
-                            argThat(s -> s.getClientSessions().equals(List.of())), anyString());
+                            argThat(
+                                    s ->
+                                            s.getClientSessions().equals(List.of(CLIENT_SESSION_ID))
+                                                    && s.getClientSessions().size() == 1),
+                            anyString());
         }
 
         @Test
@@ -1331,15 +1363,24 @@ class AuthenticationCallbackHandlerTest {
                     redirectLocation,
                     equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
-            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
-                    .updateSession(argThat(s -> s.getPreviousSessionId() == null));
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            s.getPreviousSessionId() == null
+                                                    && s.getClientSessions().size() == 1));
             verify(sessionService, times(2))
                     .storeOrUpdateSession(
-                            argThat(s -> s.getClientSessions().equals(List.of())), anyString());
+                            argThat(
+                                    s ->
+                                            s.getClientSessions().equals(List.of(CLIENT_SESSION_ID))
+                                                    && s.getClientSessions().size() == 1),
+                            anyString());
 
             verify(logoutService, times(1))
                     .handleMaxAgeLogout(
@@ -1356,6 +1397,7 @@ class AuthenticationCallbackHandlerTest {
             var previousOrchSession =
                     new OrchSessionItem(PREVIOUS_SESSION_ID)
                             .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+            PREVIOUS_CLIENT_SESSIONS.forEach(previousOrchSession::addClientSession);
             when(orchSessionService.getSession(PREVIOUS_SESSION_ID))
                     .thenReturn(Optional.of(previousOrchSession));
             return previousOrchSession;
@@ -1381,13 +1423,14 @@ class AuthenticationCallbackHandlerTest {
             var orchSession =
                     new OrchSessionItem(SESSION_ID)
                             .withPreviousSessionId(PREVIOUS_SESSION_ID)
-                            .withInternalCommonSubjectId(internalCommonSubjectId);
+                            .withInternalCommonSubjectId(internalCommonSubjectId)
+                            .addClientSession(CLIENT_SESSION_ID);
             when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
             return orchSession;
         }
 
         private Session withMaxAgeSharedSession() {
-            var session = new Session();
+            var session = new Session().addClientSession(CLIENT_SESSION_ID);
             when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
             return session;
         }
