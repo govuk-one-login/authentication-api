@@ -925,10 +925,6 @@ public class AuthenticationCallbackHandler
                 .getInternalCommonSubjectId()
                 .equals(previousInternalCommonSubjectId)) {
             LOG.info("Previous OrchSession InternalCommonSubjectId matches Auth UserInfo response");
-            previousSharedSession
-                    .get()
-                    .getClientSessions()
-                    .forEach(currentSharedSession::addClientSession);
 
             previousOrchSession
                     .get()

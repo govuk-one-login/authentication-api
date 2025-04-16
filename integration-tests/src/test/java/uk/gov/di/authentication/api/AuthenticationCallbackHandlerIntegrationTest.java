@@ -873,9 +873,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         "rp-pairwise-id-client-3");
 
         @Test
-        void
-                updatesOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdMatchesAuthUserInfoResponse()
-                        throws Json.JsonException, ParseException {
+        void updatesOrchSessionWhenPreviousCommonSubjectIdMatchesAuthUserInfoResponse()
+                throws Json.JsonException, ParseException {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
@@ -890,20 +889,16 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
             assertUserInfoStoredAndRedirectedToRp(response);
 
-            var sharedSession = redis.getSession(SESSION_ID);
             var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
             var expectedClientSessions = new ArrayList<>(List.of(CLIENT_SESSION_ID));
             expectedClientSessions.addAll(PREVIOUS_CLIENT_SESSIONS);
-            assertEquals(
-                    expectedClientSessions.stream().toList(), sharedSession.getClientSessions());
             assertEquals(expectedClientSessions.stream().toList(), orchSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
         }
 
         @Test
-        void
-                doesNotUpdateOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse()
-                        throws Json.JsonException {
+        void doesNotUpdateOrchSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse()
+                throws Json.JsonException {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
@@ -942,9 +937,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             LogoutAuditableEvent.LOG_OUT_SUCCESS,
                             OidcAuditableEvent.AUTH_CODE_ISSUED));
 
-            var sharedSession = redis.getSession(SESSION_ID);
             var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
-            assertEquals(List.of(CLIENT_SESSION_ID), sharedSession.getClientSessions());
             assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
             assertBackChannelLogoutsSent(PREVIOUS_CLIENTS_FOR_CLIENT_SESSION);
