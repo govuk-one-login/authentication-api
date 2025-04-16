@@ -250,14 +250,15 @@ Resources:
                     - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
       CacheClusterEnabled: false
       DefinitionBody:
-        openapi: "3.0.3" # workaround to get `sam validate` to work
+        openapi: "3.0.1" # workaround to get `sam validate` to work
         paths: # workaround to get `sam validate` to work
-          /foo:
-            bar: baz
-        # Fn::Transform:
-        #   Name: AWS::Include
-        #   Parameters:
-        #     Location: ./openAPI/AuthTokenRestApi.yaml
+          /never-created:
+            options: {} # workaround to get `sam validate` to work
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: "./openAPI/AuthTokenRestApi.yaml"
+      OpenApiVersion: 3.0.1
       EndpointConfiguration:
         Type: PRIVATE
         VPCEndpointIds:
