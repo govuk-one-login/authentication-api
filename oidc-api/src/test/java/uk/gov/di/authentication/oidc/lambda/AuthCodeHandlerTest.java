@@ -147,12 +147,13 @@ class AuthCodeHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private AuthCodeHandler handler;
 
-    private final Session session = new Session().addClientSession(CLIENT_SESSION_ID);
+    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.NEW)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
-                    .withAuthTime(12345L);
+                    .withAuthTime(12345L)
+                    .addClientSession(CLIENT_SESSION_ID);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
