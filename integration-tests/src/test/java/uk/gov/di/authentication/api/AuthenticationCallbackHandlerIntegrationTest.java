@@ -903,7 +903,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Test
         void
                 doesNotUpdateOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse()
-                        throws Json.JsonException, ParseException {
+                        throws Json.JsonException {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
