@@ -809,6 +809,7 @@ public class AuthorisationHandler
                         .withAuthenticated(false)
                         .withPreviousSessionId(newSessionIdForPreviousSession);
         newSession.resetProcessingIdentityAttempts();
+        newSession.resetClientSessions();
         return newSession;
     }
 
