@@ -108,9 +108,9 @@ public class MFAMethodsCreateHandler
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
 
-            if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ERROR_1080);
+            if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier()
+                    == PriorityIdentifier.DEFAULT) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1080);
             }
 
             Result<MfaCreateFailureReason, MfaMethodData> addBackupMfaResult =
