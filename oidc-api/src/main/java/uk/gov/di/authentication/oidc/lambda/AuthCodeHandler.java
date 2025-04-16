@@ -30,6 +30,7 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -272,6 +273,11 @@ public class AuthCodeHandler
             return processUserNotFoundException(authenticationRequest);
         } catch (ParseException e) {
             return processParseException(e);
+        } catch (OrchAuthCodeException e) {
+            LOG.error(
+                    "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: {}",
+                    e.getMessage());
+            return generateApiGatewayProxyResponse(500, "Internal server error");
         }
 
         LOG.info("Successfully processed request");

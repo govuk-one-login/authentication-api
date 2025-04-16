@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -101,6 +102,7 @@ import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTIN
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -703,6 +705,33 @@ class AuthCodeHandlerTest {
     }
 
     @Test
+    void shouldGenerateErrorResponseWhenAuthCodeGenerationThrowsException()
+            throws ParseException, JOSEException {
+        generateAuthUserInfo();
+
+        session.setNewAccount(AccountState.UNKNOWN);
+        orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
+
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
+                .thenReturn(true);
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
+                .thenThrow(new OrchAuthCodeException("Some error during auth code generation."));
+
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+
+        var response = generateApiRequest();
+
+        assertThat(response, hasStatus(500));
+        assertThat(response, hasBody("Internal server error"));
+
+        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
+    }
+
+    @Test
     void shouldUpdateOrchSession() throws JOSEException, ParseException {
         generateAuthUserInfo();
 
@@ -726,6 +755,9 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
+
+        // TODO: Stop here in new test.
+
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
                 .thenReturn(authorizationCode);
