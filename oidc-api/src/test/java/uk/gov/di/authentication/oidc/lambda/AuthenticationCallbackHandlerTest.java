@@ -285,7 +285,6 @@ class AuthenticationCallbackHandlerTest {
                         logoutService,
                         authFrontend,
                         noSessionOrchestrationService);
-        session.resetClientSessions();
         orchSession.resetClientSessions();
     }
 
