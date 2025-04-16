@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 
 import java.util.Map;
@@ -37,4 +39,33 @@ public class CommonTestVariables {
                             PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
                     Map.entry(SESSION_ID_HEADER, SESSION_ID),
                     Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
+
+    public static final MFAMethod DEFAULT_AUTH_APP_METHOD =
+            MFAMethod.authAppMfaMethod(
+                    "default-auth-app-secret",
+                    true,
+                    true,
+                    PriorityIdentifier.DEFAULT,
+                    "default-auth-app-identifier");
+    public static final MFAMethod BACKUP_AUTH_APP_METHOD =
+            MFAMethod.authAppMfaMethod(
+                    "backup-auth-app-secret",
+                    true,
+                    true,
+                    PriorityIdentifier.BACKUP,
+                    "backup-auth-app-identifier");
+    public static final MFAMethod DEFAULT_SMS_METHOD =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    "+447900000100",
+                    PriorityIdentifier.DEFAULT,
+                    "default-sms-identifier");
+    public static final MFAMethod BACKUP_SMS_METHOD =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    "+447900000000",
+                    PriorityIdentifier.BACKUP,
+                    "backup-sms-identifier");
 }
