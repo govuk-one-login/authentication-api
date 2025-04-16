@@ -234,6 +234,36 @@ class MfaHelperTest {
 
             assertEquals(expectedResult, result);
         }
+
+        @Test
+        void shouldHandleErrorsRetrievingADefaultMethodForAMigratedUser() {
+            var userContext =
+                    userContextWithLevelOfTrustRequested(CredentialTrustLevel.MEDIUM_LEVEL);
+            when(userProfile.getMfaMethodsMigrated()).thenReturn(true);
+
+            var isPhoneNumberVerifiedOnUserProfile = false;
+            setupUserProfile(userProfile, null, isPhoneNumberVerifiedOnUserProfile, true);
+
+            var backupAuthAppMethod =
+                    MFAMethod.authAppMfaMethod(
+                            "some-credential",
+                            true,
+                            true,
+                            PriorityIdentifier.BACKUP,
+                            "auth-app-mfa-id");
+            when(userCredentials.getMfaMethods()).thenReturn(List.of(backupAuthAppMethod));
+
+            var result = getUserMFADetail(userContext, userCredentials, userProfile);
+            var expectedResult = new UserMfaDetail(true, false, NONE, null);
+
+            assertEquals(expectedResult, result);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Unexpected error retrieving default mfa method for migrated user: no default method exists")));
+        }
     }
 
     @Nested
