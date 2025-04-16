@@ -15,14 +15,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
-import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -30,6 +31,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -58,6 +60,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
@@ -65,6 +68,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -85,7 +89,9 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -233,9 +239,7 @@ class LoginHandlerTest {
 
         assertThat(
                 response.redactedPhoneNumber(),
-                equalTo(
-                        FrontendApiPhoneNumberHelper.redactPhoneNumber(
-                                CommonTestVariables.UK_MOBILE_NUMBER)));
+                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
         assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
@@ -369,6 +373,67 @@ class LoginHandlerTest {
         verifyNoInteractions(cloudwatchMetricsService);
 
         verifyInternalCommonSubjectIdentifierSaved();
+    }
+
+    private static Stream<Arguments> migratedMfaMethodsToExpectedLoginResponse() {
+        var defaultSmsMethod =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        "some-mfa-id");
+        var expectedRedactedPhoneNumber = redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+        var defaultAuthAppMethod =
+                MFAMethod.authAppMfaMethod(
+                        "some-credential",
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        "another-mfa-id");
+        return Stream.of(
+                Arguments.of(
+                        defaultSmsMethod,
+                        new LoginResponse(
+                                expectedRedactedPhoneNumber, true, true, SMS, true, false)),
+                Arguments.of(
+                        defaultAuthAppMethod,
+                        new LoginResponse(null, true, true, AUTH_APP, true, false)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("migratedMfaMethodsToExpectedLoginResponse")
+    void shouldReturn200WithCorrectMfaMethodForMigratedUser(
+            MFAMethod mfaMethod, LoginResponse expectedResponse) throws Json.JsonException {
+        var userProfile =
+                generateUserProfile(null)
+                        .withMfaMethodsMigrated(true)
+                        .withPhoneNumber(null)
+                        .withPhoneNumberVerified(false);
+        var migratedUserCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(CommonTestVariables.PASSWORD)
+                        .setMfaMethod(mfaMethod);
+
+        when(authenticationService.login(migratedUserCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(migratedUserCredentials);
+        usingValidSession();
+        usingValidAuthSession();
+
+        usingDefaultVectorOfTrust();
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertEquals(expectedResponse, response);
     }
 
     @ParameterizedTest

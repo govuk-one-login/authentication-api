@@ -329,8 +329,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         String redactedPhoneNumber =
-                userProfile.isPhoneNumberVerified()
-                        ? redactPhoneNumber(userProfile.getPhoneNumber())
+                userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()
+                        ? redactPhoneNumber(userMfaDetail.phoneNumber())
                         : null;
 
         boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
