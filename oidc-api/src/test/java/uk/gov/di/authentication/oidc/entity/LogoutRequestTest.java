@@ -442,7 +442,7 @@ class LogoutRequestTest {
     }
 
     private Session generateSession() {
-        return new Session().addClientSession(CLIENT_SESSION_ID);
+        return new Session();
     }
 
     private void generateSessionFromCookie(Session session, OrchSessionItem orchSession) {

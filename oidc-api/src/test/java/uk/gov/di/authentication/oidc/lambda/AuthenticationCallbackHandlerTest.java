@@ -1356,7 +1356,6 @@ class AuthenticationCallbackHandlerTest {
 
         private void withPreviousSharedSessionDueToMaxAge() {
             var previousSharedSession = new Session();
-            PREVIOUS_CLIENT_SESSIONS.forEach(previousSharedSession::addClientSession);
             previousSharedSession.setEmailAddress(TEST_EMAIL_ADDRESS);
             when(sessionService.getSession(PREVIOUS_SESSION_ID))
                     .thenReturn(Optional.of(previousSharedSession));
