@@ -117,7 +117,7 @@ class LogoutServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
-    private static Session session;
+    private static OrchSessionItem orchSession;
 
     private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
     private static final URI REAUTH_FAILURE_URI =
@@ -182,9 +182,10 @@ class LogoutServiceTest {
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
         rpPairwiseId = Optional.of(idToken.getJWTClaimsSet().getSubject());
 
-        session = new Session();
+        orchSession = new OrchSessionItem(SESSION_ID);
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID, rpPairwiseId.get());
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(new Session()));
         destroySessionsRequest =
                 new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID), EMAIL);
     }
@@ -208,9 +209,10 @@ class LogoutServiceTest {
                         Optional.of(audience.get()),
                         rpPairwiseId);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
@@ -246,9 +248,10 @@ class LogoutServiceTest {
                         audience,
                         rpPairwiseId);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
@@ -284,9 +287,10 @@ class LogoutServiceTest {
                         audience,
                         rpPairwiseId);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
@@ -323,9 +327,10 @@ class LogoutServiceTest {
                         Optional.of(CLIENT_ID),
                         rpPairwiseId);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
@@ -376,9 +381,10 @@ class LogoutServiceTest {
                         CLIENT_ID,
                         intervention);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
@@ -415,9 +421,10 @@ class LogoutServiceTest {
                         CLIENT_ID,
                         intervention);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
@@ -461,9 +468,10 @@ class LogoutServiceTest {
                 Optional.empty(),
                 rpPairwiseId);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
@@ -540,11 +548,12 @@ class LogoutServiceTest {
                         Optional.of(audience.get()),
                         rpPairwiseId);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(clientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(clientSessionService).deleteStoredClientSession("client-session-id-3");
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(orchClientSessionService).deleteStoredClientSession("client-session-id-3");
         verify(sessionService).deleteStoredSession(SESSION_ID);
@@ -606,9 +615,10 @@ class LogoutServiceTest {
                         CLIENT_ID,
                         REAUTH_FAILURE_URI);
 
-        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(clientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService)
-                .deleteStoredClientSession(session.getClientSessions().get(0));
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
@@ -745,7 +755,7 @@ class LogoutServiceTest {
     }
 
     private void setUpClientSession(String clientSessionId, String clientId, String rpPairwiseId) {
-        session.getClientSessions().add(clientSessionId);
+        orchSession.getClientSessions().add(clientSessionId);
         var creationDate = LocalDateTime.now();
         when(clientSessionService.getClientSession(clientSessionId))
                 .thenReturn(
