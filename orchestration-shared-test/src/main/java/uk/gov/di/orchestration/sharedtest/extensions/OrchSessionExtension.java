@@ -71,6 +71,14 @@ public class OrchSessionExtension extends DynamoExtension implements AfterEachCa
         orchSessionService.addSession(orchSession);
     }
 
+    public void addClientSessionIdToSession(String clientSessionId, String sessionId) {
+        orchSessionService.updateSession(
+                orchSessionService
+                        .getSession(sessionId)
+                        .orElse(new OrchSessionItem(sessionId))
+                        .addClientSession(clientSessionId));
+    }
+
     public OrchSessionItem addOrUpdateSessionId(
             Optional<String> previousSessionId, String newSessionId) {
         return orchSessionService.addOrUpdateSessionId(previousSessionId, newSessionId);

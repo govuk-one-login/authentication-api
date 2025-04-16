@@ -106,7 +106,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRedirectToSpecifiedClientLogoutUriWhenThereIsNoActiveSession()
             throws Json.JsonException, ParseException {
         var signedJWT = setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
-        redis.addClientSessionIdToSession("expired-client-session-id", SESSION_ID);
+        orchSessionExtension.addClientSessionIdToSession("expired-client-session-id", SESSION_ID);
         var response =
                 makeRequest(
                         Optional.empty(),

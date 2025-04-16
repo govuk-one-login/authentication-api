@@ -1329,44 +1329,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertTrue(newSession.isPresent());
             assertFalse(newSession.get().getAuthenticated());
             assertEquals(newSession.get().getSessionId(), newSessionId);
-        }
-
-        @Test
-        void shouldUpdateSharedSessionWhenMaxAgeExpired() throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            var previousClientSessionId = "a-previous-client-session";
-            var previousSessionId =
-                    givenAnExistingSessionWithClientSession(previousClientSessionId);
-            orchSessionExtension.addSession(
-                    new OrchSessionItem(previousSessionId)
-                            .withAuthenticated(true)
-                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
-
-            var previousSession = orchSessionExtension.getSession(previousSessionId);
-            assertTrue(previousSession.isPresent());
-            assertTrue(previousSession.get().getAuthenticated());
-            assertNull(previousSession.get().getPreviousSessionId());
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    new HttpCookie[] {
-                                        buildSessionCookie(
-                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                    }),
-                            constructQueryStringParameters(
-                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", 0L),
-                            Optional.of("GET"));
-            var newSessionId = getSessionId(response);
-            var newSession = redis.getSession(newSessionId);
-            assertNotNull(newSession);
-            assertEquals(1, newSession.getClientSessions().size());
-            assertFalse(newSession.getClientSessions().contains(previousClientSessionId));
+            assertEquals(1, newSession.get().getClientSessions().size());
         }
 
         @Test
@@ -2029,10 +1992,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
     }
 
-    private String givenAnExistingSessionWithClientSession(String clientSessionId)
-            throws Json.JsonException {
-        var sessionId = redis.createSession();
-        redis.addClientSessionIdToSession(clientSessionId, sessionId);
+    private String givenAnExistingSessionWithClientSession(String clientSessionId) {
+        var sessionId = IdGenerator.generate();
+        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
+        orchSessionExtension.addClientSessionIdToSession(sessionId, clientSessionId);
         return sessionId;
     }
 
