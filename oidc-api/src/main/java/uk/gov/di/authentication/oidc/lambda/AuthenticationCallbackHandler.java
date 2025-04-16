@@ -317,7 +317,7 @@ public class AuthenticationCallbackHandler
 
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
-                            authenticationRequest, input, user, session, sessionId, orchSession);
+                            authenticationRequest, input, user, sessionId, orchSession);
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
@@ -517,7 +517,7 @@ public class AuthenticationCallbackHandler
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    new DestroySessionsRequest(sessionId, session),
+                                    new DestroySessionsRequest(sessionId, orchSession),
                                     orchSession.getInternalCommonSubjectId(),
                                     input,
                                     clientId,
@@ -526,7 +526,7 @@ public class AuthenticationCallbackHandler
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        new DestroySessionsRequest(sessionId, session),
+                                        new DestroySessionsRequest(sessionId, orchSession),
                                         orchSession.getInternalCommonSubjectId(),
                                         input,
                                         clientId,
@@ -774,7 +774,6 @@ public class AuthenticationCallbackHandler
                     AuthenticationRequest authenticationRequest,
                     APIGatewayProxyRequestEvent input,
                     TxmaAuditUser user,
-                    Session session,
                     String sessionId,
                     OrchSessionItem orchSession) {
         try {
@@ -782,13 +781,7 @@ public class AuthenticationCallbackHandler
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
-                            authenticationRequest,
-                            input,
-                            e,
-                            user,
-                            session,
-                            sessionId,
-                            orchSession));
+                            authenticationRequest, input, e, user, sessionId, orchSession));
         }
         return Optional.empty();
     }
@@ -798,7 +791,6 @@ public class AuthenticationCallbackHandler
             APIGatewayProxyRequestEvent input,
             AuthenticationCallbackValidationException exception,
             TxmaAuditUser user,
-            Session session,
             String sessionId,
             OrchSessionItem orchSession) {
         var error = exception.getError();
@@ -821,7 +813,7 @@ public class AuthenticationCallbackHandler
 
         if (exception.getLogoutRequired()) {
             return logoutService.handleReauthenticationFailureLogout(
-                    new DestroySessionsRequest(sessionId, session),
+                    new DestroySessionsRequest(sessionId, orchSession),
                     orchSession.getInternalCommonSubjectId(),
                     input,
                     authenticationRequest.getClientID().getValue(),
@@ -909,7 +901,7 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
             logoutService.handleMaxAgeLogout(
-                    new DestroySessionsRequest(previousSessionId, previousSharedSession.get()),
+                    new DestroySessionsRequest(previousSessionId, previousOrchSession.get()),
                     previousOrchSession.get(),
                     user);
         }
