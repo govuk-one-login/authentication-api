@@ -139,7 +139,6 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -2377,15 +2376,6 @@ class AuthorisationHandlerTest {
         @AfterEach()
         void docAppTearDown() {
             docAppSubjectIdHelperMock.close();
-        }
-
-        @Test
-        void shouldCreateANewClientSessionAndAttachItToExistingSessionWhenRequestIsDocAppRequest()
-                throws JOSEException {
-            var sessionSpy = spy(session);
-            when(sessionService.getSession(any())).thenReturn(Optional.of(sessionSpy));
-            makeDocAppHandlerRequest();
-            verify(sessionSpy).addClientSession(CLIENT_SESSION_ID);
         }
 
         @Test
