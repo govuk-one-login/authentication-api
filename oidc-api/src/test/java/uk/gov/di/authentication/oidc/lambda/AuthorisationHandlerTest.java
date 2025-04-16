@@ -2093,7 +2093,7 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
             verify(orchSessionService)
-                    .updateSession(
+                    .addSession(
                             argThat(
                                     os ->
                                             os.getClientSessions().size() == 1
@@ -2116,7 +2116,7 @@ class AuthorisationHandlerTest {
             makeHandlerRequest(event);
 
             verify(orchSessionService)
-                    .updateSession(
+                    .addSession(
                             argThat(
                                     os ->
                                             os.getClientSessions().size() == 2

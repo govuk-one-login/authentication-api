@@ -750,7 +750,7 @@ public class AuthorisationHandler
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session, newSessionId);
-        orchSessionService.updateSession(orchSession);
+        orchSessionService.addSession(orchSession);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
                 newSessionId,
@@ -768,7 +768,6 @@ public class AuthorisationHandler
     private OrchSessionItem createNewOrchSession(String sessionId, String browserSessionId) {
         var newOrchSessionItem =
                 new OrchSessionItem(sessionId).withBrowserSessionId(browserSessionId);
-        orchSessionService.addSession(newOrchSessionItem);
         LOG.info("Created new Orch session with session ID: {}", sessionId);
         return newOrchSessionItem;
     }
@@ -780,7 +779,6 @@ public class AuthorisationHandler
                         .withSessionId(newSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry());
         updatedSession.resetProcessingIdentityAttempts();
-        orchSessionService.addSession(updatedSession);
         orchSessionService.deleteSession(previousSession.getSessionId());
         LOG.info(
                 "Updated existing Orch session ID from {} to {}",
@@ -811,8 +809,6 @@ public class AuthorisationHandler
                         .withAuthenticated(false)
                         .withPreviousSessionId(newSessionIdForPreviousSession);
         newSession.resetProcessingIdentityAttempts();
-        orchSessionService.addSession(newSession);
-
         return newSession;
     }
 
