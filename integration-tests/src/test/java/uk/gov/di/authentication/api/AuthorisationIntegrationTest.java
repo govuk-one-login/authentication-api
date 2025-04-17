@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -520,9 +521,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
+        void shouldRedirectToLoginUriWhenUserHasMismatchBetweenBsidCookieAndSession()
+                throws Exception {
             setupForAuthJourney();
-            String previousSessionId = givenAnExistingSession(LOW_LEVEL);
+            String previousSessionId =
+                    givenAnExistingSession(LOW_LEVEL, Optional.of(BROWSER_SESSION_ID));
             registerUser();
 
             var response =
@@ -554,7 +557,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var sessionCookie =
                     getHttpCookieFromMultiValueResponseHeaders(
                             response.getMultiValueHeaders(), "gs");
-            assertOnSessionCookie(sessionCookie, previousSessionId);
+            assertOnSessionCookie(sessionCookie);
 
             Optional<HttpCookie> browserSessionIdCookie =
                     getHttpCookieFromMultiValueResponseHeaders(
@@ -2036,10 +2039,21 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return sessionId;
     }
 
-    private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel) {
+    private String givenAnExistingSession(
+            CredentialTrustLevel credentialTrustLevel, Optional<String> browserSessionId)
+            throws Json.JsonException {
         var sessionId = IdGenerator.generate();
-        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
+        var session =
+                new OrchSessionItem(sessionId).withCurrentCredentialStrength(credentialTrustLevel);
+        browserSessionId.ifPresent(session::withBrowserSessionId);
+        orchSessionExtension.addSession(session);
+        redis.addSessionWithId(new Session(), sessionId);
         return sessionId;
+    }
+
+    private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
+            throws Json.JsonException {
+        return givenAnExistingSession(credentialTrustLevel, Optional.empty());
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
