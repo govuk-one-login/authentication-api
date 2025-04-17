@@ -1256,6 +1256,8 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt BackChannelLogoutQueue.Arn
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -4276,6 +4278,7 @@ Resources:
       KeyUsage: ENCRYPT_DECRYPT
       KeySpec: SYMMETRIC_DEFAULT
       EnableKeyRotation: true
+
   #endregion
 
   #region Storage Token Jwk Lambda
