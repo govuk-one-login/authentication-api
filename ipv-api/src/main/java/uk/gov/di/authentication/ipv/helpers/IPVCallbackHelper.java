@@ -17,6 +17,7 @@ import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -271,6 +272,7 @@ public class IPVCallbackHelper {
             LogIds logIds,
             String sectorIdentifier,
             UserProfile userProfile,
+            UserInfo authUserInfo,
             Subject pairwiseSubject,
             UserInfo userIdentityUserInfo,
             String clientId)
@@ -295,7 +297,7 @@ public class IPVCallbackHelper {
                 new SPOTRequest(
                         spotClaimsBuilder.build(),
                         userProfile.getSubjectID(),
-                        dynamoService.getOrGenerateSalt(userProfile),
+                        authUserInfo.getStringClaim(AuthUserInfoClaims.SALT.getValue()),
                         sectorIdentifier,
                         pairwiseSubject.getValue(),
                         logIds,
