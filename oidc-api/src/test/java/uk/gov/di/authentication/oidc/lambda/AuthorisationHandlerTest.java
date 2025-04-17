@@ -336,9 +336,6 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenUserHasNoExistingSession() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
@@ -379,9 +376,6 @@ class AuthorisationHandlerTest {
 
             var requestParams = buildRequestParams(null);
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -418,9 +412,6 @@ class AuthorisationHandlerTest {
             var requestParams =
                     buildRequestParams(Map.of("scope", "openid phone", "vtr", "[\"Cl\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -457,9 +448,7 @@ class AuthorisationHandlerTest {
             var requestParams =
                     buildRequestParams(Map.of("scope", "openid", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -491,9 +480,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -513,9 +500,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -532,9 +517,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -555,9 +538,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -575,9 +556,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -610,9 +589,7 @@ class AuthorisationHandlerTest {
                 requestParams.put("ui_locales", uiLocales);
             }
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
@@ -665,9 +642,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verify(orchSessionService, atLeastOnce())
@@ -928,23 +903,19 @@ class AuthorisationHandlerTest {
                     .when(authorisationService)
                     .classifyParseException(any());
 
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "scope",
-                            SCOPE,
-                            "invalid_parameter",
-                            "nonsense",
-                            "state",
-                            STATE.getValue()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "scope",
+                                    SCOPE,
+                                    "invalid_parameter",
+                                    "nonsense",
+                                    "state",
+                                    STATE.getValue()));
 
             makeHandlerRequest(event);
 
@@ -960,17 +931,16 @@ class AuthorisationHandlerTest {
         @ParameterizedTest
         @ValueSource(strings = {"PUT", "DELETE", "PATCH"})
         void shouldThrowExceptionWhenMethodIsNotGetOrPost(String method) {
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id", "test-id",
+                                    "redirect_uri", "http://localhost:8080",
+                                    "scope", "email,openid,profile",
+                                    "response_type", "code"));
+
             event.setHttpMethod(method);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://localhost:8080",
-                            "scope", "email,openid,profile",
-                            "response_type", "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             RuntimeException expectedException =
                     assertThrows(
                             InvalidHttpMethodException.class,
@@ -1018,22 +988,20 @@ class AuthorisationHandlerTest {
         void shouldValidateRequestObjectWhenJARValidationIsRequired()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
+
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             makeHandlerRequest(event);
             verify(requestObjectAuthorizeValidator).validate(any());
         }
@@ -1043,22 +1011,20 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any()))
                     .thenReturn(false);
-            var event = new APIGatewayProxyRequestEvent();
+
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             makeHandlerRequest(event);
             verify(requestObjectAuthorizeValidator).validate(any());
         }
@@ -1068,22 +1034,20 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
-            var event = new APIGatewayProxyRequestEvent();
+
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1119,20 +1083,23 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("POST");
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setBody(
-                    String.format(
-                            "client_id=%s&scope=openid&response_type=code&request=%s",
-                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
-                            URLEncoder.encode(
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
-                                    Charset.defaultCharset())));
 
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            var event =
+                    withPostRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    URLEncoder.encode(
+                                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR)
+                                                    .serialize(),
+                                            Charset.defaultCharset())));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1167,22 +1134,19 @@ class AuthorisationHandlerTest {
             when(requestObjectAuthorizeValidator.validate(any()))
                     .thenThrow(ClientSignatureValidationException.class);
 
-            var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
             assertEquals(400, response.getStatusCode());
             assertEquals("Trust chain validation failed", response.getBody());
@@ -1193,7 +1157,6 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
-            var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet =
                     new JWTClaimsSet.Builder()
                             .audience("https://localhost/authorize")
@@ -1206,20 +1169,18 @@ class AuthorisationHandlerTest {
                             .issuer(CLIENT_ID.getValue())
                             .build();
 
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1255,22 +1216,20 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any())).thenThrow(JwksException.class);
 
-            var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
             assertEquals(500, response.getStatusCode());
             assertEquals("Unexpected server error", response.getBody());
@@ -1281,9 +1240,7 @@ class AuthorisationHandlerTest {
             var rpSid = "test-rp-sid";
             Map<String, String> requestParams = buildRequestParams(Map.of("rp_sid", rpSid));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
             verifyAuthorisationRequestParsedAuditEvent(rpSid, false, false, "MEDIUM_LEVEL");
         }
@@ -1292,9 +1249,7 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWhenRpSidNotPresent() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1305,9 +1260,7 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWhenOnAuthOnlyFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1318,9 +1271,7 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWhenOnIdentityFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"P2.Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1336,9 +1287,7 @@ class AuthorisationHandlerTest {
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]", "max_age", "123"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1355,9 +1304,7 @@ class AuthorisationHandlerTest {
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -1377,9 +1324,7 @@ class AuthorisationHandlerTest {
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -1392,9 +1337,7 @@ class AuthorisationHandlerTest {
                 throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
             Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid am"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1417,9 +1360,7 @@ class AuthorisationHandlerTest {
 
             Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1440,9 +1381,7 @@ class AuthorisationHandlerTest {
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("scope", "openid govuk-account"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1461,9 +1400,6 @@ class AuthorisationHandlerTest {
         void shouldSetTheRelevantCookiesInTheHeader() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
             var response = makeHandlerRequest(event);
 
@@ -1515,9 +1451,7 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1544,9 +1478,7 @@ class AuthorisationHandlerTest {
                                     "id_token_hint",
                                     SERIALIZED_SIGNED_ID_TOKEN));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1568,9 +1500,7 @@ class AuthorisationHandlerTest {
                                     "id_token_hint",
                                     SERIALIZED_SIGNED_ID_TOKEN));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -1604,9 +1534,7 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
             var expectedErrorObject =
@@ -1660,9 +1588,7 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
             var expectedErrorObject =
@@ -1745,9 +1671,7 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1788,9 +1712,7 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1804,51 +1726,45 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-        void shouldCreateANewSessionAndAttachTheClientSessionIdToIt() {
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+    void shouldCreateANewSessionAndAttachTheClientSessionIdToIt() {
+        var requestParams =
+                buildRequestParams(
+                        Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
 
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-            verify(orchSessionService)
-                    .addSession(
-                            argThat(
-                                    os ->
-                                            os.getClientSessions().size() == 1
-                                                    && os.getClientSessions()
-                                                            .contains(CLIENT_SESSION_ID)));
-        }
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+        makeHandlerRequest(event);
+        verify(orchSessionService)
+                .addSession(
+                        argThat(
+                                os ->
+                                        os.getClientSessions().size() == 1
+                                                && os.getClientSessions()
+                                                        .contains(CLIENT_SESSION_ID)));
+    }
 
-        @Test
-        void shouldAddANewClientSessionToAnExistingOrchSession() {
-            withExistingOrchSession(orchSession.addClientSession("previous-client-session"));
-            withExistingSession(session);
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+    @Test
+    void shouldAddANewClientSessionToAnExistingOrchSession() {
+        withExistingOrchSession(orchSession.addClientSession("previous-client-session"));
+        withExistingSession(session);
+        var requestParams =
+                buildRequestParams(
+                        Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
 
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+        makeHandlerRequest(event);
 
-            verify(orchSessionService)
-                    .addSession(
-                            argThat(
-                                    os ->
-                                            os.getClientSessions().size() == 2
-                                                    && os.getClientSessions()
-                                                            .contains(CLIENT_SESSION_ID)
-                                                    && os.getClientSessions()
-                                                            .contains("previous-client-session")));
-        }
+        verify(orchSessionService)
+                .addSession(
+                        argThat(
+                                os ->
+                                        os.getClientSessions().size() == 2
+                                                && os.getClientSessions()
+                                                        .contains(CLIENT_SESSION_ID)
+                                                && os.getClientSessions()
+                                                        .contains("previous-client-session")));
+    }
 
-        @Nested
+    @Nested
     class BrowserSessionId {
         private final ArgumentCaptor<Session> sessionCaptor =
                 ArgumentCaptor.forClass(Session.class);
@@ -2047,9 +1963,7 @@ class AuthorisationHandlerTest {
                 String browserSessionIdFromCookie) {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             var cookieString = SESSION_COOKIE;
             if (browserSessionIdFromCookie != null) {
                 cookieString =
@@ -2208,18 +2122,15 @@ class AuthorisationHandlerTest {
             when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenThrow(ClientRedirectUriValidationException.class);
 
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://incorrect-redirect-uri",
-                            "scope", "email,openid,profile",
-                            "response_type", "code",
-                            "state", "test-state"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id", "test-id",
+                                    "redirect_uri", "http://incorrect-redirect-uri",
+                                    "scope", "email,openid,profile",
+                                    "response_type", "code",
+                                    "state", "test-state"));
+
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(400));
@@ -2228,11 +2139,8 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturnBadRequestWhenNoQueryStringParametersArePresent() {
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyRequestEvent event = withRequestEvent(null);
+
             var response = makeHandlerRequest(event);
 
             verify(auditService)
@@ -2419,21 +2327,18 @@ class AuthorisationHandlerTest {
         void
                 shouldThrowBadRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            "invalid-redirect-uri",
-                            "response_type",
-                            "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    SCOPE,
+                                    "redirect_uri",
+                                    "invalid-redirect-uri",
+                                    "response_type",
+                                    "code"));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response.getStatusCode(), equalTo(400));
@@ -2461,18 +2366,15 @@ class AuthorisationHandlerTest {
                                             URI.create("http://localhost:8080"),
                                             new State("test-state"))));
 
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://localhost:8080",
-                            "scope", "email,openid,profile,non-existent-scope",
-                            "response_type", "code",
-                            "state", "test-state"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id", "test-id",
+                                    "redirect_uri", "http://localhost:8080",
+                                    "scope", "email,openid,profile,non-existent-scope",
+                                    "response_type", "code",
+                                    "state", "test-state"));
+
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -2566,20 +2468,22 @@ class AuthorisationHandlerTest {
                                             OAuth2Error.INVALID_SCOPE,
                                             URI.create("http://localhost:8080"),
                                             new State("test-state"))));
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("POST");
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setBody(
-                    String.format(
-                            "client_id=%s&scope=openid&response_type=code&request=%s",
-                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
-                            URLEncoder.encode(
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
-                                    Charset.defaultCharset())));
+            var event =
+                    withPostRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "scope",
+                                    "openid unknown-scope",
+                                    "request",
+                                    URLEncoder.encode(
+                                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR)
+                                                    .serialize(),
+                                            Charset.defaultCharset())));
 
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -2598,22 +2502,19 @@ class AuthorisationHandlerTest {
                                             OAuth2Error.INVALID_SCOPE,
                                             URI.create("http://localhost:8080"),
                                             new State("test-state"))));
-            var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -2627,21 +2528,18 @@ class AuthorisationHandlerTest {
             when(clientService.getClient(CLIENT_ID.toString()))
                     .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
 
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "response_type",
-                            "code"));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    SCOPE,
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "response_type",
+                                    "code"));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -2659,21 +2557,19 @@ class AuthorisationHandlerTest {
         void
                 shouldRedirectToProvidedRedirectUriWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "response_type",
-                            "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    SCOPE,
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "response_type",
+                                    "code"));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response.getStatusCode(), equalTo(302));
@@ -2710,21 +2606,19 @@ class AuthorisationHandlerTest {
                                             errorObject,
                                             URI.create("http://localhost:8080"),
                                             null)));
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            "test-id",
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    "test-id",
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
+
             event.withHeaders(Map.of("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE));
             var response = makeHandlerRequest(event);
 
@@ -2769,9 +2663,7 @@ class AuthorisationHandlerTest {
                                     "max_age",
                                     "1000"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeRequestWithSessionIdInCookie(event);
 
             ArgumentCaptor<OrchSessionItem> captor = ArgumentCaptor.forClass(OrchSessionItem.class);
@@ -2799,9 +2691,7 @@ class AuthorisationHandlerTest {
                                     "max_age",
                                     "1000"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeRequestWithSessionIdInCookie(event);
 
             ArgumentCaptor<OrchSessionItem> captor = ArgumentCaptor.forClass(OrchSessionItem.class);
@@ -2846,9 +2736,6 @@ class AuthorisationHandlerTest {
                                     "max_age",
                                     maxAgeParam));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
             var response = makeRequestWithSessionIdInCookie(event);
             var sessionCookie =
@@ -2916,23 +2803,19 @@ class AuthorisationHandlerTest {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
 
-            var event = new APIGatewayProxyRequestEvent();
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var jwtClaimsSet =
                     buildJwtClaimsSet("https://localhost/authorize", null, null, maxAgeParam);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             var response = makeRequestWithSessionIdInCookie(event);
             var sessionCookie =
@@ -3060,6 +2943,31 @@ class AuthorisationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHttpMethod("GET");
         event.setQueryStringParameters(requestParams);
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+        event.withHeaders(
+                Map.of(
+                        "txma-audit-encoded",
+                        TXMA_ENCODED_HEADER_VALUE,
+                        "Cookie",
+                        format("%s;bsid=%s", SESSION_COOKIE, BROWSER_SESSION_ID)));
+        return event;
+    }
+
+    private APIGatewayProxyRequestEvent withPostRequestEvent(Map<String, String> requestParams) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHttpMethod("POST");
+        event.setBody(
+                requestParams.entrySet().stream()
+                        .map(
+                                p ->
+                                        URLEncoder.encode(p.getKey(), Charset.defaultCharset())
+                                                + "="
+                                                + URLEncoder.encode(
+                                                        p.getValue(), Charset.defaultCharset()))
+                        .reduce((p1, p2) -> p1 + "&" + p2)
+                        .orElse(""));
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
