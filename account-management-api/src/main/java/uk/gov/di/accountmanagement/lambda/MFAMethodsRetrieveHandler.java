@@ -89,6 +89,7 @@ public class MFAMethodsRetrieveHandler
         UserProfile userProfile = maybeUserProfile.get();
 
         Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+        LOG.info("AIDAN authorizer params: {}", authorizerParams.toString());
         if (PrincipalValidationHelper.principalIsInvalid(
                 userProfile,
                 configurationService.getInternalSectorUri(),

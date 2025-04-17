@@ -28,6 +28,7 @@ public class PrincipalValidationHelper {
             var internalSubjectId =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile, internalSectorUri, authenticationService);
+            LOG.info("AIDAN calculate principal ID: {}", internalSubjectId);
             return !internalSubjectId.getValue().equals(authorizerParams.get(PRINCIPAL_ID_KEY));
         }
     }

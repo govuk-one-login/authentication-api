@@ -41,6 +41,10 @@ public class ClientSubjectHelper {
             UserProfile userProfile,
             String sectorIdentifierURI,
             AuthenticationService authenticationService) {
+        LOG.info("AIDAN subject ID: {}", userProfile.getSubjectID());
+        LOG.info("AIDAN sector identifier URI: {}", sectorIdentifierURI);
+        LOG.info("AIDAN sector identifier URI host returned: {}", returnHost(sectorIdentifierURI));
+        LOG.info("AIDAN salt: {}", authenticationService.getOrGenerateSalt(userProfile));
         return new Subject(
                 calculatePairwiseIdentifier(
                         userProfile.getSubjectID(),
