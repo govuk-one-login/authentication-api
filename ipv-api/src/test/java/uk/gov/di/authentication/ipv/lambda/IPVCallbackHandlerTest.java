@@ -170,8 +170,6 @@ class IPVCallbackHandlerTest {
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final Subject PUBLIC_SUBJECT =
-            new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final State STATE = new State();
     private static final List<VectorOfTrust> VTR_LIST =
             List.of(
@@ -232,7 +230,6 @@ class IPVCallbackHandlerTest {
                                     new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
                                     new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
                             CLIENT_NAME)
-                    .withPublicSubjectId(PUBLIC_SUBJECT.getValue())
                     .withRpPairwiseId(TEST_RP_PAIRWISE_ID);
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -1262,7 +1259,6 @@ class IPVCallbackHandlerTest {
                 .withEmailVerified(true)
                 .withPhoneNumber(TEST_PHONE_NUMBER)
                 .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
                 .withSubjectID(TEST_SUBJECT.getValue());
     }
 
