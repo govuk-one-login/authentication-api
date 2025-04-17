@@ -8,13 +8,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.ResponseAuthAppMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -90,14 +88,13 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     void shouldReturn200AndMfaMethodDataWhenAuthAppUserAddsSmsMfa() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
-        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -128,7 +125,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         extractedMfaIdentifier,
                         PriorityIdentifier.BACKUP,
                         true,
-                        new ResponseSmsMfaDetail(TEST_PHONE_NUMBER));
+                        new SmsMfaDetail(TEST_PHONE_NUMBER));
         var expectedResponse = JsonParser.parseString(expectedJson).getAsJsonObject().toString();
 
         assertEquals(expectedResponse, response.getBody());
@@ -144,7 +141,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL))),
+                                        new AuthAppMfaDetail(TEST_CREDENTIAL))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -174,7 +171,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         extractedMfaIdentifier,
                         PriorityIdentifier.BACKUP,
                         true,
-                        new ResponseAuthAppMfaDetail(TEST_CREDENTIAL));
+                        new AuthAppMfaDetail(TEST_CREDENTIAL));
 
         var expectedResponse = JsonParser.parseString(expectedJson).getAsJsonObject().toString();
 
@@ -188,7 +185,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap());
         assertEquals(400, response.getStatusCode());
@@ -202,7 +199,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", "incorrect-public-subject-id"),
@@ -247,14 +244,13 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
-        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -268,14 +264,13 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     void shouldReturn400ErrorResponseWhenSmsUserAddsSmsMfaWithSamePhoneNumber() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
-        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
+                                        new SmsMfaDetail(TEST_PHONE_NUMBER))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT),
@@ -295,7 +290,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestAuthAppMfaDetail(
+                                        new AuthAppMfaDetail(
                                                 "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -313,7 +308,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         Optional.of(
                                 constructRequestBody(
                                         PriorityIdentifier.BACKUP,
-                                        new RequestAuthAppMfaDetail(
+                                        new AuthAppMfaDetail(
                                                 MFAMethodType.AUTH_APP,
                                                 "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
                         Collections.emptyMap(),
@@ -336,7 +331,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                           }
                         }
                         """,
-                priorityIdentifier, constructRequestMfaDetailJson(mfaDetail));
+                priorityIdentifier, constructMfaDetailJson(mfaDetail));
     }
 
     private static String constructExpectedResponse(
@@ -356,11 +351,11 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 mfaIdentifier,
                 priorityIdentifier,
                 methodVerified,
-                constructResponseMfaDetailJson(mfaDetail));
+                constructMfaDetailJson(mfaDetail));
     }
 
-    private static String constructResponseMfaDetailJson(MfaDetail mfaDetail) {
-        if (mfaDetail instanceof ResponseSmsMfaDetail) {
+    private static String constructMfaDetailJson(MfaDetail mfaDetail) {
+        if (mfaDetail instanceof SmsMfaDetail) {
             return format(
                     """
                             {
@@ -368,7 +363,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                               "phoneNumber": "%s"
                             }
                             """,
-                    (mfaDetail).mfaMethodType(), ((ResponseSmsMfaDetail) mfaDetail).phoneNumber());
+                    ((SmsMfaDetail) mfaDetail).mfaMethodType(),
+                    ((SmsMfaDetail) mfaDetail).phoneNumber());
         } else {
             return format(
                     """
@@ -377,34 +373,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                               "credential": "%s"
                             }
                             """,
-                    ((ResponseAuthAppMfaDetail) mfaDetail).mfaMethodType(),
-                    ((ResponseAuthAppMfaDetail) mfaDetail).credential());
-        }
-    }
-
-    private static String constructRequestMfaDetailJson(MfaDetail mfaDetail) {
-        if (mfaDetail instanceof RequestSmsMfaDetail) {
-            return format(
-                    """
-                            {
-                              "mfaMethodType": "%s",
-                              "phoneNumber": "%s",
-                              "otp": "%s"
-                            }
-                            """,
-                    ((RequestSmsMfaDetail) mfaDetail).mfaMethodType(),
-                    ((RequestSmsMfaDetail) mfaDetail).phoneNumber(),
-                    ((RequestSmsMfaDetail) mfaDetail).otp());
-        } else {
-            return format(
-                    """
-                            {
-                              "mfaMethodType": "%s",
-                              "credential": "%s"
-                            }
-                            """,
-                    ((RequestAuthAppMfaDetail) mfaDetail).mfaMethodType(),
-                    ((RequestAuthAppMfaDetail) mfaDetail).credential());
+                    ((AuthAppMfaDetail) mfaDetail).mfaMethodType(),
+                    ((AuthAppMfaDetail) mfaDetail).credential());
         }
     }
 }

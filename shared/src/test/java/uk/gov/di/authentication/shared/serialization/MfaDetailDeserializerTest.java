@@ -3,29 +3,27 @@ package uk.gov.di.authentication.shared.serialization;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.mfa.AuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaDetailDeserializer;
-import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.entity.mfa.SmsMfaDetail;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-class MfaDetailDeserializerTest {
+public class MfaDetailDeserializerTest {
 
     @Test
     void shouldDeserializeSmsMfaDetail() {
-        String json =
-                "{\"mfaMethodType\": \"SMS\", \"phoneNumber\": \"+447700900123\", \"otp\":\"123456\"}";
+        String json = "{\"mfaMethodType\": \"SMS\", \"phoneNumber\": \"+447700900123\"}";
         Gson gson =
                 new GsonBuilder()
                         .registerTypeAdapter(MfaDetail.class, new MfaDetailDeserializer())
                         .create();
         MfaDetail mfaDetail = gson.fromJson(json, MfaDetail.class);
-        assertInstanceOf(RequestSmsMfaDetail.class, mfaDetail);
-        assertEquals(MFAMethodType.SMS, ((RequestSmsMfaDetail) mfaDetail).mfaMethodType());
-        assertEquals("+447700900123", ((RequestSmsMfaDetail) mfaDetail).phoneNumber());
+        assertInstanceOf(SmsMfaDetail.class, mfaDetail);
+        assertEquals(MFAMethodType.SMS, ((SmsMfaDetail) mfaDetail).mfaMethodType());
+        assertEquals("+447700900123", ((SmsMfaDetail) mfaDetail).phoneNumber());
     }
 
     @Test
@@ -36,8 +34,8 @@ class MfaDetailDeserializerTest {
                         .registerTypeAdapter(MfaDetail.class, new MfaDetailDeserializer())
                         .create();
         MfaDetail mfaDetail = gson.fromJson(json, MfaDetail.class);
-        assertInstanceOf(RequestAuthAppMfaDetail.class, mfaDetail);
-        assertEquals(MFAMethodType.AUTH_APP, ((RequestAuthAppMfaDetail) mfaDetail).mfaMethodType());
-        assertEquals("123456", ((RequestAuthAppMfaDetail) mfaDetail).credential());
+        assertInstanceOf(AuthAppMfaDetail.class, mfaDetail);
+        assertEquals(MFAMethodType.AUTH_APP, ((AuthAppMfaDetail) mfaDetail).mfaMethodType());
+        assertEquals("123456", ((AuthAppMfaDetail) mfaDetail).credential());
     }
 }

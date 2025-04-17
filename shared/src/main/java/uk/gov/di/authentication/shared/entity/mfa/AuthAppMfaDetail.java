@@ -1,17 +1,15 @@
-package uk.gov.di.authentication.shared.entity.mfa.response;
+package uk.gov.di.authentication.shared.entity.mfa;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.validation.Required;
 
-public record ResponseAuthAppMfaDetail(
+public record AuthAppMfaDetail(
         @Expose @Required @SerializedName("mfaMethodType") MFAMethodType mfaMethodType,
         @Expose @Required @SerializedName("credential") String credential)
         implements MfaDetail {
 
-    public ResponseAuthAppMfaDetail(String credential) {
+    public AuthAppMfaDetail(String credential) {
         this(MFAMethodType.AUTH_APP, credential);
     }
 }
