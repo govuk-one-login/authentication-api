@@ -49,14 +49,16 @@ class PrincipalValidationHelperTest {
 
     @Test
     void shouldReturnTrueWhenPrincipalDoesNotMatchPairwiseSubjectId() {
-        var salt = SaltHelper.generateNewSalt();
+        byte[] salt = SaltHelper.generateNewSalt();
         var userProfile =
                 new UserProfile()
                         .withSubjectID(new Subject().getValue())
                         .withPublicSubjectID(new Subject().getValue());
         var internalPairwiseIdentifier =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        new Subject().getValue(), "test.account.gov.uk", salt);
+                        new Subject("3447a6a6-ade4-44a3-8378-bb06b89313cb").getValue(),
+                        "test.account.gov.uk",
+                        salt);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         authorizerParams.put("principalId", internalPairwiseIdentifier);
 
