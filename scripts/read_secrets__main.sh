@@ -1,29 +1,17 @@
 #!/bin/bash
-set -euo pipefail
 
-[[ "${BASH_SOURCE[0]}" != "${0}" ]] || {
-  echo "Error: Script must be sourced, not executed"
-  exit 1
-}
-
-ENVIRONMENT="${1}"
-
-if [ "$ENVIRONMENT" = "dev" ]; then
-  ENVIRONMENT="build"
-fi
-
-secrets="$(
-  aws secretsmanager list-secrets \
-    --filter "Key=\"name\",Values=\"/deploy/${ENVIRONMENT}/\"" --region eu-west-2 |
-    jq -r '.SecretList[]|[.ARN,(.Name|split("/")|last)]|@tsv'
-)"
-
-if [ -z "${secrets}" ]; then
-  printf '!! ERROR: No secrets found for environment %s. Exiting.\n' "${ENVIRONMENT}" >&2
+if [[ -z ${CODEBUILD_BUILD_ID:-} ]]; then
+  echo 'This should only be run in codebuild'
   exit 1
 fi
 
-while IFS=$'\t' read -r arn name; do
-  value=$(aws secretsmanager get-secret-value --secret-id "${arn}" | jq -r '.SecretString')
-  export "TF_VAR_${name}"="${value}"
-done <<<"${secrets}"
+_secrets_environment="${1}"
+
+_tfvars_path="./terraform.tfvars.json"
+if ! python3 "secrets-to-tfvars.py" "${_secrets_environment}" "${_tfvars_path}"; then
+  echo "Failed to generate terraform.tfvars.json"
+  exit 1
+fi
+
+_secret_count=$(jq '. | length' "${_tfvars_path}")
+echo "Successfully retrieved ${_secret_count} secrets from AWS Secrets Manager and saved to ${_tfvars_path}"
