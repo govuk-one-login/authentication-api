@@ -2244,8 +2244,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void assertOnSessionCookie(Optional<HttpCookie> sessionCookie) {
         assertTrue(sessionCookie.isPresent());
-        var sessionId = sessionCookie.get().getValue().split("\\.")[0];
-        assertTrue(orchSessionExtension.getSession(sessionId).isPresent());
+        var sids = sessionCookie.get().getValue().split("\\.");
+        var sessionId = sids[0];
+        var clientSessionId = sids[1];
+        var session = orchSessionExtension.getSession(sessionId);
+        assertTrue(session.isPresent());
+        assertTrue(session.get().getClientSessions().contains(clientSessionId));
+        assertTrue(orchClientSessionExtention.getClientSession(clientSessionId).isPresent());
     }
 
     private void assertResponseJarHasClaimsWithValues(

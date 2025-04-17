@@ -2081,6 +2081,51 @@ class AuthorisationHandlerTest {
                             pair("description", expectedErrorObject.getDescription()));
         }
 
+        @Test
+        void shouldCreateANewSessionAndAttachTheClientSessionIdToIt() {
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+            verify(orchSessionService)
+                    .addSession(
+                            argThat(
+                                    os ->
+                                            os.getClientSessions().size() == 1
+                                                    && os.getClientSessions()
+                                                            .contains(CLIENT_SESSION_ID)));
+        }
+
+        @Test
+        void shouldAddANewClientSessionToAnExistingOrchSession() {
+            withExistingOrchSession(orchSession.addClientSession("previous-client-session"));
+            withExistingSession(session);
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verify(orchSessionService)
+                    .addSession(
+                            argThat(
+                                    os ->
+                                            os.getClientSessions().size() == 2
+                                                    && os.getClientSessions()
+                                                            .contains(CLIENT_SESSION_ID)
+                                                    && os.getClientSessions()
+                                                            .contains("previous-client-session")));
+        }
+
         @Nested
         class BrowserSessionId {
             private final ArgumentCaptor<Session> sessionCaptor =
@@ -2341,6 +2386,33 @@ class AuthorisationHandlerTest {
             when(sessionService.getSession(any())).thenReturn(Optional.of(sessionSpy));
             makeDocAppHandlerRequest();
             verify(sessionSpy).addClientSession(CLIENT_SESSION_ID);
+        }
+
+        @Test
+        void shouldAddANewClientSessionToAnExistingOrchSession() throws JOSEException {
+            withExistingOrchSession(orchSession.addClientSession("previous-client-session"));
+            makeDocAppHandlerRequest();
+            verify(orchSessionService)
+                    .updateSession(
+                            argThat(
+                                    os ->
+                                            os.getClientSessions().size() == 2
+                                                    && os.getClientSessions()
+                                                            .contains("previous-client-session")
+                                                    && os.getClientSessions()
+                                                            .contains(CLIENT_SESSION_ID)));
+        }
+
+        @Test
+        void shouldAddANewClientSessionToANewOrchSession() throws JOSEException {
+            makeDocAppHandlerRequest();
+            verify(orchSessionService)
+                    .addSession(
+                            argThat(
+                                    os ->
+                                            os.getClientSessions().size() == 1
+                                                    && os.getClientSessions()
+                                                            .contains(CLIENT_SESSION_ID)));
         }
 
         @Test

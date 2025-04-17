@@ -119,6 +119,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttache
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
+import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -585,6 +586,7 @@ public class AuthorisationHandler
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
 
         session.addClientSession(clientSessionId);
+        orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session, newSessionId);
@@ -592,7 +594,7 @@ public class AuthorisationHandler
                 s -> orchSessionService.updateSession(orchSession),
                 () -> orchSessionService.addSession(orchSession));
         LOG.info("Session saved successfully");
-
+        logIfClientSessionListOnSessionsAreEqual(session, orchSession);
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
@@ -745,10 +747,13 @@ public class AuthorisationHandler
         orchClientSessionService.storeClientSession(orchClientSession);
 
         session.addClientSession(clientSessionId);
+        orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session, newSessionId);
+        orchSessionService.addSession(orchSession);
         LOG.info("Session saved successfully");
+        logIfClientSessionListOnSessionsAreEqual(session, orchSession);
         return generateAuthRedirect(
                 newSessionId,
                 clientSessionId,
@@ -765,7 +770,6 @@ public class AuthorisationHandler
     private OrchSessionItem createNewOrchSession(String sessionId, String browserSessionId) {
         var newOrchSessionItem =
                 new OrchSessionItem(sessionId).withBrowserSessionId(browserSessionId);
-        orchSessionService.addSession(newOrchSessionItem);
         LOG.info("Created new Orch session with session ID: {}", sessionId);
         return newOrchSessionItem;
     }
@@ -777,7 +781,6 @@ public class AuthorisationHandler
                         .withSessionId(newSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry());
         updatedSession.resetProcessingIdentityAttempts();
-        orchSessionService.addSession(updatedSession);
         orchSessionService.deleteSession(previousSession.getSessionId());
         LOG.info(
                 "Updated existing Orch session ID from {} to {}",
@@ -808,8 +811,7 @@ public class AuthorisationHandler
                         .withAuthenticated(false)
                         .withPreviousSessionId(newSessionIdForPreviousSession);
         newSession.resetProcessingIdentityAttempts();
-        orchSessionService.addSession(newSession);
-
+        newSession.resetClientSessions();
         return newSession;
     }
 

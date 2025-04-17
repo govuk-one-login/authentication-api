@@ -70,6 +70,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -891,14 +892,18 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
             var sharedSession = redis.getSession(SESSION_ID);
             var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
-            assertEquals(PREVIOUS_CLIENT_SESSIONS, sharedSession.getClientSessions());
+            var expectedClientSessions = new ArrayList<>(List.of(CLIENT_SESSION_ID));
+            expectedClientSessions.addAll(PREVIOUS_CLIENT_SESSIONS);
+            assertEquals(
+                    expectedClientSessions.stream().toList(), sharedSession.getClientSessions());
+            assertEquals(expectedClientSessions.stream().toList(), orchSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
         }
 
         @Test
         void
                 doesNotUpdateOrchSessionAndSharedSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse()
-                        throws Json.JsonException, ParseException {
+                        throws Json.JsonException {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
@@ -939,39 +944,46 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
             var sharedSession = redis.getSession(SESSION_ID);
             var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
-            assertEquals(List.of(), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), sharedSession.getClientSessions());
+            assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
             assertNull(orchSession.getPreviousSessionId());
             assertBackChannelLogoutsSent(PREVIOUS_CLIENTS_FOR_CLIENT_SESSION);
         }
 
         private void setupMaxAgeSession() throws Json.JsonException {
-            redis.createSession(SESSION_ID);
+            var session = new Session();
+            session.addClientSession(CLIENT_SESSION_ID);
+            redis.addSessionWithId(session, SESSION_ID);
             redis.addStateToRedis(
                     AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                     ORCH_TO_AUTH_STATE,
                     SESSION_ID);
             setUpClientSession();
             orchSessionExtension.addSession(
-                    new OrchSessionItem(SESSION_ID).withPreviousSessionId(PREVIOUS_SESSION_ID));
+                    new OrchSessionItem(SESSION_ID)
+                            .withPreviousSessionId(PREVIOUS_SESSION_ID)
+                            .addClientSession(CLIENT_SESSION_ID));
         }
 
         private void setupPreviousSessions(String internalCommonSubjectId)
                 throws Json.JsonException {
             var session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
+            var orchSession =
+                    new OrchSessionItem(PREVIOUS_SESSION_ID)
+                            .withInternalCommonSubjectId(internalCommonSubjectId)
+                            .withAuthTime(
+                                    NowHelper.nowMinus(1, ChronoUnit.HOURS)
+                                            .toInstant()
+                                            .getEpochSecond());
             PREVIOUS_CLIENT_SESSIONS.forEach(session::addClientSession);
+            PREVIOUS_CLIENT_SESSIONS.forEach(orchSession::addClientSession);
             redis.addSessionWithId(session, PREVIOUS_SESSION_ID);
             redis.addStateToRedis(
                     AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                     ORCH_TO_AUTH_STATE,
                     SESSION_ID);
             setUpClientSession();
-            orchSessionExtension.addSession(
-                    new OrchSessionItem(PREVIOUS_SESSION_ID)
-                            .withInternalCommonSubjectId(internalCommonSubjectId)
-                            .withAuthTime(
-                                    NowHelper.nowMinus(1, ChronoUnit.HOURS)
-                                            .toInstant()
-                                            .getEpochSecond()));
+            orchSessionExtension.addSession(orchSession);
         }
 
         private void setupPreviousClientsAndPreviousClientSessions() throws Json.JsonException {
