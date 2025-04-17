@@ -1627,96 +1627,6 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "prompt",
-                                    Prompt.Type.LOGIN.toString(),
-                                    "id_token_hint",
-                                    SERIALIZED_SIGNED_ID_TOKEN));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
-            assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
-        }
-
-        @Test
-        void
-                shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParametersWithAuthOrchSplitEnabled() {
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "prompt",
-                                    Prompt.Type.LOGIN.toString(),
-                                    "id_token_hint",
-                                    SERIALIZED_SIGNED_ID_TOKEN));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
-        }
-
-        @Test
-        void shouldAddReauthenticateAndPreviousJourneyIdClaimIfPromptIsLoginAndIdTokenIsValid()
-                throws JOSEException, ParseException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
-
-            var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE,
-                            Prompt.Type.LOGIN.toString(),
-                            SERIALIZED_SIGNED_ID_TOKEN);
-
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "response_type",
-                                    "code",
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(
-                    argument.getValue().getStringClaim("reauthenticate"),
-                    equalTo(SUBJECT.getValue()));
-            assertThat(
-                    argument.getValue().getStringClaim("previous_govuk_signin_journey_id"),
-                    equalTo(CLIENT_SESSION_ID));
-        }
-
-        @Test
         void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws ParseException {
             when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
             when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
@@ -1828,118 +1738,6 @@ class AuthorisationHandlerTest {
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
 
-        private static Stream<Prompt.Type> prompts() {
-            return Stream.of(Prompt.Type.CREATE, null);
-        }
-
-        @ParameterizedTest
-        @MethodSource("prompts")
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfPromptIsNotLoginAndIdTokenIsValid(
-                Prompt.Type prompt) throws JOSEException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
-
-            var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE,
-                            prompt == null ? null : prompt.toString(),
-                            SERIALIZED_SIGNED_ID_TOKEN);
-
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "response_type",
-                                    "code",
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
-        }
-
-        @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfIdTokenHintIsNotPresent()
-                throws JOSEException {
-            var jwtClaimsSet =
-                    buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
-
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "response_type",
-                                    "code",
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
-        }
-
-        @Test
-        void shouldGetVtrFromIdTokenIfNotPresentInAuthenticationRequestAndReauthRequested()
-                throws JOSEException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
-            var serialisedIdTokenHint =
-                    TokenGeneratorHelper.generateIDToken(
-                                    CLIENT_ID.getValue(),
-                                    SUBJECT,
-                                    "http://localhost-rp",
-                                    EC_SIGNING_KEY,
-                                    "[PCL200.Cl.Cm]")
-                            .serialize();
-            var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), serialisedIdTokenHint);
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "response_type",
-                                    "code",
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-            APIGatewayProxyResponseEvent response =
-                    makeHandlerRequest(withRequestEvent(requestParams));
-            assertThat(response.getStatusCode(), equalTo(302));
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(argument.getValue().getClaim("confidence"), equalTo("Cl.Cm"));
-        }
-
         @Test
         void shouldSetTheRelevantCookiesInTheHeader() {
             Map<String, String> requestParams = buildRequestParams(null);
@@ -1969,6 +1767,99 @@ class AuthorisationHandlerTest {
                                             "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                                             BROWSER_SESSION_ID_COOKIE_NAME,
                                             NEW_BROWSER_SESSION_ID)));
+        }
+    }
+
+    @Nested
+    class Reauthentication {
+        @Test
+        void shouldAddReauthenticateAndPreviousJourneyIdClaimIfPromptIsLoginAndIdTokenIsValid()
+                throws JOSEException, ParseException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertThat(
+                    argument.getValue().getStringClaim("reauthenticate"),
+                    equalTo(SUBJECT.getValue()));
+            assertThat(
+                    argument.getValue().getStringClaim("previous_govuk_signin_journey_id"),
+                    equalTo(CLIENT_SESSION_ID));
+        }
+
+        @Test
+        void
+                shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParametersWithAuthOrchSplitEnabled() {
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "prompt",
+                                    Prompt.Type.LOGIN.toString(),
+                                    "id_token_hint",
+                                    SERIALIZED_SIGNED_ID_TOKEN));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+        }
+
+        @Test
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "prompt",
+                                    Prompt.Type.LOGIN.toString(),
+                                    "id_token_hint",
+                                    SERIALIZED_SIGNED_ID_TOKEN));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
+            assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
         }
 
         @Test
@@ -2078,6 +1969,118 @@ class AuthorisationHandlerTest {
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("description", expectedErrorObject.getDescription()));
+        }
+
+        @Test
+        void shouldGetVtrFromIdTokenIfNotPresentInAuthenticationRequestAndReauthRequested()
+                throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+            var serialisedIdTokenHint =
+                    TokenGeneratorHelper.generateIDToken(
+                                    CLIENT_ID.getValue(),
+                                    SUBJECT,
+                                    "http://localhost-rp",
+                                    EC_SIGNING_KEY,
+                                    "[PCL200.Cl.Cm]")
+                            .serialize();
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), serialisedIdTokenHint);
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyResponseEvent response =
+                    makeHandlerRequest(withRequestEvent(requestParams));
+            assertThat(response.getStatusCode(), equalTo(302));
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertThat(argument.getValue().getClaim("confidence"), equalTo("Cl.Cm"));
+        }
+
+        @Test
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfIdTokenHintIsNotPresent()
+                throws JOSEException {
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+        }
+
+        private static Stream<Prompt.Type> prompts() {
+            return Stream.of(Prompt.Type.CREATE, null);
+        }
+
+        @ParameterizedTest
+        @MethodSource("prompts")
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfPromptIsNotLoginAndIdTokenIsValid(
+                Prompt.Type prompt) throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            prompt == null ? null : prompt.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
         }
     }
 
