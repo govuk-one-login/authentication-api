@@ -118,16 +118,25 @@ Mappings:
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
     dev:
+      authCodeStore: arn:aws:dynamodb:eu-west-2:653994557586:table/dev-auth-code-store
+      authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/7c60a855-8b61-4d0e-be99-f12a22bd2001
+      accessTokenStore: arn:aws:dynamodb:eu-west-2:653994557586:table/dev-access-token-store
+      accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       cloudwatchLogRetentionInDays: 1
       defaultProvisionedConcurrency: 0
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
     build:
+      authCodeStore: arn:aws:dynamodb:eu-west-2:761723964695:table/build-auth-code-store
+      authCodeStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/ce2114cb-cfe3-4108-a738-4790dbe99f64
+      accessTokenStore: arn:aws:dynamodb:eu-west-2:761723964695:table/build-access-token-store
+      accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       cloudwatchLogRetentionInDays: 7
       defaultProvisionedConcurrency: 1
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "Yes"
+      orchApiVpcEndpointId: vpce-0867442e4d95fb43e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
     staging:
@@ -135,6 +144,7 @@ Mappings:
       defaultProvisionedConcurrency: 3
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "Yes"
+      orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
     integration:
@@ -142,12 +152,14 @@ Mappings:
       defaultProvisionedConcurrency: 1
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "Yes"
+      orchApiVpcEndpointId: vpce-0704b783d794cea52
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
     production:
       cloudwatchLogRetentionInDays: 30
       defaultProvisionedConcurrency: 3
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       IsSplunkEnabled: "Yes"
+      orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
@@ -382,6 +394,14 @@ Resources:
                 DefaultValue: "",
               ]
           TXMA_AUDIT_QUEUE_URL: ""
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - !Ref AuthCodeDynamoEncryptionKeyKmsPolicy
+        - !Ref AccessTokenStoreSigningKeyKmsPolicy
+        - !Ref DynamoAuthCodeStoreReadAccessPolicy
+        - !Ref DynamoAuthCodeStoreWriteAccessPolicy
+        - !Ref DynamoAccessTokenStoreReadAccessPolicy
+        - !Ref DynamoAccessTokenStoreWriteAccessPolicy
 
   AuthTokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -476,3 +496,152 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+
+  # Managed policies
+
+  # module.auth_ext_txma_audit.access_policy_arn,
+  # aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+  # aws_iam_policy.audit_events_sns_policy.arn,
+  # aws_iam_policy.dynamo_user_read_access_policy.arn
+
+  AuthCodeDynamoEncryptionKeyKmsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing KMS encryption of the auth code table"
+      Path: !Sub /${Environment}/auth-ext-default/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToAuthCodeTableKmsEncryptionKey
+            Effect: Allow
+            Action: kms:Decrypt*
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authCodeStoreSigningKey,
+              ]
+
+  AccessTokenStoreSigningKeyKmsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing KMS encryption of the auth code table"
+      Path: !Sub /${Environment}/auth-ext-default/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToAccessTokenStoreKmsSigningKey
+            Effect: Allow
+            Action: kms:Decrypt*
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                accessTokenStoreSigningKey,
+              ]
+
+  DynamoAuthCodeStoreReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the Dynamo Auth Code table"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authCodeStore,
+              ]
+
+  DynamoAuthCodeStoreWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing write permissions to the Dynamo Auth Code table"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authCodeStore,
+              ]
+
+  DynamoAccessTokenStoreReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the Dynamo Access Token Store table"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  accessTokenStore,
+                ]
+              - !Sub
+                - "${dynamodbTable}/index/*"
+                - dynamodbTable:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      accessTokenStore,
+                    ]
+
+  DynamoAccessTokenStoreWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing write permissions to the Dynamo Access Token Store table"
+      Path: !Sub /${Environment}/auth-ext/
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  accessTokenStore,
+                ]
+              - !Sub
+                - "${dynamodbTable}/index/*"
+                - dynamodbTable:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      accessTokenStore,
+                    ]
