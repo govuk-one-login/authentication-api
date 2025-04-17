@@ -37,7 +37,6 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -81,7 +80,6 @@ public class AuthCodeHandler
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
-    private final AuthorisationCodeService authorisationCodeService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final OrchClientSessionService orchClientSessionService;
@@ -96,7 +94,6 @@ public class AuthCodeHandler
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             AuthCodeResponseGenerationService authCodeResponseService,
-            AuthorisationCodeService authorisationCodeService,
             OrchAuthCodeService orchAuthCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             OrchClientSessionService orchClientSessionService,
@@ -109,7 +106,6 @@ public class AuthCodeHandler
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.authCodeResponseService = authCodeResponseService;
-        this.authorisationCodeService = authorisationCodeService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.orchClientSessionService = orchClientSessionService;
@@ -124,7 +120,6 @@ public class AuthCodeHandler
         sessionService = new SessionService(configurationService);
         orchSessionService = new OrchSessionService(configurationService);
         authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
-        authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchAuthCodeService = new OrchAuthCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -143,7 +138,6 @@ public class AuthCodeHandler
         sessionService = new SessionService(configurationService, redis);
         orchSessionService = new OrchSessionService(configurationService);
         authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
-        authorisationCodeService = new AuthorisationCodeService(configurationService);
         orchAuthCodeService = new OrchAuthCodeService(configurationService);
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -267,6 +261,7 @@ public class AuthCodeHandler
                             clientSessionId,
                             session,
                             orchSession);
+
             authenticationResponse =
                     orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                             authenticationRequest, authCode, redirectUri, state);
@@ -278,6 +273,11 @@ public class AuthCodeHandler
             return processUserNotFoundException(authenticationRequest);
         } catch (ParseException e) {
             return processParseException(e);
+        } catch (OrchAuthCodeException e) {
+            LOG.error(
+                    "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: {}",
+                    e.getMessage());
+            return generateApiGatewayProxyResponse(500, "Internal server error");
         }
 
         LOG.info("Successfully processed request");
@@ -482,27 +482,10 @@ public class AuthCodeHandler
             orchSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
 
-        var authCode =
-                authorisationCodeService.generateAndSaveAuthorisationCode(
-                        clientID.getValue(),
-                        clientSessionId,
-                        emailOptional.orElse(null),
-                        orchSession.getAuthTime());
-
-        // TODO: ATO-1218: Remove the try-catch block below
-        try {
-            orchAuthCodeService.generateAndSaveAuthorisationCode(
-                    authCode,
-                    clientID.getValue(),
-                    clientSessionId,
-                    emailOptional.orElse(null),
-                    orchSession.getAuthTime());
-        } catch (OrchAuthCodeException e) {
-            LOG.warn(
-                    "Failed to generate and save authorisation code to orch auth code DynamoDB store. NOTE: Redis is still the primary at present. Error: {}",
-                    e.getMessage());
-        }
-
-        return authCode;
+        return orchAuthCodeService.generateAndSaveAuthorisationCode(
+                clientID.getValue(),
+                clientSessionId,
+                emailOptional.orElse(null),
+                orchSession.getAuthTime());
     }
 }

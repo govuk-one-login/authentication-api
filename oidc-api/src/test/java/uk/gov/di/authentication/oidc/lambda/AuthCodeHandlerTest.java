@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -49,7 +50,6 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -102,6 +102,7 @@ import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTIN
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -109,8 +110,7 @@ class AuthCodeHandlerTest {
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
+
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
     private final OrchClientSessionService orchClientSessionService =
@@ -182,7 +182,6 @@ class AuthCodeHandlerTest {
                         orchSessionService,
                         authUserInfoService,
                         authCodeResponseService,
-                        authorisationCodeService,
                         orchAuthCodeService,
                         orchestrationAuthorizationService,
                         orchClientSessionService,
@@ -285,16 +284,7 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
-
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class)))
-                .thenReturn(authorizationCode);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
@@ -352,12 +342,7 @@ class AuthCodeHandlerTest {
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
 
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class));
+        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
 
         var dimensions =
                 Map.of(
@@ -411,17 +396,8 @@ class AuthCodeHandlerTest {
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
-
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
-                .thenReturn(authorizationCode);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(null),
-                        any(Long.class)))
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -482,9 +458,8 @@ class AuthCodeHandlerTest {
                         pair("rpPairwiseId", AuditService.UNKNOWN),
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class));
+
+        assertAuthorisationCodeGeneratedAndSaved(null);
 
         var expectedDimensions =
                 Map.of(
@@ -730,6 +705,33 @@ class AuthCodeHandlerTest {
     }
 
     @Test
+    void shouldGenerateErrorResponseWhenAuthCodeGenerationThrowsException()
+            throws ParseException, JOSEException {
+        generateAuthUserInfo();
+
+        session.setNewAccount(AccountState.UNKNOWN);
+        orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
+
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(
+                        (ClientRegistry) any(), eq(REDIRECT_URI)))
+                .thenReturn(true);
+        when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
+
+        when(orchAuthCodeService.generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
+                .thenThrow(new OrchAuthCodeException("Some error during auth code generation."));
+
+        generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
+
+        var response = generateApiRequest();
+
+        assertThat(response, hasStatus(500));
+        assertThat(response, hasBody("Internal server error"));
+
+        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
+    }
+
+    @Test
     void shouldUpdateOrchSession() throws JOSEException, ParseException {
         generateAuthUserInfo();
 
@@ -754,19 +756,10 @@ class AuthCodeHandlerTest {
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
 
-        // TODO: ATO-1218: Remove the following stub for the auth code service.
-        when(authorisationCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class)))
-                .thenReturn(authorizationCode);
+        // TODO: Stop here in new test.
+
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(EMAIL),
-                        any(Long.class)))
+                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -899,16 +892,8 @@ class AuthCodeHandlerTest {
     }
 
     private void assertAuthorisationCodeGeneratedAndSaved(String expectedEmail) {
-        verify(authorisationCodeService, times(1))
-                .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(expectedEmail),
-                        anyLong());
-
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(expectedEmail),
@@ -916,15 +901,7 @@ class AuthCodeHandlerTest {
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
-        verify(authorisationCodeService, times(0))
-                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
-
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(
-                        any(AuthorizationCode.class),
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyLong());
+                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
     }
 }
