@@ -959,7 +959,7 @@ public class AuthorisationHandler
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthSub)
                         .claim("previous_govuk_signin_journey_id", reauthSid)
-                        .claim("channel", client.getChannel())
+                        .claim("channel", client.getChannel().toLowerCase())
                         .claim("authenticated", orchSession.getAuthenticated())
                         .claim(
                                 "current_credential_strength",
