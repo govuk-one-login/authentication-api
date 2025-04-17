@@ -2380,7 +2380,7 @@ class AuthorisationHandlerTest {
     @Nested
     class InvalidRequestRedirectingErrors {
         @Test
-        void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
+        void shouldReturn302WithErrorQueryParamsWhenAuthorisationRequestContainsInvalidScope() {
             when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -2417,7 +2417,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
+        void
+                shouldReturnReturn302WithErrorQueryParamsWhenAuthorisationRequestBodyContainsInvalidScope() {
             when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -2550,7 +2551,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToRPWhenClientIsNotActive() {
+        void shouldReturn302WithErrorQueryParamsWhenClientIsNotActive() {
             when(clientService.getClient(CLIENT_ID.toString()))
                     .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
 
