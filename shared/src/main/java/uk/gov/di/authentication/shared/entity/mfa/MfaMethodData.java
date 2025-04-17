@@ -1,22 +1,19 @@
-package uk.gov.di.authentication.shared.entity.mfa.response;
+package uk.gov.di.authentication.shared.entity.mfa;
 
 import com.google.gson.annotations.Expose;
 import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.validation.Required;
 
-public record MfaMethodResponse(
+public record MfaMethodData(
         @Expose String mfaIdentifier,
         @Expose @Required PriorityIdentifier priorityIdentifier,
         @Expose @Required boolean methodVerified,
         @Expose @Required MfaDetail method)
-        implements Comparable<MfaMethodResponse> {
+        implements Comparable<MfaMethodData> {
 
-    public static Result<String, MfaMethodResponse> from(MFAMethod mfaMethod) {
+    public static Result<String, MfaMethodData> from(MFAMethod mfaMethod) {
         if (mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
             return Result.success(
                     smsMethodData(
@@ -36,32 +33,29 @@ public record MfaMethodResponse(
         }
     }
 
-    public static MfaMethodResponse smsMethodData(
+    public static MfaMethodData smsMethodData(
             String mfaIdentifier,
             PriorityIdentifier priorityIdentifier,
             boolean methodVerified,
             String phoneNumber) {
-        return new MfaMethodResponse(
-                mfaIdentifier,
-                priorityIdentifier,
-                methodVerified,
-                new ResponseSmsMfaDetail(phoneNumber));
+        return new MfaMethodData(
+                mfaIdentifier, priorityIdentifier, methodVerified, new SmsMfaDetail(phoneNumber));
     }
 
-    public static MfaMethodResponse authAppMfaData(
+    public static MfaMethodData authAppMfaData(
             String mfaIdentifier,
             PriorityIdentifier priorityIdentifier,
             boolean methodVerified,
             String credential) {
-        return new MfaMethodResponse(
+        return new MfaMethodData(
                 mfaIdentifier,
                 priorityIdentifier,
                 methodVerified,
-                new ResponseAuthAppMfaDetail(credential));
+                new AuthAppMfaDetail(credential));
     }
 
     @Override
-    public int compareTo(@NotNull MfaMethodResponse other) {
+    public int compareTo(@NotNull MfaMethodData other) {
         return this.mfaIdentifier.compareTo(other.mfaIdentifier);
     }
 }
