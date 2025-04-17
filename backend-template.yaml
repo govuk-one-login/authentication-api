@@ -6,10 +6,9 @@ Transform:
 Metadata:
   cfn-lint:
     config:
-      configure_rules:
-        E3033:
-          exceptions:
-            - none
+      ignore_checks:
+        - W8003
+        - E3033
 
 Description: >
   Auth API template for backend
@@ -27,7 +26,7 @@ Parameters:
   PermissionsBoundary:
     Description: "The ARN of the permissions boundary to apply when creating IAM roles"
     Type: String
-    Default: "nonenonenonenonenone"
+    Default: "none"
 
   Environment:
     Description: "The name of the environment to deploy to"
@@ -50,6 +49,11 @@ Parameters:
     Type: String
     Description: Specifies the configuration to enable gradual Lambda deployments
     Default: AllAtOnce
+
+  LoggingSubscriptionEndpointArn:
+    Type: String
+    Description: The ARN of the subscription endpoint to send logs to splunk
+    Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
   EnableProvisionedConcurrency:
@@ -77,7 +81,7 @@ Conditions:
     Fn::Not:
       - Fn::Equals:
           - !Ref PermissionsBoundary
-          - "nonenonenonenonenone"
+          - "none"
 
   UseSubEnvironment:
     Fn::And:
@@ -94,6 +98,16 @@ Conditions:
       - Fn::Equals:
           - !Ref Environment
           - production
+
+  IsSplunkEnabled:
+    Fn::Equals:
+      - !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          IsSplunkEnabled,
+          DefaultValue: "No",
+        ]
+      - "Yes"
 
 Mappings:
   EnvironmentConfiguration:
@@ -113,23 +127,27 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       defaultProvisionedConcurrency: 1
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      IsSplunkEnabled: "Yes"
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
     staging:
       cloudwatchLogRetentionInDays: 7
       defaultProvisionedConcurrency: 3
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      IsSplunkEnabled: "Yes"
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
     integration:
       cloudwatchLogRetentionInDays: 30
       defaultProvisionedConcurrency: 1
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      IsSplunkEnabled: "Yes"
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
     production:
       cloudwatchLogRetentionInDays: 30
       defaultProvisionedConcurrency: 3
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      IsSplunkEnabled: "Yes"
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
@@ -291,6 +309,14 @@ Resources:
         - Key: Source
           Value: govuk-one-login/authentication-api/backend-template.yaml
 
+  AuthTokenRestApiSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthTokenRestApiLogGroup
+
   AuthTokenFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -375,6 +401,14 @@ Resources:
           Value: !Ref Environment
         - Key: Source
           Value: govuk-one-login/authentication-api/backend-template.yaml
+
+  AuthTokenFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthTokenFunctionLogGroup
 
   CodeDeployServiceRole:
     Type: AWS::IAM::Role
