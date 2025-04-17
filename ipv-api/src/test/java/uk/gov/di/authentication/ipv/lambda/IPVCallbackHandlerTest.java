@@ -738,7 +738,6 @@ class IPVCallbackHandlerTest {
                 .queueSPOTRequest(
                         any(),
                         anyString(),
-                        eq(userProfile),
                         eq(authUserInfo),
                         eq(expectedRpPairwiseSub),
                         any(UserInfo.class),
