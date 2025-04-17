@@ -305,7 +305,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         authSessionExtension.addSession(sessionId);
-        redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
         var response =
