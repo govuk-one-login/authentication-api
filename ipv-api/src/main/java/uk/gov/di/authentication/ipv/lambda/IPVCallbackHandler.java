@@ -347,17 +347,6 @@ public class IPVCallbackHandler
 
             // TODO: ATO-1117: temporary logs to check values are as expected
             LOG.info(
-                    "is rpPairwiseId the same on clientSession as calculated: {}",
-                    Objects.equals(
-                            rpPairwiseSubject.getValue(), orchClientSession.getRpPairwiseId()));
-            LOG.info(
-                    "is correct pairwiseId for client the same on clientSession as calculated: {}",
-                    Objects.equals(
-                            rpPairwiseSubject.getValue(),
-                            orchClientSession.getCorrectPairwiseIdGivenSubjectType(
-                                    clientRegistry.getSubjectType())));
-
-            LOG.info(
                     "is email the same on authUserInfo as on session: {}",
                     Objects.equals(session.getEmailAddress(), authUserInfo.getEmailAddress()));
             if (userProfile.getPhoneNumber() != null) {
