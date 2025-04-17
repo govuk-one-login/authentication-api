@@ -957,75 +957,6 @@ class AuthorisationHandlerTest {
                     parseExceptionArgument.getValue().getMessage());
         }
 
-        @Test
-        void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://localhost:8080",
-                            "scope", "email,openid,profile,non-existent-scope",
-                            "response_type", "code",
-                            "state", "test-state"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
-        }
-
-        @Test
-        void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
-            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setBody(
-                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code&state=test-state");
-            event.setHttpMethod("POST");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
-        }
-
         @ParameterizedTest
         @ValueSource(strings = {"PUT", "DELETE", "PATCH"})
         void shouldThrowExceptionWhenMethodIsNotGetOrPost(String method) {
@@ -1133,74 +1064,6 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void
-                shouldRedirectToProvidedRedirectUriWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
-            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "response_type",
-                            "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
-            var response = makeHandlerRequest(event);
-
-            assertThat(response.getStatusCode(), equalTo(302));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    equalTo(
-                            "https://localhost:8080?error=access_denied&error_description=JAR+required+for+client+but+request+does+not+contain+Request+Object"));
-
-            assertThat(
-                    logging.events(),
-                    hasItems(
-                            withMessage(
-                                    "JAR required for client but request does not contain Request Object"),
-                            withMessage("Redirecting")));
-        }
-
-        @Test
-        void shouldRedirectToRPWhenClientIsNotActive() {
-            when(clientService.getClient(CLIENT_ID.toString()))
-                    .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
-
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "response_type",
-                            "code"));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    logging.events(),
-                    hasItem(withMessage("Client configured as not active in Client Registry")));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    equalTo(
-                            REDIRECT_URI
-                                    + "?error=unauthorized_client&error_description=client+deactivated"));
-        }
-
-        @Test
         void shouldRedirectToLoginWhenRequestObjectIsValid()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
@@ -1296,72 +1159,6 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
-        }
-
-        @Test
-        void shouldRedirectToRPWhenRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-            var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-        }
-
-        @Test
-        void shouldRedirectToRPWhenPostRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("POST");
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setBody(
-                    String.format(
-                            "client_id=%s&scope=openid&response_type=code&request=%s",
-                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
-                            URLEncoder.encode(
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
-                                    Charset.defaultCharset())));
-
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
         }
 
         @Test
@@ -2597,57 +2394,6 @@ class AuthorisationHandlerTest {
                                             CLIENT_ID.getValue())));
         }
 
-        private static Stream<ErrorObject> expectedErrorObjects() {
-            return Stream.of(
-                    OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
-                    OAuth2Error.INVALID_SCOPE,
-                    OAuth2Error.UNAUTHORIZED_CLIENT,
-                    OAuth2Error.INVALID_REQUEST);
-        }
-
-        @ParameterizedTest
-        @MethodSource("expectedErrorObjects")
-        void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
-                throws JwksException, ClientSignatureValidationException {
-            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            errorObject,
-                                            URI.create("http://localhost:8080"),
-                                            null)));
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "scope", "openid",
-                            "response_type", "code",
-                            "request",
-                                    new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.withHeaders(Map.of("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE));
-            var response = makeHandlerRequest(event);
-
-            var expectedURI =
-                    new AuthenticationErrorResponse(
-                                    URI.create("http://localhost:8080"), errorObject, null, null)
-                            .toURI()
-                            .toString();
-            assertThat(response, hasStatus(302));
-            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("description", errorObject.getDescription()));
-        }
-
         @Test
         void shouldReturnErrorWhenInvalidPromptValuesArePassed() {
             Map<String, String> requestParams =
@@ -2667,6 +2413,111 @@ class AuthorisationHandlerTest {
                             pair(
                                     "description",
                                     OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
+        }
+
+        @Test
+        void
+                shouldThrowBadRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
+            var event = new APIGatewayProxyRequestEvent();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            SCOPE,
+                            "redirect_uri",
+                            "invalid-redirect-uri",
+                            "response_type",
+                            "code"));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.setHttpMethod("GET");
+            var response = makeHandlerRequest(event);
+
+            assertThat(response.getStatusCode(), equalTo(400));
+            assertThat(response.getBody(), equalTo(INVALID_REQUEST.getDescription()));
+
+            assertThat(
+                    logging.events(),
+                    hasItems(
+                            withMessage(
+                                    "JAR required for client but request does not contain Request Object"),
+                            withMessage(
+                                    "Redirect URI invalid-redirect-uri is invalid for client")));
+        }
+    }
+
+    @Nested
+    class InvalidRequestRedirectingErrors {
+        @Test
+        void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("GET");
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id", "test-id",
+                            "redirect_uri", "http://localhost:8080",
+                            "scope", "email,openid,profile,non-existent-scope",
+                            "response_type", "code",
+                            "state", "test-state"));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
+        }
+
+        @Test
+        void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setBody(
+                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code&state=test-state");
+            event.setHttpMethod("POST");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
         }
 
         @Test
@@ -2705,8 +2556,107 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldRedirectToRPWhenPostRequestObjectIsNotValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+            var event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("POST");
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            event.setBody(
+                    String.format(
+                            "client_id=%s&scope=openid&response_type=code&request=%s",
+                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
+                            URLEncoder.encode(
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
+                                    Charset.defaultCharset())));
+
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+        }
+
+        @Test
+        void shouldRedirectToRPWhenRequestObjectIsNotValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+            var event = new APIGatewayProxyRequestEvent();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+            event.setHttpMethod("GET");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+        }
+
+        @Test
+        void shouldRedirectToRPWhenClientIsNotActive() {
+            when(clientService.getClient(CLIENT_ID.toString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
+
+            var event = new APIGatewayProxyRequestEvent();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            SCOPE,
+                            "redirect_uri",
+                            REDIRECT_URI,
+                            "response_type",
+                            "code"));
+            event.setHttpMethod("GET");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessage("Client configured as not active in Client Registry")));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(
+                            REDIRECT_URI
+                                    + "?error=unauthorized_client&error_description=client+deactivated"));
+        }
+
+        @Test
         void
-                shouldThrowBadRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+                shouldRedirectToProvidedRedirectUriWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var event = new APIGatewayProxyRequestEvent();
             event.setQueryStringParameters(
@@ -2716,7 +2666,7 @@ class AuthorisationHandlerTest {
                             "scope",
                             SCOPE,
                             "redirect_uri",
-                            "invalid-redirect-uri",
+                            REDIRECT_URI,
                             "response_type",
                             "code"));
             event.setRequestContext(
@@ -2725,16 +2675,72 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
             var response = makeHandlerRequest(event);
 
-            assertThat(response.getStatusCode(), equalTo(400));
-            assertThat(response.getBody(), equalTo(INVALID_REQUEST.getDescription()));
+            assertThat(response.getStatusCode(), equalTo(302));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(
+                            "https://localhost:8080?error=access_denied&error_description=JAR+required+for+client+but+request+does+not+contain+Request+Object"));
 
             assertThat(
                     logging.events(),
                     hasItems(
                             withMessage(
                                     "JAR required for client but request does not contain Request Object"),
-                            withMessage(
-                                    "Redirect URI invalid-redirect-uri is invalid for client")));
+                            withMessage("Redirecting")));
+        }
+
+        private static Stream<ErrorObject> expectedErrorObjects() {
+            return Stream.of(
+                    OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
+                    OAuth2Error.INVALID_SCOPE,
+                    OAuth2Error.UNAUTHORIZED_CLIENT,
+                    OAuth2Error.INVALID_REQUEST);
+        }
+
+        @ParameterizedTest
+        @MethodSource("expectedErrorObjects")
+        void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
+                throws JwksException, ClientSignatureValidationException {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            errorObject,
+                                            URI.create("http://localhost:8080"),
+                                            null)));
+            var event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("GET");
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            "test-id",
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.withHeaders(Map.of("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE));
+            var response = makeHandlerRequest(event);
+
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("http://localhost:8080"), errorObject, null, null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", errorObject.getDescription()));
         }
     }
 
