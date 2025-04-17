@@ -2079,8 +2079,9 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("description", expectedErrorObject.getDescription()));
         }
+    }
 
-        @Test
+    @Test
         void shouldCreateANewSessionAndAttachTheClientSessionIdToIt() {
             var requestParams =
                     buildRequestParams(
@@ -2126,223 +2127,218 @@ class AuthorisationHandlerTest {
         }
 
         @Nested
-        class BrowserSessionId {
-            private final ArgumentCaptor<Session> sessionCaptor =
-                    ArgumentCaptor.forClass(Session.class);
-            private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
-                    ArgumentCaptor.forClass(OrchSessionItem.class);
+    class BrowserSessionId {
+        private final ArgumentCaptor<Session> sessionCaptor =
+                ArgumentCaptor.forClass(Session.class);
+        private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
+                ArgumentCaptor.forClass(OrchSessionItem.class);
 
-            @BeforeEach
-            void setup() {
-                when(sessionService.generateSession()).thenReturn(new Session());
-            }
+        @BeforeEach
+        void setup() {
+            when(sessionService.generateSession()).thenReturn(new Session());
+        }
 
-            @Test
-            void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
-                withExistingSession(null);
-                withExistingOrchSession(null);
-                APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
+        @Test
+        void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
+            withExistingSession(null);
+            withExistingOrchSession(null);
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
 
-                assertEquals(
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
+            withExistingSession(null);
+            withExistingOrchSession(null);
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
+
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
+            withExistingSession(session);
+            withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
+
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", true));
+        }
+
+        @Test
+        void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
+            withExistingSession(session);
+            withExistingOrchSession(orchSession.withBrowserSessionId(null));
+            var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
+
+            verify(sessionService, never()).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertNull(actualOrchSession.getBrowserSessionId());
+
+            assertEquals(2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
+            assertTrue(
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
+                            .noneMatch(
+                                    it ->
+                                            it.startsWith(
+                                                    format(
+                                                            "%s=",
+                                                            BROWSER_SESSION_ID_COOKIE_NAME))));
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
+            withExistingSession(session);
+            withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
+
+            verify(sessionService, never()).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
+            withExistingSession(session);
+            withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
+            APIGatewayProxyResponseEvent response =
+                    makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
+
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", true));
+        }
+
+        private void withExistingSession(Session session) {
+            when(sessionService.getSession(any())).thenReturn(Optional.ofNullable(session));
+        }
+
+        private APIGatewayProxyResponseEvent makeRequestWithBSIDInCookie(
+                String browserSessionIdFromCookie) {
+            Map<String, String> requestParams = buildRequestParams(null);
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var cookieString = SESSION_COOKIE;
+            if (browserSessionIdFromCookie != null) {
+                cookieString =
                         format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
+                                "%s;%s=%s",
+                                cookieString,
+                                BROWSER_SESSION_ID_COOKIE_NAME,
+                                browserSessionIdFromCookie);
             }
-
-            @Test
-            void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
-                withExistingSession(null);
-                withExistingOrchSession(null);
-                APIGatewayProxyResponseEvent response =
-                        makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
-            }
-
-            @Test
-            void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
-                APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
-
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", true));
-            }
-
-            @Test
-            void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(null));
-                var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-                verify(sessionService, never()).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertNull(actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
-                assertTrue(
-                        response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
-                                .noneMatch(
-                                        it ->
-                                                it.startsWith(
-                                                        format(
-                                                                "%s=",
-                                                                BROWSER_SESSION_ID_COOKIE_NAME))));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
-            }
-
-            @Test
-            void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
-                APIGatewayProxyResponseEvent response =
-                        makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-                verify(sessionService, never()).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
-            }
-
-            @Test
-            void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
-                APIGatewayProxyResponseEvent response =
-                        makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
-
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", true));
-            }
-
-            private void withExistingSession(Session session) {
-                when(sessionService.getSession(any())).thenReturn(Optional.ofNullable(session));
-            }
-
-            private APIGatewayProxyResponseEvent makeRequestWithBSIDInCookie(
-                    String browserSessionIdFromCookie) {
-                Map<String, String> requestParams = buildRequestParams(null);
-                APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-                event.setRequestContext(
-                        new ProxyRequestContext()
-                                .withIdentity(
-                                        new RequestIdentity().withSourceIp("123.123.123.123")));
-                var cookieString = SESSION_COOKIE;
-                if (browserSessionIdFromCookie != null) {
-                    cookieString =
-                            format(
-                                    "%s;%s=%s",
-                                    cookieString,
-                                    BROWSER_SESSION_ID_COOKIE_NAME,
-                                    browserSessionIdFromCookie);
-                }
-                event.withHeaders(Map.of("Cookie", cookieString));
-                return makeHandlerRequest(event);
-            }
+            event.withHeaders(Map.of("Cookie", cookieString));
+            return makeHandlerRequest(event);
         }
     }
 
