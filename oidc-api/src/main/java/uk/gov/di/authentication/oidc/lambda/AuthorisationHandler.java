@@ -461,20 +461,12 @@ public class AuthorisationHandler
                     user);
         }
 
-        Optional<String> browserSessionIdFromSession =
-                orchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
 
-        boolean newAuthenticationRequired = false;
-        if (browserSessionIdFromSession.isPresent()
-                && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
-            sessionId = Optional.empty();
-            newAuthenticationRequired = true;
-        }
-
         return handleAuthJourney(
                 sessionId,
+                browserSessionIdFromCookie,
                 orchSessionOptional,
                 clientSession,
                 orchClientSession,
@@ -483,7 +475,6 @@ public class AuthorisationHandler
                 client,
                 clientSessionId,
                 reauthRequested,
-                newAuthenticationRequired,
                 requestedVtr,
                 user);
     }
@@ -640,6 +631,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<String> previousSessionIdFromCookie,
+            Optional<String> browserSessionIdFromCookie,
             Optional<OrchSessionItem> existingOrchSessionOptional,
             ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
@@ -648,7 +640,6 @@ public class AuthorisationHandler
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
-            boolean newAuthenticationRequired,
             VectorOfTrust requestedVtr,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
@@ -660,6 +651,16 @@ public class AuthorisationHandler
                     OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
                     authenticationRequest.getClientID().getValue(),
                     user);
+        }
+
+        Optional<String> browserSessionIdFromSession =
+                existingOrchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
+
+        boolean newAuthenticationRequired = false;
+        if (browserSessionIdFromSession.isPresent()
+                && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
+            previousSessionIdFromCookie = Optional.empty();
+            newAuthenticationRequired = true;
         }
 
         Session session;
