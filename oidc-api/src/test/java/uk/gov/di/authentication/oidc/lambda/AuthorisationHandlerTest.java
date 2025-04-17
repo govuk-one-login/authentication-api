@@ -64,7 +64,6 @@ import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
-import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -3151,13 +3150,6 @@ class AuthorisationHandlerTest {
                     URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8));
         }
         return query_pairs;
-    }
-
-    private static void verifyAuditEvents(
-            List<AuditableEvent> auditEvents, AuditService auditService) {
-        for (AuditableEvent event : auditEvents) {
-            verify(auditService).submitAuditEvent(eq(event), any(), eq(BASE_AUDIT_USER));
-        }
     }
 
     private static String extractSessionId(String input, String sessionIdPrefix) {
