@@ -212,24 +212,24 @@ Resources:
   AuthTokenRestApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub ${AWS::StackName}-AuthTokenRestApi
+      Name: !Sub ${Environment}-di-auth-ext-api
       StageName: !Ref Environment
       AccessLogSetting:
         DestinationArn: !GetAtt AuthTokenRestApiLogGroup.Arn
         Format: >-
           {
-            "requestId":"$context.requestId",
-            "ip":"$context.identity.sourceIp",
-            "userAgent":"$context.identity.userAgent",
-            "requestTime":"$context.requestTime",
-            "httpMethod":"$context.httpMethod",
-            "resourcePath":"$context.resourcePath",
-            "status":"$context.status",
-            "protocol":"$context.protocol",
-            "responseLength":"$context.responseLength",
-            "integrationStatus":"$context.integration.integrationStatus",
-            "integrationLatency":"$context.integration.latency",
-            "integrationRequestId":"$context.integration.requestId"
+          "requestId":"$context.requestId",
+          "ip":"$context.identity.sourceIp",
+          "userAgent":"$context.identity.userAgent",
+          "requestTime":"$context.requestTime",
+          "httpMethod":"$context.httpMethod",
+          "resourcePath":"$context.resourcePath",
+          "status":"$context.status",
+          "protocol":"$context.protocol",
+          "responseLength":"$context.responseLength",
+          "integrationStatus":"$context.integration.integrationStatus",
+          "integrationLatency":"$context.integration.latency",
+          "integrationRequestId":"$context.integration.requestId"
           }
       Auth:
         ResourcePolicy:
