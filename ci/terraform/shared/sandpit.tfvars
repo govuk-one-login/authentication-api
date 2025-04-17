@@ -25,8 +25,9 @@ stub_rp_clients = [
     logout_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
-    test_client = "1"
-    client_type = "web"
+    back_channel_logout_uri = "https://rp-build.build.stubs.account.gov.uk/backchannel-logout"
+    test_client             = "1"
+    client_type             = "web"
     scopes = [
       "openid",
       "email",
