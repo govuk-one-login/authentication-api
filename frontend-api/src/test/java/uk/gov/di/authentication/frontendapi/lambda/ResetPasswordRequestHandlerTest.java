@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -247,6 +248,82 @@ class ResetPasswordRequestHandlerTest {
 
             assertEquals(200, result.getStatusCode());
             var expectedBody = "{\"mfaMethodType\":\"SMS\",\"phoneNumberLastThree\":\"890\"}";
+            assertEquals(expectedBody, result.getBody());
+            verify(codeStorageService)
+                    .saveOtpCode(
+                            CommonTestVariables.EMAIL,
+                            TEST_SIX_DIGIT_CODE,
+                            CODE_EXPIRY_TIME,
+                            RESET_PASSWORD_WITH_CODE);
+            verify(authSessionService, atLeastOnce())
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            isAuthSessionWithCountAndResetState(
+                                                    s,
+                                                    1,
+                                                    AuthSessionItem.ResetPasswordState.ATTEMPTED)));
+        }
+
+        @Test
+        void shouldReturn200WithTheMigratedUsersMfaMethodAndSaveOtpCodeForAValidRequest() {
+            usingValidSession();
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(migratedUserProfileWithoutPhoneNumber()));
+            when(authenticationService.getUserCredentialsFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(
+                            new UserCredentials()
+                                    .withMfaMethods(
+                                            List.of(
+                                                    MFAMethod.smsMfaMethod(
+                                                            true,
+                                                            true,
+                                                            CommonTestVariables.UK_MOBILE_NUMBER,
+                                                            PriorityIdentifier.DEFAULT,
+                                                            "1"))));
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
+            var expectedBody = "{\"mfaMethodType\":\"SMS\",\"phoneNumberLastThree\":\"890\"}";
+            assertEquals(expectedBody, result.getBody());
+            verify(codeStorageService)
+                    .saveOtpCode(
+                            CommonTestVariables.EMAIL,
+                            TEST_SIX_DIGIT_CODE,
+                            CODE_EXPIRY_TIME,
+                            RESET_PASSWORD_WITH_CODE);
+            verify(authSessionService, atLeastOnce())
+                    .updateSession(
+                            argThat(
+                                    s ->
+                                            isAuthSessionWithCountAndResetState(
+                                                    s,
+                                                    1,
+                                                    AuthSessionItem.ResetPasswordState.ATTEMPTED)));
+        }
+
+        @Test
+        void shouldReturn200WithTheMigratedUsersMfaMethodAndSaveEmailOtpCodeForAValidRequest() {
+            usingValidSession();
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(migratedUserProfileWithoutPhoneNumber()));
+            when(authenticationService.getUserCredentialsFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(
+                            new UserCredentials()
+                                    .withMfaMethods(
+                                            List.of(
+                                                    MFAMethod.authAppMfaMethod(
+                                                            "cred",
+                                                            true,
+                                                            true,
+                                                            PriorityIdentifier.DEFAULT,
+                                                            "auth-app-id"))));
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
+            var expectedBody = "{\"mfaMethodType\":\"AUTH_APP\",\"phoneNumberLastThree\":null}";
             assertEquals(expectedBody, result.getBody());
             verify(codeStorageService)
                     .saveOtpCode(
@@ -605,6 +682,10 @@ class ResetPasswordRequestHandlerTest {
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
+    }
+
+    private UserProfile migratedUserProfileWithoutPhoneNumber() {
+        return new UserProfile().withEmail(CommonTestVariables.EMAIL).withMfaMethodsMigrated(true);
     }
 
     private UserProfile userProfileWithPhoneNumber() {

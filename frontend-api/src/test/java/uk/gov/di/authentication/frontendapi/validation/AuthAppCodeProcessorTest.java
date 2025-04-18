@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -28,7 +29,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -42,7 +42,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -96,6 +100,10 @@ class AuthAppCodeProcessorTest {
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
         when(mockUserContext.getSession()).thenReturn(session);
         when(mockUserContext.getAuthSession()).thenReturn(authSession);
+        when(mockDynamoService.getUserProfileByEmail(EMAIL))
+                .thenReturn(new UserProfile().withMfaMethodsMigrated(false));
+        when(mockConfigurationService.getAuthAppCodeAllowedWindows()).thenReturn(9);
+        when(mockConfigurationService.getAuthAppCodeWindowLength()).thenReturn(30);
     }
 
     private static Stream<Arguments> validatorParams() {
@@ -128,6 +136,118 @@ class AuthAppCodeProcessorTest {
         assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
     }
 
+    private static Stream<Arguments> validatorParamsWithoutRegistrationJourney() {
+        return Stream.of(
+                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.AUTH_APP_SIGN_IN),
+                Arguments.of(
+                        JourneyType.PASSWORD_RESET_MFA,
+                        null,
+                        CodeRequestType.PW_RESET_MFA_AUTH_APP),
+                Arguments.of(
+                        JourneyType.REAUTHENTICATION,
+                        null,
+                        CodeRequestType.AUTH_APP_REAUTHENTICATION));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validatorParamsWithoutRegistrationJourney")
+    void returnsNoErrorOnValidAuthCodeForMigratedUser(JourneyType journeyType) {
+        when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(false);
+
+        var userCredentials =
+                new UserCredentials()
+                        .withMfaMethods(List.of(DEFAULT_AUTH_APP_METHOD, BACKUP_SMS_METHOD));
+        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(mockDynamoService.getUserProfileByEmail(EMAIL))
+                .thenReturn(new UserProfile().withMfaMethodsMigrated(true));
+
+        var secretForMigratedAuthApp = DEFAULT_AUTH_APP_METHOD.getCredentialValue();
+
+        var authAppStub = new AuthAppStub();
+        var authCode =
+                authAppStub.getAuthAppOneTimeCode(
+                        secretForMigratedAuthApp, NowHelper.now().getTime());
+
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, authCode, journeyType);
+
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
+                        mockUserContext,
+                        mockCodeStorageService,
+                        mockConfigurationService,
+                        mockDynamoService,
+                        MAX_RETRIES,
+                        codeRequest,
+                        mockAuditService,
+                        mockAccountModifiersService);
+
+        assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
+    }
+
+    @ParameterizedTest
+    @MethodSource("validatorParamsWithoutRegistrationJourney")
+    void returnsAnErrorIfDefaultMethodIsNotAuthAppForMigratedUser(JourneyType journeyType) {
+        when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(false);
+
+        var userCredentials =
+                new UserCredentials()
+                        .withMfaMethods(List.of(BACKUP_AUTH_APP_METHOD, DEFAULT_SMS_METHOD));
+        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(mockDynamoService.getUserProfileByEmail(EMAIL))
+                .thenReturn(new UserProfile().withMfaMethodsMigrated(true));
+
+        var secretForMigratedAuthApp = BACKUP_AUTH_APP_METHOD.getCredentialValue();
+
+        var authAppStub = new AuthAppStub();
+        var authCode =
+                authAppStub.getAuthAppOneTimeCode(
+                        secretForMigratedAuthApp, NowHelper.now().getTime());
+
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, authCode, journeyType);
+
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
+                        mockUserContext,
+                        mockCodeStorageService,
+                        mockConfigurationService,
+                        mockDynamoService,
+                        MAX_RETRIES,
+                        codeRequest,
+                        mockAuditService,
+                        mockAccountModifiersService);
+
+        assertEquals(Optional.of(ErrorResponse.ERROR_1081), authAppCodeProcessor.validateCode());
+    }
+
+    @ParameterizedTest
+    @MethodSource("validatorParamsWithoutRegistrationJourney")
+    void returnsAnErrorIfThereIsNoDefaultMethodForMigratedUser(JourneyType journeyType) {
+        when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(false);
+
+        var userCredentials = new UserCredentials().withMfaMethods(List.of(BACKUP_AUTH_APP_METHOD));
+        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(mockDynamoService.getUserProfileByEmail(EMAIL))
+                .thenReturn(new UserProfile().withMfaMethodsMigrated(true));
+
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", journeyType);
+
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
+                        mockUserContext,
+                        mockCodeStorageService,
+                        mockConfigurationService,
+                        mockDynamoService,
+                        MAX_RETRIES,
+                        codeRequest,
+                        mockAuditService,
+                        mockAccountModifiersService);
+
+        assertEquals(Optional.of(ErrorResponse.ERROR_1081), authAppCodeProcessor.validateCode());
+    }
+
     @ParameterizedTest
     @MethodSource("validatorParams")
     void returnsCorrectErrorWhenCodeBlockedForEmailAddress(
@@ -156,7 +276,7 @@ class AuthAppCodeProcessorTest {
         setUpNoAuthCodeForUser(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", journeyType));
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
+        assertEquals(Optional.of(ErrorResponse.ERROR_1081), authAppCodeProcessor.validateCode());
     }
 
     @Test
@@ -339,7 +459,7 @@ class AuthAppCodeProcessorTest {
         when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockDynamoService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(mock(UserCredentials.class));
+                .thenReturn(new UserCredentials().withMfaMethods(List.of()));
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
@@ -356,17 +476,14 @@ class AuthAppCodeProcessorTest {
     private void setUpValidAuthCode(CodeRequest codeRequest) {
         when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        when(mockConfigurationService.getAuthAppCodeAllowedWindows()).thenReturn(9);
-        when(mockConfigurationService.getAuthAppCodeWindowLength()).thenReturn(30);
 
-        UserCredentials mockUserCredentials = mock(UserCredentials.class);
-        MFAMethod mockMfaMethod = mock(MFAMethod.class);
-        when(mockMfaMethod.getMfaMethodType()).thenReturn(MFAMethodType.AUTH_APP.getValue());
-        when(mockMfaMethod.getCredentialValue()).thenReturn(AUTH_APP_SECRET);
-        when(mockMfaMethod.isEnabled()).thenReturn(true);
-        List<MFAMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
-        when(mockUserCredentials.getMfaMethods()).thenReturn(mockMfaMethodList);
-        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(mockUserCredentials);
+        var mfaMethod =
+                new MFAMethod()
+                        .withMfaMethodType(MFAMethodType.AUTH_APP.name())
+                        .withCredentialValue(AUTH_APP_SECRET)
+                        .withEnabled(true);
+        var userCredentials = new UserCredentials().withMfaMethods(List.of(mfaMethod));
+        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(

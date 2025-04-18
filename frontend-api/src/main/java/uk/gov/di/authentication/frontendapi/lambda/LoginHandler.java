@@ -298,12 +298,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         .withAccountState(AuthSessionItem.AccountState.EXISTING)
                         .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
 
-        var userMfaDetail =
-                getUserMFADetail(
-                        userContext,
-                        userCredentials,
-                        userProfile.getPhoneNumber(),
-                        userProfile.isPhoneNumberVerified());
+        var userMfaDetail = getUserMFADetail(userContext, userCredentials, userProfile);
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
 
@@ -334,8 +329,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         String redactedPhoneNumber =
-                userProfile.isPhoneNumberVerified()
-                        ? redactPhoneNumber(userProfile.getPhoneNumber())
+                userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()
+                        ? redactPhoneNumber(userMfaDetail.phoneNumber())
                         : null;
 
         boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);

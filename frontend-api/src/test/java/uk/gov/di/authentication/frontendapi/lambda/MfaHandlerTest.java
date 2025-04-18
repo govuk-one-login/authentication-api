@@ -28,7 +28,11 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -109,6 +113,36 @@ class MfaHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final int MAX_CODE_RETRIES = 6;
     private static final Json objectMapper = SerializationService.getInstance();
+    private static final MFAMethod backupAuthAppMethod =
+            MFAMethod.authAppMfaMethod(
+                    "auth-app-credential-1",
+                    true,
+                    true,
+                    PriorityIdentifier.BACKUP,
+                    "auth-app-identifier-1");
+    private static final MFAMethod defaultAuthAppMethod =
+            MFAMethod.authAppMfaMethod(
+                    "auth-app-credential-2",
+                    true,
+                    true,
+                    PriorityIdentifier.DEFAULT,
+                    "auth-app-identifier-2");
+    private static final String PHONE_NUMBER_FOR_DEFAULT_SMS_METHOD = "+447900000001";
+    private static final MFAMethod defaultSmsMethod =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    PHONE_NUMBER_FOR_DEFAULT_SMS_METHOD,
+                    PriorityIdentifier.DEFAULT,
+                    "sms-mfa-identifier-1");
+    private static final String PHONE_NUMBER_FOR_BACKUP_SMS_METHOD = "+447900000002";
+    private static final MFAMethod backupSmsMethod =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    PHONE_NUMBER_FOR_BACKUP_SMS_METHOD,
+                    PriorityIdentifier.BACKUP,
+                    "sms-mfa-identifier-2");
 
     private final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -146,6 +180,7 @@ class MfaHandlerTest {
                     SupportedLanguage.EN,
                     SESSION_ID,
                     CLIENT_SESSION_ID);
+    private static final UserProfile userProfile = mock(UserProfile.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
@@ -165,6 +200,9 @@ class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         usingValidClientSession(TEST_CLIENT_ID);
+        when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
+        when(authenticationService.getUserProfileFromEmail(EMAIL))
+                .thenReturn(Optional.of(userProfile));
 
         handler =
                 new MfaHandler(
@@ -203,6 +241,85 @@ class MfaHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
                         AUDIT_CONTEXT,
+                        pair("journey-type", JourneyType.SIGN_IN),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+    }
+
+    @Test
+    void shouldReturn204ForSuccessfulMfaRequestForMigratedUser() throws Json.JsonException {
+        usingValidSession();
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(
+                        new UserCredentials()
+                                .withMfaMethods(List.of(backupAuthAppMethod, defaultSmsMethod)));
+        var migratedUserProfile = mock(UserProfile.class);
+        when(migratedUserProfile.getMfaMethodsMigrated()).thenReturn(true);
+        when(authenticationService.getUserProfileFromEmail(EMAIL))
+                .thenReturn(Optional.of(migratedUserProfile));
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        var notifyRequestWithNumberFromMigratedMethod =
+                new NotifyRequest(
+                        defaultSmsMethod.getDestination(),
+                        MFA_SMS,
+                        CODE,
+                        SupportedLanguage.EN,
+                        SESSION_ID,
+                        CLIENT_SESSION_ID);
+
+        verify(sqsClient)
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(
+                                                notifyRequestWithNumberFromMigratedMethod),
+                                        "unique_notification_reference")));
+        verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
+        assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
+                        AUDIT_CONTEXT.withPhoneNumber(defaultSmsMethod.getDestination()),
+                        pair("journey-type", JourneyType.SIGN_IN),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+    }
+
+    private static Stream<List<MFAMethod>> mfaMethodsWithoutSmsDefault() {
+        return Stream.of(List.of(defaultAuthAppMethod, backupSmsMethod), List.of(backupSmsMethod));
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaMethodsWithoutSmsDefault")
+    void shouldReturn400IfMigratedUserDoesNotHaveSmsDefault(
+            List<MFAMethod> mfaMethodsWithoutSmsDefault) {
+        usingValidSession();
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(new UserCredentials().withMfaMethods(mfaMethodsWithoutSmsDefault));
+        var migratedUserProfile = mock(UserProfile.class);
+        when(migratedUserProfile.getMfaMethodsMigrated()).thenReturn(true);
+        when(authenticationService.getUserProfileFromEmail(EMAIL))
+                .thenReturn(Optional.of(migratedUserProfile));
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(sqsClient, never()).send(any());
+        verify(codeStorageService, never()).saveOtpCode(any(), any(), anyLong(), any());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1014));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER,
+                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -332,6 +449,21 @@ class MfaHandlerTest {
                                 .withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+    }
+
+    @Test
+    void shouldReturn400IfEmailDoesNotHaveUserProfile() {
+        usingValidSession();
+        when(authenticationService.getUserProfileFromEmail(EMAIL)).thenReturn(Optional.empty());
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(sqsClient, never()).send(any());
+        verify(codeStorageService, never()).saveOtpCode(any(), any(), anyLong(), any());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1049));
     }
 
     @Test

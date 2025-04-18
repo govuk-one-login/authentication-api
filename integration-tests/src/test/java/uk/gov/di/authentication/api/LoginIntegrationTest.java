@@ -18,7 +18,9 @@ import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -156,6 +158,73 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
     }
 
+    @ParameterizedTest
+    @MethodSource(
+            "vectorOfTrustWithVerifiedMethods") // We are only going to migrate verified mfa methods
+    void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrustsAndAMigratedUser(
+            CredentialTrustLevel level,
+            String termsAndConditionsVersion,
+            MFAMethodType mfaMethodType)
+            throws Json.JsonException {
+        var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        var password = "password-1";
+        var sessionId = IdGenerator.generate();
+        redis.createSession(sessionId);
+        authSessionExtension.addSession(sessionId);
+        authSessionExtension.addEmailToSession(sessionId, email);
+
+        userStore.signUp(email, password);
+        userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
+        userStore.setMfaMethodsMigrated(email, true);
+        if (mfaMethodType.equals(SMS)) {
+            userStore.addMfaMethodSupportingMultiple(
+                    email,
+                    MFAMethod.smsMfaMethod(
+                            true, true, "01234567890", PriorityIdentifier.DEFAULT, "some-mfa-id"));
+        } else {
+            userStore.addMfaMethodSupportingMultiple(
+                    email,
+                    MFAMethod.authAppMfaMethod(
+                            "some-credential",
+                            true,
+                            true,
+                            PriorityIdentifier.DEFAULT,
+                            "some-mfa-id"));
+        }
+
+        AuthenticationRequest.Builder builder = basicAuthRequestBuilder;
+        if (level != null) {
+            builder.customParameter("vtr", jsonArrayOf(level.getValue()));
+        }
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, builder.build().toParameters());
+
+        var headers = validHeadersWithSessionId(sessionId);
+
+        var response =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response, hasStatus(200));
+
+        var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
+
+        assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
+        assertThat(
+                loginResponse.latestTermsAndConditionsAccepted(),
+                equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
+
+        assertThat(loginResponse.mfaMethodType(), equalTo(mfaMethodType));
+        assertThat(loginResponse.mfaMethodVerified(), equalTo(true));
+        assertTrue(
+                Objects.nonNull(
+                        authSessionExtension
+                                .getSession(sessionId)
+                                .orElseThrow()
+                                .getInternalCommonSubjectId()));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
+    }
+
     private static Stream<Arguments> vectorOfTrust() {
         return Stream.of(
                 Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
@@ -182,6 +251,23 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
                 Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
                 Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false));
+    }
+
+    private static Stream<Arguments> vectorOfTrustWithVerifiedMethods() {
+        return Stream.of(
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP));
     }
 
     @Test

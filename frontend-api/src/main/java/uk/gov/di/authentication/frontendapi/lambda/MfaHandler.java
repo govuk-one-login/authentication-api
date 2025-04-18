@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -15,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -46,6 +48,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1014;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1049;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -185,15 +188,23 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
 
-            String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
+            var userProfileMaybe = userContext.getUserProfile();
+            if (userProfileMaybe.isEmpty()) {
+                LOG.error(
+                        "Error message: Email from session does not have a user profile required, cannot determine if mfa methods are migrated");
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1049);
+            }
+            var userProfile = userProfileMaybe.get();
+            Optional<String> maybePhoneNumber = getPhoneNumber(email, userProfile);
 
-            if (phoneNumber == null) {
+            if (maybePhoneNumber.isEmpty()) {
                 auditService.submitAuditEvent(
                         AUTH_MFA_MISSING_PHONE_NUMBER, auditContext, metadataPairs);
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
-            } else {
-                auditContext = auditContext.withPhoneNumber(phoneNumber);
             }
+
+            var phoneNumber = maybePhoneNumber.get();
+            auditContext = auditContext.withPhoneNumber(phoneNumber);
 
             LOG.info("Incrementing code request count for {}", journeyType);
 
@@ -331,5 +342,27 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         LOG.info("Resetting code request count");
         authSessionService.updateSession(
                 authSessionItem.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
+    }
+
+    private Optional<String> getPhoneNumber(String email, UserProfile userProfile) {
+        if (userProfile.getMfaMethodsMigrated()) {
+            var userCredentials = authenticationService.getUserCredentialsFromEmail(email);
+            var maybeDefaultMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
+            if (maybeDefaultMethod.isEmpty()) {
+                LOG.error("Attempted to send SMS otp for user without a default mfa method");
+                return Optional.empty();
+            }
+            var defaultMethod = maybeDefaultMethod.get();
+            if (defaultMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
+                return Optional.ofNullable(defaultMethod.getDestination());
+            } else {
+                LOG.error(
+                        "Attempted to send SMS otp for user with default mfa method of type {}",
+                        defaultMethod.getMfaMethodType());
+                return Optional.empty();
+            }
+        } else {
+            return authenticationService.getPhoneNumber(email);
+        }
     }
 }

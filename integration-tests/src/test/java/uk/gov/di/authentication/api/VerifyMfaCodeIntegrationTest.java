@@ -22,7 +22,9 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -110,7 +112,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(this.sessionId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
-        setUpTest(sessionId, withScope());
+        setupUser(sessionId, withScope(), EMAIL_ADDRESS, false);
     }
 
     private static Stream<Arguments> verifyMfaCodeRequest() {
@@ -144,6 +146,75 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
+    }
+
+    @ParameterizedTest
+    @MethodSource("existingUserAuthAppJourneyTypes")
+    void whenValidAuthAppOtpCodeReturn204ForSignInOrPasswordResetForMigratedUser(
+            JourneyType journeyType) throws Json.JsonException {
+        var emailAddressOfMigratedUser = "migrated.user@example.com";
+        setupUser(sessionId, withScope(), emailAddressOfMigratedUser, true);
+
+        userStore.setAccountVerified(emailAddressOfMigratedUser);
+        userStore.addMfaMethodSupportingMultiple(
+                emailAddressOfMigratedUser,
+                MFAMethod.authAppMfaMethod(
+                        AUTH_APP_SECRET_BASE_32,
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        "some-mfa-identifier"));
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, journeyType);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+        assertThat(response, hasStatus(204));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_CODE_VERIFIED));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("existingUserAuthAppJourneyTypes")
+    void whenAuthAppMethodIsBackupReturnsErrorForMigratedUser(JourneyType journeyType)
+            throws Json.JsonException {
+        var emailAddressOfMigratedUser = "migrated.user@example.com";
+        setupUser(sessionId, withScope(), emailAddressOfMigratedUser, true);
+
+        userStore.setAccountVerified(emailAddressOfMigratedUser);
+        userStore.addMfaMethodSupportingMultiple(
+                emailAddressOfMigratedUser,
+                MFAMethod.authAppMfaMethod(
+                        AUTH_APP_SECRET_BASE_32,
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        "some-mfa-identifier"));
+        userStore.addMfaMethodSupportingMultiple(
+                emailAddressOfMigratedUser,
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        "+447900000000",
+                        PriorityIdentifier.DEFAULT,
+                        "mfa-identifier-2"));
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, journeyType);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+        assertThat(response, hasStatus(400));
+        assertTrue(
+                response.getBody()
+                        .contains(
+                                "Attempting to validate auth app code for user without auth app method"));
     }
 
     @Test
@@ -492,7 +563,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1081));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_INVALID_CODE_SENT));
     }
 
@@ -532,7 +603,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var isAccountVerified = accountVerifiedJourneyTypes.contains(journeyType);
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1081));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_INVALID_CODE_SENT));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
@@ -629,10 +700,12 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         }
+        setUpAuthAppRequest(journeyType);
+        String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("some-other-secret");
 
-        String invalidCode = "999999";
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, journeyType);
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, invalidCode, journeyType, AUTH_APP_SECRET_BASE_32);
 
         var response =
                 makeRequest(
@@ -984,9 +1057,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
     }
 
-    private void setUpTest(String sessionId, Scope scope) throws Json.JsonException {
-        userStore.addUnverifiedUser(EMAIL_ADDRESS, USER_PASSWORD);
-        authSessionExtension.addEmailToSession(sessionId, EMAIL_ADDRESS);
+    private void setupUser(String sessionId, Scope scope, String email, boolean mfaMethodsMigrated)
+            throws Json.JsonException {
+        userStore.addUnverifiedUser(email, USER_PASSWORD);
+        authSessionExtension.addEmailToSession(sessionId, email);
+        userStore.setMfaMethodsMigrated(email, mfaMethodsMigrated);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
