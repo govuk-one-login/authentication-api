@@ -298,7 +298,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authSuccessResponse);
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(orchClientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
-        when(orchClientSession.getRpPairwiseId())
+        when(orchClientSession.getCorrectPairwiseIdGivenSubjectType(anyString()))
                 .thenReturn(
                         ClientSubjectHelper.calculatePairwiseIdentifier(
                                 SUBJECT.getValue(), "rp-sector-uri", SALT));
