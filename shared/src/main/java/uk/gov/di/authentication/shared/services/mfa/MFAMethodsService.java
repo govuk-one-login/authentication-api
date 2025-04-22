@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.entity.mfa.response.ResponseAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -174,6 +175,8 @@ public class MFAMethodsService {
         }
 
         if (mfaMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            var phoneNumberWithCountryCode =
+                    PhoneNumberHelper.formatPhoneNumber(requestSmsMfaDetail.phoneNumber());
 
             boolean phoneNumberExists =
                     mfaMethods.stream()
@@ -183,8 +186,7 @@ public class MFAMethodsService {
                             .anyMatch(
                                     mfa ->
                                             mfa.phoneNumber()
-                                                    .equalsIgnoreCase(
-                                                            requestSmsMfaDetail.phoneNumber()));
+                                                    .equalsIgnoreCase(phoneNumberWithCountryCode));
 
             if (phoneNumberExists) {
                 return Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS);
@@ -196,7 +198,7 @@ public class MFAMethodsService {
                     MFAMethod.smsMfaMethod(
                             true,
                             true,
-                            requestSmsMfaDetail.phoneNumber(),
+                            phoneNumberWithCountryCode,
                             mfaMethod.priorityIdentifier(),
                             uuid));
             return Result.success(
@@ -204,7 +206,7 @@ public class MFAMethodsService {
                             uuid,
                             mfaMethod.priorityIdentifier(),
                             true,
-                            requestSmsMfaDetail.phoneNumber()));
+                            phoneNumberWithCountryCode));
         } else {
             boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
                     // auth apps?

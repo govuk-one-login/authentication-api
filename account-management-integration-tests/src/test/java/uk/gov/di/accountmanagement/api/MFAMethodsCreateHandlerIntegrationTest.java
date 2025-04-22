@@ -37,6 +37,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_EMAIL = "test@email.com";
     private static final String TEST_PASSWORD = "test-password";
     private static final String TEST_PHONE_NUMBER = "07700900000";
+    private static final String TEST_PHONE_NUMBER_WITH_COUNTRY_CODE = "+447700900000";
     private static final String TEST_PHONE_NUMBER_TWO = "07700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
@@ -46,7 +47,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             MFAMethod.smsMfaMethod(
                     true,
                     true,
-                    TEST_PHONE_NUMBER,
+                    TEST_PHONE_NUMBER_WITH_COUNTRY_CODE,
                     PriorityIdentifier.DEFAULT,
                     UUID.randomUUID().toString());
     private static final MFAMethod backupPrioritySms =
@@ -118,7 +119,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         .get();
 
         assertEquals(PriorityIdentifier.BACKUP.toString(), retrievedSmsMethod.getPriority());
-        assertEquals(TEST_PHONE_NUMBER, retrievedSmsMethod.getDestination());
+        assertEquals(TEST_PHONE_NUMBER_WITH_COUNTRY_CODE, retrievedSmsMethod.getDestination());
         assertTrue(retrievedSmsMethod.isEnabled());
         assertTrue(retrievedSmsMethod.isMethodVerified());
 
@@ -128,7 +129,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         extractedMfaIdentifier,
                         PriorityIdentifier.BACKUP,
                         true,
-                        new ResponseSmsMfaDetail(TEST_PHONE_NUMBER));
+                        new ResponseSmsMfaDetail(TEST_PHONE_NUMBER_WITH_COUNTRY_CODE));
         var expectedResponse = JsonParser.parseString(expectedJson).getAsJsonObject().toString();
 
         assertEquals(expectedResponse, response.getBody());
