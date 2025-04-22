@@ -48,7 +48,6 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
@@ -87,7 +86,6 @@ public class IPVCallbackHandler
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
-    private final DynamoService dynamoService;
     private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
@@ -109,7 +107,6 @@ public class IPVCallbackHandler
             SessionService sessionService,
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
-            DynamoService dynamoService,
             OrchClientSessionService orchClientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
@@ -124,7 +121,6 @@ public class IPVCallbackHandler
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
-        this.dynamoService = dynamoService;
         this.orchClientSessionService = orchClientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
@@ -148,7 +144,6 @@ public class IPVCallbackHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -175,7 +170,6 @@ public class IPVCallbackHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -270,13 +264,6 @@ public class IPVCallbackHandler
                             () ->
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(), sessionId));
-            var userProfile =
-                    dynamoService
-                            .getUserProfileByEmailMaybe(session.getEmailAddress())
-                            .orElseThrow(
-                                    () ->
-                                            new IpvCallbackException(
-                                                    "Email from session does not have a user profile"));
 
             UserInfo authUserInfo =
                     getAuthUserInfo(

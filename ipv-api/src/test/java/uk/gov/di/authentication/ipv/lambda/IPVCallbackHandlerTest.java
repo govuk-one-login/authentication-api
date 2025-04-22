@@ -304,7 +304,6 @@ class IPVCallbackHandlerTest {
                         sessionService,
                         orchSessionService,
                         authUserInfoStorageService,
-                        dynamoService,
                         orchClientSessionService,
                         dynamoClientService,
                         auditService,
