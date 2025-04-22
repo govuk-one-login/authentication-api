@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
@@ -175,8 +176,15 @@ public class MFAMethodsService {
         }
 
         if (mfaMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            var phoneNumberWithCountryCode =
-                    PhoneNumberHelper.formatPhoneNumber(requestSmsMfaDetail.phoneNumber());
+            var maybePhoneNumberWithCountryCode =
+                    getPhoneNumberWithCountryCode(requestSmsMfaDetail.phoneNumber());
+
+            if (maybePhoneNumberWithCountryCode.isFailure()) {
+                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
+                return Result.failure(MfaCreateFailureReason.INVALID_PHONE_NUMBER);
+            }
+
+            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
 
             boolean phoneNumberExists =
                     mfaMethods.stream()
@@ -475,5 +483,16 @@ public class MFAMethodsService {
                         identifier));
 
         return Optional.empty();
+    }
+
+    private Result<String, String> getPhoneNumberWithCountryCode(String phoneNumber) {
+        try {
+            return Result.success(PhoneNumberHelper.formatPhoneNumber(phoneNumber));
+        } catch (Exception e) {
+            return Result.failure(
+                    format(
+                            "Could not convert phone number %s to phone number with country code",
+                            phoneNumber));
+        }
     }
 }

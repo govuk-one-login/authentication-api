@@ -639,6 +639,25 @@ class MFAMethodsServiceIntegrationTest {
         }
 
         @Test
+        void
+                shouldReturnInvalidPhoneNumberErrorWhenPhoneNumberCannotBeConvertedToOneWithCountryCode() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            MfaMethodCreateOrUpdateRequest request =
+                    new MfaMethodCreateOrUpdateRequest(
+                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+                                    PriorityIdentifier.BACKUP,
+                                    new RequestSmsMfaDetail(
+                                            "this is not a phone number", "123456")));
+
+            var result =
+                    mfaMethodsService.addBackupMfa(
+                            MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
+
+            assertEquals(MfaCreateFailureReason.INVALID_PHONE_NUMBER, result.getFailure());
+        }
+
+        @Test
         void shouldReturnAuthAppAlreadyExistsErrorWhenAuthAppMfaUserAddsSecondAuthAppMfa() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 

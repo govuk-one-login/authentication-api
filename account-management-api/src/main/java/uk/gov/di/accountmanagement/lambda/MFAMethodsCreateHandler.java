@@ -146,6 +146,8 @@ public class MFAMethodsCreateHandler
                             400, ErrorResponse.ERROR_1069);
                     case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1070);
+                    case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1012);
                     case ERROR_RETRIEVING_MFA_METHODS -> generateApiGatewayProxyErrorResponse(
                             500, ErrorResponse.ERROR_1071);
                 };

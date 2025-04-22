@@ -330,6 +330,27 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
+    void shouldReturn400WhenMfaMethodServiceReturnsInvalidPhoneNumberError() {
+        var event =
+                generateApiGatewayEvent(
+                        PriorityIdentifier.BACKUP,
+                        new RequestSmsMfaDetail("not a real phone number", TEST_OTP),
+                        TEST_INTERNAL_SUBJECT);
+        when(codeStorageService.isValidOtpCode(
+                        TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.addBackupMfa(any(), any()))
+                .thenReturn(Result.failure(MfaCreateFailureReason.INVALID_PHONE_NUMBER));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
+    }
+
+    @Test
     void shouldReturn400WhenOTPIsInvalid() {
         var event =
                 generateApiGatewayEvent(
