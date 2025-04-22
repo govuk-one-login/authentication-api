@@ -277,8 +277,9 @@ public class MFAMethodsService {
             String email,
             List<MFAMethod> allMethods) {
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            var changesPhoneNumber =
-                    !updatedSmsDetail.phoneNumber().equals(backupMethod.getDestination());
+            var normalisedPhoneNumber =
+                    PhoneNumberHelper.formatPhoneNumber(updatedSmsDetail.phoneNumber());
+            var changesPhoneNumber = !normalisedPhoneNumber.equals(backupMethod.getDestination());
             if (changesPhoneNumber) {
                 return Result.failure(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER);
@@ -350,8 +351,10 @@ public class MFAMethodsService {
         Result<String, List<MFAMethod>> databaseUpdateResult;
 
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
+            var phoneNumberWithCountryCode =
+                    PhoneNumberHelper.formatPhoneNumber(updatedSmsDetail.phoneNumber());
             var isExistingDefaultPhoneNumber =
-                    updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination());
+                    phoneNumberWithCountryCode.equals(defaultMethod.getDestination());
             var otherMethods =
                     allMethodsForUser.stream()
                             .filter(
@@ -362,9 +365,8 @@ public class MFAMethodsService {
                     otherMethods.stream()
                             .anyMatch(
                                     mfaMethod ->
-                                            updatedSmsDetail
-                                                    .phoneNumber()
-                                                    .equals(mfaMethod.getDestination()));
+                                            phoneNumberWithCountryCode.equals(
+                                                    mfaMethod.getDestination()));
             if (isExistingDefaultPhoneNumber) {
                 return Result.failure(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
@@ -374,7 +376,7 @@ public class MFAMethodsService {
             } else {
                 databaseUpdateResult =
                         persistentService.updateMigratedMethodPhoneNumber(
-                                email, updatedSmsDetail.phoneNumber(), mfaIdentifier);
+                                email, phoneNumberWithCountryCode, mfaIdentifier);
             }
         } else {
             var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
