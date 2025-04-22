@@ -57,7 +57,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -74,7 +73,6 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -131,7 +129,6 @@ class IPVCallbackHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final AuthenticationUserInfoStorageService authUserInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -189,7 +186,6 @@ class IPVCallbackHandlerTest {
                             null)
                     .toURI();
     private static final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
-    private final UserProfile userProfile = generateUserProfile();
     private final UserInfo authUserInfo = generateAuthUserInfo();
 
     private static final Subject TEST_SUBJECT = new Subject();
@@ -320,7 +316,6 @@ class IPVCallbackHandlerTest {
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(
                         new AccountIntervention(
@@ -383,13 +378,9 @@ class IPVCallbackHandlerTest {
                         .toString();
         assertThat(response, hasStatus(302));
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-        var expectedInternalPairwiseSubjectId =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorURI(), dynamoService)
-                        .getValue();
         verify(accountInterventionService)
                 .getAccountIntervention(
-                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
     }
 
     @ParameterizedTest
@@ -835,8 +826,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
 
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.setQueryStringParameters(responseHeaders);
@@ -905,9 +894,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -915,17 +901,12 @@ class IPVCallbackHandlerTest {
 
         var response = handler.handleRequest(event, context);
 
-        var expectedInternalPairwiseSubjectId =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorURI(), dynamoService)
-                        .getValue();
-
         assertThat(response, hasStatus(302));
         assertEquals(
                 accessDeniedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
         verify(accountInterventionService)
                 .getAccountIntervention(
-                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(dynamoIdentityService);
@@ -948,9 +929,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -1012,9 +990,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() throws ParseException {
-        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
         var clientRegistry = generateClientRegistryNoClaims();
-        var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
         usingValidAuthUserInfo();
@@ -1028,9 +1004,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
         when(authUserInfoStorageService.getAuthenticationUserInfo(
                         TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
@@ -1153,8 +1126,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
         var intervention =
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
@@ -1177,9 +1148,7 @@ class IPVCallbackHandlerTest {
     @Test
     void shouldLogoutUserWhenAISReturnsBlockedAccountInTokenStep()
             throws IpvCallbackException, ParseException {
-        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
         var clientRegistry = generateClientRegistryNoClaims();
-        var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
         usingValidAuthUserInfo();
@@ -1193,9 +1162,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
@@ -1255,15 +1221,6 @@ class IPVCallbackHandlerTest {
         when(authUserInfoStorageService.getAuthenticationUserInfo(
                         TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(authUserInfo));
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber(TEST_PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withSubjectID(TEST_SUBJECT.getValue());
     }
 
     private UserInfo generateAuthUserInfo() {
@@ -1327,7 +1284,7 @@ class IPVCallbackHandlerTest {
                                 .withSessionId(SESSION_ID)
                                 .withUserId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
                                 .withEmail(TEST_EMAIL_ADDRESS)
-                                .withPhone(userProfile.getPhoneNumber())
+                                .withPhone(authUserInfo.getPhoneNumber())
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID));
     }
 
@@ -1343,9 +1300,6 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
         when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(userIdentityUserInfo);
