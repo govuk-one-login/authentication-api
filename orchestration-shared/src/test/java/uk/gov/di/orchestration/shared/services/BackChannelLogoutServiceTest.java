@@ -21,9 +21,7 @@ class BackChannelLogoutServiceTest {
     private final AwsSqsClient sqs = Mockito.mock(AwsSqsClient.class);
     private final AuthenticationService authenticationService =
             Mockito.mock(AuthenticationService.class);
-    private final BackChannelLogoutService service =
-            new BackChannelLogoutService(sqs, authenticationService);
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private final BackChannelLogoutService service = new BackChannelLogoutService(sqs);
     private static final String RP_SECTOR_HOST = "example.sign-in.service.gov.uk";
     private static final String SUBJECT_ID = "subject";
     private static String rpPairwiseId;
@@ -47,8 +45,6 @@ class BackChannelLogoutServiceTest {
                         .withSubjectType("pairwise")
                         .withSectorIdentifierUri("https://example.sign-in.service.gov.uk")
                         .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
-                "test@test.com",
-                INTERNAL_SECTOR_URI,
                 rpPairwiseId);
 
         var captor = ArgumentCaptor.forClass(BackChannelLogoutMessage.class);
@@ -73,11 +69,7 @@ class BackChannelLogoutServiceTest {
         Stream.of(noLogoutUri, noClientId, neitherField)
                 .forEach(
                         clientRegistry ->
-                                service.sendLogoutMessage(
-                                        clientRegistry,
-                                        null,
-                                        INTERNAL_SECTOR_URI,
-                                        "dummy-rpPairwiseId"));
+                                service.sendLogoutMessage(clientRegistry, "dummy-rpPairwiseId"));
 
         Mockito.verify(sqs, Mockito.never()).send(ArgumentMatchers.anyString());
     }
@@ -91,8 +83,6 @@ class BackChannelLogoutServiceTest {
                 new ClientRegistry()
                         .withClientID("client-id")
                         .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
-                "test@test.com",
-                INTERNAL_SECTOR_URI,
                 "dummy-rpPairwiseId");
 
         Mockito.verify(sqs, Mockito.never()).send(ArgumentMatchers.anyString());

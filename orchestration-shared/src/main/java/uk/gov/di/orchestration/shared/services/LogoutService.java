@@ -10,6 +10,7 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LogoutReason;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -33,7 +34,6 @@ public class LogoutService {
 
     private static final Logger LOG = LogManager.getLogger(LogoutService.class);
 
-    private final ConfigurationService configurationService;
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
@@ -49,7 +49,6 @@ public class LogoutService {
 
     public LogoutService(ConfigurationService configurationService) {
         this(
-                configurationService,
                 new SessionService(configurationService),
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
@@ -64,7 +63,6 @@ public class LogoutService {
 
     public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
         this(
-                configurationService,
                 new SessionService(configurationService, redis),
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
@@ -78,7 +76,6 @@ public class LogoutService {
     }
 
     public LogoutService(
-            ConfigurationService configurationService,
             SessionService sessionService,
             OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
@@ -89,7 +86,6 @@ public class LogoutService {
             BackChannelLogoutService backChannelLogoutService,
             AuthFrontend authFrontend,
             NowClock nowClock) {
-        this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
@@ -122,22 +118,8 @@ public class LogoutService {
             var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
             logIfClientSessionsAreNotEqual(
                     clientSessionOpt.orElse(null), orchClientSessionOpt.orElse(null));
-            orchClientSessionOpt.ifPresent(
-                    orchClientSessionItem ->
-                            orchClientSessionItem.getAuthRequestParams().get("client_id").stream()
-                                    .findFirst()
-                                    .flatMap(dynamoClientService::getClient)
-                                    .ifPresent(
-                                            clientRegistry ->
-                                                    backChannelLogoutService.sendLogoutMessage(
-                                                            clientRegistry,
-                                                            request.getEmailAddress(),
-                                                            configurationService
-                                                                    .getInternalSectorURI(),
-                                                            orchClientSessionItem
-                                                                    .getCorrectPairwiseIdGivenSubjectType(
-                                                                            clientRegistry
-                                                                                    .getSubjectType()))));
+
+            sendBackchannelLogoutIfPresent(orchClientSessionOpt);
 
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);
@@ -283,5 +265,27 @@ public class LogoutService {
                         CookieHelper.getClientSessionIdFromRequestHeaders(input.getHeaders())
                                 .orElse(null))
                 .withUserId(internalCommonSubjectId);
+    }
+
+    private void sendBackchannelLogoutIfPresent(
+            Optional<OrchClientSessionItem> orchClientSessionItemOpt) {
+        if (orchClientSessionItemOpt.isEmpty()) return;
+        var orchClientSessionItem = orchClientSessionItemOpt.get();
+
+        var clientOpt =
+                orchClientSessionItem.getAuthRequestParams().get("client_id").stream()
+                        .findFirst()
+                        .flatMap(dynamoClientService::getClient);
+        if (clientOpt.isEmpty()) return;
+        var client = clientOpt.get();
+
+        var pairwiseIdOpt =
+                Optional.ofNullable(
+                        orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
+                                client.getSubjectType()));
+        if (pairwiseIdOpt.isEmpty()) return;
+        var pairwiseId = pairwiseIdOpt.get();
+
+        backChannelLogoutService.sendLogoutMessage(client, pairwiseId);
     }
 }
