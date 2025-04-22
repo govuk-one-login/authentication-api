@@ -285,9 +285,17 @@ public class MFAMethodsService {
             String email,
             List<MFAMethod> allMethods) {
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            var normalisedPhoneNumber =
-                    PhoneNumberHelper.formatPhoneNumber(updatedSmsDetail.phoneNumber());
-            var changesPhoneNumber = !normalisedPhoneNumber.equals(backupMethod.getDestination());
+            var maybePhoneNumberWithCountryCode =
+                    getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
+
+            if (maybePhoneNumberWithCountryCode.isFailure()) {
+                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
+                return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
+            }
+
+            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
+            var changesPhoneNumber =
+                    !phoneNumberWithCountryCode.equals(backupMethod.getDestination());
             if (changesPhoneNumber) {
                 return Result.failure(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER);
@@ -359,8 +367,15 @@ public class MFAMethodsService {
         Result<String, List<MFAMethod>> databaseUpdateResult;
 
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            var phoneNumberWithCountryCode =
-                    PhoneNumberHelper.formatPhoneNumber(updatedSmsDetail.phoneNumber());
+            var maybePhoneNumberWithCountryCode =
+                    getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
+
+            if (maybePhoneNumberWithCountryCode.isFailure()) {
+                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
+                return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
+            }
+
+            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
             var isExistingDefaultPhoneNumber =
                     phoneNumberWithCountryCode.equals(defaultMethod.getDestination());
             var otherMethods =

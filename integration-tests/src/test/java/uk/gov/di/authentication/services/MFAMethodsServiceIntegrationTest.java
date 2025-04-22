@@ -866,6 +866,24 @@ class MFAMethodsServiceIntegrationTest {
             }
 
             @Test
+            void returnsAnErrorWhenAttemptingToUpdateWithAnInvalidNumber() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT,
+                                new RequestSmsMfaDetail("not a real phone number", "123456"));
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, defaultPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(MfaUpdateFailureReason.INVALID_PHONE_NUMBER, result.getFailure());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
+                assertEquals(List.of(mfaMethodDataFrom(defaultPrioritySms)), remainingMfaMethods);
+            }
+
+            @Test
             void returnsAnErrorWhenAttemptingToChangePriorityOfDefaultMethod() {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
                 var request =
@@ -1007,6 +1025,32 @@ class MFAMethodsServiceIntegrationTest {
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
+            }
+
+            @Test
+            void returnsAFailureWhenPhoneNumberIsInvalid() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP,
+                                new RequestSmsMfaDetail("not a real phone number", "123456"));
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, backupPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(MfaUpdateFailureReason.INVALID_PHONE_NUMBER, result.getFailure());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
+                assertEquals(
+                        List.of(
+                                        mfaMethodDataFrom(backupPrioritySms),
+                                        mfaMethodDataFrom(defaultPrioritySms))
+                                .stream()
+                                .sorted()
+                                .toList(),
+                        remainingMfaMethods.stream().sorted().toList());
             }
 
             private static Stream<Arguments> existingBackupMethodsAndNoChangeUpdates() {
