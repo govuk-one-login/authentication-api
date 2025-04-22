@@ -91,7 +91,8 @@ public enum ErrorResponse {
     ERROR_1077(1076, "Attempted to update a backup mfa method without a default present"),
     ERROR_1078(1078, "Unexpected error creating mfa identifier for auth app mfa method"),
     ERROR_1079(1079, "Invalid principal in request"),
-    ERROR_1080(1080, "Default method already exists, new one cannot be created.");
+    ERROR_1080(1080, "Default method already exists, new one cannot be created."),
+    ERROR_1081(1081, "Attempting to validate auth app code for user without auth app method");
 
     private int code;
 

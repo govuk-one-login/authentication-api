@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -48,6 +49,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -437,6 +439,106 @@ class StartServiceTest {
                         upliftRequired);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
+    }
+
+    private static Stream<Arguments> mfaMethodsForMigratedUserToExpectedMfaMethodType() {
+        var defaultAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        "some-credential-1",
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        "auth-app-id-1");
+        var backupAuthApp =
+                MFAMethod.authAppMfaMethod(
+                        "some-credential-2",
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        "auth-app-id-2");
+        var defaultSmsMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447900000000", PriorityIdentifier.DEFAULT, "sms-id-1");
+        var backupSmsMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, "+447900000100", PriorityIdentifier.BACKUP, "sms-id-2");
+        var nonMigratedNonEnabledAuthApp =
+                new MFAMethod(
+                        MFAMethodType.AUTH_APP.name(),
+                        "another-credential",
+                        true,
+                        false,
+                        "updated-at");
+        var nonMigratedNonVerifiedAuthApp =
+                new MFAMethod(
+                        MFAMethodType.AUTH_APP.name(),
+                        "another-credential",
+                        false,
+                        true,
+                        "updated-at");
+        return Stream.of(
+                Arguments.of(List.of(defaultAuthApp, backupSmsMethod), MFAMethodType.AUTH_APP),
+                Arguments.of(List.of(defaultSmsMethod, backupAuthApp), MFAMethodType.SMS),
+                Arguments.of(List.of(defaultSmsMethod, backupSmsMethod), MFAMethodType.SMS),
+                Arguments.of(
+                        List.of(defaultSmsMethod, nonMigratedNonEnabledAuthApp), MFAMethodType.SMS),
+                Arguments.of(List.of(nonMigratedNonEnabledAuthApp), MFAMethodType.NONE),
+                Arguments.of(List.of(nonMigratedNonVerifiedAuthApp), MFAMethodType.NONE),
+                Arguments.of(List.of(), MFAMethodType.NONE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaMethodsForMigratedUserToExpectedMfaMethodType")
+    void shouldCreateStartInfoWithCorrectMfaMethodTypeForAMigratedUser(
+            List<MFAMethod> mfaMethods, MFAMethodType expectedMfaMethodType) {
+        var userProfile =
+                new UserProfile()
+                        .withMfaMethodsMigrated(true)
+                        .withEmail(EMAIL)
+                        .withPhoneNumberVerified(false);
+        var userCredentials = new UserCredentials().withEmail(EMAIL).withMfaMethods(mfaMethods);
+        var userContext =
+                buildUserContext(
+                        jsonArrayOf("Cl.Cm"),
+                        true,
+                        ClientType.WEB,
+                        null,
+                        true,
+                        Optional.of(userProfile),
+                        Optional.of(userCredentials),
+                        false);
+
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        userContext, "true", "tracking-id", true, false, false, false, false);
+
+        assertThat(userStartInfo.mfaMethodType(), equalTo(expectedMfaMethodType));
+    }
+
+    @Test
+    void shouldReturnNoneIfMigratedUserDoesNotHaveUserCredentials() {
+        var userProfile =
+                new UserProfile()
+                        .withMfaMethodsMigrated(true)
+                        .withEmail(EMAIL)
+                        .withPhoneNumberVerified(false);
+        var userCredentials = Optional.<UserCredentials>empty();
+        var userContext =
+                buildUserContext(
+                        jsonArrayOf("Cl.Cm"),
+                        true,
+                        ClientType.WEB,
+                        null,
+                        true,
+                        Optional.of(userProfile),
+                        userCredentials,
+                        false);
+
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        userContext, "true", "tracking-id", true, false, false, false, false);
+
+        assertThat(userStartInfo.mfaMethodType(), equalTo(MFAMethodType.NONE));
     }
 
     @ParameterizedTest

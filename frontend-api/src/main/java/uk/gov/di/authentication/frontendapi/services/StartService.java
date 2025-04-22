@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -146,18 +147,12 @@ public class StartService {
             boolean isAuthenticated,
             boolean upliftRequired) {
         var identityRequired = false;
-        MFAMethodType mfaMethodType = null;
         var clientRegistry = userContext.getClient().orElseThrow();
         identityRequired =
                 IdentityHelper.identityRequired(
                         userContext.getClientSession().getAuthRequestParams(),
                         clientRegistry.isIdentityVerificationSupported(),
                         identityEnabled);
-        if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
-            mfaMethodType = MFAMethodType.SMS;
-        } else if (authApp(userContext)) {
-            mfaMethodType = MFAMethodType.AUTH_APP;
-        }
 
         var userIsAuthenticated = isAuthenticated && !reauthenticate;
 
@@ -176,7 +171,7 @@ public class StartService {
                 userIsAuthenticated,
                 cookieConsent,
                 gaTrackingId,
-                mfaMethodType,
+                getMfaMethodType(userContext),
                 isBlockedForReauth);
     }
 
@@ -238,6 +233,39 @@ public class StartService {
                         () ->
                                 new ClientNotFoundException(
                                         "Could not find client for start service"));
+    }
+
+    public MFAMethodType getMfaMethodType(UserContext userContext) {
+        var maybeUserProfile = userContext.getUserProfile();
+        if (maybeUserProfile.isEmpty()) {
+            return null;
+        }
+
+        var userProfile = maybeUserProfile.get();
+        if (userProfile.getMfaMethodsMigrated()) {
+            var maybeUserCredentials = userContext.getUserCredentials();
+            if (maybeUserCredentials.isPresent()) {
+                var userCredentials = maybeUserCredentials.get();
+                var defaultMfaMethod =
+                        MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
+                if (defaultMfaMethod.isPresent()) {
+                    return MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType());
+                } else {
+                    LOG.error(
+                            "Unexpected error getting default mfa method for user: no default method exists");
+                    return MFAMethodType.NONE;
+                }
+            } else {
+                LOG.error(
+                        "Attempted to get default mfa method for migrated user without user credentials");
+                return MFAMethodType.NONE;
+            }
+        }
+        if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
+            return MFAMethodType.SMS;
+        } else if (authApp(userContext)) {
+            return MFAMethodType.AUTH_APP;
+        } else return null;
     }
 
     private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {

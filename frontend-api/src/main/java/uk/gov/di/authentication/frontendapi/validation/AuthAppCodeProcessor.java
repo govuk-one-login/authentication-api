@@ -4,6 +4,7 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -91,7 +92,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
         if (Objects.isNull(authAppSecret)) {
             LOG.info("No auth app secret found");
-            return Optional.of(ErrorResponse.ERROR_1043);
+            return Optional.of(ErrorResponse.ERROR_1081);
         }
 
         if (!nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())
@@ -160,22 +161,40 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     private Optional<String> getMfaCredentialValue() {
         var userCredentials = dynamoService.getUserCredentialsFromEmail(emailAddress);
+        var userProfile = dynamoService.getUserProfileByEmail(emailAddress);
 
         if (userCredentials == null) {
             LOG.info("User credentials not found");
             return Optional.empty();
         }
 
-        var mfaMethod =
-                userCredentials.getMfaMethods().stream()
-                        .filter(
-                                method ->
-                                        method.getMfaMethodType()
-                                                .equals(MFAMethodType.AUTH_APP.getValue()))
-                        .filter(MFAMethod::isEnabled)
-                        .findAny();
+        if (userProfile.getMfaMethodsMigrated()) {
+            var maybeDefaultMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
+            if (maybeDefaultMethod.isEmpty()) {
+                LOG.error("No default method found for migrated user");
+                return Optional.empty();
+            }
+            var defaultMethod = maybeDefaultMethod.get();
+            if (defaultMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
+                return Optional.of(defaultMethod.getCredentialValue());
+            } else {
+                LOG.error(
+                        "Attempting to validate auth app code for user with a default mfa method of type {}",
+                        defaultMethod.getMfaMethodType());
+                return Optional.empty();
+            }
+        } else {
+            var mfaMethod =
+                    userCredentials.getMfaMethods().stream()
+                            .filter(
+                                    method ->
+                                            method.getMfaMethodType()
+                                                    .equals(MFAMethodType.AUTH_APP.getValue()))
+                            .filter(MFAMethod::isEnabled)
+                            .findAny();
 
-        return mfaMethod.map(MFAMethod::getCredentialValue);
+            return mfaMethod.map(MFAMethod::getCredentialValue);
+        }
     }
 
     private boolean checkCode(String secret, long code, long timestamp) {

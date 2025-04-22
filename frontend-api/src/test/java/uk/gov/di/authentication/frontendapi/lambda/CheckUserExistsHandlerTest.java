@@ -15,6 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -24,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -51,6 +55,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -184,6 +189,62 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
+            assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
+        }
+
+        private static Stream<Arguments> mfaMethodsToExpectedResponseFields() {
+            var phoneNumber = CommonTestVariables.UK_MOBILE_NUMBER;
+            var defaultSmsMethod =
+                    MFAMethod.smsMfaMethod(
+                            true, true, phoneNumber, PriorityIdentifier.DEFAULT, "some-identifier");
+            var defaultAuthAppMethod =
+                    MFAMethod.authAppMfaMethod(
+                            "some-credential",
+                            true,
+                            true,
+                            PriorityIdentifier.DEFAULT,
+                            "auth-app-mfa-id");
+            return Stream.of(
+                    Arguments.of(
+                            defaultSmsMethod,
+                            MFAMethodType.SMS,
+                            phoneNumber.substring(phoneNumber.length() - 3)),
+                    Arguments.of(defaultAuthAppMethod, MFAMethodType.AUTH_APP, null));
+        }
+
+        @ParameterizedTest
+        @MethodSource("mfaMethodsToExpectedResponseFields")
+        void shouldReturn200WithRelevantMfaMethodForMigratedUser(
+                MFAMethod mfaMethod,
+                MFAMethodType expectedMfaMethodType,
+                String expectedPhoneNumberLastThree) {
+            var userProfile = generateUserProfile().withMfaMethodsMigrated(true);
+            setupUserProfileAndClient(Optional.of(userProfile));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var expectedFormattedAndRedactedPhoneNumber =
+                    expectedPhoneNumberLastThree == null
+                            ? "null"
+                            : format("\"%s\"", expectedPhoneNumberLastThree);
+            var expectedResponse =
+                    format(
+                            """
+                    {"email":%s,
+                    "doesUserExist":true,
+                    "mfaMethodType":"%s",
+                    "phoneNumberLastThree": %s,
+                    "lockoutInformation":[]}
+                    """,
+                            EMAIL_ADDRESS,
+                            expectedMfaMethodType,
+                            expectedFormattedAndRedactedPhoneNumber);
+            assertEquals(
+                    JsonParser.parseString(expectedResponse),
+                    JsonParser.parseString(result.getBody()));
             assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
