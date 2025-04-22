@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.utils;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.SubjectType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -66,7 +67,8 @@ public class ClientSessionMigrationUtils {
                 && areFieldsEqual(
                         "rpPairwiseId",
                         clientSession.getRpPairwiseId(),
-                        orchClientSession.getRpPairwiseId());
+                        orchClientSession.getCorrectPairwiseIdGivenSubjectType(
+                                SubjectType.PAIRWISE.toString()));
     }
 
     private static <T> boolean areFieldsEqual(
