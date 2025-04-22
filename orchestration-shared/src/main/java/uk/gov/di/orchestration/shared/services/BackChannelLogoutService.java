@@ -5,8 +5,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 
-import java.util.Objects;
-
 import static org.apache.logging.log4j.util.Strings.isBlank;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSubject;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -59,28 +57,6 @@ public class BackChannelLogoutService {
         var subjectId =
                 getSubject(user.get(), clientRegistry, authenticationService, internalSectorUri)
                         .getValue();
-
-        if (Objects.equals(subjectId, rpPairwiseId)) {
-            LOGGER.info(
-                    "calculated and given rpPairwiseId are the same, client-id = {}",
-                    clientRegistry.getClientID());
-        } else {
-            if (Objects.equals(subjectId, user.get().getPublicSubjectID())) {
-                LOGGER.info(
-                        "subjectId is publicSubjectId, client-id = {}",
-                        clientRegistry.getClientID());
-            } else if (rpPairwiseId == null) {
-                LOGGER.info(
-                        "rpPairwiseId on client session is null, client-id = {}",
-                        clientRegistry.getClientID());
-            } else if (subjectId == null) {
-                LOGGER.info("subjectId is null, client-id = {}", clientRegistry.getClientID());
-            } else {
-                LOGGER.info(
-                        "calculated and given rpPairwiseId are different, client-id = {}",
-                        clientRegistry.getClientID());
-            }
-        }
 
         var message =
                 new BackChannelLogoutMessage(
