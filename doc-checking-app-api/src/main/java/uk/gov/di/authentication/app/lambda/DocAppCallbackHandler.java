@@ -251,15 +251,17 @@ public class DocAppCallbackHandler
                         clientId,
                         user);
             } else {
-                LOG.error(
-                        "Doc App TokenResponse was not successful: {}",
-                        tokenResponse.toErrorResponse().toJSONObject());
                 incrementDocAppCallbackErrorCounter(false, "UnsuccessfulTokenResponse");
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+                return RedirectService.redirectToFrontendErrorPage(
+                        authFrontend.errorURI(),
+                        new Error(
+                                String.format(
+                                        "Doc App TokenResponse was not successful: %s",
+                                        tokenResponse.toErrorResponse().toJSONObject())));
             }
 
             try {
@@ -339,16 +341,20 @@ public class DocAppCallbackHandler
                             DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                             clientId,
                             user);
-                    LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
-                    return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+                    return RedirectService.redirectToFrontendErrorPage(
+                            authFrontend.errorURI(),
+                            new Error(
+                                    String.format(
+                                            "Doc App sendCriDataRequest was not successful: %s",
+                                            e.getMessage())));
                 }
             }
         } catch (DocAppCallbackException | NoSessionException | OrchAuthCodeException e) {
-            LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
         } catch (ParseException e) {
-            LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+            return RedirectService.redirectToFrontendErrorPage(
+                    authFrontend.errorURI(),
+                    new Error("Cannot retrieve auth request params from client session id"));
         }
     }
 

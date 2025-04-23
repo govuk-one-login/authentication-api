@@ -46,6 +46,7 @@ import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
+import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -72,6 +73,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withThrownMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppCallbackHandlerTest {
@@ -133,6 +135,10 @@ class DocAppCallbackHandlerTest {
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(DocAppCallbackHandler.class);
+
+    @RegisterExtension
+    private final CaptureLoggingExtension redirectLogging =
+            new CaptureLoggingExtension(RedirectService.class);
 
     @BeforeEach
     void setUp() {
@@ -358,8 +364,8 @@ class DocAppCallbackHandlerTest {
                 response.getHeaders().get("Location"),
                 equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
         assertThat(
-                logging.events(),
-                hasItem(withMessageContaining("Doc App TokenResponse was not successful: ")));
+                redirectLogging.events(),
+                hasItem(withThrownMessageContaining("Doc App TokenResponse was not successful: ")));
 
         verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -410,8 +416,10 @@ class DocAppCallbackHandlerTest {
                 response.getHeaders().get("Location"),
                 equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
         assertThat(
-                logging.events(),
-                hasItem(withMessageContaining("Doc App sendCriDataRequest was not successful: ")));
+                redirectLogging.events(),
+                hasItem(
+                        withThrownMessageContaining(
+                                "Doc App sendCriDataRequest was not successful: ")));
 
         verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -519,9 +527,9 @@ class DocAppCallbackHandlerTest {
                 response.getHeaders().get("Location"),
                 equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
         assertThat(
-                logging.events(),
+                redirectLogging.events(),
                 hasItem(
-                        withMessageContaining(
+                        withThrownMessageContaining(
                                 "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false")));
 
         verifyNoInteractions(tokenService);
