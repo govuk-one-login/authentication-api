@@ -381,19 +381,93 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                oneOf:
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/InvalidOTPCode"
+                  - $ref: "#/components/schemas/CannotChangeTypeOfMfaMethod"
+                  - $ref: "#/components/schemas/CannotUpdateABackupSmsMfaMethodPhoneNumber"
+                  - $ref: "#/components/schemas/CannotUpdateABackupSmsMfaMethodsAuthAppCredential"
+                  - $ref: "#/components/schemas/CannotChangePriorityOfDefaultMfaMethod"
+                  - $ref: "#/components/schemas/CannotUpdatePrimarySMSNumberToNumberAlreadyInUseByBackup"
+              examples:
+                new-method-management-api-not-available-in-this-environment:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                invalid-otp-code:
+                  value:
+                    code: 1020
+                    message: "Invalid OTP code"
+                cannot-change-type-of-mfa-method:
+                  value:
+                    code: 1072
+                    message: "Cannot change type of MFA method"
+                cannot-update-a-backup-sms-mfa-method-phone-number:
+                  value:
+                    code: 1075
+                    message: "Cannot update a backup sms mfa method's phone number"
+                cannot-update-a-backup-sms-mfa-methods-auth-app-credential:
+                  value:
+                    code: 1076
+                    message: "Cannot update a backup sms mfa method's auth app credential"
+                cannot-change-priority-of-default-mfa-method:
+                  value:
+                    code: 1073
+                    message: "Cannot change priority of default mfa method"
+                cannot-update-primary-sms-number-to-number-already-in-use-by-backup:
+                  value:
+                    code: 1074
+                    message: "Cannot update primary sms number to number already in use by backup"
+        "401":
+          description: Unauthorized - user credentials incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
         "404":
           description: MFA Method not Found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/MfaMethodNotFound"
+              examples:
+                user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                mfa-method-not-found:
+                  value:
+                    code: 1065
+                    message: "MFA method not found"
         "500":
           description: MFA Method could not be updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                oneOf:
+                  - $ref: "#/components/schemas/AttemptedToUpdateABackupMfaMethodWithoutADefaultPresent"
+                  - $ref: "#/components/schemas/AccountManagementApiUnexpectedError"
+              examples:
+                attempted-to-update-a-backup-mfa-method-without-a-default-present:
+                  value:
+                    code: 1076
+                    message: "Attempted to update a backup mfa method without a default present"
+                unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                  value:
+                    code: 1078
+                    message: "Unexpected error creating mfa identifier for auth app mfa method"
     delete:
       security:
         - authorise-access-token: []
