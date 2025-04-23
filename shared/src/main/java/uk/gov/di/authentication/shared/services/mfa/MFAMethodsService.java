@@ -55,33 +55,6 @@ public class MFAMethodsService {
         return Optional.ofNullable(userCredentials.getMfaMethods()).orElse(new ArrayList<>());
     }
 
-    // This can be removed and moved to account management api when the refactoring to only return
-    // MFAMethods from this class is complete
-    private Result<String, List<MfaMethodResponse>> convertMfaMethodsToMfaMethodResponse(
-            List<MFAMethod> mfaMethods) {
-        List<Result<String, MfaMethodResponse>> mfaMethodDataResults =
-                mfaMethods.stream()
-                        .map(
-                                mfaMethod -> {
-                                    var mfaMethodData = MfaMethodResponse.from(mfaMethod);
-                                    if (mfaMethodData.isFailure()) {
-                                        var failureString =
-                                                format(
-                                                        "Error converting mfa method with type %s to mfa method data: %s",
-                                                        mfaMethod.getMfaMethodType(),
-                                                        mfaMethodData.getFailure());
-                                        LOG.error(failureString);
-                                        return Result.<String, MfaMethodResponse>failure(
-                                                failureString);
-                                    } else {
-                                        return Result.<String, MfaMethodResponse>success(
-                                                mfaMethodData.getSuccess());
-                                    }
-                                })
-                        .toList();
-        return Result.sequenceSuccess(mfaMethodDataResults);
-    }
-
     public Result<MfaDeleteFailureReason, String> deleteMfaMethod(
             String mfaIdentifier, UserProfile userProfile) {
         if (!userProfile.getMfaMethodsMigrated()) {
@@ -161,13 +134,7 @@ public class MFAMethodsService {
     public Result<MfaCreateFailureReason, MfaMethodResponse> addBackupMfa(
             String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
-        Result<String, List<MfaMethodResponse>> mfaMethodsResult =
-                convertMfaMethodsToMfaMethodResponse(getMfaMethodsForMigratedUser(userCredentials));
-        if (mfaMethodsResult.isFailure()) {
-            return Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
-        }
-
-        var mfaMethods = mfaMethodsResult.getSuccess();
+        var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
 
         if (mfaMethods.size() >= 2) {
             return Result.failure(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
@@ -186,12 +153,13 @@ public class MFAMethodsService {
 
             boolean phoneNumberExists =
                     mfaMethods.stream()
-                            .map(MfaMethodResponse::method)
-                            .filter(ResponseSmsMfaDetail.class::isInstance)
-                            .map(ResponseSmsMfaDetail.class::cast)
+                            .filter(
+                                    method ->
+                                            method.getMfaMethodType()
+                                                    .equals(MFAMethodType.SMS.getValue()))
                             .anyMatch(
-                                    mfa ->
-                                            mfa.phoneNumber()
+                                    method ->
+                                            method.getDestination()
                                                     .equalsIgnoreCase(phoneNumberWithCountryCode));
 
             if (phoneNumberExists) {
@@ -217,9 +185,10 @@ public class MFAMethodsService {
             boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
                     // auth apps?
                     mfaMethods.stream()
-                            .map(MfaMethodResponse::method)
-                            .filter(ResponseAuthAppMfaDetail.class::isInstance)
-                            .anyMatch(mfa -> true);
+                            .anyMatch(
+                                    method ->
+                                            method.getMfaMethodType()
+                                                    .equals(MFAMethodType.AUTH_APP.getValue()));
 
             if (authAppExists) {
                 return Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS);
