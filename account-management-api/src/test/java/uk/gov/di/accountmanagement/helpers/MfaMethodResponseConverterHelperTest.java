@@ -3,9 +3,9 @@ package uk.gov.di.accountmanagement.helpers;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 
 import java.util.List;
 import java.util.stream.Stream;

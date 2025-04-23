@@ -1,8 +1,8 @@
 package uk.gov.di.accountmanagement.helpers;
 
+import uk.gov.di.accountmanagement.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 
 import java.util.List;
 
