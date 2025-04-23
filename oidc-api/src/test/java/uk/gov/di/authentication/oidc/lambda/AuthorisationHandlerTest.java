@@ -2138,7 +2138,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnBadRequestWhenNoQueryStringParametersArePresent() {
+        void shouldReturn400WhenNoQueryStringParametersArePresent() {
             APIGatewayProxyRequestEvent event = withRequestEvent(null);
 
             var response = makeHandlerRequest(event);
@@ -2157,7 +2157,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void returns400ForOpenRedirect()
+        void shouldReturn400ForOpenRedirect()
                 throws InvalidAuthenticationRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
@@ -2188,7 +2188,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnBadRequestWhenMissingClientId()
+        void shouldReturn400WhenMissingClientId()
                 throws InvalidAuthenticationRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
@@ -2212,7 +2212,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnBadRequestWhenMissingRedirectUri()
+        void shouldReturn400WhenMissingRedirectUri()
                 throws InvalidAuthenticationRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
@@ -2237,7 +2237,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnBadRequestWhenIncorrectRedirectUri()
+        void shouldReturn400WhenIncorrectRedirectUri()
                 throws InvalidAuthenticationRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
@@ -2268,7 +2268,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnBadRequestWhenClientNotFound()
+        void shouldReturn400WhenClientNotFound()
                 throws InvalidAuthenticationRequestException,
                         ClientNotFoundException,
                         MissingClientIDException,
@@ -2303,7 +2303,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnErrorWhenInvalidPromptValuesArePassed() {
+        void shouldReturn400WhenInvalidPromptValuesArePassed() {
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("prompt", "select_account"));
             APIGatewayProxyResponseEvent response =
@@ -2325,7 +2325,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void
-                shouldThrowBadRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+                shouldReturn400WhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var event =
                     withRequestEvent(
