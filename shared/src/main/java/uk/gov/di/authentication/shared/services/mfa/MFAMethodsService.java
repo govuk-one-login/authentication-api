@@ -48,7 +48,8 @@ public class MFAMethodsService {
                     getMfaMethodsForMigratedUser(userCredentials));
         } else {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
-                    .map(optional -> optional.map(List::of).orElseGet(List::of));
+                    .map(optional -> optional.map(List::of).orElseGet(List::of))
+                    .flatMap(this::convertMfaMethodsToMfaMethodResponse);
         }
     }
 
@@ -114,9 +115,8 @@ public class MFAMethodsService {
         return Result.success(mfaIdentifier);
     }
 
-    private Result<MfaRetrieveFailureReason, Optional<MfaMethodResponse>>
-            getMfaMethodForNonMigratedUser(
-                    UserProfile userProfile, UserCredentials userCredentials) {
+    private Result<MfaRetrieveFailureReason, Optional<MFAMethod>> getMfaMethodForNonMigratedUser(
+            UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             var method = enabledAuthAppMethod.get();
@@ -139,11 +139,7 @@ public class MFAMethodsService {
             }
             return Result.success(
                     Optional.of(
-                            MfaMethodResponse.authAppMfaData(
-                                    mfaIdentifier,
-                                    PriorityIdentifier.DEFAULT,
-                                    method.isMethodVerified(),
-                                    method.getCredentialValue())));
+                            method.withMfaIdentifier(mfaIdentifier).withPriority(DEFAULT.name())));
         } else if (userProfile.isPhoneNumberVerified()) {
             String mfaIdentifier;
             if (Objects.nonNull(userProfile.getMfaIdentifier())) {
@@ -155,11 +151,12 @@ public class MFAMethodsService {
             }
             return Result.success(
                     Optional.of(
-                            MfaMethodResponse.smsMethodData(
-                                    mfaIdentifier,
-                                    PriorityIdentifier.DEFAULT,
+                            MFAMethod.smsMfaMethod(
                                     true,
-                                    userProfile.getPhoneNumber())));
+                                    true,
+                                    userProfile.getPhoneNumber(),
+                                    DEFAULT,
+                                    mfaIdentifier)));
         } else {
             return Result.success(Optional.empty());
         }
@@ -463,19 +460,23 @@ public class MFAMethodsService {
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
         String mfaIdentifier;
-        if (Objects.isNull(nonMigratedMfaMethod.mfaIdentifier())) {
+        if (Objects.isNull(nonMigratedMfaMethod.getMfaIdentifier())) {
             mfaIdentifier = UUID.randomUUID().toString();
         } else {
-            mfaIdentifier = nonMigratedMfaMethod.mfaIdentifier();
+            mfaIdentifier = nonMigratedMfaMethod.getMfaIdentifier();
         }
 
-        return nonMigratedMfaMethod.method() instanceof ResponseAuthAppMfaDetail
-                ? migrateAuthAppToNewFormat(
-                        email,
-                        (ResponseAuthAppMfaDetail) nonMigratedMfaMethod.method(),
-                        mfaIdentifier)
-                : migrateSmsToNewFormat(
-                        email, (ResponseSmsMfaDetail) nonMigratedMfaMethod.method(), mfaIdentifier);
+        return switch (MFAMethodType.valueOf(nonMigratedMfaMethod.getMfaMethodType())) {
+            case SMS -> migrateSmsToNewFormat(
+                    email,
+                    new ResponseSmsMfaDetail(nonMigratedMfaMethod.getDestination()),
+                    mfaIdentifier);
+            case AUTH_APP -> migrateAuthAppToNewFormat(
+                    email,
+                    new ResponseAuthAppMfaDetail(nonMigratedMfaMethod.getCredentialValue()),
+                    mfaIdentifier);
+            default -> Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
+        };
     }
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
