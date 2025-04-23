@@ -126,24 +126,72 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/ErrorRetrievingMfaMethods"
+                  - $ref: "#/components/schemas/InvalidPrincipalInRequest"
+                  - $ref: "#/components/schemas/AccountManagementApiUnexpectedError"
               examples:
-                bad-get-request:
+                user-not-found-or-no-match:
                   value:
-                    code: 1234
-                    message: "email is malformed"
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                new-method-management-api-not-available:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                error-retrieving-mfa-methods:
+                  value:
+                    code: 1064
+                    message: "Error retrieving MFA methods"
+                account-management-api-unexpected-error:
+                  value:
+                    code: 1071
+                    message: "Account Management API encountered Unexpected Error"
+                invalid-principal-in-request:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
+        "401":
+          description: Unauthorized - user credentials incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
         "404":
           description: Not Found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+              examples:
+                user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
         "500":
-          description: Search not available
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorRetrievingMfaMethods"
+                  - $ref: "#/components/schemas/UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod"
+              examples:
+                error-retrieving-mfa-methods:
+                  value:
+                    code: 1064
+                    message: "Error retrieving mfa methods"
+                unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                  value:
+                    code: 1078
+                    message: "Unexpected error creating mfa identifier for auth app mfa method"
       x-code-samples:
         - lang: shell
           label: cURL request example
@@ -440,9 +488,7 @@ components:
             credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
     SimpleError:
       type: object
-      required:
-        - code
-        - message
+      required: [code, message]
       properties:
         code:
           type: integer
@@ -451,6 +497,212 @@ components:
         message:
           type: string
           description: Human readable error message
+    UserNotFoundOrNoMatch:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1056]
+    NewMethodManagementAPINotAvailableInThisEnvironment:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1063]
+          example:
+            code: 1063
+            message: "New method management api not available in environment"
+    ErrorRetrievingMfaMethods:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1064]
+          example:
+            code: 1064
+            message: "Error retrieving MFA methods"
+    MfaMethodNotFound:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1065]
+          example:
+            code: 1065
+            message: "MFA method not found"
+    CannotDeleteDefaultPriorityMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1066]
+          example:
+            code: 1066
+            message: "Cannot delete default priority MFA method"
+    CannotDeleteMfaMethodForNonMigratedUser:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1067]
+          example:
+            code: 1067
+            message: "Cannot delete MFA method for non migrated user"
+    MfaMethodCountLimitReached:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1068]
+          example:
+            code: 1068
+            message: "MFA method count limit reached"
+    SmsMfaMethodWithSameNumberAlreadyExists:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1069]
+          example:
+            code: 1069
+            message: "SMS MFA method with the same number already exists"
+    AuthAppAlreadyExists:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1070]
+          example:
+            code: 1070
+            message: "AUTH APP MFA already exists"
+    AccountManagementApiUnexpectedError:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1071]
+          example:
+            code: 1071
+            message: "Account Management API encountered Unexpected Error"
+    CannotChangeTypeOfMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1072]
+          example:
+            code: 1072
+            message: "Cannot change type of MFA method"
+    CannotChangePriorityOfDefaultMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1073]
+          example:
+            code: 1073
+            message: "Cannot change priority of default MFA method"
+    CannotUpdatePrimarySMSNumberToNumberAlreadyInUseByBackup:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1074]
+          example:
+            code: 1074
+            message: "Cannot update primary SMS number to number already in use by backup"
+    CannotUpdateABackupSmsMfaMethodPhoneNumber:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1075]
+          example:
+            code: 1075
+            message: "Cannot update a backup SMS MFA methods phone number"
+    CannotUpdateABackupSmsMfaMethodsAuthAppCredential:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1076]
+          example:
+            code: 1076
+            message: "Cannot update a backup sms mfa method's auth app credential"
+    AttemptedToUpdateABackupMfaMethodWithoutADefaultPresent:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1077]
+          example:
+            code: 1077
+            message: "Attempted to update a backup mfa method without a default present"
+    UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1078]
+          example:
+            code: 1078
+            message: "Unexpected error creating mfa identifier for auth app mfa method"
+    InvalidPrincipalInRequest:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1079]
+          example:
+            code: 1079
+            message: "Invalid principal in request"
+    DefaultMethodAlreadyExistsNewOneCannotBeCreated:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1080]
+          example:
+            code: 1080
+            message: "Default method already exists, new one cannot be created."
 
   securitySchemes:
     authorise-access-token:

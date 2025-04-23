@@ -31,12 +31,16 @@ imposter up -r --engine-type=jvm
 Here are some httpie requests to see the example responses:
 
 ```shell
+# GET successful response
 http :8080/v1/mfa-methods/one-mfa
 http :8080/v1/mfa-methods/two-mfa
 http :8080/v1/mfa-methods/user-with-multiple-mfa-types-primary-sms
 http :8080/v1/mfa-methods/user-with-single-mfa-type-app
 
-http :8080/v1/mfa-methods/not-found
-http :8080/v1/mfa-methods/internal-server-error
-http :8080/v1/mfa-methods/bad-get-request
+# GET error responses
+http :8080/v1/mfa-methods/user-not-found-or-no-match
+http :8080/v1/mfa-methods/new-method-management-api-not-available
+http :8080/v1/mfa-methods/error-retrieving-mfa-methods
+http :8080/v1/mfa-methods/account-management-api-unexpected-error
+http :8080/v1/mfa-methods/invalid-principal-in-request
 ```
