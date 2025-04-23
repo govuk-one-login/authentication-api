@@ -900,6 +900,11 @@ public class AuthenticationCallbackHandler
                     .getClientSessions()
                     .forEach(currentSharedSession::addClientSession);
 
+            previousOrchSession
+                    .get()
+                    .getClientSessions()
+                    .forEach(currentOrchSession::addClientSession);
+
         } else {
             LOG.info(
                     "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
