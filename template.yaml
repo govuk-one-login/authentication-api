@@ -2657,6 +2657,7 @@ Resources:
             ]
       Policies:
         - !Ref IpvTokenSigningKmsAccessPolicy
+        - !Ref OrchIpvTokenSigningKmsAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -5819,6 +5820,19 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: "*"
+
+  OrchIpvTokenSigningKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchIpvTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !GetAtt OrchIPVTokenSigningKmsKey.Arn
 
   #endregion
 
