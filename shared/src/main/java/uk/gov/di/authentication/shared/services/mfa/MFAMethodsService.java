@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.entity.mfa.response.ResponseAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -202,7 +201,7 @@ public class MFAMethodsService {
         }
     }
 
-    public Result<MfaUpdateFailureReason, List<MfaMethodResponse>> updateMfaMethod(
+    public Result<MfaUpdateFailureReason, List<MFAMethod>> updateMfaMethod(
             String email, String mfaIdentifier, MfaMethodCreateOrUpdateRequest request) {
         var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
 
@@ -216,10 +215,8 @@ public class MFAMethodsService {
                         method -> {
                             if (updateRequestChangesMethodType(
                                     method.getMfaMethodType(), request.mfaMethod().method())) {
-                                return Result
-                                        .<MfaUpdateFailureReason, List<MfaMethodResponse>>failure(
-                                                MfaUpdateFailureReason
-                                                        .CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
+                                return Result.<MfaUpdateFailureReason, List<MFAMethod>>failure(
+                                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
                             } else {
                                 return switch (PriorityIdentifier.valueOf(method.getPriority())) {
                                     case DEFAULT -> handleDefaultMethodUpdate(
@@ -236,7 +233,7 @@ public class MFAMethodsService {
                 .orElse(Result.failure(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
     }
 
-    private Result<MfaUpdateFailureReason, List<MfaMethodResponse>> handleBackupMethodUpdate(
+    private Result<MfaUpdateFailureReason, List<MFAMethod>> handleBackupMethodUpdate(
             MFAMethod backupMethod,
             MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
             String email,
@@ -289,28 +286,22 @@ public class MFAMethodsService {
                                 defaultMethod.withPriority(BACKUP.name()),
                                 backupMethod.withPriority(DEFAULT.name())));
 
-        return updateMfaResultToMfaMethodData(databaseUpdateResult);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
     }
 
-    private Result<MfaUpdateFailureReason, List<MfaMethodResponse>> updateMfaResultToMfaMethodData(
-            Result<String, List<MFAMethod>> updateResult) {
-        Result<String, List<MfaMethodResponse>> returnedMfaMethods =
-                updateResult.flatMap(
-                        mfaMethods ->
-                                Result.sequenceSuccess(
-                                                mfaMethods.stream()
-                                                        .map(MfaMethodResponse::from)
-                                                        .toList())
-                                        .map(list -> list.stream().sorted().toList()));
-
-        return returnedMfaMethods.mapFailure(
-                errorString -> {
-                    LOG.error(errorString);
-                    return MfaUpdateFailureReason.UNEXPECTED_ERROR;
-                });
+    private Result<MfaUpdateFailureReason, List<MFAMethod>>
+            mfaUpdateFailureReasonOrSortedMfaMethods(
+                    Result<String, List<MFAMethod>> databaseUpdateResult) {
+        return databaseUpdateResult
+                .map(m -> m.stream().sorted().toList())
+                .mapFailure(
+                        errorString -> {
+                            LOG.error(errorString);
+                            return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                        });
     }
 
-    private Result<MfaUpdateFailureReason, List<MfaMethodResponse>> handleDefaultMethodUpdate(
+    private Result<MfaUpdateFailureReason, List<MFAMethod>> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
             MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
             String email,
@@ -370,7 +361,7 @@ public class MFAMethodsService {
             }
         }
 
-        return updateMfaResultToMfaMethodData(databaseUpdateResult);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
     }
 
     private boolean updateRequestChangesMethodType(

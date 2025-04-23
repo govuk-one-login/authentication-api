@@ -18,9 +18,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
-import uk.gov.di.authentication.shared.entity.mfa.response.ResponseAuthAppMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
@@ -770,18 +767,13 @@ class MFAMethodsServiceIntegrationTest {
                                 PriorityIdentifier.valueOf(defaultPriorityAuthApp.getPriority()),
                                 defaultPriorityAuthApp.getMfaIdentifier());
 
-                var expectedUnchangedBackupMethod = backupPrioritySms;
-
-                assertEquals(
-                        Stream.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod)
-                                .map(MFAMethodsServiceIntegrationTest::mfaMethodDataFrom)
-                                .sorted()
-                                .toList(),
-                        result.getSuccess());
-
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 var expectedRemainingMethods =
-                        List.of(expectedUpdatedDefaultMethod, expectedUnchangedBackupMethod);
+                        List.of(expectedUpdatedDefaultMethod, backupPrioritySms);
+                assertTrue(
+                        mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
+                                expectedRemainingMethods, result.getSuccess()));
+
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedRemainingMethods, remainingMfaMethods));
@@ -821,16 +813,12 @@ class MFAMethodsServiceIntegrationTest {
                                 PriorityIdentifier.DEFAULT,
                                 defaultPrioritySms.getMfaIdentifier());
 
-                assertEquals(
-                        Stream.of(
-                                        mfaMethodDataFrom(expectedUpdatedDefaultMethod),
-                                        mfaMethodDataFrom(backupPrioritySms))
-                                .sorted()
-                                .toList(),
-                        result.getSuccess().stream().sorted().toList());
-
                 var methodsInDatabase = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 var expectedMethods = List.of(expectedUpdatedDefaultMethod, backupPrioritySms);
+
+                assertTrue(
+                        mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
+                                expectedMethods, result.getSuccess()));
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedMethods, methodsInDatabase));
@@ -1003,13 +991,9 @@ class MFAMethodsServiceIntegrationTest {
                 var expectedMethodsAfterUpdate =
                         Stream.of(expectedDefaultMethod, expectedBackupMethod).sorted().toList();
 
-                var expectedMethodsAfterUpdateAsMfaResponse =
-                        expectedMethodsAfterUpdate.stream()
-                                .map(MFAMethodsServiceIntegrationTest::mfaMethodDataFrom);
-
-                assertEquals(
-                        expectedMethodsAfterUpdateAsMfaResponse.sorted().toList(),
-                        result.getSuccess().stream().sorted().toList());
+                assertTrue(
+                        mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
+                                expectedMethodsAfterUpdate, result.getSuccess()));
 
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
@@ -1319,21 +1303,6 @@ class MFAMethodsServiceIntegrationTest {
 
             assertEquals(methodsBeforeDelete, methodsAfterDelete);
         }
-    }
-
-    private static MfaMethodResponse mfaMethodDataFrom(MFAMethod mfaMethod) {
-        MfaDetail detail;
-        if (mfaMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
-            detail = new ResponseAuthAppMfaDetail(mfaMethod.getCredentialValue());
-
-        } else {
-            detail = new ResponseSmsMfaDetail(mfaMethod.getDestination());
-        }
-        return new MfaMethodResponse(
-                mfaMethod.getMfaIdentifier(),
-                PriorityIdentifier.valueOf(mfaMethod.getPriority()),
-                mfaMethod.isMethodVerified(),
-                detail);
     }
 
     private boolean mfaMethodsAreEqualIgnoringUpdated(MFAMethod mfaMethod1, MFAMethod mfaMethod2) {

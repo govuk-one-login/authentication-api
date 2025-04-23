@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -152,9 +153,18 @@ public class MFAMethodsPutHandler
                 return response;
             }
 
-            var successfulUpdate = result.getSuccess();
+            var successfulUpdateMethods = result.getSuccess();
 
-            return generateApiGatewayProxyResponse(200, successfulUpdate, true);
+            var methodsAsResponse = convertMfaMethodsToMfaMethodResponse(successfulUpdateMethods);
+
+            if (methodsAsResponse.isFailure()) {
+                LOG.error(
+                        "Error converting mfa methods to response; update may still have occurred. Error: {}",
+                        methodsAsResponse.getFailure());
+                return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+            }
+
+            return generateApiGatewayProxyResponse(200, methodsAsResponse.getSuccess(), true);
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
