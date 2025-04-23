@@ -1,0 +1,232 @@
+@startuml
+allowmixing
+
+title "AS-IS: User with SMS MFA"
+
+rectangle {
+    frame "user_profile" {
+        json "<b>user_profile" as up {
+          "Email":"any.user@digital.cabinet-office.gov.uk",
+          "PublicSubjectID": "ZqBP0Nav-RFGelKefGcbarI8YfZcrIuQ9COuksT7oI8",
+          "salt": "ERA0/hVDX8Wu/EIEG5H7KyQG06QtMfT8s82LnjLpOjE=",
+          "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+          "accountVerified":  "1",
+          "EmailVerified": "1",
+          "<back:yellow>PhoneNumber": "+447700900111",
+          "<back:yellow>PhoneNumberVerified": "1",
+          "mfaMethodsMigrated": "false",
+          "termsAndConditions": "...",
+          "testUser": "0",
+          "Created":"2025-04-11T12:53:47.461588505",
+          "Updated": "2025-04-11T12:57:18.000914"
+        }
+    }
+    note bottom of up
+            The 'PhoneNumber' and 'PhoneNumberVerified' fields are populated for
+            an as-is user with an SMS MFA
+        end note
+
+    frame "user_credentials" as frame_uc {
+        json "<b>user_credentials" as mfa {
+            "Email":"any.user@digital.cabinet-office.gov.uk",
+            "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+            "Password": "",
+            "testUser": "0",
+            "Created":"2025-04-11T12:53:47.461588505",
+            "Updated": "2025-04-11T12:57:18.000914",
+            "<back:yellow>MfaMethods": []
+        }
+    }
+    note bottom of mfa
+        The 'MfaMethods' list is empty for
+        an as-is user with an SMS MFA
+    end note
+}
+
+
+newpage
+
+title "AS-IS: User with Auth App MFA"
+
+rectangle {
+    frame "user_profile" as frame_up {
+        json "<b>user_profile" as up {
+          "Email":"any.user@digital.cabinet-office.gov.uk",
+          "PublicSubjectID": "ZqBP0Nav-RFGelKefGcbarI8YfZcrIuQ9COuksT7oI8",
+          "salt": "ERA0/hVDX8Wu/EIEG5H7KyQG06QtMfT8s82LnjLpOjE=",
+          "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+          "accountVerified":  "1",
+          "EmailVerified": "1",
+          "<back:yellow>PhoneNumber": "",
+          "<back:yellow>PhoneNumberVerified": "",
+          "mfaMethodsMigrated": "false",
+          "termsAndConditions": "...",
+          "testUser": "0",
+          "Created":"2025-04-11T12:53:47.461588505",
+          "Updated": "2025-04-11T12:57:18.000914"
+        }
+    }
+    note bottom of up
+        The 'PhoneNumber' and 'PhoneNumberVerified' fields are empty for
+        an as-is user with an Auth App MFA
+    end note
+
+    frame "user_credentials" as frame_uc {
+        json "<b>user_credentials" as mfa {
+            "Email":"any.user@digital.cabinet-office.gov.uk",
+            "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+            "Password": "",
+            "testUser": "0",
+            "Created":"2025-04-11T12:53:47.461588505",
+            "Updated": "2025-04-11T12:57:18.000914",
+            "<back:yellow>MfaMethods": [
+                {
+                    "<back:yellow>MfaMethodType": "AUTH_APP",
+                    "<back:yellow>Enabled": "1",
+                    "<back:yellow>MethodVerified": "1",
+                    "<back:yellow>CredentialValue": "ABCDEFG123",
+                    "<back:yellow>Updated": "2023-06-09T10:34:59.983254"
+                }
+            ]
+        }
+    }
+    note bottom of mfa
+        The 'MfaMethods' list is populated with a single entry
+        for an as-is user with an Auth App MFA
+    end note
+}
+
+newpage
+
+title "TO-BE: User with SMS MFA"
+
+json "<b>user_profile" as up {
+  "Email":"any.user@digital.cabinet-office.gov.uk",
+  "PublicSubjectID": "ZqBP0Nav-RFGelKefGcbarI8YfZcrIuQ9COuksT7oI8",
+  "salt": "ERA0/hVDX8Wu/EIEG5H7KyQG06QtMfT8s82LnjLpOjE=",
+  "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+  "accountVerified":  "1",
+  "EmailVerified": "1",
+  "<back:yellow>PhoneNumber": "",
+  "<back:yellow>PhoneNumberVerified": "",
+  "<back:yellow>mfaMethodsMigrated": "true",
+  "termsAndConditions": "...",
+  "testUser": "0",
+  "Created":"2025-04-11T12:53:47.461588505",
+  "Updated": "2025-04-11T12:57:18.000914"
+}
+
+json "<b>user_credentials" as mfa {
+    "Email":"any.user@digital.cabinet-office.gov.uk",
+    "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+    "Password": "",
+    "testUser": "0",
+    "Created":"2025-04-11T12:53:47.461588505",
+    "Updated": "2025-04-11T12:57:18.000914",
+    "<back:yellow>MfaMethods": [
+        {
+            "<back:yellow>PriorityIdentifier": "DEFAULT",
+            "<back:yellow>MfaMethodType": "SMS",
+            "<back:yellow>MFAIdentifier": "ABCD-1234-5678-EFGH",
+            "<back:yellow>Enabled": "1",
+            "<back:yellow>MethodVerified": "1",
+            "<back:yellow>Updated": "2023-06-09T10:34:59.983254",
+            "<back:yellow>Destination": "+447700900111",
+            "CredentialValue": ""
+        }
+    ]
+}
+
+newpage
+
+title "TO-BE: User with Auth App MFA"
+
+json "<b>user_profile" as up {
+  "Email":"any.user@digital.cabinet-office.gov.uk",
+  "PublicSubjectID": "ZqBP0Nav-RFGelKefGcbarI8YfZcrIuQ9COuksT7oI8",
+  "salt": "ERA0/hVDX8Wu/EIEG5H7KyQG06QtMfT8s82LnjLpOjE=",
+  "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+  "accountVerified":  "1",
+  "EmailVerified": "1",
+  "<back:yellow>PhoneNumber": "",
+  "<back:yellow>PhoneNumberVerified": "",
+  "<back:yellow>mfaMethodsMigrated": "true",
+  "termsAndConditions": "...",
+  "testUser": "0",
+  "Created":"2025-04-11T12:53:47.461588505",
+  "Updated": "2025-04-11T12:57:18.000914"
+}
+
+json "<b>user_credentials" as mfa {
+    "Email":"any.user@digital.cabinet-office.gov.uk",
+    "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+    "Password": "",
+    "testUser": "0",
+    "Created":"2025-04-11T12:53:47.461588505",
+    "Updated": "2025-04-11T12:57:18.000914",
+    "<back:yellow>MfaMethods": [
+        {
+            "<back:yellow>PriorityIdentifier": "DEFAULT",
+            "<back:yellow>MfaMethodType": "AUTH_APP",
+            "<back:yellow>MFAIdentifier": "ABCD-1234-5678-EFGH",
+            "<back:yellow>Enabled": "1",
+            "<back:yellow>MethodVerified": "1",
+            "<back:yellow>CredentialValue": "ABCDEFG123",
+            "<back:yellow>Updated": "2023-06-09T10:34:59.983254",
+            "Destination": ""
+        }
+    ]
+}
+
+newpage
+
+title "TO-BE: User with 2 x SMS MFA"
+
+json "<b>user_profile" as up {
+  "Email":"any.user@digital.cabinet-office.gov.uk",
+  "PublicSubjectID": "ZqBP0Nav-RFGelKefGcbarI8YfZcrIuQ9COuksT7oI8",
+  "salt": "ERA0/hVDX8Wu/EIEG5H7KyQG06QtMfT8s82LnjLpOjE=",
+  "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+  "accountVerified":  "1",
+  "EmailVerified": "1",
+  "<back:yellow>PhoneNumber": "",
+  "<back:yellow>PhoneNumberVerified": "",
+  "<back:yellow>mfaMethodsMigrated": "true",
+  "termsAndConditions": "...",
+  "testUser": "0",
+  "Created":"2025-04-11T12:53:47.461588505",
+  "Updated": "2025-04-11T12:57:18.000914"
+}
+
+json "<b>user_credentials" as mfa {
+    "Email":"any.user@digital.cabinet-office.gov.uk",
+    "SubjectID": "-iTmfEMXefVym2Sr9DortAm9WV4zDEf7NxST0WDJ7mA",
+    "Password": "",
+    "testUser": "0",
+    "Created":"2025-04-11T12:53:47.461588505",
+    "Updated": "2025-04-11T12:57:18.000914",
+    "<back:yellow>MfaMethods": [
+        {
+            "<back:cyan>PriorityIdentifier": "DEFAULT",
+            "<back:cyan>MfaMethodType": "SMS",
+            "<back:cyan>MFAIdentifier": "ABCD-1234-5678-EFGH",
+            "<back:cyan>Enabled": "1",
+            "<back:cyan>MethodVerified": "1",
+            "<back:cyan>Destination": "+447700900111",
+            "CredentialValue": "",
+            "<back:cyan>Updated": "2023-06-09T10:34:59.983254"
+        },
+        {
+            "<back:pink>PriorityIdentifier": "BACKUP",
+            "<back:pink>MfaMethodType": "SMS",
+            "CredentialValue": "",
+            "<back:pink>Enabled": "1",
+            "<back:pink>MethodVerified": "1",
+            "<back:pink>Updated": "2023-06-09T10:34:59.983254",
+            "<back:pink>Destination": "+447700900222",
+            "<back:pink>MFAIdentifier": "IJKL-1234-5678-MNOP"
+        }
+    ]
+}
+
+@enduml
