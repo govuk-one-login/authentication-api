@@ -11,7 +11,8 @@ module "account_management_api_update_password_role" {
     aws_iam_policy.dynamo_common_passwords_read_access_policy.arn,
     module.account_management_txma_audit.access_policy_arn,
     local.common_passwords_encryption_policy_arn,
-    local.user_profile_encryption_policy_arn
+    local.user_profile_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn,
   ]
   extra_tags = {
     Service = "update-password"

@@ -13,7 +13,8 @@ module "account_management_api_update_email_role" {
     aws_iam_policy.parameter_policy.arn,
     module.account_management_txma_audit.access_policy_arn,
     local.user_profile_encryption_policy_arn,
-    local.email_check_results_encryption_policy_arn
+    local.email_check_results_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn,
   ]
   extra_tags = {
     Service = "update-email"
