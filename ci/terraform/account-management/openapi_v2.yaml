@@ -234,13 +234,82 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/DefaultMethodAlreadyExistsNewOneCannotBeCreated"
+                  - $ref: "#/components/schemas/InvalidOTPCode"
+                  - $ref: "#/components/schemas/MfaMethodCountLimitReached"
+                  - $ref: "#/components/schemas/SmsMfaMethodWithSameNumberAlreadyExists"
+                  - $ref: "#/components/schemas/AuthAppAlreadyExists"
+              examples:
+                request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                new-method-management-api-not-available:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                default-method-already-exists-new-one-cannot-be-created:
+                  value:
+                    code: 1080
+                    message: "Default method already exists, new one cannot be created."
+                invalid-otp-code:
+                  value:
+                    code: 1020
+                    message: "Invalid OTP code"
+                mfa-method-count-limit-reached:
+                  value:
+                    code: 1068
+                    message: "MFA method could limit reached"
+                sma-mfa-method-with-same-number-already-exists:
+                  value:
+                    code: 1069
+                    message: "SMS MFA with same number already exists"
+                auth-app-mfa-already-exists:
+                  value:
+                    code: 1070
+                    message: "AUTH APP MFA already exists"
+        "401":
+          description: Unauthorized - user credentials incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+              examples:
+                user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
         "500":
           description: MFA Method could not be created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                $ref: "#/components/schemas/UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod"
+              examples:
+                unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                  value:
+                    code: 1078
+                    message: "Unexpected error creating mfa identifier for auth app mfa method"
   /v1/mfa-methods/{publicSubjectId}/{mfaIdentifier}:
     parameters:
       - name: mfaIdentifier
@@ -497,6 +566,22 @@ components:
         message:
           type: string
           description: Human readable error message
+    RequestIsMissingParameters:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1001]
+    InvalidOTPCode:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1020]
     UserNotFoundOrNoMatch:
       allOf:
         - $ref: "#/components/schemas/SimpleError"
