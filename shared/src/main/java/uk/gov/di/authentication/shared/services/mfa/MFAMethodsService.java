@@ -131,7 +131,7 @@ public class MFAMethodsService {
         }
     }
 
-    public Result<MfaCreateFailureReason, MfaMethodResponse> addBackupMfa(
+    public Result<MfaCreateFailureReason, MFAMethod> addBackupMfa(
             String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
         var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
@@ -167,20 +167,15 @@ public class MFAMethodsService {
             }
 
             String uuid = UUID.randomUUID().toString();
-            persistentService.addMFAMethodSupportingMultiple(
-                    email,
+            var smsMfaMethod =
                     MFAMethod.smsMfaMethod(
                             true,
                             true,
                             phoneNumberWithCountryCode,
                             mfaMethod.priorityIdentifier(),
-                            uuid));
-            return Result.success(
-                    MfaMethodResponse.smsMethodData(
-                            uuid,
-                            mfaMethod.priorityIdentifier(),
-                            true,
-                            phoneNumberWithCountryCode));
+                            uuid);
+            persistentService.addMFAMethodSupportingMultiple(email, smsMfaMethod);
+            return Result.success(smsMfaMethod);
         } else {
             boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
                     // auth apps?
@@ -195,20 +190,15 @@ public class MFAMethodsService {
             }
 
             String uuid = UUID.randomUUID().toString();
-            persistentService.addMFAMethodSupportingMultiple(
-                    email,
+            var authAppMfaMethod =
                     MFAMethod.authAppMfaMethod(
                             ((RequestAuthAppMfaDetail) mfaMethod.method()).credential(),
                             true,
                             true,
                             mfaMethod.priorityIdentifier(),
-                            uuid));
-            return Result.success(
-                    MfaMethodResponse.authAppMfaData(
-                            uuid,
-                            mfaMethod.priorityIdentifier(),
-                            true,
-                            ((RequestAuthAppMfaDetail) mfaMethod.method()).credential()));
+                            uuid);
+            persistentService.addMFAMethodSupportingMultiple(email, authAppMfaMethod);
+            return Result.success(authAppMfaMethod);
         }
     }
 

@@ -511,14 +511,16 @@ class MFAMethodsServiceIntegrationTest {
                             .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
                             .findFirst()
                             .get();
+
             assertEquals(MFAMethodType.SMS.getValue(), storedBackupMethod.getMfaMethodType());
             assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, storedBackupMethod.getDestination());
 
-            assertEquals(storedBackupMethod.getMfaIdentifier(), result.mfaIdentifier());
-            assertDoesNotThrow(() -> UUID.fromString(result.mfaIdentifier()));
-            assertEquals(PriorityIdentifier.BACKUP, result.priorityIdentifier());
-            assertTrue(result.methodVerified());
-            assertEquals(new ResponseSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE), result.method());
+            assertEquals(storedBackupMethod.getMfaIdentifier(), result.getMfaIdentifier());
+            assertDoesNotThrow(() -> UUID.fromString(result.getMfaIdentifier()));
+            assertEquals(PriorityIdentifier.BACKUP.name(), result.getPriority());
+            assertTrue(result.isMethodVerified());
+            assertEquals(MFAMethodType.SMS.getValue(), result.getMfaMethodType());
+            assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, result.getDestination());
         }
 
         @Test
@@ -548,11 +550,12 @@ class MFAMethodsServiceIntegrationTest {
             assertEquals(MFAMethodType.SMS.getValue(), storedBackupMethod.getMfaMethodType());
             assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, storedBackupMethod.getDestination());
 
-            assertEquals(storedBackupMethod.getMfaIdentifier(), result.mfaIdentifier());
-            assertDoesNotThrow(() -> UUID.fromString(result.mfaIdentifier()));
-            assertEquals(PriorityIdentifier.BACKUP, result.priorityIdentifier());
-            assertTrue(result.methodVerified());
-            assertEquals(new ResponseSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE), result.method());
+            assertEquals(storedBackupMethod.getMfaIdentifier(), result.getMfaIdentifier());
+            assertDoesNotThrow(() -> UUID.fromString(result.getMfaIdentifier()));
+            assertEquals(PriorityIdentifier.BACKUP.name(), result.getPriority());
+            assertTrue(result.isMethodVerified());
+            assertEquals(MFAMethodType.SMS.getValue(), result.getMfaMethodType());
+            assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, result.getDestination());
         }
 
         @Test
@@ -582,10 +585,11 @@ class MFAMethodsServiceIntegrationTest {
                                                     .equals(MFAMethodType.AUTH_APP.getValue()));
 
             assertTrue(authAppMethodExists);
-            assertDoesNotThrow(() -> UUID.fromString(result.mfaIdentifier()));
-            assertEquals(PriorityIdentifier.BACKUP, result.priorityIdentifier());
-            assertTrue(result.methodVerified());
-            assertEquals(new ResponseAuthAppMfaDetail(AUTH_APP_CREDENTIAL), result.method());
+            assertDoesNotThrow(() -> UUID.fromString(result.getMfaIdentifier()));
+            assertEquals(PriorityIdentifier.BACKUP.name(), result.getPriority());
+            assertTrue(result.isMethodVerified());
+            assertEquals(MFAMethodType.AUTH_APP.getValue(), result.getMfaMethodType());
+            assertEquals(AUTH_APP_CREDENTIAL, result.getCredentialValue());
         }
 
         @Test
