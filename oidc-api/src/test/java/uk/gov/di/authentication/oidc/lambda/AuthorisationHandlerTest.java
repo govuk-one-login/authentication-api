@@ -48,7 +48,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
@@ -134,7 +133,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -186,7 +184,6 @@ class AuthorisationHandlerTest {
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator =
             mock(QueryParamsAuthorizeValidator.class);
     private final ClientService clientService = mock(ClientService.class);
-    private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_NEW_SESSION_COOKIE_STRING =
             "gs=a-new-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final String EXPECTED_BASE_PERSISTENT_COOKIE_VALUE = IdGenerator.generate();
@@ -357,7 +354,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -622,7 +619,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -688,7 +685,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -759,7 +756,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -805,7 +802,7 @@ class AuthorisationHandlerTest {
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, false, false, "LOW_LEVEL");
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -848,7 +845,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1069,7 +1066,7 @@ class AuthorisationHandlerTest {
 
             verify(requestObjectAuthorizeValidator).validate(any());
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1119,7 +1116,7 @@ class AuthorisationHandlerTest {
             verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1202,7 +1199,7 @@ class AuthorisationHandlerTest {
 
             verify(requestObjectAuthorizeValidator).validate(any());
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1553,7 +1550,7 @@ class AuthorisationHandlerTest {
 
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             CLIENT_ID.getValue(),
@@ -1608,7 +1605,7 @@ class AuthorisationHandlerTest {
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             CLIENT_ID.getValue(),
@@ -1796,7 +1793,7 @@ class AuthorisationHandlerTest {
                             "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1825,7 +1822,7 @@ class AuthorisationHandlerTest {
                             "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1854,7 +1851,7 @@ class AuthorisationHandlerTest {
                             "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1887,7 +1884,7 @@ class AuthorisationHandlerTest {
                                                     format(
                                                             "%s=",
                                                             BROWSER_SESSION_ID_COOKIE_NAME))));
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1916,7 +1913,7 @@ class AuthorisationHandlerTest {
                             "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1946,7 +1943,7 @@ class AuthorisationHandlerTest {
                             "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -2896,7 +2893,7 @@ class AuthorisationHandlerTest {
                                 NEW_BROWSER_SESSION_ID,
                                 NEW_SESSION_ID_FOR_PREV_SESSION));
 
-        inOrder.verify(auditService)
+        verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, "", BASE_AUDIT_USER);
 
@@ -3140,7 +3137,7 @@ class AuthorisationHandlerTest {
             String credentialTrustLevel,
             Integer maxAge) {
         if (Objects.isNull(maxAge)) {
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                             CLIENT_ID.getValue(),
@@ -3150,7 +3147,7 @@ class AuthorisationHandlerTest {
                             pair("reauthRequested", reauthRequested),
                             pair("credential_trust_level", credentialTrustLevel));
         } else {
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                             CLIENT_ID.getValue(),
