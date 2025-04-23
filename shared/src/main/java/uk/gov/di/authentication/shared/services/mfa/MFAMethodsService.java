@@ -40,16 +40,14 @@ public class MFAMethodsService {
         this.persistentService = new DynamoService(configurationService);
     }
 
-    public Result<MfaRetrieveFailureReason, List<MfaMethodResponse>> getMfaMethods(String email) {
+    public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
-            return convertMfaMethodsToMfaMethodResponse(
-                    getMfaMethodsForMigratedUser(userCredentials));
+            return Result.success(getMfaMethodsForMigratedUser(userCredentials));
         } else {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
-                    .map(optional -> optional.map(List::of).orElseGet(List::of))
-                    .flatMap(this::convertMfaMethodsToMfaMethodResponse);
+                    .map(optional -> optional.map(List::of).orElseGet(List::of));
         }
     }
 

@@ -9,13 +9,18 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -97,7 +102,10 @@ public class MFAMethodsRetrieveHandler
             return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
         }
 
-        var retrieveResult = mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());
+        var retrieveResult =
+                mfaMethodsService
+                        .getMfaMethods(maybeUserProfile.get().getEmail())
+                        .flatMap(this::convertMfaMethodsToMfaMethodResponse);
 
         if (retrieveResult.isFailure()) {
             return switch (retrieveResult.getFailure()) {
@@ -119,5 +127,32 @@ public class MFAMethodsRetrieveHandler
         Map<String, String> headers = input.getHeaders();
         String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
         attachSessionIdToLogs(sessionId);
+    }
+
+    private Result<MfaRetrieveFailureReason, List<MfaMethodResponse>>
+            convertMfaMethodsToMfaMethodResponse(List<MFAMethod> mfaMethods) {
+        List<Result<MfaRetrieveFailureReason, MfaMethodResponse>> mfaMethodDataResults =
+                mfaMethods.stream()
+                        .map(
+                                mfaMethod -> {
+                                    var mfaMethodData = MfaMethodResponse.from(mfaMethod);
+                                    if (mfaMethodData.isFailure()) {
+                                        LOG.error(
+                                                "Error converting mfa method with type {} to mfa method data: {}",
+                                                mfaMethod.getMfaMethodType(),
+                                                mfaMethodData.getFailure());
+                                        return Result
+                                                .<MfaRetrieveFailureReason, MfaMethodResponse>
+                                                        failure(
+                                                                MfaRetrieveFailureReason
+                                                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA);
+                                    } else {
+                                        return Result
+                                                .<MfaRetrieveFailureReason, MfaMethodResponse>
+                                                        success(mfaMethodData.getSuccess());
+                                    }
+                                })
+                        .toList();
+        return Result.sequenceSuccess(mfaMethodDataResults);
     }
 }

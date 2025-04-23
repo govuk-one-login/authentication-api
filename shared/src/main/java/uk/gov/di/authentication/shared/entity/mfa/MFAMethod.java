@@ -9,7 +9,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import java.util.Objects;
 
 @DynamoDbBean
-public class MFAMethod {
+public class MFAMethod implements Comparable<MFAMethod> {
 
     public static final String ATTRIBUTE_MFA_METHOD_TYPE = "MfaMethodType";
     public static final String ATTRIBUTE_CREDENTIAL_VALUE = "CredentialValue";
@@ -206,5 +206,19 @@ public class MFAMethod {
     @Override
     public int hashCode() {
         return Objects.hash(mfaMethodType, credentialValue, methodVerified, enabled, updated);
+    }
+
+    @Override
+    public int compareTo(MFAMethod other) {
+        if (this.mfaIdentifier == null && other.mfaIdentifier == null) {
+            return 0;
+        }
+        if (this.mfaIdentifier == null) {
+            return -1;
+        }
+        if (other.mfaIdentifier == null) {
+            return 1;
+        }
+        return this.mfaIdentifier.compareTo(other.mfaIdentifier);
     }
 }

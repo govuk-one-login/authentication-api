@@ -12,8 +12,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -72,11 +71,8 @@ class MFAMethodsRetrieveHandlerTest {
                 .thenReturn(Optional.of(userProfile));
 
         var method =
-                new MfaMethodResponse(
-                        MFA_IDENTIFIER,
-                        PriorityIdentifier.DEFAULT,
-                        true,
-                        new RequestSmsMfaDetail("+44123456789", "123456"));
+                MFAMethod.smsMfaMethod(
+                        true, true, "+44123456789", PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(method)));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
@@ -86,7 +82,7 @@ class MFAMethodsRetrieveHandlerTest {
         assertThat(result, hasStatus(200));
         var expectedBody =
                 format(
-                        "[{\"mfaIdentifier\":\"%s\",\"priorityIdentifier\":\"DEFAULT\",\"methodVerified\":true,\"method\":{\"mfaMethodType\":\"SMS\",\"phoneNumber\":\"+44123456789\",\"otp\":\"123456\"}}]",
+                        "[{\"mfaIdentifier\":\"%s\",\"priorityIdentifier\":\"DEFAULT\",\"methodVerified\":true,\"method\":{\"mfaMethodType\":\"SMS\",\"phoneNumber\":\"+44123456789\"}}]",
                         MFA_IDENTIFIER);
         assertEquals(expectedBody, result.getBody());
     }
