@@ -12,8 +12,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.ResponseAuthAppMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -414,40 +412,28 @@ public class MFAMethodsService {
 
         return switch (MFAMethodType.valueOf(nonMigratedMfaMethod.getMfaMethodType())) {
             case SMS -> migrateSmsToNewFormat(
-                    email,
-                    new ResponseSmsMfaDetail(nonMigratedMfaMethod.getDestination()),
-                    mfaIdentifier);
+                    email, nonMigratedMfaMethod.getDestination(), mfaIdentifier);
             case AUTH_APP -> migrateAuthAppToNewFormat(
-                    email,
-                    new ResponseAuthAppMfaDetail(nonMigratedMfaMethod.getCredentialValue()),
-                    mfaIdentifier);
+                    email, nonMigratedMfaMethod.getCredentialValue(), mfaIdentifier);
             default -> Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
         };
     }
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
-            String email, ResponseAuthAppMfaDetail requestAuthAppMfaDetail, String identifier) {
+            String email, String credential, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.authAppMfaMethod(
-                        requestAuthAppMfaDetail.credential(),
-                        true,
-                        true,
-                        PriorityIdentifier.DEFAULT,
-                        identifier));
+                        credential, true, true, PriorityIdentifier.DEFAULT, identifier));
         return Optional.empty();
     }
 
     private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
-            String email, ResponseSmsMfaDetail requestSmsMfaDetail, String identifier) {
+            String email, String phoneNumber, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        requestSmsMfaDetail.phoneNumber(),
-                        PriorityIdentifier.DEFAULT,
-                        identifier));
+                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, identifier));
 
         return Optional.empty();
     }
