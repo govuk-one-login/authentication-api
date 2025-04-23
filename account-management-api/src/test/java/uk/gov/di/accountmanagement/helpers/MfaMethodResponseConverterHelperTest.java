@@ -6,11 +6,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
-import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
@@ -42,6 +42,7 @@ class MfaMethodResponseConverterHelperTest {
     private static final MfaMethodResponse BACKUP_AUTH_APP_MFA_AS_MFA_METHOD_RESPONSE =
             MfaMethodResponse.authAppMfaData(
                     BACKUP_AUTH_APP_MFA_IDENTIFIER, BACKUP, true, AUTH_APP_CREDENTIAL_2);
+    private static final String INVALID_MFA_TYPE = "not a valid mfa type";
 
     private static Stream<Arguments> convertableMethodsToExpectedMfaMethodResponses() {
         return Stream.of(
@@ -69,8 +70,7 @@ class MfaMethodResponseConverterHelperTest {
     }
 
     private static Stream<List<MFAMethod>> methodsIncludingInvalidMfa() {
-        var invalidMfaMethod =
-                new MFAMethod("not a valid mfa type", null, true, true, "updated-at");
+        var invalidMfaMethod = new MFAMethod(INVALID_MFA_TYPE, null, true, true, "updated-at");
         return Stream.of(
                 List.of(invalidMfaMethod),
                 List.of(invalidMfaMethod, SMS_MFA_METHOD),
@@ -85,9 +85,11 @@ class MfaMethodResponseConverterHelperTest {
         var convertedResult =
                 convertMfaMethodsToMfaMethodResponse(mfaMethodsIncludingUncovertableMfaMethod);
 
-        assertEquals(
-                Result.failure(
-                        MfaRetrieveFailureReason.ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA),
-                convertedResult);
+        var expectedFailureMessage =
+                format(
+                        "Error converting mfa method to mfa method data: Unsupported MFA method type: %s",
+                        INVALID_MFA_TYPE);
+
+        assertEquals(Result.failure(expectedFailureMessage), convertedResult);
     }
 }

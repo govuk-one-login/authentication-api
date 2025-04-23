@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -19,6 +18,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -98,25 +98,26 @@ public class MFAMethodsRetrieveHandler
             return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
         }
 
-        var retrieveResult =
-                mfaMethodsService
-                        .getMfaMethods(maybeUserProfile.get().getEmail())
-                        .flatMap(
-                                MfaMethodResponseConverterHelper
-                                        ::convertMfaMethodsToMfaMethodResponse);
+        var retrieveResult = mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());
 
         if (retrieveResult.isFailure()) {
             return switch (retrieveResult.getFailure()) {
-                case ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ERROR_1064);
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
                         500, ErrorResponse.ERROR_1078);
             };
         }
+
         var retrievedMethods = retrieveResult.getSuccess();
+        var maybeResponse = convertMfaMethodsToMfaMethodResponse(retrievedMethods);
+        if (maybeResponse.isFailure()) {
+            LOG.error(maybeResponse.getFailure());
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+        }
+
+        var mfaMethodResponses = maybeResponse.getSuccess();
 
         var serialisationService = SerializationService.getInstance();
-        var response = serialisationService.writeValueAsStringCamelCase(retrievedMethods);
+        var response = serialisationService.writeValueAsStringCamelCase(mfaMethodResponses);
 
         return generateApiGatewayProxyResponse(200, response);
     }

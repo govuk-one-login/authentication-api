@@ -57,27 +57,25 @@ public class MFAMethodsService {
 
     // This can be removed and moved to account management api when the refactoring to only return
     // MFAMethods from this class is complete
-    private Result<MfaRetrieveFailureReason, List<MfaMethodResponse>>
-            convertMfaMethodsToMfaMethodResponse(List<MFAMethod> mfaMethods) {
-        List<Result<MfaRetrieveFailureReason, MfaMethodResponse>> mfaMethodDataResults =
+    private Result<String, List<MfaMethodResponse>> convertMfaMethodsToMfaMethodResponse(
+            List<MFAMethod> mfaMethods) {
+        List<Result<String, MfaMethodResponse>> mfaMethodDataResults =
                 mfaMethods.stream()
                         .map(
                                 mfaMethod -> {
                                     var mfaMethodData = MfaMethodResponse.from(mfaMethod);
                                     if (mfaMethodData.isFailure()) {
-                                        LOG.error(
-                                                "Error converting mfa method with type {} to mfa method data: {}",
-                                                mfaMethod.getMfaMethodType(),
-                                                mfaMethodData.getFailure());
-                                        return Result
-                                                .<MfaRetrieveFailureReason, MfaMethodResponse>
-                                                        failure(
-                                                                MfaRetrieveFailureReason
-                                                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA);
+                                        var failureString =
+                                                format(
+                                                        "Error converting mfa method with type %s to mfa method data: %s",
+                                                        mfaMethod.getMfaMethodType(),
+                                                        mfaMethodData.getFailure());
+                                        LOG.error(failureString);
+                                        return Result.<String, MfaMethodResponse>failure(
+                                                failureString);
                                     } else {
-                                        return Result
-                                                .<MfaRetrieveFailureReason, MfaMethodResponse>
-                                                        success(mfaMethodData.getSuccess());
+                                        return Result.<String, MfaMethodResponse>success(
+                                                mfaMethodData.getSuccess());
                                     }
                                 })
                         .toList();
@@ -163,7 +161,7 @@ public class MFAMethodsService {
     public Result<MfaCreateFailureReason, MfaMethodResponse> addBackupMfa(
             String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
-        Result<MfaRetrieveFailureReason, List<MfaMethodResponse>> mfaMethodsResult =
+        Result<String, List<MfaMethodResponse>> mfaMethodsResult =
                 convertMfaMethodsToMfaMethodResponse(getMfaMethodsForMigratedUser(userCredentials));
         if (mfaMethodsResult.isFailure()) {
             return Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
