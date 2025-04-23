@@ -496,24 +496,67 @@ paths:
       responses:
         "204":
           description: MFA Method Deleted
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/CannotDeleteMfaMethodForNonMigratedUser"
+              examples:
+                new-method-management-api-not-available-in-this-environment:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                cannot-delete-mfa-method-for-non-migrated-user:
+                  value:
+                    code: 1067
+                    message: "Cannot delete mfa method for non-migrated user"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
         "404":
           description: MFA Method Not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/MfaMethodNotFound"
+              examples:
+                user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                mfa-method-not-found:
+                  value:
+                    code: 1065
+                    message: "MFA method not found"
         "409":
           description: Cannot delete a Default MFA Method
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SimpleError"
-        "500":
-          description: MFA Method could not be deleted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SimpleError"
+                $ref: "#/components/schemas/CannotDeleteDefaultPriorityMfaMethod"
+              examples:
+                cannot-delete-default-priority-mfa-method:
+                  value:
+                    code: 1066
+                    message: "Cannot delete default priority mfa method"
 components:
   schemas:
     PriorityEnum:
