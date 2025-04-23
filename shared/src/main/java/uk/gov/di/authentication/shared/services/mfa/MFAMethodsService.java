@@ -44,19 +44,24 @@ public class MFAMethodsService {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
-            return getMfaMethodsForMigratedUser(userCredentials);
+            return convertMfaMethodsToMfaMethodResponse(
+                    getMfaMethodsForMigratedUser(userCredentials));
         } else {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
                     .map(optional -> optional.map(List::of).orElseGet(List::of));
         }
     }
 
-    private Result<MfaRetrieveFailureReason, List<MfaMethodResponse>> getMfaMethodsForMigratedUser(
-            UserCredentials userCredentials) {
+    private List<MFAMethod> getMfaMethodsForMigratedUser(UserCredentials userCredentials) {
+        return Optional.ofNullable(userCredentials.getMfaMethods()).orElse(new ArrayList<>());
+    }
+
+    // This can be removed and moved to account management api when the refactoring to only return
+    // MFAMethods from this class is complete
+    private Result<MfaRetrieveFailureReason, List<MfaMethodResponse>>
+            convertMfaMethodsToMfaMethodResponse(List<MFAMethod> mfaMethods) {
         List<Result<MfaRetrieveFailureReason, MfaMethodResponse>> mfaMethodDataResults =
-                Optional.ofNullable(userCredentials.getMfaMethods())
-                        .orElse(new ArrayList<>())
-                        .stream()
+                mfaMethods.stream()
                         .map(
                                 mfaMethod -> {
                                     var mfaMethodData = MfaMethodResponse.from(mfaMethod);
@@ -164,7 +169,7 @@ public class MFAMethodsService {
             String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
         Result<MfaRetrieveFailureReason, List<MfaMethodResponse>> mfaMethodsResult =
-                getMfaMethodsForMigratedUser(userCredentials);
+                convertMfaMethodsToMfaMethodResponse(getMfaMethodsForMigratedUser(userCredentials));
         if (mfaMethodsResult.isFailure()) {
             return Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
         }
