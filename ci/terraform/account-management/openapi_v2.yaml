@@ -3,6 +3,8 @@ info:
   title: "auth-account-management-method-management-api"
   version: 1.0.1
   description: Auth Account Management API
+servers:
+  - url: "https://localhost:8080/"
 paths:
   /authenticate:
     post:
@@ -64,7 +66,7 @@ paths:
         uri: "${endpoint_modules.update-phone-number.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
-  /mfa-methods/{publicSubjectId}:
+  /v1/mfa-methods/{publicSubjectId}:
     parameters:
       - name: publicSubjectId
         in: path
@@ -104,7 +106,7 @@ paths:
                         mfaMethodType: AUTH_APP
                         credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
                       methodVerified: true
-                user-with-multiple-mfa-types-primary-sms:
+                user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method
                   value:
                     - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
@@ -124,27 +126,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ValidationProblem"
-              example:
-                default:
+                $ref: "#/components/schemas/SimpleError"
+              examples:
+                bad-get-request:
                   value:
-                    type: "https://account.gov.uk/validation-error"
-                    title: "email is malformed"
-                    error:
-                      "len": "Too short"
-                      "pointer": "#/email"
+                    code: 1234
+                    message: "email is malformed"
         "404":
           description: Not Found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
         "500":
           description: Search not available
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
       x-code-samples:
         - lang: shell
           label: cURL request example
@@ -187,14 +186,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
         "500":
           description: MFA Method could not be created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
-  /mfa-methods/{publicSubjectId}/{mfaIdentifier}:
+                $ref: "#/components/schemas/SimpleError"
+  /v1/mfa-methods/{publicSubjectId}/{mfaIdentifier}:
     parameters:
       - name: mfaIdentifier
         in: path
@@ -265,19 +264,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
         "404":
           description: MFA Method not Found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
         "500":
           description: MFA Method could not be updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
     delete:
       security:
         - authorise-access-token: []
@@ -289,7 +288,7 @@ paths:
         timeoutInMillis: 29000
       tags:
         - 2FAManagement
-      description: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'PRIMARY'.
+      description: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'DEFAULT'.
       operationId: "mfa-method-delete"
       parameters:
         - name: mfaIdentifier
@@ -311,19 +310,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
         "409":
-          description: Cannot delete a Primary MFA Method
+          description: Cannot delete a Default MFA Method
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
         "500":
           description: MFA Method could not be deleted
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDetail"
+                $ref: "#/components/schemas/SimpleError"
 components:
   schemas:
     PriorityEnum:
@@ -439,50 +438,20 @@ components:
           method:
             mfaMethodType: AUTH_APP
             credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
-    ProblemDetail:
+    SimpleError:
       type: object
+      required:
+        - code
+        - message
       properties:
-        type:
+        code:
+          type: integer
+          format: int32
+          description: API specific error code
+        message:
           type: string
-          format: uri
-          example: "https://account.gov.uk/problems/mfa-method-not-updated"
-        title:
-          type: string
-          example: "MFA Method could not be updated."
-        status:
-          type: string
-        detail:
-          example: "Database error"
-          type: string
-        resource:
-          example: "/mfa-methods/{mfaIdentifier}"
-          type: string
-        extension:
-          type: object
-          properties:
-            error:
-              type: object
-              properties:
-                code:
-                  enum: [1056, 1057, 1058]
-    ValidationProblem:
-      type: object
-      properties:
-        type:
-          type: string
-        title:
-          type: string
-        errors:
-          type: array
-          items:
-            $ref: "#/components/schemas/Error"
-    Error:
-      type: object
-      properties:
-        detail:
-          type: string
-        pointer:
-          type: string
+          description: Human readable error message
+
   securitySchemes:
     authorise-access-token:
       type: "apiKey"
