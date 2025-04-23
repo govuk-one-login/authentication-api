@@ -7,7 +7,8 @@ module "bulk_test_user_delete_lambda_role" {
   policies_to_attach = [
     aws_iam_policy.user_profile_dynamo_delete_access.arn,
     aws_iam_policy.user_credentials_dynamo_delete_access.arn,
-    local.user_profile_encryption_policy_arn
+    local.user_profile_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn,
   ]
 }
 
