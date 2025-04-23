@@ -43,8 +43,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MFAMethodsServiceIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@example.com";
-    private static final String PHONE_NUMBER = "+44123456789";
-    private static final String PHONE_NUMBER_TWO = "987654321";
+    private static final String PHONE_NUMBER_WITHOUT_COUNTRY_CODE = "07900000000";
+    private static final String PHONE_NUMBER_WITH_COUNTRY_CODE = "+447900000000";
+    private static final String PHONE_NUMBER_TWO_WITHOUT_COUNTRY_CODE = "07900000100";
+    private static final String PHONE_NUMBER_TWO_WITH_COUNTRY_CODE = "+447900000100";
     private static final String AUTH_APP_CREDENTIAL = "some-credential";
     private static final String SMS_MFA_IDENTIFIER_1 = "ea83592f-b9bf-436f-b4f4-ee33f610ee05";
     private static final String SMS_MFA_IDENTIFIER_2 = "3634a5e3-dac8-4804-8d40-181722b48ae1";
@@ -67,10 +69,18 @@ class MFAMethodsServiceIntegrationTest {
                     APP_MFA_IDENTIFIER_2);
     private static final MFAMethod defaultPrioritySms =
             MFAMethod.smsMfaMethod(
-                    true, true, PHONE_NUMBER, PriorityIdentifier.DEFAULT, SMS_MFA_IDENTIFIER_1);
+                    true,
+                    true,
+                    PHONE_NUMBER_WITH_COUNTRY_CODE,
+                    PriorityIdentifier.DEFAULT,
+                    SMS_MFA_IDENTIFIER_1);
     private static final MFAMethod backupPrioritySms =
             MFAMethod.smsMfaMethod(
-                    true, true, PHONE_NUMBER_TWO, PriorityIdentifier.BACKUP, SMS_MFA_IDENTIFIER_2);
+                    true,
+                    true,
+                    PHONE_NUMBER_TWO_WITH_COUNTRY_CODE,
+                    PriorityIdentifier.BACKUP,
+                    SMS_MFA_IDENTIFIER_2);
     MFAMethodsService mfaMethodsService = new MFAMethodsService(ConfigurationService.getInstance());
     private UserProfile userProfile;
 
@@ -92,13 +102,13 @@ class MFAMethodsServiceIntegrationTest {
         @ParameterizedTest
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void shouldReturnSingleSmsMethodWhenVerified(String email) {
-            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER_WITH_COUNTRY_CODE);
             var mfaIdentifier = UUID.randomUUID().toString();
             userStoreExtension.setPhoneNumberMfaIdentifer(email, mfaIdentifier);
 
             var result = mfaMethodsService.getMfaMethods(email).getSuccess();
 
-            var smsMfaDetail = new ResponseSmsMfaDetail(PHONE_NUMBER);
+            var smsMfaDetail = new ResponseSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE);
             var expectedData =
                     new MfaMethodResponse(
                             mfaIdentifier, PriorityIdentifier.DEFAULT, true, smsMfaDetail);
@@ -108,7 +118,7 @@ class MFAMethodsServiceIntegrationTest {
         @ParameterizedTest
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void shouldStoreAnMfaIdentifierForANonMigratedSmsMethodOnRead(String email) {
-            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
             var result = mfaMethodsService.getMfaMethods(email).getSuccess();
 
@@ -116,7 +126,7 @@ class MFAMethodsServiceIntegrationTest {
             var mfaIdentifier = userProfile.getMfaIdentifier();
             assertFalse(mfaIdentifier.isEmpty());
 
-            var smsMfaDetail = new ResponseSmsMfaDetail(PHONE_NUMBER);
+            var smsMfaDetail = new ResponseSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE);
             var expectedData =
                     new MfaMethodResponse(
                             mfaIdentifier, PriorityIdentifier.DEFAULT, true, smsMfaDetail);
@@ -165,7 +175,7 @@ class MFAMethodsServiceIntegrationTest {
         @ParameterizedTest
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void authAppShouldTakePrecedenceOverSmsMethodForNonMigratedUser(String email) {
-            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+            userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER_WITH_COUNTRY_CODE);
             var mfaIdentifier = UUID.randomUUID().toString();
             userStoreExtension.addAuthAppMethodWithIdentifier(
                     email, true, true, AUTH_APP_CREDENTIAL, mfaIdentifier);
@@ -203,7 +213,7 @@ class MFAMethodsServiceIntegrationTest {
         @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
         void shouldReturnNoMethodsWhenSmsMethodNotVerified(String email) {
             userStoreExtension.setPhoneNumberAndVerificationStatus(
-                    email, PHONE_NUMBER, false, true);
+                    email, PHONE_NUMBER_WITH_COUNTRY_CODE, false, true);
 
             var result = mfaMethodsService.getMfaMethods(email).getSuccess();
 
@@ -216,7 +226,7 @@ class MFAMethodsServiceIntegrationTest {
             @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
             void shouldMigrateActiveSmsNeedingMigration(String email) {
                 // Arrange
-                userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+                userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
                 var credentialsMfaMethodsBefore =
                         userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
@@ -226,7 +236,7 @@ class MFAMethodsServiceIntegrationTest {
                         userStoreExtension.getUserProfileFromEmail(email).get();
 
                 assertFalse(userProfileBefore.getMfaMethodsMigrated());
-                assertEquals(PHONE_NUMBER, userProfileBefore.getPhoneNumber());
+                assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, userProfileBefore.getPhoneNumber());
                 assertTrue(userProfileBefore.isPhoneNumberVerified());
 
                 // Act
@@ -243,7 +253,8 @@ class MFAMethodsServiceIntegrationTest {
                 var credentialSmsMfaMethod = credentialsMfaMethodsAfter.get(0);
                 assertTrue(credentialSmsMfaMethod.isMethodVerified());
                 assertTrue(credentialSmsMfaMethod.isEnabled());
-                assertEquals(PHONE_NUMBER, credentialSmsMfaMethod.getDestination());
+                assertEquals(
+                        PHONE_NUMBER_WITH_COUNTRY_CODE, credentialSmsMfaMethod.getDestination());
                 assertEquals(
                         PriorityIdentifier.DEFAULT.toString(),
                         credentialSmsMfaMethod.getPriority());
@@ -262,7 +273,7 @@ class MFAMethodsServiceIntegrationTest {
             @ValueSource(strings = {EMAIL, EXPLICITLY_NON_MIGRATED_USER_EMAIL})
             void shouldMigrateActiveSmsWithExistingMfaIdentifierNeedingMigration(String email) {
                 // Arrange
-                userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER);
+                userStoreExtension.addVerifiedPhoneNumber(email, PHONE_NUMBER_WITH_COUNTRY_CODE);
                 var existingIdentifier = UUID.randomUUID().toString();
                 userStoreExtension.setPhoneNumberMfaIdentifer(email, existingIdentifier);
 
@@ -274,7 +285,7 @@ class MFAMethodsServiceIntegrationTest {
                         userStoreExtension.getUserProfileFromEmail(email).get();
 
                 assertFalse(userProfileBefore.getMfaMethodsMigrated());
-                assertEquals(PHONE_NUMBER, userProfileBefore.getPhoneNumber());
+                assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, userProfileBefore.getPhoneNumber());
                 assertTrue(userProfileBefore.isPhoneNumberVerified());
 
                 // Act
@@ -291,7 +302,8 @@ class MFAMethodsServiceIntegrationTest {
                 var credentialSmsMfaMethod = credentialsMfaMethodsAfter.get(0);
                 assertTrue(credentialSmsMfaMethod.isMethodVerified());
                 assertTrue(credentialSmsMfaMethod.isEnabled());
-                assertEquals(PHONE_NUMBER, credentialSmsMfaMethod.getDestination());
+                assertEquals(
+                        PHONE_NUMBER_WITH_COUNTRY_CODE, credentialSmsMfaMethod.getDestination());
                 assertEquals(
                         PriorityIdentifier.DEFAULT.toString(),
                         credentialSmsMfaMethod.getPriority());
@@ -380,7 +392,7 @@ class MFAMethodsServiceIntegrationTest {
             @Test
             void shouldErrorIfUserProfileNotFound() {
                 // Arrange
-                userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
+                userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
                 // Act
                 var mfaMigrationFailureReason =
@@ -466,7 +478,7 @@ class MFAMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethodSupportingMultiple(
                     MFAMethodsServiceIntegrationTest.EMAIL, defaultPriorityAuthApp);
             RequestSmsMfaDetail requestSmsMfaDetail =
-                    new RequestSmsMfaDetail(PHONE_NUMBER, "123456");
+                    new RequestSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE, "123456");
 
             MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod =
                     new MfaMethodCreateOrUpdateRequest.MfaMethod(
@@ -479,18 +491,53 @@ class MFAMethodsServiceIntegrationTest {
 
             List<MFAMethod> mfaMethods =
                     userStoreExtension.getMfaMethod(MFAMethodsServiceIntegrationTest.EMAIL);
-            boolean smsMethodExists =
+            var storedBackupMethod =
                     mfaMethods.stream()
-                            .anyMatch(
-                                    method ->
-                                            method.getMfaMethodType()
-                                                    .equals(MFAMethodType.SMS.getValue()));
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+            assertEquals(MFAMethodType.SMS.getValue(), storedBackupMethod.getMfaMethodType());
+            assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, storedBackupMethod.getDestination());
 
-            assertTrue(smsMethodExists);
+            assertEquals(storedBackupMethod.getMfaIdentifier(), result.mfaIdentifier());
             assertDoesNotThrow(() -> UUID.fromString(result.mfaIdentifier()));
             assertEquals(PriorityIdentifier.BACKUP, result.priorityIdentifier());
             assertTrue(result.methodVerified());
-            assertEquals(new ResponseSmsMfaDetail(PHONE_NUMBER), result.method());
+            assertEquals(new ResponseSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE), result.method());
+        }
+
+        @Test
+        void
+                aPhoneNumberWithoutACountryCodeShouldBeStoredAndReturnedWithTheDefaultCountryCodeForBackupMfa() {
+            userStoreExtension.addMfaMethodSupportingMultiple(
+                    MFAMethodsServiceIntegrationTest.EMAIL, defaultPriorityAuthApp);
+            RequestSmsMfaDetail requestSmsMfaDetail =
+                    new RequestSmsMfaDetail(PHONE_NUMBER_WITHOUT_COUNTRY_CODE, "123456");
+
+            MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod =
+                    new MfaMethodCreateOrUpdateRequest.MfaMethod(
+                            PriorityIdentifier.BACKUP, requestSmsMfaDetail);
+
+            var result =
+                    mfaMethodsService
+                            .addBackupMfa(MFAMethodsServiceIntegrationTest.EMAIL, mfaMethod)
+                            .getSuccess();
+
+            List<MFAMethod> mfaMethods =
+                    userStoreExtension.getMfaMethod(MFAMethodsServiceIntegrationTest.EMAIL);
+            var storedBackupMethod =
+                    mfaMethods.stream()
+                            .filter(m -> m.getPriority().equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+            assertEquals(MFAMethodType.SMS.getValue(), storedBackupMethod.getMfaMethodType());
+            assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, storedBackupMethod.getDestination());
+
+            assertEquals(storedBackupMethod.getMfaIdentifier(), result.mfaIdentifier());
+            assertDoesNotThrow(() -> UUID.fromString(result.mfaIdentifier()));
+            assertEquals(PriorityIdentifier.BACKUP, result.priorityIdentifier());
+            assertTrue(result.methodVerified());
+            assertEquals(new ResponseSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE), result.method());
         }
 
         @Test
@@ -535,7 +582,8 @@ class MFAMethodsServiceIntegrationTest {
                     new MfaMethodCreateOrUpdateRequest(
                             new MfaMethodCreateOrUpdateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
-                                    new RequestSmsMfaDetail(PHONE_NUMBER, "123456")));
+                                    new RequestSmsMfaDetail(
+                                            PHONE_NUMBER_WITH_COUNTRY_CODE, "123456")));
 
             var result =
                     mfaMethodsService.addBackupMfa(
@@ -554,13 +602,59 @@ class MFAMethodsServiceIntegrationTest {
                     new MfaMethodCreateOrUpdateRequest(
                             new MfaMethodCreateOrUpdateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
-                                    new RequestSmsMfaDetail(PHONE_NUMBER, "123456")));
+                                    new RequestSmsMfaDetail(
+                                            PHONE_NUMBER_WITH_COUNTRY_CODE, "123456")));
 
             var result =
                     mfaMethodsService.addBackupMfa(
                             MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
 
             assertEquals(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS, result.getFailure());
+        }
+
+        @Test
+        void
+                shouldReturnPhoneNumberAlreadyExistsErrorWhenSmsMfaUserAddsBackupWithSameNumberWithoutCountryCode() {
+            userStoreExtension.addMfaMethodSupportingMultiple(
+                    EMAIL,
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            PHONE_NUMBER_WITH_COUNTRY_CODE,
+                            PriorityIdentifier.DEFAULT,
+                            "some-id"));
+
+            MfaMethodCreateOrUpdateRequest request =
+                    new MfaMethodCreateOrUpdateRequest(
+                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+                                    PriorityIdentifier.BACKUP,
+                                    new RequestSmsMfaDetail(
+                                            PHONE_NUMBER_WITHOUT_COUNTRY_CODE, "123456")));
+
+            var result =
+                    mfaMethodsService.addBackupMfa(
+                            MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
+
+            assertEquals(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS, result.getFailure());
+        }
+
+        @Test
+        void
+                shouldReturnInvalidPhoneNumberErrorWhenPhoneNumberCannotBeConvertedToOneWithCountryCode() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            MfaMethodCreateOrUpdateRequest request =
+                    new MfaMethodCreateOrUpdateRequest(
+                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+                                    PriorityIdentifier.BACKUP,
+                                    new RequestSmsMfaDetail(
+                                            "this is not a phone number", "123456")));
+
+            var result =
+                    mfaMethodsService.addBackupMfa(
+                            MFAMethodsServiceIntegrationTest.EMAIL, request.mfaMethod());
+
+            assertEquals(MfaCreateFailureReason.INVALID_PHONE_NUMBER, result.getFailure());
         }
 
         @Test
@@ -607,7 +701,9 @@ class MFAMethodsServiceIntegrationTest {
         private static final RequestAuthAppMfaDetail authAppDetail =
                 new RequestAuthAppMfaDetail(AUTH_APP_CREDENTIAL);
         private static final RequestSmsMfaDetail REQUEST_SMS_MFA_DETAIL =
-                new RequestSmsMfaDetail(PHONE_NUMBER, "123456");
+                new RequestSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE, "123456");
+        private static final RequestSmsMfaDetail REQUEST_SMS_MFA_DETAIL_WITHOUT_COUNTRY_CODE =
+                new RequestSmsMfaDetail(PHONE_NUMBER_WITHOUT_COUNTRY_CODE, "123456");
 
         @BeforeEach
         void setUp() {
@@ -672,14 +768,24 @@ class MFAMethodsServiceIntegrationTest {
                         remainingMfaMethods.stream().sorted().toList());
             }
 
-            @Test
-            void returnsSuccessWhenAttemptingToUpdateAnSmsNumber() {
+            private static Stream<Arguments> phoneNumbersToPhoneNumbersWithCountryCodes() {
+                var phoneNumberThree = "07900000300";
+                var phoneNumberThreeWithCountryCode = "+447900000300";
+                return Stream.of(
+                        Arguments.of(
+                                phoneNumberThreeWithCountryCode, phoneNumberThreeWithCountryCode),
+                        Arguments.of(phoneNumberThree, phoneNumberThreeWithCountryCode));
+            }
+
+            @ParameterizedTest
+            @MethodSource("phoneNumbersToPhoneNumbersWithCountryCodes")
+            void returnsSuccessWhenAttemptingToUpdateAnSmsNumberWithOrWithoutACountryCode(
+                    String phoneNumberInRequest, String expectedStoredPhoneNumber) {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
-                var aThirdPhoneNumber = "111222333";
-
-                var detailWithUpdatedNumber = new RequestSmsMfaDetail(aThirdPhoneNumber, "123456");
+                var detailWithUpdatedNumber =
+                        new RequestSmsMfaDetail(phoneNumberInRequest, "123456");
                 var request =
                         MfaMethodCreateOrUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
@@ -693,7 +799,7 @@ class MFAMethodsServiceIntegrationTest {
                                 defaultPrioritySms.getMfaIdentifier(),
                                 PriorityIdentifier.DEFAULT,
                                 true,
-                                aThirdPhoneNumber);
+                                expectedStoredPhoneNumber);
 
                 var expectedUnchangedBackupMethod =
                         MfaMethodResponse.from(backupPrioritySms).getSuccess();
@@ -717,13 +823,24 @@ class MFAMethodsServiceIntegrationTest {
                 assertEquals(expectedMethods, methodsInDatabase);
             }
 
-            @Test
-            void returnsFailureWhenAttemptingToUpdateAnSmsNumberToTheBackupNumber() {
+            @ParameterizedTest
+            @MethodSource("phoneNumbersToPhoneNumbersWithCountryCodes")
+            void
+                    returnsFailureWhenAttemptingToUpdateAnSmsNumberToTheBackupNumberRegardlessOfWhetherCountryCodeIncluded(
+                            String phoneNumberInRequest,
+                            String phoneNumberInRequestWithCountryCode) {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
-                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+                var backupSms =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                phoneNumberInRequestWithCountryCode,
+                                PriorityIdentifier.BACKUP,
+                                backupPrioritySms.getMfaIdentifier());
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupSms);
 
                 var detailWithUpdatedNumber =
-                        new RequestSmsMfaDetail(backupPrioritySms.getDestination(), "123456");
+                        new RequestSmsMfaDetail(phoneNumberInRequest, "123456");
                 var request =
                         MfaMethodCreateOrUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
@@ -741,13 +858,29 @@ class MFAMethodsServiceIntegrationTest {
                                 .sorted()
                                 .toList();
                 var expectedMethods =
-                        List.of(
-                                        mfaMethodDataFrom(backupPrioritySms),
-                                        mfaMethodDataFrom(defaultPrioritySms))
+                        List.of(mfaMethodDataFrom(backupSms), mfaMethodDataFrom(defaultPrioritySms))
                                 .stream()
                                 .sorted()
                                 .toList();
                 assertEquals(expectedMethods, methodsInDatabase);
+            }
+
+            @Test
+            void returnsAnErrorWhenAttemptingToUpdateWithAnInvalidNumber() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT,
+                                new RequestSmsMfaDetail("not a real phone number", "123456"));
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, defaultPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(MfaUpdateFailureReason.INVALID_PHONE_NUMBER, result.getFailure());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
+                assertEquals(List.of(mfaMethodDataFrom(defaultPrioritySms)), remainingMfaMethods);
             }
 
             @Test
@@ -800,7 +933,9 @@ class MFAMethodsServiceIntegrationTest {
             private static Stream<Arguments> existingMethodsAndNoChangeUpdates() {
                 return Stream.of(
                         Arguments.of(defaultPriorityAuthApp, authAppDetail),
-                        Arguments.of(defaultPrioritySms, REQUEST_SMS_MFA_DETAIL));
+                        Arguments.of(defaultPrioritySms, REQUEST_SMS_MFA_DETAIL),
+                        Arguments.of(
+                                defaultPrioritySms, REQUEST_SMS_MFA_DETAIL_WITHOUT_COUNTRY_CODE));
             }
 
             @ParameterizedTest
@@ -892,6 +1027,32 @@ class MFAMethodsServiceIntegrationTest {
                 assertEquals(List.of(mfaMethodDataFrom(existingMethod)), remainingMfaMethods);
             }
 
+            @Test
+            void returnsAFailureWhenPhoneNumberIsInvalid() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+                var request =
+                        MfaMethodCreateOrUpdateRequest.from(
+                                PriorityIdentifier.BACKUP,
+                                new RequestSmsMfaDetail("not a real phone number", "123456"));
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, backupPrioritySms.getMfaIdentifier(), request);
+
+                assertEquals(MfaUpdateFailureReason.INVALID_PHONE_NUMBER, result.getFailure());
+
+                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
+                assertEquals(
+                        List.of(
+                                        mfaMethodDataFrom(backupPrioritySms),
+                                        mfaMethodDataFrom(defaultPrioritySms))
+                                .stream()
+                                .sorted()
+                                .toList(),
+                        remainingMfaMethods.stream().sorted().toList());
+            }
+
             private static Stream<Arguments> existingBackupMethodsAndNoChangeUpdates() {
                 return Stream.of(
                         Arguments.of(
@@ -901,7 +1062,16 @@ class MFAMethodsServiceIntegrationTest {
                         Arguments.of(
                                 backupPrioritySms,
                                 new RequestSmsMfaDetail(
-                                        backupPrioritySms.getDestination(), "123456")));
+                                        backupPrioritySms.getDestination(), "123456")),
+                        Arguments.of(
+                                MFAMethod.smsMfaMethod(
+                                        true,
+                                        true,
+                                        PHONE_NUMBER_TWO_WITH_COUNTRY_CODE,
+                                        PriorityIdentifier.BACKUP,
+                                        backupPrioritySms.getMfaIdentifier()),
+                                new RequestSmsMfaDetail(
+                                        PHONE_NUMBER_TWO_WITHOUT_COUNTRY_CODE, "123456")));
             }
 
             @ParameterizedTest

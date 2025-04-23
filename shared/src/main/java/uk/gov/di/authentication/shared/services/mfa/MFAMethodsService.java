@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.entity.mfa.response.ResponseAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -25,6 +26,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
@@ -174,6 +176,15 @@ public class MFAMethodsService {
         }
 
         if (mfaMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            var maybePhoneNumberWithCountryCode =
+                    getPhoneNumberWithCountryCode(requestSmsMfaDetail.phoneNumber());
+
+            if (maybePhoneNumberWithCountryCode.isFailure()) {
+                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
+                return Result.failure(MfaCreateFailureReason.INVALID_PHONE_NUMBER);
+            }
+
+            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
 
             boolean phoneNumberExists =
                     mfaMethods.stream()
@@ -183,8 +194,7 @@ public class MFAMethodsService {
                             .anyMatch(
                                     mfa ->
                                             mfa.phoneNumber()
-                                                    .equalsIgnoreCase(
-                                                            requestSmsMfaDetail.phoneNumber()));
+                                                    .equalsIgnoreCase(phoneNumberWithCountryCode));
 
             if (phoneNumberExists) {
                 return Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS);
@@ -196,7 +206,7 @@ public class MFAMethodsService {
                     MFAMethod.smsMfaMethod(
                             true,
                             true,
-                            requestSmsMfaDetail.phoneNumber(),
+                            phoneNumberWithCountryCode,
                             mfaMethod.priorityIdentifier(),
                             uuid));
             return Result.success(
@@ -204,7 +214,7 @@ public class MFAMethodsService {
                             uuid,
                             mfaMethod.priorityIdentifier(),
                             true,
-                            requestSmsMfaDetail.phoneNumber()));
+                            phoneNumberWithCountryCode));
         } else {
             boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
                     // auth apps?
@@ -275,8 +285,17 @@ public class MFAMethodsService {
             String email,
             List<MFAMethod> allMethods) {
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
+            var maybePhoneNumberWithCountryCode =
+                    getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
+
+            if (maybePhoneNumberWithCountryCode.isFailure()) {
+                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
+                return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
+            }
+
+            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
             var changesPhoneNumber =
-                    !updatedSmsDetail.phoneNumber().equals(backupMethod.getDestination());
+                    !phoneNumberWithCountryCode.equals(backupMethod.getDestination());
             if (changesPhoneNumber) {
                 return Result.failure(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER);
@@ -348,8 +367,17 @@ public class MFAMethodsService {
         Result<String, List<MFAMethod>> databaseUpdateResult;
 
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
+            var maybePhoneNumberWithCountryCode =
+                    getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
+
+            if (maybePhoneNumberWithCountryCode.isFailure()) {
+                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
+                return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
+            }
+
+            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
             var isExistingDefaultPhoneNumber =
-                    updatedSmsDetail.phoneNumber().equals(defaultMethod.getDestination());
+                    phoneNumberWithCountryCode.equals(defaultMethod.getDestination());
             var otherMethods =
                     allMethodsForUser.stream()
                             .filter(
@@ -360,9 +388,8 @@ public class MFAMethodsService {
                     otherMethods.stream()
                             .anyMatch(
                                     mfaMethod ->
-                                            updatedSmsDetail
-                                                    .phoneNumber()
-                                                    .equals(mfaMethod.getDestination()));
+                                            phoneNumberWithCountryCode.equals(
+                                                    mfaMethod.getDestination()));
             if (isExistingDefaultPhoneNumber) {
                 return Result.failure(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
@@ -372,7 +399,7 @@ public class MFAMethodsService {
             } else {
                 databaseUpdateResult =
                         persistentService.updateMigratedMethodPhoneNumber(
-                                email, updatedSmsDetail.phoneNumber(), mfaIdentifier);
+                                email, phoneNumberWithCountryCode, mfaIdentifier);
             }
         } else {
             var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
@@ -471,5 +498,16 @@ public class MFAMethodsService {
                         identifier));
 
         return Optional.empty();
+    }
+
+    private Result<String, String> getPhoneNumberWithCountryCode(String phoneNumber) {
+        try {
+            return Result.success(PhoneNumberHelper.formatPhoneNumber(phoneNumber));
+        } catch (Exception e) {
+            return Result.failure(
+                    format(
+                            "Could not convert phone number %s to phone number with country code",
+                            phoneNumber));
+        }
     }
 }

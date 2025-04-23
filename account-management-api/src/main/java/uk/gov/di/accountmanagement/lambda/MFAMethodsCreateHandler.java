@@ -139,16 +139,7 @@ public class MFAMethodsCreateHandler
                             userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
             if (addBackupMfaResult.isFailure()) {
-                return switch (addBackupMfaResult.getFailure()) {
-                    case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1068);
-                    case PHONE_NUMBER_ALREADY_EXISTS -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1069);
-                    case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1070);
-                    case ERROR_RETRIEVING_MFA_METHODS -> generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.ERROR_1071);
-                };
+                return handleCreateBackupMfaFailure(addBackupMfaResult.getFailure());
             }
 
             return generateApiGatewayProxyResponse(200, addBackupMfaResult.getSuccess(), true);
@@ -156,6 +147,22 @@ public class MFAMethodsCreateHandler
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private static APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(
+            MfaCreateFailureReason failureReason) {
+        return switch (failureReason) {
+            case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1068);
+            case PHONE_NUMBER_ALREADY_EXISTS -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1069);
+            case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1070);
+            case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1012);
+            case ERROR_RETRIEVING_MFA_METHODS -> generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.ERROR_1071);
+        };
     }
 
     private Optional<APIGatewayProxyResponseEvent> migrateMfaCredentialsForUserIfRequired(

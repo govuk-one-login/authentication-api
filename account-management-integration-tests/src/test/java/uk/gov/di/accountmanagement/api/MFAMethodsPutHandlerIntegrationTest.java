@@ -31,8 +31,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     private static final String TEST_EMAIL = "test@email.com";
     private static final String TEST_PASSWORD = "test-password";
-    private static final String TEST_PHONE_NUMBER = "07700900000";
-    private static final String TEST_PHONE_NUMBER_TWO = "07700900111";
+    private static final String TEST_PHONE_NUMBER = "+447700900000";
+    private static final String TEST_PHONE_NUMBER_TWO = "+447700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static String testPublicSubject;
     private static final MFAMethod defaultPrioritySms =
@@ -228,7 +228,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var mfaIdentifier = defaultPrioritySms.getMfaIdentifier();
-        var updatedPhoneNumber = "111222333";
+        var updatedPhoneNumber = "07900000123";
+        var updatedPhoneNumberWithCountryCode = "+447900000123";
         var updateRequest =
                 format(
                         """
@@ -270,7 +271,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                              }
                          }
                         """,
-                        mfaIdentifier, updatedPhoneNumber);
+                        mfaIdentifier, updatedPhoneNumberWithCountryCode);
         var expectedUnchangedBackup =
                 format(
                         """
@@ -304,7 +305,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var retrievedDefault = getMethodWithPriority(retrievedMfaMethods, DEFAULT);
 
         assertRetrievedMethodHasSameBasicFields(defaultPrioritySms, retrievedDefault);
-        assertMfaPhoneNumberUpdated(retrievedDefault, updatedPhoneNumber);
+        assertMfaPhoneNumberUpdated(retrievedDefault, updatedPhoneNumberWithCountryCode);
     }
 
     @Test

@@ -180,6 +180,8 @@ public class MFAMethodsPutHandler
             case REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE -> generateEmptySuccessApiGatewayResponse();
             case ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.ERROR_1074);
+            case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.ERROR_1012);
         };
     }
 
