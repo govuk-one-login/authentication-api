@@ -40,44 +40,19 @@ public class MFAMethodsService {
         this.persistentService = new DynamoService(configurationService);
     }
 
-    public Result<MfaRetrieveFailureReason, List<MfaMethodResponse>> getMfaMethods(String email) {
+    public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
-            return getMfaMethodsForMigratedUser(userCredentials);
+            return Result.success(getMfaMethodsForMigratedUser(userCredentials));
         } else {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
                     .map(optional -> optional.map(List::of).orElseGet(List::of));
         }
     }
 
-    private Result<MfaRetrieveFailureReason, List<MfaMethodResponse>> getMfaMethodsForMigratedUser(
-            UserCredentials userCredentials) {
-        List<Result<MfaRetrieveFailureReason, MfaMethodResponse>> mfaMethodDataResults =
-                Optional.ofNullable(userCredentials.getMfaMethods())
-                        .orElse(new ArrayList<>())
-                        .stream()
-                        .map(
-                                mfaMethod -> {
-                                    var mfaMethodData = MfaMethodResponse.from(mfaMethod);
-                                    if (mfaMethodData.isFailure()) {
-                                        LOG.error(
-                                                "Error converting mfa method with type {} to mfa method data: {}",
-                                                mfaMethod.getMfaMethodType(),
-                                                mfaMethodData.getFailure());
-                                        return Result
-                                                .<MfaRetrieveFailureReason, MfaMethodResponse>
-                                                        failure(
-                                                                MfaRetrieveFailureReason
-                                                                        .ERROR_CONVERTING_MFA_METHOD_TO_MFA_METHOD_DATA);
-                                    } else {
-                                        return Result
-                                                .<MfaRetrieveFailureReason, MfaMethodResponse>
-                                                        success(mfaMethodData.getSuccess());
-                                    }
-                                })
-                        .toList();
-        return Result.sequenceSuccess(mfaMethodDataResults);
+    private List<MFAMethod> getMfaMethodsForMigratedUser(UserCredentials userCredentials) {
+        return Optional.ofNullable(userCredentials.getMfaMethods()).orElse(new ArrayList<>());
     }
 
     public Result<MfaDeleteFailureReason, String> deleteMfaMethod(
@@ -109,9 +84,8 @@ public class MFAMethodsService {
         return Result.success(mfaIdentifier);
     }
 
-    private Result<MfaRetrieveFailureReason, Optional<MfaMethodResponse>>
-            getMfaMethodForNonMigratedUser(
-                    UserProfile userProfile, UserCredentials userCredentials) {
+    private Result<MfaRetrieveFailureReason, Optional<MFAMethod>> getMfaMethodForNonMigratedUser(
+            UserProfile userProfile, UserCredentials userCredentials) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             var method = enabledAuthAppMethod.get();
@@ -134,11 +108,7 @@ public class MFAMethodsService {
             }
             return Result.success(
                     Optional.of(
-                            MfaMethodResponse.authAppMfaData(
-                                    mfaIdentifier,
-                                    PriorityIdentifier.DEFAULT,
-                                    method.isMethodVerified(),
-                                    method.getCredentialValue())));
+                            method.withMfaIdentifier(mfaIdentifier).withPriority(DEFAULT.name())));
         } else if (userProfile.isPhoneNumberVerified()) {
             String mfaIdentifier;
             if (Objects.nonNull(userProfile.getMfaIdentifier())) {
@@ -150,11 +120,12 @@ public class MFAMethodsService {
             }
             return Result.success(
                     Optional.of(
-                            MfaMethodResponse.smsMethodData(
-                                    mfaIdentifier,
-                                    PriorityIdentifier.DEFAULT,
+                            MFAMethod.smsMfaMethod(
                                     true,
-                                    userProfile.getPhoneNumber())));
+                                    true,
+                                    userProfile.getPhoneNumber(),
+                                    DEFAULT,
+                                    mfaIdentifier)));
         } else {
             return Result.success(Optional.empty());
         }
@@ -163,13 +134,7 @@ public class MFAMethodsService {
     public Result<MfaCreateFailureReason, MfaMethodResponse> addBackupMfa(
             String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
-        Result<MfaRetrieveFailureReason, List<MfaMethodResponse>> mfaMethodsResult =
-                getMfaMethodsForMigratedUser(userCredentials);
-        if (mfaMethodsResult.isFailure()) {
-            return Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS);
-        }
-
-        var mfaMethods = mfaMethodsResult.getSuccess();
+        var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
 
         if (mfaMethods.size() >= 2) {
             return Result.failure(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
@@ -188,12 +153,13 @@ public class MFAMethodsService {
 
             boolean phoneNumberExists =
                     mfaMethods.stream()
-                            .map(MfaMethodResponse::method)
-                            .filter(ResponseSmsMfaDetail.class::isInstance)
-                            .map(ResponseSmsMfaDetail.class::cast)
+                            .filter(
+                                    method ->
+                                            method.getMfaMethodType()
+                                                    .equals(MFAMethodType.SMS.getValue()))
                             .anyMatch(
-                                    mfa ->
-                                            mfa.phoneNumber()
+                                    method ->
+                                            method.getDestination()
                                                     .equalsIgnoreCase(phoneNumberWithCountryCode));
 
             if (phoneNumberExists) {
@@ -219,9 +185,10 @@ public class MFAMethodsService {
             boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
                     // auth apps?
                     mfaMethods.stream()
-                            .map(MfaMethodResponse::method)
-                            .filter(ResponseAuthAppMfaDetail.class::isInstance)
-                            .anyMatch(mfa -> true);
+                            .anyMatch(
+                                    method ->
+                                            method.getMfaMethodType()
+                                                    .equals(MFAMethodType.AUTH_APP.getValue()));
 
             if (authAppExists) {
                 return Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS);
@@ -458,19 +425,23 @@ public class MFAMethodsService {
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
         String mfaIdentifier;
-        if (Objects.isNull(nonMigratedMfaMethod.mfaIdentifier())) {
+        if (Objects.isNull(nonMigratedMfaMethod.getMfaIdentifier())) {
             mfaIdentifier = UUID.randomUUID().toString();
         } else {
-            mfaIdentifier = nonMigratedMfaMethod.mfaIdentifier();
+            mfaIdentifier = nonMigratedMfaMethod.getMfaIdentifier();
         }
 
-        return nonMigratedMfaMethod.method() instanceof ResponseAuthAppMfaDetail
-                ? migrateAuthAppToNewFormat(
-                        email,
-                        (ResponseAuthAppMfaDetail) nonMigratedMfaMethod.method(),
-                        mfaIdentifier)
-                : migrateSmsToNewFormat(
-                        email, (ResponseSmsMfaDetail) nonMigratedMfaMethod.method(), mfaIdentifier);
+        return switch (MFAMethodType.valueOf(nonMigratedMfaMethod.getMfaMethodType())) {
+            case SMS -> migrateSmsToNewFormat(
+                    email,
+                    new ResponseSmsMfaDetail(nonMigratedMfaMethod.getDestination()),
+                    mfaIdentifier);
+            case AUTH_APP -> migrateAuthAppToNewFormat(
+                    email,
+                    new ResponseAuthAppMfaDetail(nonMigratedMfaMethod.getCredentialValue()),
+                    mfaIdentifier);
+            default -> Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
+        };
     }
 
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
