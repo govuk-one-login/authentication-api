@@ -97,16 +97,16 @@ paths:
                 items:
                   $ref: "#/components/schemas/MfaMethod"
               examples:
-                user-with-single-mfa-type-app:
+                get-when-user-with-single-mfa-type-app:
                   summary: a user with a single MFA
                   value:
                     - mfaIdentifier: "bb5ccc7d-2591-4ccd-ae04-2b2c95b4e256"
-                      priorityIdentifier: BACKUP
+                      priorityIdentifier: DEFAULT
                       method:
                         mfaMethodType: AUTH_APP
                         credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
                       methodVerified: true
-                user-with-multiple-mfa-types-default-sms:
+                get-when-user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method
                   value:
                     - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
@@ -133,23 +133,23 @@ paths:
                   - $ref: "#/components/schemas/InvalidPrincipalInRequest"
                   - $ref: "#/components/schemas/AccountManagementApiUnexpectedError"
               examples:
-                user-not-found-or-no-match:
+                get-when-user-not-found-or-no-match:
                   value:
                     code: 1056
                     message: "User Not Found Or No Match"
-                new-method-management-api-not-available:
+                get-when-new-method-management-api-not-available:
                   value:
                     code: 1063
                     message: "New method management api not available in environment"
-                error-retrieving-mfa-methods:
+                get-when-error-retrieving-mfa-methods:
                   value:
                     code: 1064
                     message: "Error retrieving MFA methods"
-                account-management-api-unexpected-error:
+                get-when-account-management-api-unexpected-error:
                   value:
                     code: 1071
                     message: "Account Management API encountered Unexpected Error"
-                invalid-principal-in-request:
+                get-when-invalid-principal-in-request:
                   value:
                     code: 1079
                     message: "Invalid principal in request"
@@ -160,7 +160,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/InvalidPrincipalInRequest"
               examples:
-                invalid-principal:
+                get-when-invalid-principal:
                   value:
                     code: 1079
                     message: "Invalid principal in request"
@@ -171,7 +171,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserNotFoundOrNoMatch"
               examples:
-                user-not-found-or-no-match:
+                get-when-404-user-not-found-or-no-match:
                   value:
                     code: 1056
                     message: "User Not Found Or No Match"
@@ -184,11 +184,11 @@ paths:
                   - $ref: "#/components/schemas/ErrorRetrievingMfaMethods"
                   - $ref: "#/components/schemas/UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod"
               examples:
-                error-retrieving-mfa-methods:
+                get-when-500-error-retrieving-mfa-methods:
                   value:
                     code: 1064
                     message: "Error retrieving mfa methods"
-                unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                get-when-unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
                   value:
                     code: 1078
                     message: "Unexpected error creating mfa identifier for auth app mfa method"
@@ -229,6 +229,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MfaMethod"
+              examples:
+                create-new-mfa-method:
+                  value:
+                    - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
+                      priorityIdentifier: DEFAULT
+                      method:
+                        mfaMethodType: SMS
+                        phoneNumber: "070"
+                      methodVerified: true
+                    - mfaIdentifier: "4372e333-266c-4245-8c4d-385aafdd3fb3"
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "postAAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
         "400":
           description: Bad Request
           content:
@@ -244,35 +259,35 @@ paths:
                   - $ref: "#/components/schemas/SmsMfaMethodWithSameNumberAlreadyExists"
                   - $ref: "#/components/schemas/AuthAppAlreadyExists"
               examples:
-                request-is-missing-parameters:
+                post-when-request-is-missing-parameters:
                   value:
                     code: 1001
                     message: "Request is missing parameters"
-                user-not-found-or-no-match:
+                post-when-user-not-found-or-no-match:
                   value:
                     code: 1056
                     message: "User Not Found Or No Match"
-                new-method-management-api-not-available:
+                post-when-new-method-management-api-not-available:
                   value:
                     code: 1063
                     message: "New method management api not available in environment"
-                default-method-already-exists-new-one-cannot-be-created:
+                post-when-default-method-already-exists-new-one-cannot-be-created:
                   value:
                     code: 1080
                     message: "Default method already exists, new one cannot be created."
-                invalid-otp-code:
+                post-when-invalid-otp-code:
                   value:
                     code: 1020
                     message: "Invalid OTP code"
-                mfa-method-count-limit-reached:
+                post-when-mfa-method-count-limit-reached:
                   value:
                     code: 1068
                     message: "MFA method could limit reached"
-                sma-mfa-method-with-same-number-already-exists:
+                post-when-sms-mfa-method-with-same-number-already-exists:
                   value:
                     code: 1069
                     message: "SMS MFA with same number already exists"
-                auth-app-mfa-already-exists:
+                post-when-auth-app-mfa-already-exists:
                   value:
                     code: 1070
                     message: "AUTH APP MFA already exists"
@@ -283,7 +298,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/InvalidPrincipalInRequest"
               examples:
-                invalid-principal:
+                post-when-invalid-principal:
                   value:
                     code: 1079
                     message: "Invalid principal in request"
@@ -295,7 +310,7 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
               examples:
-                user-not-found-or-no-match:
+                post-when-404-user-not-found-or-no-match:
                   value:
                     code: 1056
                     message: "User Not Found Or No Match"
@@ -306,7 +321,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod"
               examples:
-                unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                post-when-unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
                   value:
                     code: 1078
                     message: "Unexpected error creating mfa identifier for auth app mfa method"
@@ -352,7 +367,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/MfaMethod"
               examples:
-                user-with-single-mfa-type-app:
+                put-when-user-with-single-mfa-type-app:
                   summary: a user with a single MFA after update
                   value:
                     - mfaIdentifier: "bb5ccc7d-2591-4ccd-ae04-2b2c95b4e256"
@@ -361,7 +376,7 @@ paths:
                         mfaMethodType: AUTH_APP
                         credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
                       methodVerified: true
-                user-with-multiple-mfa-types-default-sms:
+                put-when-user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method after update
                   value:
                     - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
@@ -391,35 +406,35 @@ paths:
                   - $ref: "#/components/schemas/CannotChangePriorityOfDefaultMfaMethod"
                   - $ref: "#/components/schemas/CannotUpdatePrimarySMSNumberToNumberAlreadyInUseByBackup"
               examples:
-                new-method-management-api-not-available-in-this-environment:
+                put-when-new-method-management-api-not-available-in-this-environment:
                   value:
                     code: 1063
                     message: "New method management api not available in environment"
-                request-is-missing-parameters:
+                put-when-request-is-missing-parameters:
                   value:
                     code: 1001
                     message: "Request is missing parameters"
-                invalid-otp-code:
+                put-when-invalid-otp-code:
                   value:
                     code: 1020
                     message: "Invalid OTP code"
-                cannot-change-type-of-mfa-method:
+                put-when-cannot-change-type-of-mfa-method:
                   value:
                     code: 1072
                     message: "Cannot change type of MFA method"
-                cannot-update-a-backup-sms-mfa-method-phone-number:
+                put-when-cannot-update-a-backup-sms-mfa-method-phone-number:
                   value:
                     code: 1075
                     message: "Cannot update a backup sms mfa method's phone number"
-                cannot-update-a-backup-sms-mfa-methods-auth-app-credential:
+                put-when-cannot-update-a-backup-sms-mfa-methods-auth-app-credential:
                   value:
                     code: 1076
                     message: "Cannot update a backup sms mfa method's auth app credential"
-                cannot-change-priority-of-default-mfa-method:
+                put-when-cannot-change-priority-of-default-mfa-method:
                   value:
                     code: 1073
                     message: "Cannot change priority of default mfa method"
-                cannot-update-primary-sms-number-to-number-already-in-use-by-backup:
+                put-when-cannot-update-primary-sms-number-to-number-already-in-use-by-backup:
                   value:
                     code: 1074
                     message: "Cannot update primary sms number to number already in use by backup"
@@ -430,7 +445,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/InvalidPrincipalInRequest"
               examples:
-                invalid-principal:
+                put-when-invalid-principal:
                   value:
                     code: 1079
                     message: "Invalid principal in request"
@@ -443,11 +458,11 @@ paths:
                   - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
                   - $ref: "#/components/schemas/MfaMethodNotFound"
               examples:
-                user-not-found-or-no-match:
+                put-when-user-not-found-or-no-match:
                   value:
                     code: 1056
                     message: "User Not Found Or No Match"
-                mfa-method-not-found:
+                put-when-mfa-method-not-found:
                   value:
                     code: 1065
                     message: "MFA method not found"
@@ -460,11 +475,11 @@ paths:
                   - $ref: "#/components/schemas/AttemptedToUpdateABackupMfaMethodWithoutADefaultPresent"
                   - $ref: "#/components/schemas/AccountManagementApiUnexpectedError"
               examples:
-                attempted-to-update-a-backup-mfa-method-without-a-default-present:
+                put-when-attempted-to-update-a-backup-mfa-method-without-a-default-present:
                   value:
                     code: 1076
                     message: "Attempted to update a backup mfa method without a default present"
-                unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                put-when-unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
                   value:
                     code: 1078
                     message: "Unexpected error creating mfa identifier for auth app mfa method"
@@ -496,6 +511,15 @@ paths:
       responses:
         "204":
           description: MFA Method Deleted
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MfaMethod"
+              examples:
+                delete-mfa-method:
+                  summary: a user with a single MFA after update
         "400":
           description: Bad Request
           content:
@@ -506,15 +530,15 @@ paths:
                   - $ref: "#/components/schemas/RequestIsMissingParameters"
                   - $ref: "#/components/schemas/CannotDeleteMfaMethodForNonMigratedUser"
               examples:
-                new-method-management-api-not-available-in-this-environment:
+                delete-when-new-method-management-api-not-available-in-this-environment:
                   value:
                     code: 1063
                     message: "New method management api not available in environment"
-                request-is-missing-parameters:
+                delete-when-request-is-missing-parameters:
                   value:
                     code: 1001
                     message: "Request is missing parameters"
-                cannot-delete-mfa-method-for-non-migrated-user:
+                delete-when-cannot-delete-mfa-method-for-non-migrated-user:
                   value:
                     code: 1067
                     message: "Cannot delete mfa method for non-migrated user"
@@ -525,7 +549,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/InvalidPrincipalInRequest"
               examples:
-                invalid-principal:
+                delete-when-invalid-principal:
                   value:
                     code: 1079
                     message: "Invalid principal in request"
@@ -538,11 +562,11 @@ paths:
                   - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
                   - $ref: "#/components/schemas/MfaMethodNotFound"
               examples:
-                user-not-found-or-no-match:
+                delete-when-user-not-found-or-no-match:
                   value:
                     code: 1056
                     message: "User Not Found Or No Match"
-                mfa-method-not-found:
+                delete-when-mfa-method-not-found:
                   value:
                     code: 1065
                     message: "MFA method not found"
@@ -553,7 +577,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CannotDeleteDefaultPriorityMfaMethod"
               examples:
-                cannot-delete-default-priority-mfa-method:
+                delete-when-cannot-delete-default-priority-mfa-method:
                   value:
                     code: 1066
                     message: "Cannot delete default priority mfa method"

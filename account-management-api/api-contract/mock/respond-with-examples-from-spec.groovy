@@ -9,10 +9,11 @@
 def request = context.request
 def method = request.method.toLowerCase()
 
-if (method == "get") {
+if (method == "get" || method == "post" || method == "put" || method == "delete") {
     def publicSubjectId = context.request.pathParams.publicSubjectId
     def responseStatusCode
     def responseBody
+
     context.operation.responses.each { statusCode, response ->
         def examples = response.content.get("application/json")?.examples
         if (examples?.containsKey(publicSubjectId)) {
