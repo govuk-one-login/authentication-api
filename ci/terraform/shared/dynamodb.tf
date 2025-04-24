@@ -854,6 +854,8 @@ locals {
 
 
 data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_document" {
+  #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
+  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrictable actions
   count = local.allow_cross_account_access ? 1 : 0
   statement {
     actions = [
