@@ -48,7 +48,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
@@ -64,7 +63,6 @@ import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
-import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -135,7 +133,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -187,7 +184,6 @@ class AuthorisationHandlerTest {
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator =
             mock(QueryParamsAuthorizeValidator.class);
     private final ClientService clientService = mock(ClientService.class);
-    private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_NEW_SESSION_COOKIE_STRING =
             "gs=a-new-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final String EXPECTED_BASE_PERSISTENT_COOKIE_VALUE = IdGenerator.generate();
@@ -337,9 +333,6 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenUserHasNoExistingSession() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
@@ -361,7 +354,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -380,9 +373,6 @@ class AuthorisationHandlerTest {
 
             var requestParams = buildRequestParams(null);
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -419,9 +409,6 @@ class AuthorisationHandlerTest {
             var requestParams =
                     buildRequestParams(Map.of("scope", "openid phone", "vtr", "[\"Cl\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -458,9 +445,7 @@ class AuthorisationHandlerTest {
             var requestParams =
                     buildRequestParams(Map.of("scope", "openid", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -492,9 +477,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -514,9 +497,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -533,9 +514,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -556,9 +535,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -576,9 +553,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -611,9 +586,7 @@ class AuthorisationHandlerTest {
                 requestParams.put("ui_locales", uiLocales);
             }
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
@@ -646,7 +619,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -666,9 +639,7 @@ class AuthorisationHandlerTest {
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verify(orchSessionService, atLeastOnce())
@@ -714,7 +685,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -785,7 +756,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -831,7 +802,7 @@ class AuthorisationHandlerTest {
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, false, false, "LOW_LEVEL");
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -874,7 +845,7 @@ class AuthorisationHandlerTest {
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -929,23 +900,19 @@ class AuthorisationHandlerTest {
                     .when(authorisationService)
                     .classifyParseException(any());
 
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "scope",
-                            SCOPE,
-                            "invalid_parameter",
-                            "nonsense",
-                            "state",
-                            STATE.getValue()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "scope",
+                                    SCOPE,
+                                    "invalid_parameter",
+                                    "nonsense",
+                                    "state",
+                                    STATE.getValue()));
 
             makeHandlerRequest(event);
 
@@ -958,134 +925,19 @@ class AuthorisationHandlerTest {
                     parseExceptionArgument.getValue().getMessage());
         }
 
-        @Test
-        void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://localhost:8080",
-                            "scope", "email,openid,profile,non-existent-scope",
-                            "response_type", "code",
-                            "state", "test-state"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
-        }
-
-        @Test
-        void shouldReturn400WhenAuthorisationRequestContainsInvalidRedirectUri() {
-            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenThrow(ClientRedirectUriValidationException.class);
-
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://incorrect-redirect-uri",
-                            "scope", "email,openid,profile",
-                            "response_type", "code",
-                            "state", "test-state"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(400));
-            assertThat(response, hasBody("Invalid request"));
-        }
-
-        @Test
-        void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
-            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setBody(
-                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code&state=test-state");
-            event.setHttpMethod("POST");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
-        }
-
-        @Test
-        void shouldReturnBadRequestWhenNoQueryStringParametersArePresent() {
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            var response = makeHandlerRequest(event);
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
-                            "",
-                            BASE_AUDIT_USER,
-                            pair(
-                                    "description",
-                                    "No parameters are present in the Authentication request query string or body"));
-
-            assertThat(response, hasStatus(400));
-            assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
-        }
-
         @ParameterizedTest
         @ValueSource(strings = {"PUT", "DELETE", "PATCH"})
         void shouldThrowExceptionWhenMethodIsNotGetOrPost(String method) {
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id", "test-id",
+                                    "redirect_uri", "http://localhost:8080",
+                                    "scope", "email,openid,profile",
+                                    "response_type", "code"));
+
             event.setHttpMethod(method);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://localhost:8080",
-                            "scope", "email,openid,profile",
-                            "response_type", "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             RuntimeException expectedException =
                     assertThrows(
                             InvalidHttpMethodException.class,
@@ -1133,22 +985,20 @@ class AuthorisationHandlerTest {
         void shouldValidateRequestObjectWhenJARValidationIsRequired()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
+
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             makeHandlerRequest(event);
             verify(requestObjectAuthorizeValidator).validate(any());
         }
@@ -1158,125 +1008,22 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any()))
                     .thenReturn(false);
-            var event = new APIGatewayProxyRequestEvent();
+
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             makeHandlerRequest(event);
             verify(requestObjectAuthorizeValidator).validate(any());
-        }
-
-        @Test
-        void
-                shouldRedirectToProvidedRedirectUriWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
-            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "response_type",
-                            "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
-            var response = makeHandlerRequest(event);
-
-            assertThat(response.getStatusCode(), equalTo(302));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    equalTo(
-                            "https://localhost:8080?error=access_denied&error_description=JAR+required+for+client+but+request+does+not+contain+Request+Object"));
-
-            assertThat(
-                    logging.events(),
-                    hasItems(
-                            withMessage(
-                                    "JAR required for client but request does not contain Request Object"),
-                            withMessage("Redirecting")));
-        }
-
-        @Test
-        void
-                shouldThrowBadRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
-            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            "invalid-redirect-uri",
-                            "response_type",
-                            "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
-            var response = makeHandlerRequest(event);
-
-            assertThat(response.getStatusCode(), equalTo(400));
-            assertThat(response.getBody(), equalTo(INVALID_REQUEST.getDescription()));
-
-            assertThat(
-                    logging.events(),
-                    hasItems(
-                            withMessage(
-                                    "JAR required for client but request does not contain Request Object"),
-                            withMessage(
-                                    "Redirect URI invalid-redirect-uri is invalid for client")));
-        }
-
-        @Test
-        void shouldRedirectToRPWhenClientIsNotActive() {
-            when(clientService.getClient(CLIENT_ID.toString()))
-                    .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
-
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            REDIRECT_URI,
-                            "response_type",
-                            "code"));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    logging.events(),
-                    hasItem(withMessage("Client configured as not active in Client Registry")));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    equalTo(
-                            REDIRECT_URI
-                                    + "?error=unauthorized_client&error_description=client+deactivated"));
         }
 
         @Test
@@ -1284,22 +1031,20 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
-            var event = new APIGatewayProxyRequestEvent();
+
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1321,7 +1066,7 @@ class AuthorisationHandlerTest {
 
             verify(requestObjectAuthorizeValidator).validate(any());
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1335,20 +1080,23 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("POST");
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setBody(
-                    String.format(
-                            "client_id=%s&scope=openid&response_type=code&request=%s",
-                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
-                            URLEncoder.encode(
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
-                                    Charset.defaultCharset())));
 
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            var event =
+                    withPostRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    URLEncoder.encode(
+                                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR)
+                                                    .serialize(),
+                                            Charset.defaultCharset())));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1368,7 +1116,7 @@ class AuthorisationHandlerTest {
             verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1378,93 +1126,24 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToRPWhenRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-            var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-        }
-
-        @Test
-        void shouldRedirectToRPWhenPostRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHttpMethod("POST");
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setBody(
-                    String.format(
-                            "client_id=%s&scope=openid&response_type=code&request=%s",
-                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
-                            URLEncoder.encode(
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
-                                    Charset.defaultCharset())));
-
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-        }
-
-        @Test
         void shouldReturnValidationFailedWhenSignatureIsInvalid()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any()))
                     .thenThrow(ClientSignatureValidationException.class);
 
-            var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
             assertEquals(400, response.getStatusCode());
             assertEquals("Trust chain validation failed", response.getBody());
@@ -1475,7 +1154,6 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
-            var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet =
                     new JWTClaimsSet.Builder()
                             .audience("https://localhost/authorize")
@@ -1488,20 +1166,18 @@ class AuthorisationHandlerTest {
                             .issuer(CLIENT_ID.getValue())
                             .build();
 
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1523,7 +1199,7 @@ class AuthorisationHandlerTest {
 
             verify(requestObjectAuthorizeValidator).validate(any());
 
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
@@ -1537,22 +1213,20 @@ class AuthorisationHandlerTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any())).thenThrow(JwksException.class);
 
-            var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
+
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             var response = makeHandlerRequest(event);
             assertEquals(500, response.getStatusCode());
             assertEquals("Unexpected server error", response.getBody());
@@ -1563,9 +1237,7 @@ class AuthorisationHandlerTest {
             var rpSid = "test-rp-sid";
             Map<String, String> requestParams = buildRequestParams(Map.of("rp_sid", rpSid));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
             verifyAuthorisationRequestParsedAuditEvent(rpSid, false, false, "MEDIUM_LEVEL");
         }
@@ -1574,9 +1246,7 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWhenRpSidNotPresent() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1587,9 +1257,7 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWhenOnAuthOnlyFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1600,9 +1268,7 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWhenOnIdentityFlow() {
             Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"P2.Cl.Cm\"]"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1618,9 +1284,7 @@ class AuthorisationHandlerTest {
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]", "max_age", "123"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1628,53 +1292,138 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
-            Map<String, String> requestParams =
+        void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws ParseException {
+            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
+            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
+
+            var requestParams =
                     buildRequestParams(
-                            Map.of(
-                                    "prompt",
-                                    Prompt.Type.LOGIN.toString(),
-                                    "id_token_hint",
-                                    SERIALIZED_SIGNED_ID_TOKEN));
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
-            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+            makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
-            assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertThat(
+                    argument.getValue().getStringClaim("previous_session_id"), equalTo(SESSION_ID));
         }
 
         @Test
-        void
-                shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParametersWithAuthOrchSplitEnabled() {
-            Map<String, String> requestParams =
+        void shouldNotAddPreviousSessionIdWhenSessionCookiePresentButNotOrchSession()
+                throws ParseException {
+            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
+            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
+
+            var requestParams =
                     buildRequestParams(
-                            Map.of(
-                                    "prompt",
-                                    Prompt.Type.LOGIN.toString(),
-                                    "id_token_hint",
-                                    SERIALIZED_SIGNED_ID_TOKEN));
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            makeHandlerRequest(event);
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getStringClaim("previous_session_id"));
+        }
+
+        @Test
+        void shouldAddPublicSubjectIdClaimIfAmScopePresent()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
+            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid am"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+
+            var expectedClaim =
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null}}");
+            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
+            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
 
+        @Test
+        void shouldAddPublicSubjectIdClaimIfClientHasPublicSubjectTypePresent()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
+            when(clientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(generateClientRegistry().withSubjectType("public")));
+
+            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+
+            var expectedClaim =
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null}}");
+            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
+            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
+        }
+
+        @Test
+        void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent()
+                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
+            Map<String, String> requestParams =
+                    buildRequestParams(Map.of("scope", "openid govuk-account"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+
+            var expectedClaim =
+                    ClaimsSetRequest.parse(
+                            "{\"userinfo\":{\"legacy_subject_id\":null,\"local_account_id\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null}}");
+            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
+            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
+        }
+
+        @Test
+        void shouldSetTheRelevantCookiesInTheHeader() {
+            Map<String, String> requestParams = buildRequestParams(null);
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            var response = makeHandlerRequest(event);
+
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .get(0)
+                            .contains(EXPECTED_NEW_SESSION_COOKIE_STRING));
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .get(1)
+                            .contains(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP));
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .get(2)
+                            .contains(
+                                    format(
+                                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                            BROWSER_SESSION_ID_COOKIE_NAME,
+                                            NEW_BROWSER_SESSION_ID)));
+        }
+    }
+
+    @Nested
+    class Reauthentication {
         @Test
         void shouldAddReauthenticateAndPreviousJourneyIdClaimIfPromptIsLoginAndIdTokenIsValid()
                 throws JOSEException, ParseException {
@@ -1699,9 +1448,7 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -1718,131 +1465,57 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws ParseException {
-            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
-            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
-
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(
-                    argument.getValue().getStringClaim("previous_session_id"), equalTo(SESSION_ID));
-        }
-
-        @Test
-        void shouldNotAddPreviousSessionIdWhenSessionCookiePresentButNotOrchSession()
-                throws ParseException {
-            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
-            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
-
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getStringClaim("previous_session_id"));
-        }
-
-        @Test
-        void shouldAddPublicSubjectIdClaimIfAmScopePresent()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid am"));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-
-            var expectedClaim =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null}}");
-            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
-            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
-        }
-
-        @Test
-        void shouldAddPublicSubjectIdClaimIfClientHasPublicSubjectTypePresent()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            when(clientService.getClient(CLIENT_ID.getValue()))
-                    .thenReturn(Optional.of(generateClientRegistry().withSubjectType("public")));
-
-            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid"));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-
-            var expectedClaim =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null}}");
-            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
-            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
-        }
-
-        @Test
-        void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
+        void
+                shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParametersWithAuthOrchSplitEnabled() {
             Map<String, String> requestParams =
-                    buildRequestParams(Map.of("scope", "openid govuk-account"));
+                    buildRequestParams(
+                            Map.of(
+                                    "prompt",
+                                    Prompt.Type.LOGIN.toString(),
+                                    "id_token_hint",
+                                    SERIALIZED_SIGNED_ID_TOKEN));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
                     AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-
-            var expectedClaim =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"legacy_subject_id\":null,\"local_account_id\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null}}");
-            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
-            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
         }
 
-        private static Stream<Prompt.Type> prompts() {
-            return Stream.of(Prompt.Type.CREATE, null);
+        @Test
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "prompt",
+                                    Prompt.Type.LOGIN.toString(),
+                                    "id_token_hint",
+                                    SERIALIZED_SIGNED_ID_TOKEN));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
+            assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
         }
 
-        @ParameterizedTest
-        @MethodSource("prompts")
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfPromptIsNotLoginAndIdTokenIsValid(
-                Prompt.Type prompt) throws JOSEException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+        @Test
+        void shouldErrorIfIdTokenIsInvalid() throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
 
             var jwtClaimsSet =
                     buildjwtClaimsSet(
                             ID_TOKEN_AUDIENCE,
-                            prompt == null ? null : prompt.toString(),
+                            Prompt.Type.LOGIN.toString(),
                             SERIALIZED_SIGNED_ID_TOKEN);
 
             Map<String, String> requestParams =
@@ -1858,25 +1531,46 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
+
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            var expectedErrorObject =
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Unable to validate id_token_hint");
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("https://localhost:8080"),
+                                    expectedErrorObject,
+                                    STATE,
+                                    null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
 
             verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("description", expectedErrorObject.getDescription()));
         }
 
         @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfIdTokenHintIsNotPresent()
-                throws JOSEException {
+        void shouldErrorIfIdTokenHasIncorrectClient() throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var signedIDTokenIncorrectClient =
+                    TokenGeneratorHelper.generateIDToken(
+                            "not-the-client-id", SUBJECT, "http://localhost-rp", EC_SIGNING_KEY);
+
             var jwtClaimsSet =
-                    buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            signedIDTokenIncorrectClient.serialize());
 
             Map<String, String> requestParams =
                     buildRequestParams(
@@ -1891,18 +1585,32 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
+
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            var expectedErrorObject =
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Invalid id_token_hint for client");
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("https://localhost:8080"),
+                                    expectedErrorObject,
+                                    STATE,
+                                    null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
 
             verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
 
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("description", expectedErrorObject.getDescription()));
         }
 
         @Test
@@ -1942,44 +1650,50 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldSetTheRelevantCookiesInTheHeader() {
-            Map<String, String> requestParams = buildRequestParams(null);
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfIdTokenHintIsNotPresent()
+                throws JOSEException {
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
-            var response = makeHandlerRequest(event);
+            makeHandlerRequest(event);
 
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .get(0)
-                            .contains(EXPECTED_NEW_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .get(1)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .get(2)
-                            .contains(
-                                    format(
-                                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                            BROWSER_SESSION_ID_COOKIE_NAME,
-                                            NEW_BROWSER_SESSION_ID)));
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
         }
 
-        @Test
-        void shouldErrorIfIdTokenIsInvalid() throws JOSEException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
+        private static Stream<Prompt.Type> prompts() {
+            return Stream.of(Prompt.Type.CREATE, null);
+        }
+
+        @ParameterizedTest
+        @MethodSource("prompts")
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfPromptIsNotLoginAndIdTokenIsValid(
+                Prompt.Type prompt) throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
 
             var jwtClaimsSet =
                     buildjwtClaimsSet(
                             ID_TOKEN_AUDIENCE,
-                            Prompt.Type.LOGIN.toString(),
+                            prompt == null ? null : prompt.toString(),
                             SERIALIZED_SIGNED_ID_TOKEN);
 
             Map<String, String> requestParams =
@@ -1995,355 +1709,269 @@ class AuthorisationHandlerTest {
                                     generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
-            var expectedErrorObject =
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "Unable to validate id_token_hint");
-            var expectedURI =
-                    new AuthenticationErrorResponse(
-                                    URI.create("https://localhost:8080"),
-                                    expectedErrorObject,
-                                    STATE,
-                                    null)
-                            .toURI()
-                            .toString();
-            assertThat(response, hasStatus(302));
-            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
-            inOrder.verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                            pair("description", expectedErrorObject.getDescription()));
-        }
-
-        @Test
-        void shouldErrorIfIdTokenHasIncorrectClient() throws JOSEException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
-
-            var signedIDTokenIncorrectClient =
-                    TokenGeneratorHelper.generateIDToken(
-                            "not-the-client-id", SUBJECT, "http://localhost-rp", EC_SIGNING_KEY);
-
-            var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE,
-                            Prompt.Type.LOGIN.toString(),
-                            signedIDTokenIncorrectClient.serialize());
-
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "response_type",
-                                    "code",
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            var expectedErrorObject =
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "Invalid id_token_hint for client");
-            var expectedURI =
-                    new AuthenticationErrorResponse(
-                                    URI.create("https://localhost:8080"),
-                                    expectedErrorObject,
-                                    STATE,
-                                    null)
-                            .toURI()
-                            .toString();
-            assertThat(response, hasStatus(302));
-            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
-
-            inOrder.verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                            pair("description", expectedErrorObject.getDescription()));
-        }
-
-        @Test
-        void shouldCreateANewSessionAndAttachTheClientSessionIdToIt() {
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             makeHandlerRequest(event);
-            verify(orchSessionService)
-                    .addSession(
-                            argThat(
-                                    os ->
-                                            os.getClientSessions().size() == 1
-                                                    && os.getClientSessions()
-                                                            .contains(CLIENT_SESSION_ID)));
+
+            verifyAuthorisationRequestParsedAuditEvent(
+                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+        }
+    }
+
+    @Test
+    void shouldCreateANewSessionAndAttachTheClientSessionIdToIt() {
+        var requestParams =
+                buildRequestParams(
+                        Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+        makeHandlerRequest(event);
+        verify(orchSessionService)
+                .addSession(
+                        argThat(
+                                os ->
+                                        os.getClientSessions().size() == 1
+                                                && os.getClientSessions()
+                                                        .contains(CLIENT_SESSION_ID)));
+    }
+
+    @Test
+    void shouldAddANewClientSessionToAnExistingOrchSession() {
+        withExistingOrchSession(orchSession.addClientSession("previous-client-session"));
+        withExistingSession(session);
+        var requestParams =
+                buildRequestParams(
+                        Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+        makeHandlerRequest(event);
+
+        verify(orchSessionService)
+                .addSession(
+                        argThat(
+                                os ->
+                                        os.getClientSessions().size() == 2
+                                                && os.getClientSessions()
+                                                        .contains(CLIENT_SESSION_ID)
+                                                && os.getClientSessions()
+                                                        .contains("previous-client-session")));
+    }
+
+    @Nested
+    class BrowserSessionId {
+        private final ArgumentCaptor<Session> sessionCaptor =
+                ArgumentCaptor.forClass(Session.class);
+        private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
+                ArgumentCaptor.forClass(OrchSessionItem.class);
+
+        @BeforeEach
+        void setup() {
+            when(sessionService.generateSession()).thenReturn(new Session());
         }
 
         @Test
-        void shouldAddANewClientSessionToAnExistingOrchSession() {
-            withExistingOrchSession(orchSession.addClientSession("previous-client-session"));
+        void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
+            withExistingSession(null);
+            withExistingOrchSession(null);
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
+
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
+            withExistingSession(null);
+            withExistingOrchSession(null);
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
+
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
             withExistingSession(session);
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+            withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
-            verify(orchSessionService)
-                    .addSession(
-                            argThat(
-                                    os ->
-                                            os.getClientSessions().size() == 2
-                                                    && os.getClientSessions()
-                                                            .contains(CLIENT_SESSION_ID)
-                                                    && os.getClientSessions()
-                                                            .contains("previous-client-session")));
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", true));
         }
 
-        @Nested
-        class BrowserSessionId {
-            private final ArgumentCaptor<Session> sessionCaptor =
-                    ArgumentCaptor.forClass(Session.class);
-            private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
-                    ArgumentCaptor.forClass(OrchSessionItem.class);
+        @Test
+        void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
+            withExistingSession(session);
+            withExistingOrchSession(orchSession.withBrowserSessionId(null));
+            var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-            @BeforeEach
-            void setup() {
-                when(sessionService.generateSession()).thenReturn(new Session());
-            }
+            verify(sessionService, never()).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
-            @Test
-            void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
-                withExistingSession(null);
-                withExistingOrchSession(null);
-                APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertNull(actualOrchSession.getBrowserSessionId());
 
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+            assertEquals(2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
+            assertTrue(
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
+                            .noneMatch(
+                                    it ->
+                                            it.startsWith(
+                                                    format(
+                                                            "%s=",
+                                                            BROWSER_SESSION_ID_COOKIE_NAME))));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
 
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+        @Test
+        void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
+            withExistingSession(session);
+            withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
+            APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-                assertEquals(
+            verify(sessionService, never()).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
+        }
+
+        @Test
+        void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
+            withExistingSession(session);
+            withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
+            APIGatewayProxyResponseEvent response =
+                    makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
+
+            verify(sessionService).generateSession();
+            verify(sessionService)
+                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
+
+            verify(orchSessionService).addSession(orchSessionCaptor.capture());
+            var actualOrchSession = orchSessionCaptor.getValue();
+            assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
+            assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
+
+            assertEquals(
+                    format(
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", true));
+        }
+
+        private void withExistingSession(Session session) {
+            when(sessionService.getSession(any())).thenReturn(Optional.ofNullable(session));
+        }
+
+        private APIGatewayProxyResponseEvent makeRequestWithBSIDInCookie(
+                String browserSessionIdFromCookie) {
+            Map<String, String> requestParams = buildRequestParams(null);
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            var cookieString = SESSION_COOKIE;
+            if (browserSessionIdFromCookie != null) {
+                cookieString =
                         format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
+                                "%s;%s=%s",
+                                cookieString,
+                                BROWSER_SESSION_ID_COOKIE_NAME,
+                                browserSessionIdFromCookie);
             }
-
-            @Test
-            void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
-                withExistingSession(null);
-                withExistingOrchSession(null);
-                APIGatewayProxyResponseEvent response =
-                        makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
-            }
-
-            @Test
-            void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
-                APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
-
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", true));
-            }
-
-            @Test
-            void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(null));
-                var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-                verify(sessionService, never()).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertNull(actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
-                assertTrue(
-                        response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
-                                .noneMatch(
-                                        it ->
-                                                it.startsWith(
-                                                        format(
-                                                                "%s=",
-                                                                BROWSER_SESSION_ID_COOKIE_NAME))));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
-            }
-
-            @Test
-            void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
-                APIGatewayProxyResponseEvent response =
-                        makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-                verify(sessionService, never()).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", false));
-            }
-
-            @Test
-            void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
-                withExistingSession(session);
-                withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
-                APIGatewayProxyResponseEvent response =
-                        makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
-
-                verify(sessionService).generateSession();
-                verify(sessionService)
-                        .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
-                verify(orchSessionService).addSession(orchSessionCaptor.capture());
-                var actualOrchSession = orchSessionCaptor.getValue();
-                assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
-                assertEquals(NEW_BROWSER_SESSION_ID, actualOrchSession.getBrowserSessionId());
-
-                assertEquals(
-                        format(
-                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                        browserSessionIdCookieFromResponse(response));
-                inOrder.verify(auditService)
-                        .submitAuditEvent(
-                                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                                CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                                pair("client-name", RP_CLIENT_NAME),
-                                pair("new_authentication_required", true));
-            }
-
-            private void withExistingSession(Session session) {
-                when(sessionService.getSession(any())).thenReturn(Optional.ofNullable(session));
-            }
-
-            private APIGatewayProxyResponseEvent makeRequestWithBSIDInCookie(
-                    String browserSessionIdFromCookie) {
-                Map<String, String> requestParams = buildRequestParams(null);
-                APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-                event.setRequestContext(
-                        new ProxyRequestContext()
-                                .withIdentity(
-                                        new RequestIdentity().withSourceIp("123.123.123.123")));
-                var cookieString = SESSION_COOKIE;
-                if (browserSessionIdFromCookie != null) {
-                    cookieString =
-                            format(
-                                    "%s;%s=%s",
-                                    cookieString,
-                                    BROWSER_SESSION_ID_COOKIE_NAME,
-                                    browserSessionIdFromCookie);
-                }
-                event.withHeaders(Map.of("Cookie", cookieString));
-                return makeHandlerRequest(event);
-            }
+            event.withHeaders(Map.of("Cookie", cookieString));
+            return makeHandlerRequest(event);
         }
     }
 
@@ -2484,250 +2112,528 @@ class AuthorisationHandlerTest {
         }
     }
 
-    @Test
-    void returns400ForOpenRedirect()
-            throws InvalidAuthenticationRequestException,
-                    ClientNotFoundException,
-                    MissingClientIDException,
-                    IncorrectRedirectUriException,
-                    MissingRedirectUriException {
-        doThrow(new IncorrectRedirectUriException(OAuth2Error.INVALID_REQUEST))
-                .when(authorisationService)
-                .classifyParseException(any());
+    @Nested
+    class InvalidRequestNonRedirecting {
+        @Test
+        void shouldReturn400WhenAuthorisationRequestContainsInvalidRedirectUri() {
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenThrow(ClientRedirectUriValidationException.class);
 
-        var response =
-                makeHandlerRequest(
-                        withRequestEvent(
-                                Map.of(
-                                        "redirect_uri",
-                                        "https://www.example.com",
-                                        "client_id",
-                                        "invalid-client")));
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id", "test-id",
+                                    "redirect_uri", "http://incorrect-redirect-uri",
+                                    "scope", "email,openid,profile",
+                                    "response_type", "code",
+                                    "state", "test-state"));
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(OAuth2Error.INVALID_REQUEST.getDescription()));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        "invalid-client",
-                        BASE_AUDIT_USER,
-                        pair("description", OAuth2Error.INVALID_REQUEST.getDescription()));
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody("Invalid request"));
+        }
+
+        @Test
+        void shouldReturn400WhenNoQueryStringParametersArePresent() {
+            APIGatewayProxyRequestEvent event = withRequestEvent(null);
+
+            var response = makeHandlerRequest(event);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                            "",
+                            BASE_AUDIT_USER,
+                            pair(
+                                    "description",
+                                    "No parameters are present in the Authentication request query string or body"));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
+        }
+
+        @Test
+        void shouldReturn400ForOpenRedirect()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(new IncorrectRedirectUriException(OAuth2Error.INVALID_REQUEST))
+                    .when(authorisationService)
+                    .classifyParseException(any());
+
+            var response =
+                    makeHandlerRequest(
+                            withRequestEvent(
+                                    Map.of(
+                                            "redirect_uri",
+                                            "https://www.example.com",
+                                            "client_id",
+                                            "invalid-client")));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody(OAuth2Error.INVALID_REQUEST.getDescription()));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            "invalid-client",
+                            BASE_AUDIT_USER,
+                            pair("description", OAuth2Error.INVALID_REQUEST.getDescription()));
+        }
+
+        @Test
+        void shouldReturn400WhenMissingClientId()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(new MissingClientIDException(OAuth2Error.INVALID_REQUEST))
+                    .when(authorisationService)
+                    .classifyParseException(any());
+
+            var response = makeHandlerRequest(withRequestEvent(Map.of()));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            "",
+                            BASE_AUDIT_USER,
+                            pair("description", INVALID_REQUEST.getDescription()));
+        }
+
+        @Test
+        void shouldReturn400WhenMissingRedirectUri()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(new MissingRedirectUriException(OAuth2Error.INVALID_REQUEST))
+                    .when(authorisationService)
+                    .classifyParseException(any());
+
+            var response =
+                    makeHandlerRequest(withRequestEvent(Map.of("client_id", CLIENT_ID.getValue())));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", INVALID_REQUEST.getDescription()));
+        }
+
+        @Test
+        void shouldReturn400WhenIncorrectRedirectUri()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(new IncorrectRedirectUriException(OAuth2Error.INVALID_REQUEST))
+                    .when(authorisationService)
+                    .classifyParseException(any());
+
+            var response =
+                    makeHandlerRequest(
+                            withRequestEvent(
+                                    Map.of(
+                                            "client_id",
+                                            CLIENT_ID.getValue(),
+                                            "redirect_uri",
+                                            "bad_redirect_uri")));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", INVALID_REQUEST.getDescription()));
+        }
+
+        @Test
+        void shouldReturn400WhenClientNotFound()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(new ClientNotFoundException(CLIENT_ID.getValue()))
+                    .when(authorisationService)
+                    .classifyParseException(any());
+
+            var response =
+                    makeHandlerRequest(
+                            withRequestEvent(
+                                    Map.of(
+                                            "client_id",
+                                            CLIENT_ID.getValue(),
+                                            "redirect_uri",
+                                            REDIRECT_URI)));
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair(
+                                    "description",
+                                    format(
+                                            "No Client found for ClientID: %s",
+                                            CLIENT_ID.getValue())));
+        }
+
+        @Test
+        void shouldReturn400WhenInvalidPromptValuesArePassed() {
+            Map<String, String> requestParams =
+                    buildRequestParams(Map.of("prompt", "select_account"));
+            APIGatewayProxyResponseEvent response =
+                    makeHandlerRequest(withRequestEvent(requestParams));
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getCode()));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair(
+                                    "description",
+                                    OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
+        }
+
+        @Test
+        void
+                shouldReturn400WhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    SCOPE,
+                                    "redirect_uri",
+                                    "invalid-redirect-uri",
+                                    "response_type",
+                                    "code"));
+
+            var response = makeHandlerRequest(event);
+
+            assertThat(response.getStatusCode(), equalTo(400));
+            assertThat(response.getBody(), equalTo(INVALID_REQUEST.getDescription()));
+
+            assertThat(
+                    logging.events(),
+                    hasItems(
+                            withMessage(
+                                    "JAR required for client but request does not contain Request Object"),
+                            withMessage(
+                                    "Redirect URI invalid-redirect-uri is invalid for client")));
+        }
     }
 
-    private static Stream<ErrorObject> expectedErrorObjects() {
-        return Stream.of(
-                OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
-                OAuth2Error.INVALID_SCOPE,
-                OAuth2Error.UNAUTHORIZED_CLIENT,
-                OAuth2Error.INVALID_REQUEST);
-    }
+    @Nested
+    class InvalidRequestRedirectingErrors {
+        @Test
+        void shouldReturn302WithErrorQueryParamsWhenAuthorisationRequestContainsInvalidScope() {
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
 
-    @ParameterizedTest
-    @MethodSource("expectedErrorObjects")
-    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
-            throws JwksException, ClientSignatureValidationException {
-        when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-        when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                .thenReturn(
-                        Optional.of(
-                                new AuthRequestError(
-                                        errorObject, URI.create("http://localhost:8080"), null)));
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHttpMethod("GET");
-        event.setQueryStringParameters(
-                Map.of(
-                        "client_id", "test-id",
-                        "scope", "openid",
-                        "response_type", "code",
-                        "request", new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
-        event.setRequestContext(
-                new ProxyRequestContext()
-                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-        event.withHeaders(Map.of("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE));
-        var response = makeHandlerRequest(event);
+            APIGatewayProxyRequestEvent event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id", "test-id",
+                                    "redirect_uri", "http://localhost:8080",
+                                    "scope", "email,openid,profile,non-existent-scope",
+                                    "response_type", "code",
+                                    "state", "test-state"));
 
-        var expectedURI =
-                new AuthenticationErrorResponse(
-                                URI.create("http://localhost:8080"), errorObject, null, null)
-                        .toURI()
-                        .toString();
-        assertThat(response, hasStatus(302));
-        assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER,
-                        pair("description", errorObject.getDescription()));
-    }
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
 
-    @Test
-    void shouldReturnErrorWhenInvalidPromptValuesArePassed() {
-        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "select_account"));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getCode()));
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
+        }
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER,
-                        pair(
-                                "description",
-                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
-    }
+        @Test
+        void
+                shouldReturnReturn302WithErrorQueryParamsWhenAuthorisationRequestBodyContainsInvalidScope() {
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
 
-    @Test
-    void shouldReturnBadRequestWhenMissingClientId()
-            throws InvalidAuthenticationRequestException,
-                    ClientNotFoundException,
-                    MissingClientIDException,
-                    IncorrectRedirectUriException,
-                    MissingRedirectUriException {
-        doThrow(new MissingClientIDException(OAuth2Error.INVALID_REQUEST))
-                .when(authorisationService)
-                .classifyParseException(any());
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setBody(
+                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code&state=test-state");
+            event.setHttpMethod("POST");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
-        var response = makeHandlerRequest(withRequestEvent(Map.of()));
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
+        }
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        "",
-                        BASE_AUDIT_USER,
-                        pair("description", INVALID_REQUEST.getDescription()));
-    }
+        @Test
+        void shouldReturnRedirectWithErrorWhenInvalidAuthParameters()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(new InvalidAuthenticationRequestException(INVALID_REQUEST))
+                    .when(authorisationService)
+                    .classifyParseException(any());
 
-    @Test
-    void shouldReturnBadRequestWhenMissingRedirectUri()
-            throws InvalidAuthenticationRequestException,
-                    ClientNotFoundException,
-                    MissingClientIDException,
-                    IncorrectRedirectUriException,
-                    MissingRedirectUriException {
-        doThrow(new MissingRedirectUriException(OAuth2Error.INVALID_REQUEST))
-                .when(authorisationService)
-                .classifyParseException(any());
+            var response =
+                    makeHandlerRequest(
+                            withRequestEvent(
+                                    Map.of(
+                                            "client_id",
+                                            CLIENT_ID.getValue(),
+                                            "redirect_uri",
+                                            REDIRECT_URI,
+                                            "prompt",
+                                            "invalid-prompt")));
 
-        var response =
-                makeHandlerRequest(withRequestEvent(Map.of("client_id", CLIENT_ID.getValue())));
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "https://localhost:8080?error=invalid_request&error_description=Invalid+request",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", INVALID_REQUEST.getDescription()));
+        }
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER,
-                        pair("description", INVALID_REQUEST.getDescription()));
-    }
+        @Test
+        void shouldRedirectToRPWhenPostRequestObjectIsNotValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            var event =
+                    withPostRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "scope",
+                                    "openid unknown-scope",
+                                    "request",
+                                    URLEncoder.encode(
+                                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR)
+                                                    .serialize(),
+                                            Charset.defaultCharset())));
 
-    @Test
-    void shouldReturnBadRequestWhenIncorrectRedirectUri()
-            throws InvalidAuthenticationRequestException,
-                    ClientNotFoundException,
-                    MissingClientIDException,
-                    IncorrectRedirectUriException,
-                    MissingRedirectUriException {
-        doThrow(new IncorrectRedirectUriException(OAuth2Error.INVALID_REQUEST))
-                .when(authorisationService)
-                .classifyParseException(any());
+            var response = makeHandlerRequest(event);
 
-        var response =
-                makeHandlerRequest(
-                        withRequestEvent(
-                                Map.of(
-                                        "client_id",
-                                        CLIENT_ID.getValue(),
-                                        "redirect_uri",
-                                        "bad_redirect_uri")));
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+        }
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
+        @Test
+        void shouldRedirectToRPWhenRequestObjectIsNotValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER,
-                        pair("description", INVALID_REQUEST.getDescription()));
-    }
+            var response = makeHandlerRequest(event);
 
-    @Test
-    void shouldReturnBadRequestWhenClientNotFound()
-            throws InvalidAuthenticationRequestException,
-                    ClientNotFoundException,
-                    MissingClientIDException,
-                    IncorrectRedirectUriException,
-                    MissingRedirectUriException {
-        doThrow(new ClientNotFoundException(CLIENT_ID.getValue()))
-                .when(authorisationService)
-                .classifyParseException(any());
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+        }
 
-        var response =
-                makeHandlerRequest(
-                        withRequestEvent(
-                                Map.of(
-                                        "client_id",
-                                        CLIENT_ID.getValue(),
-                                        "redirect_uri",
-                                        REDIRECT_URI)));
+        @Test
+        void shouldReturn302WithErrorQueryParamsWhenClientIsNotActive() {
+            when(clientService.getClient(CLIENT_ID.toString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
 
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    SCOPE,
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "response_type",
+                                    "code"));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER,
-                        pair(
-                                "description",
-                                format("No Client found for ClientID: %s", CLIENT_ID.getValue())));
-    }
+            var response = makeHandlerRequest(event);
 
-    @Test
-    void shouldReturnRedirectWithErrorWhenInvalidAuthParameters()
-            throws InvalidAuthenticationRequestException,
-                    ClientNotFoundException,
-                    MissingClientIDException,
-                    IncorrectRedirectUriException,
-                    MissingRedirectUriException {
-        doThrow(new InvalidAuthenticationRequestException(INVALID_REQUEST))
-                .when(authorisationService)
-                .classifyParseException(any());
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessage("Client configured as not active in Client Registry")));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(
+                            REDIRECT_URI
+                                    + "?error=unauthorized_client&error_description=client+deactivated"));
+        }
 
-        var response =
-                makeHandlerRequest(
-                        withRequestEvent(
-                                Map.of(
-                                        "client_id",
-                                        CLIENT_ID.getValue(),
-                                        "redirect_uri",
-                                        REDIRECT_URI,
-                                        "prompt",
-                                        "invalid-prompt")));
+        @Test
+        void
+                shouldRedirectToProvidedRedirectUriWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
 
-        assertThat(response, hasStatus(302));
-        assertEquals(
-                "https://localhost:8080?error=invalid_request&error_description=Invalid+request",
-                response.getHeaders().get(ResponseHeaders.LOCATION));
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    SCOPE,
+                                    "redirect_uri",
+                                    REDIRECT_URI,
+                                    "response_type",
+                                    "code"));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTHORISATION_REQUEST_ERROR,
-                        CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER,
-                        pair("description", INVALID_REQUEST.getDescription()));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response.getStatusCode(), equalTo(302));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(
+                            "https://localhost:8080?error=access_denied&error_description=JAR+required+for+client+but+request+does+not+contain+Request+Object"));
+
+            assertThat(
+                    logging.events(),
+                    hasItems(
+                            withMessage(
+                                    "JAR required for client but request does not contain Request Object"),
+                            withMessage("Redirecting")));
+        }
+
+        private static Stream<ErrorObject> expectedErrorObjects() {
+            return Stream.of(
+                    OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
+                    OAuth2Error.INVALID_SCOPE,
+                    OAuth2Error.UNAUTHORIZED_CLIENT,
+                    OAuth2Error.INVALID_REQUEST);
+        }
+
+        @ParameterizedTest
+        @MethodSource("expectedErrorObjects")
+        void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
+                throws JwksException, ClientSignatureValidationException {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            errorObject,
+                                            URI.create("http://localhost:8080"),
+                                            null)));
+
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    "test-id",
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
+
+            event.withHeaders(Map.of("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE));
+            var response = makeHandlerRequest(event);
+
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("http://localhost:8080"), errorObject, null, null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("description", errorObject.getDescription()));
+        }
     }
 
     @Nested
@@ -2754,9 +2660,7 @@ class AuthorisationHandlerTest {
                                     "max_age",
                                     "1000"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeRequestWithSessionIdInCookie(event);
 
             ArgumentCaptor<OrchSessionItem> captor = ArgumentCaptor.forClass(OrchSessionItem.class);
@@ -2784,9 +2688,7 @@ class AuthorisationHandlerTest {
                                     "max_age",
                                     "1000"));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
             makeRequestWithSessionIdInCookie(event);
 
             ArgumentCaptor<OrchSessionItem> captor = ArgumentCaptor.forClass(OrchSessionItem.class);
@@ -2831,9 +2733,6 @@ class AuthorisationHandlerTest {
                                     "max_age",
                                     maxAgeParam));
             var event = withRequestEvent(requestParams);
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
             var response = makeRequestWithSessionIdInCookie(event);
             var sessionCookie =
@@ -2901,23 +2800,19 @@ class AuthorisationHandlerTest {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
 
-            var event = new APIGatewayProxyRequestEvent();
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var jwtClaimsSet =
                     buildJwtClaimsSet("https://localhost/authorize", null, null, maxAgeParam);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setHttpMethod("GET");
+            var event =
+                    withRequestEvent(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "scope",
+                                    "openid",
+                                    "response_type",
+                                    "code",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
             var response = makeRequestWithSessionIdInCookie(event);
             var sessionCookie =
@@ -2998,7 +2893,7 @@ class AuthorisationHandlerTest {
                                 NEW_BROWSER_SESSION_ID,
                                 NEW_SESSION_ID_FOR_PREV_SESSION));
 
-        inOrder.verify(auditService)
+        verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, "", BASE_AUDIT_USER);
 
@@ -3045,6 +2940,31 @@ class AuthorisationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHttpMethod("GET");
         event.setQueryStringParameters(requestParams);
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+        event.withHeaders(
+                Map.of(
+                        "txma-audit-encoded",
+                        TXMA_ENCODED_HEADER_VALUE,
+                        "Cookie",
+                        format("%s;bsid=%s", SESSION_COOKIE, BROWSER_SESSION_ID)));
+        return event;
+    }
+
+    private APIGatewayProxyRequestEvent withPostRequestEvent(Map<String, String> requestParams) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHttpMethod("POST");
+        event.setBody(
+                requestParams.entrySet().stream()
+                        .map(
+                                p ->
+                                        URLEncoder.encode(p.getKey(), Charset.defaultCharset())
+                                                + "="
+                                                + URLEncoder.encode(
+                                                        p.getValue(), Charset.defaultCharset()))
+                        .reduce((p1, p2) -> p1 + "&" + p2)
+                        .orElse(""));
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -3153,13 +3073,6 @@ class AuthorisationHandlerTest {
         return query_pairs;
     }
 
-    private static void verifyAuditEvents(
-            List<AuditableEvent> auditEvents, AuditService auditService) {
-        for (AuditableEvent event : auditEvents) {
-            verify(auditService).submitAuditEvent(eq(event), any(), eq(BASE_AUDIT_USER));
-        }
-    }
-
     private static String extractSessionId(String input, String sessionIdPrefix) {
         String sessionIdPattern = sessionIdPrefix + "--[0-9]+";
         var pattern = Pattern.compile(sessionIdPattern);
@@ -3224,7 +3137,7 @@ class AuthorisationHandlerTest {
             String credentialTrustLevel,
             Integer maxAge) {
         if (Objects.isNull(maxAge)) {
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                             CLIENT_ID.getValue(),
@@ -3234,7 +3147,7 @@ class AuthorisationHandlerTest {
                             pair("reauthRequested", reauthRequested),
                             pair("credential_trust_level", credentialTrustLevel));
         } else {
-            inOrder.verify(auditService)
+            verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                             CLIENT_ID.getValue(),
