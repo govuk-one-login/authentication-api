@@ -25,11 +25,11 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -109,7 +109,8 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
         }
 
-        var maybeMigrationErrorResponse = migrateMfaCredentialsForUserIfRequired(userProfile);
+        var maybeMigrationErrorResponse =
+                migrateMfaCredentialsForUserIfRequired(userProfile, mfaMethodsService, LOG);
         if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
 
         try {
@@ -171,33 +172,6 @@ public class MFAMethodsCreateHandler
             case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.ERROR_1012);
         };
-    }
-
-    private Optional<APIGatewayProxyResponseEvent> migrateMfaCredentialsForUserIfRequired(
-            UserProfile userProfile) {
-        if (!userProfile.getMfaMethodsMigrated()) {
-            Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
-                    mfaMethodsService.migrateMfaCredentialsForUser(userProfile.getEmail());
-
-            if (maybeMfaMigrationFailureReason.isPresent()) {
-                MfaMigrationFailureReason mfaMigrationFailureReason =
-                        maybeMfaMigrationFailureReason.get();
-
-                LOG.warn(
-                        "Failed to migrate user's MFA credentials due to {}",
-                        mfaMigrationFailureReason);
-
-                return switch (mfaMigrationFailureReason) {
-                    case NO_USER_FOUND_FOR_EMAIL -> Optional.of(
-                            generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
-                    case UNEXPECTED_ERROR_RETRIEVING_METHODS -> Optional.of(
-                            generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064));
-                    case ALREADY_MIGRATED -> Optional.empty();
-                };
-            }
-        }
-
-        return Optional.empty();
     }
 
     private MfaMethodCreateOrUpdateRequest readMfaMethodCreateRequest(
