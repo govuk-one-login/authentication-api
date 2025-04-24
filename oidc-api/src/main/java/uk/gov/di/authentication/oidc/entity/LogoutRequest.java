@@ -29,6 +29,7 @@ import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAd
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
+import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class LogoutRequest {
     private static final Logger LOG = LogManager.getLogger(LogoutRequest.class);
@@ -72,6 +73,10 @@ public class LogoutRequest {
                                 extractPersistentIdFromCookieHeader(input.getHeaders()))
                         .withGovukSigninJourneyId(clientSessionIdFromCookie.orElse(null))
                         .withUserId(internalCommonSubjectId.orElse(null));
+
+        if (session.isPresent() && orchSession.isPresent()) {
+            logIfClientSessionListOnSessionsAreEqual(session.get(), orchSession.get());
+        }
 
         if (sessionId.isPresent() && session.isPresent()) {
             destroySessionsRequest =
