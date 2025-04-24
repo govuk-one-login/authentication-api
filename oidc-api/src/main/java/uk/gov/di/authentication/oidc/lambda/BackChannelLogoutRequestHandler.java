@@ -2,6 +2,7 @@ package uk.gov.di.authentication.oidc.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -9,6 +10,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
@@ -23,6 +25,8 @@ import uk.gov.di.orchestration.shared.services.TokenService;
 import java.net.URI;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -77,9 +81,19 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.AWS_REQUEST_ID, context.getAwsRequestId());
 
-        event.getRecords().forEach(this::sendLogoutMessage);
+        List<SQSBatchResponse.BatchItemFailure> batchItemFailures = new ArrayList<>();
 
-        return null;
+        for (SQSEvent.SQSMessage message : event.getRecords()) {
+            try {
+                sendLogoutMessage(message);
+            } catch (PostRequestFailureException e) {
+                LOG.warn(e.getMessage());
+                batchItemFailures.add(
+                        new SQSBatchResponse.BatchItemFailure(message.getMessageId()));
+            }
+        }
+
+        return new SQSBatchResponse(batchItemFailures);
     }
 
     private void sendLogoutMessage(SQSMessage record) {
