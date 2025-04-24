@@ -33,7 +33,7 @@ class SessionServiceTest {
     void shouldPersistSessionToRedisWithExpiry() throws Json.JsonException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
-        var session = new Session().addClientSession("client-session-id");
+        var session = new Session().setEmailAddress("example@example.com");
 
         sessionService.storeOrUpdateSession(session, SESSION_ID);
 
@@ -138,7 +138,7 @@ class SessionServiceTest {
 
     @Test
     void shouldDeleteSessionIdFromRedis() {
-        var session = new Session().addClientSession("client-session-id");
+        var session = new Session().setEmailAddress("example@example.com");
 
         sessionService.storeOrUpdateSession(session, "session-id");
         sessionService.deleteSessionFromRedis(SESSION_ID);
@@ -147,7 +147,7 @@ class SessionServiceTest {
     }
 
     private String generateSearlizedSession() throws Json.JsonException {
-        var session = new Session().addClientSession("client-session-id");
+        var session = new Session().setEmailAddress("example@example.com");
 
         return objectMapper.writeValueAsString(session);
     }
