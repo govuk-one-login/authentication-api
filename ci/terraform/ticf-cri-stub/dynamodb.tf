@@ -47,3 +47,38 @@ resource "aws_iam_policy" "stub_ticf_cri_dynamo_read_access" {
 
   policy = data.aws_iam_policy_document.stub_ticf_cri_dynamo_read_access.json
 }
+
+## DynamoDB Resource Policies
+## These policies are used to allow cross-account access to the DynamoDB tables
+
+locals {
+  restricted_environments = ["production", "integration", "staging"]
+  create_resource         = !contains(local.restricted_environments, var.environment)
+}
+resource "aws_dynamodb_resource_policy" "stub_ticf_cri_table" {
+  count        = local.create_resource ? 1 : 0
+  resource_arn = aws_dynamodb_table.stub_ticf_cri_table.arn
+  policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document[0].json
+}
+
+data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
+  count = local.create_resource ? 1 : 0
+  statement {
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}

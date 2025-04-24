@@ -5,3 +5,6 @@ logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_c
 
 # Sizing
 lambda_min_concurrency = 1
+
+# Account IDs
+auth_new_account_id = "058264536367"
