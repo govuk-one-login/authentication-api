@@ -8,15 +8,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -134,7 +135,7 @@ public class MFAMethodsCreateHandler
                 }
             }
 
-            Result<MfaCreateFailureReason, MfaMethodResponse> addBackupMfaResult =
+            Result<MfaCreateFailureReason, MFAMethod> addBackupMfaResult =
                     mfaMethodsService.addBackupMfa(
                             userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
@@ -142,7 +143,16 @@ public class MFAMethodsCreateHandler
                 return handleCreateBackupMfaFailure(addBackupMfaResult.getFailure());
             }
 
-            return generateApiGatewayProxyResponse(200, addBackupMfaResult.getSuccess(), true);
+            var backupMfaMethod = addBackupMfaResult.getSuccess();
+            var backupMfaMethodAsResponse = MfaMethodResponse.from(backupMfaMethod);
+
+            if (backupMfaMethodAsResponse.isFailure()) {
+                LOG.error(backupMfaMethodAsResponse.getFailure());
+                return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+            }
+
+            return generateApiGatewayProxyResponse(
+                    200, backupMfaMethodAsResponse.getSuccess(), true);
 
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -160,8 +170,6 @@ public class MFAMethodsCreateHandler
                     400, ErrorResponse.ERROR_1070);
             case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.ERROR_1012);
-            case ERROR_RETRIEVING_MFA_METHODS -> generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.ERROR_1071);
         };
     }
 

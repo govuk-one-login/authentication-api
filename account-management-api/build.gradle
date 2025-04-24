@@ -19,7 +19,8 @@ dependencies {
 
     implementation configurations.nimbus,
             configurations.govuk_notify,
-            configurations.gson
+            configurations.gson,
+            configurations.jetbrains_annotations
 
     implementation project(":shared")
 

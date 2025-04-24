@@ -15,9 +15,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -34,6 +34,8 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
@@ -90,8 +92,8 @@ class MFAMethodsPutHandlerTest {
                 .thenReturn(Optional.of(userProfile));
 
         var updatedMfaMethod =
-                MfaMethodResponse.smsMethodData(
-                        MFA_IDENTIFIER, PriorityIdentifier.DEFAULT, true, phoneNumber);
+                MFAMethod.smsMfaMethod(
+                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
                 .thenReturn(Result.success(List.of(updatedMfaMethod)));
 
@@ -187,6 +189,25 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasStatus(expectedStatus));
         maybeErrorResponse.ifPresent(
                 expectedError -> assertThat(result, hasJsonBody(expectedError)));
+    }
+
+    @Test
+    void shouldReturn500WhenConversionToMfaMethodResponseFails() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        var credential = "some credential";
+        var mfaWithInvalidType =
+                new MFAMethod("invalid method type", credential, true, true, "updatedString");
+
+        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), eq(MFA_IDENTIFIER), any()))
+                .thenReturn(Result.success(List.of(mfaWithInvalidType)));
+
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
     }
 
     @Test
@@ -322,5 +343,21 @@ class MFAMethodsPutHandlerTest {
         }
         """,
                 phoneNumber, otp);
+    }
+
+    private String updateAuthAppRequest(String credential) {
+        return format(
+                """
+        {
+          "mfaMethod": {
+            "priorityIdentifier": "DEFAULT",
+            "method": {
+                "mfaMethodType": "AUTH_APP",
+                "credential": "%s"
+            }
+          }
+        }
+        """,
+                credential);
     }
 }
