@@ -119,7 +119,7 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
-  SnapStartEnabled:
+  SnapStartEnabledSpotResponse:
     !Or [
       !Equals [dev, !Ref Environment],
       !Equals [build, !Ref Environment],
@@ -4226,7 +4226,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       SnapStart: !If
-        - SnapStartEnabled
+        - SnapStartEnabledSpotResponse
         - ApplyOn: PublishedVersions
         - !Ref AWS::NoValue
       Tags:
