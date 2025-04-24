@@ -103,7 +103,7 @@ class MFAMethodsCreateHandlerTest {
                 Arguments.of(
                         MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
                         ErrorResponse.ERROR_1056,
-                        400),
+                        404),
                 Arguments.of(
                         MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS,
                         ErrorResponse.ERROR_1064,

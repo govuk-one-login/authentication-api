@@ -189,7 +189,7 @@ public class MFAMethodsCreateHandler
 
                 return switch (mfaMigrationFailureReason) {
                     case NO_USER_FOUND_FOR_EMAIL -> Optional.of(
-                            generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056));
+                            generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
                     case UNEXPECTED_ERROR_RETRIEVING_METHODS -> Optional.of(
                             generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064));
                     case ALREADY_MIGRATED -> Optional.empty();
