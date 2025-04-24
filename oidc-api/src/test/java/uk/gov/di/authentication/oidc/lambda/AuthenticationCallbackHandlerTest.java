@@ -22,6 +22,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -1568,10 +1569,15 @@ class AuthenticationCallbackHandlerTest {
         verify(orchClientSessionService, times(1))
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
         assertEquals(
-                RP_PAIRWISE_ID.getValue(), orchClientSessionCaptor.getValue().getRpPairwiseId());
+                RP_PAIRWISE_ID.getValue(),
+                orchClientSessionCaptor
+                        .getValue()
+                        .getCorrectPairwiseIdGivenSubjectType(SubjectType.PAIRWISE.toString()));
         assertEquals(
                 PUBLIC_SUBJECT_ID.getValue(),
-                orchClientSessionCaptor.getValue().getPublicSubjectId());
+                orchClientSessionCaptor
+                        .getValue()
+                        .getCorrectPairwiseIdGivenSubjectType(SubjectType.PUBLIC.toString()));
     }
 
     private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {

@@ -136,6 +136,8 @@ public class OrchClientSessionItem {
 
     @DynamoDbAttribute(ATTRIBUTE_RP_PAIRWISE_ID)
     public String getRpPairwiseId() {
+        // This is public because the DynamoDbMapper requires it to be for serialisation.
+        // Do not use it directly - use getCorrectPairwiseIdGivenSubjectType instead.
         return rpPairwiseId;
     }
 
@@ -150,6 +152,8 @@ public class OrchClientSessionItem {
 
     @DynamoDbAttribute(ATTRIBUTE_PUBLIC_SUBJECT_ID)
     public String getPublicSubjectId() {
+        // This is public because the DynamoDbMapper requires it to be for serialisation.
+        // Do not use it directly - use getCorrectPairwiseIdGivenSubjectType instead.
         return publicSubjectId;
     }
 
