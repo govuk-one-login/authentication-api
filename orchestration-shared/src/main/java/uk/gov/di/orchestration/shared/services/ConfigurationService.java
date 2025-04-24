@@ -295,6 +295,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("IPV_TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public boolean isOrchIPVTokenSigningKeyPublishEnabled() {
+        return getFlagOrFalse("ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED");
+    }
+
+    public String getOrchIPVTokenSigningKeyAlias() {
+        return System.getenv("ORCH_IPV_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
     public String getIPVAuthEncryptionPublicKey() {
         var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
         try {

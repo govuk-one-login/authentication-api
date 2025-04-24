@@ -51,7 +51,16 @@ public class IpvJwksHandler
             LOG.info("IpvJwks request received");
 
             List<JWK> signingKeys = new ArrayList<>();
+
+            // TODO: ATO-1585: Following migration to the new key (below), stop publishing this key
+            // pair (that resides in the shared account).
             signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
+
+            // TODO: ATO-1314: Remove this publish check once publishing has been enabled on all
+            // environments.
+            if (jwksService.isOrchIpvTokenSigningKeyPublishEnabled()) {
+                signingKeys.add(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId());
+            }
 
             JWKSet jwkSet = new JWKSet(signingKeys);
 
