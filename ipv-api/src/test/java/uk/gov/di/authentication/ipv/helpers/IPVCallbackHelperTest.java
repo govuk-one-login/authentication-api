@@ -34,7 +34,6 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -103,8 +102,6 @@ class IPVCallbackHelperTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String TEST_PHONE_NUMBER = "012345678902";
-    private static final Subject PUBLIC_SUBJECT =
-            new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final Subject SUBJECT = new Subject("subject-id");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
@@ -128,7 +125,6 @@ class IPVCallbackHelperTest {
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final Long AUTH_TIME = 1234L;
-    private static final UserProfile userProfile = generateUserProfile();
     private static final UserInfo authUserInfo = generateAuthUserInfo();
 
     private static final UserInfo p0VotUserIdentityUserInfo =
@@ -449,7 +445,6 @@ class IPVCallbackHelperTest {
         helper.generateReturnCodeAuthenticationResponse(
                 generateAuthRequest(new OIDCClaimsRequest()),
                 CLIENT_SESSION_ID,
-                userProfile,
                 new Session(),
                 SESSION_ID,
                 orchSession,
@@ -459,19 +454,10 @@ class IPVCallbackHelperTest {
                 new UserInfo(new Subject()),
                 "127.0.0.1",
                 "a-persistent-session-id",
-                CLIENT_ID.getValue());
+                CLIENT_ID.getValue(),
+                TEST_EMAIL_ADDRESS);
 
         assertAuthorisationCodeGeneratedAndSaved();
-    }
-
-    private static UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber(TEST_PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .withSubjectID(SUBJECT.getValue());
     }
 
     private static UserInfo generateAuthUserInfo() {
