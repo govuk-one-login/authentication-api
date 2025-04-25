@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -368,8 +367,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         codeRequest,
                                         userContext,
                                         codeRequest.getJourneyType(),
-                                        authSession,
-                                        session));
+                                        authSession));
     }
 
     private void auditSuccess(
@@ -397,8 +395,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext,
             JourneyType journeyType,
-            AuthSessionItem authSession,
-            Session session) {
+            AuthSessionItem authSession) {
         var clientSession = userContext.getClientSession();
         var levelOfConfidence =
                 clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
@@ -409,10 +406,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
                 codeRequest.getMfaMethodType().getValue(),
                 journeyType);
-
-        sessionService.storeOrUpdateSession(
-                session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL),
-                userContext.getAuthSession().getSessionId());
 
         authSessionService.updateSession(
                 authSession
