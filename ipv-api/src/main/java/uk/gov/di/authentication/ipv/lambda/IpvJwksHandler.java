@@ -56,8 +56,7 @@ public class IpvJwksHandler
             // pair (that resides in the shared account).
             signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
 
-            // TODO: ATO-1314: Remove this publish check once publishing has been enabled on all
-            // environments.
+            // TODO: ATO-1585: Following migration to the new key, remove this check.
             if (jwksService.isOrchIpvTokenSigningKeyPublishEnabled()) {
                 signingKeys.add(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId());
             }
