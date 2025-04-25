@@ -462,20 +462,12 @@ public class AuthorisationHandler
                     user);
         }
 
-        Optional<String> browserSessionIdFromSession =
-                orchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
 
-        boolean newAuthenticationRequired = false;
-        if (browserSessionIdFromSession.isPresent()
-                && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
-            sessionId = Optional.empty();
-            newAuthenticationRequired = true;
-        }
-
         return handleAuthJourney(
                 sessionId,
+                browserSessionIdFromCookie,
                 orchSessionOptional,
                 clientSession,
                 orchClientSession,
@@ -484,7 +476,6 @@ public class AuthorisationHandler
                 client,
                 clientSessionId,
                 reauthRequested,
-                newAuthenticationRequired,
                 requestedVtr,
                 user);
     }
@@ -642,6 +633,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<String> previousSessionIdFromCookie,
+            Optional<String> browserSessionIdFromCookie,
             Optional<OrchSessionItem> existingOrchSessionOptional,
             ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
@@ -650,7 +642,6 @@ public class AuthorisationHandler
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
-            boolean newAuthenticationRequired,
             VectorOfTrust requestedVtr,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
@@ -664,6 +655,12 @@ public class AuthorisationHandler
                     user);
         }
 
+        Optional<String> browserSessionIdFromSession =
+                existingOrchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
+        boolean doesBrowserSessionIdFromSessionNotMatchCookie =
+                browserSessionIdFromSession.isPresent()
+                        && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie);
+
         Session session;
         OrchSessionItem orchSession;
         var newSessionId = IdGenerator.generate();
@@ -671,7 +668,8 @@ public class AuthorisationHandler
         var existingSession = previousSessionIdFromCookie.flatMap(sessionService::getSession);
         if (previousSessionIdFromCookie.isEmpty()
                 || existingSession.isEmpty()
-                || existingOrchSessionOptional.isEmpty()) {
+                || existingOrchSessionOptional.isEmpty()
+                || doesBrowserSessionIdFromSessionNotMatchCookie) {
             session = sessionService.generateSession();
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
@@ -741,7 +739,7 @@ public class AuthorisationHandler
                 authenticationRequest.getClientID().getValue(),
                 user,
                 pair("client-name", client.getClientName()),
-                pair("new_authentication_required", newAuthenticationRequired));
+                pair("new_authentication_required", doesBrowserSessionIdFromSessionNotMatchCookie));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
         orchClientSessionService.storeClientSession(orchClientSession);
