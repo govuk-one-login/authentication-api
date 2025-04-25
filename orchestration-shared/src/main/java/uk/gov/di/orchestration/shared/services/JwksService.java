@@ -67,7 +67,8 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    // TODO: ATO-1314: Remove this method once publishing has been enabled on all environments.
+    // TODO: ATO-1585: Following migration to the new key, remove this helper and the associated env
+    // var.
     public boolean isOrchIpvTokenSigningKeyPublishEnabled() {
         return configurationService.isOrchIPVTokenSigningKeyPublishEnabled();
     }
