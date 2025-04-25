@@ -778,7 +778,7 @@ data "aws_iam_policy_document" "orch_dynamo_table_encryption_key_access_policy" 
   }
 
   statement {
-    sid    = "AllowOrchAccessToKmsDocAppSigningKey-${var.environment}"
+    sid    = "Allow orch access to dynamo table encryption key"
     effect = "Allow"
 
     actions = [
@@ -800,7 +800,7 @@ data "aws_iam_policy_document" "orch_dynamo_table_encryption_key_access_policy" 
   dynamic "statement" {
     for_each = var.environment != "production" && var.environment != "integration" && var.environment != "staging" ? ["1"] : []
     content {
-      sid    = "Allow Auth access to dynamo encryption key"
+      sid    = "Allow Auth access to dynamo table encryption key"
       effect = "Allow"
 
       actions = [
