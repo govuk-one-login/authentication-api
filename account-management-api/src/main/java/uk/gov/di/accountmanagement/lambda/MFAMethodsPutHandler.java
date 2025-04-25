@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
+import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -97,6 +98,14 @@ public class MFAMethodsPutHandler
         }
 
         var putRequest = validRequestOrErrorResponse.getSuccess();
+
+        var maybeMigrationErrorResponse =
+                migrateMfaCredentialsForUserIfRequired(
+                        putRequest.userProfile, mfaMethodsService, LOG);
+
+        if (maybeMigrationErrorResponse.isPresent()) {
+            return maybeMigrationErrorResponse.get();
+        }
 
         if (putRequest.request.mfaMethod().method()
                 instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
