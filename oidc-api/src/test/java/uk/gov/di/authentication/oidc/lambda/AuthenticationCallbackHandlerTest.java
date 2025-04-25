@@ -1183,8 +1183,8 @@ class AuthenticationCallbackHandlerTest {
         @Test
         void itCopiesThePreviousClientSessionsToTheCurrentSessionIfInternalCommonSubjectIdsMatch()
                 throws UnsuccessfulCredentialResponseException {
-            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            var sharedSession = withMaxAgeSharedSession();
+            var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            withMaxAgeSharedSession();
             withPreviousOrchSessionDueToMaxAge();
             withPreviousSharedSessionDueToMaxAge();
 
@@ -1206,8 +1206,10 @@ class AuthenticationCallbackHandlerTest {
             var expectedClientSessions = new ArrayList<>(List.of(CLIENT_SESSION_ID));
             expectedClientSessions.addAll(PREVIOUS_CLIENT_SESSIONS);
 
-            assertEquals(orchSession.getClientSessions(), expectedClientSessions.stream().toList());
-            assertNull(orchSession.getPreviousSessionId());
+            assertEquals(
+                    maxAgeOrchSession.getClientSessions(),
+                    expectedClientSessions.stream().toList());
+            assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
@@ -1223,8 +1225,8 @@ class AuthenticationCallbackHandlerTest {
         @Test
         void itDoesNotAssignClientSessionsIfItCannotFindThePreviousOrchSession()
                 throws UnsuccessfulCredentialResponseException {
-            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            var sharedSession = withMaxAgeSharedSession();
+            var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            withMaxAgeSharedSession();
             withNoPreviousOrchSession();
             withPreviousSharedSessionDueToMaxAge();
 
@@ -1243,8 +1245,8 @@ class AuthenticationCallbackHandlerTest {
                     redirectLocation,
                     equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
-            assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
-            assertNull(orchSession.getPreviousSessionId());
+            assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
+            assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
@@ -1261,8 +1263,8 @@ class AuthenticationCallbackHandlerTest {
         @Test
         void itDoesNotAssignClientSessionsIfItCannotFindThePreviousSharedSession()
                 throws UnsuccessfulCredentialResponseException {
-            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            var sharedSession = withMaxAgeSharedSession();
+            var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            withMaxAgeSharedSession();
             withPreviousOrchSessionDueToMaxAge();
             withNoPreviousSharedSession();
 
@@ -1281,8 +1283,8 @@ class AuthenticationCallbackHandlerTest {
                     redirectLocation,
                     equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
-            assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
-            assertNull(orchSession.getPreviousSessionId());
+            assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
+            assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
@@ -1300,8 +1302,8 @@ class AuthenticationCallbackHandlerTest {
         void
                 itSendsBackChannelLogoutNotificationForThePreviousSessionIfTheInternalCommonSubjectIdsDoNotMatch()
                         throws UnsuccessfulCredentialResponseException {
-            var orchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            var sharedSession = withMaxAgeSharedSession();
+            var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
+            withMaxAgeSharedSession();
             var previousOrchSession = withPreviousOrchSessionDueToMaxAge();
             withPreviousSharedSessionDueToMaxAge();
 
@@ -1321,8 +1323,8 @@ class AuthenticationCallbackHandlerTest {
                     redirectLocation,
                     equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
-            assertEquals(List.of(CLIENT_SESSION_ID), orchSession.getClientSessions());
-            assertNull(orchSession.getPreviousSessionId());
+            assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
+            assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
             verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
@@ -1369,19 +1371,19 @@ class AuthenticationCallbackHandlerTest {
         }
 
         private OrchSessionItem withMaxAgeOrchSession(String internalCommonSubjectId) {
-            var orchSession =
+            var maxAgeOrchSession =
                     new OrchSessionItem(SESSION_ID)
                             .withPreviousSessionId(PREVIOUS_SESSION_ID)
                             .withInternalCommonSubjectId(internalCommonSubjectId)
                             .addClientSession(CLIENT_SESSION_ID);
-            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
-            return orchSession;
+            when(orchSessionService.getSession(SESSION_ID))
+                    .thenReturn(Optional.of(maxAgeOrchSession));
+            return maxAgeOrchSession;
         }
 
-        private Session withMaxAgeSharedSession() {
+        private void withMaxAgeSharedSession() {
             var session = new Session().addClientSession(CLIENT_SESSION_ID);
             when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
-            return session;
         }
     }
 
