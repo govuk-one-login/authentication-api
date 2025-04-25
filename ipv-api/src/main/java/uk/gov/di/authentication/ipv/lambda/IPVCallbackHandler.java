@@ -346,18 +346,6 @@ public class IPVCallbackHandler
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
-            // TODO: ATO-1117: temporary logs to check values are as expected
-            LOG.info(
-                    "is email the same on authUserInfo as on session: {}",
-                    Objects.equals(session.getEmailAddress(), authUserInfo.getEmailAddress()));
-            if (userProfile.getPhoneNumber() != null) {
-                LOG.info(
-                        "is phone number the same on authUserInfo as on UserProfile: {}",
-                        Objects.equals(
-                                userProfile.getPhoneNumber(), authUserInfo.getPhoneNumber()));
-            }
-            //
-
             var tokenResponse =
                     segmentedFunctionCall(
                             "getIpvToken",
