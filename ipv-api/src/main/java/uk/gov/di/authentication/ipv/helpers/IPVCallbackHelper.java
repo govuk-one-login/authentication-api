@@ -24,7 +24,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -34,7 +33,6 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -63,7 +61,6 @@ public class IPVCallbackHelper {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoClientService dynamoClientService;
     private final DynamoIdentityService dynamoIdentityService;
-    private final DynamoService dynamoService;
     private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
     private final OidcAPI oidcAPI;
@@ -75,7 +72,6 @@ public class IPVCallbackHelper {
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sessionService = new SessionService(configurationService);
         this.sqsClient =
@@ -83,8 +79,7 @@ public class IPVCallbackHelper {
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
                         configurationService.getSqsEndpointURI());
-        this.authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -96,7 +91,6 @@ public class IPVCallbackHelper {
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sessionService = new SessionService(configurationService, redis);
         this.sqsClient =
@@ -104,8 +98,7 @@ public class IPVCallbackHelper {
                         configurationService.getAwsRegion(),
                         configurationService.getSpotQueueURI(),
                         configurationService.getSqsEndpointURI());
-        this.authCodeResponseService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        this.authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
         this.oidcAPI = new OidcAPI(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -117,7 +110,6 @@ public class IPVCallbackHelper {
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoClientService dynamoClientService,
             DynamoIdentityService dynamoIdentityService,
-            DynamoService dynamoService,
             SerializationService objectMapper,
             SessionService sessionService,
             AwsSqsClient sqsClient,
@@ -129,7 +121,6 @@ public class IPVCallbackHelper {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.dynamoClientService = dynamoClientService;
         this.dynamoIdentityService = dynamoIdentityService;
-        this.dynamoService = dynamoService;
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.sqsClient = sqsClient;
@@ -198,8 +189,8 @@ public class IPVCallbackHelper {
             String ipAddress,
             String persistentSessionId,
             String clientId,
-            String email)
-            throws UserNotFoundException {
+            String email,
+            String subjectId) {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
                 "saveIdentityClaims",
@@ -224,8 +215,6 @@ public class IPVCallbackHelper {
         var dimensions =
                 authCodeResponseService.getDimensions(
                         orchSession, clientName, clientSessionId, false, false);
-
-        var subjectId = authCodeResponseService.getSubjectId(session);
 
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
