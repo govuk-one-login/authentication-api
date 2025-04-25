@@ -4363,7 +4363,7 @@ Resources:
       QueueName: !Sub ${Environment}-BackChannelLogoutDlq
       KmsMasterKeyId: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
       KmsDataKeyReusePeriodSeconds: 300
-      MessageRetentionPeriod: 21600
+      MessageRetentionPeriod: 259200
 
   BackChannelLogoutQueueEncryptionKey:
     Type: AWS::KMS::Key
