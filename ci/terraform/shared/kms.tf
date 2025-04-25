@@ -465,21 +465,6 @@ data "aws_iam_policy_document" "orch_to_auth_signing_key_access_policy" {
   }
 }
 
-# Authorization Code store 'Signing KMS key
-
-resource "aws_kms_key" "auth_code_store_signing_key" {
-  description              = "KMS signing key for Authorization code store in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.auth_dynamodb_kms_key_policy_document.json
-}
-
-resource "aws_kms_alias" "auth_code_store_signing_key_alias" {
-  name          = "alias/${var.environment}-auth-code-store-table-encryption-key"
-  target_key_id = aws_kms_key.auth_code_store_signing_key.key_id
-}
 
 # Authorization Token endpoint Signing KMS key
 
@@ -496,13 +481,61 @@ resource "aws_kms_alias" "auth_id_token_signing_key_alias" {
   target_key_id = aws_kms_key.auth_id_token_signing_key.key_id
 }
 
+##  Pending email check audit queue  KMS keys
+
+resource "aws_kms_key" "pending_email_check_queue_encryption_key" {
+  description              = "KMS signing key for encrypting pending email check audit queue at rest"
+  deletion_window_in_days  = 30
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  key_usage                = "ENCRYPT_DECRYPT"
+  enable_key_rotation      = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "DefaultAccessPolicy",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" },
+        Action    = ["kms:*"],
+        Resource  = "*"
+      },
+      {
+        Sid       = "AllowPendingEmailCheckAccessToKmsAuditEncryptionKey-${var.environment}",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${var.auth_check_account_id}:root" },
+        Action    = ["kms:Decrypt"],
+        Resource  = "*"
+      }
+    ]
+  })
+
+}
+
+## Below are the KMS keys used to encrypt the DynamoDB tables
+
+resource "aws_kms_key" "auth_code_store_signing_key" {
+  description              = "KMS signing key for Authorization code store in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "auth_code_store_signing_key_alias" {
+  name          = "alias/${var.environment}-auth-code-store-table-encryption-key"
+  target_key_id = aws_kms_key.auth_code_store_signing_key.key_id
+}
+
 resource "aws_kms_key" "access_token_store_signing_key" {
   description              = "KMS signing key for Access Token store in DynamoDB"
   deletion_window_in_days  = 30
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.auth_dynamodb_kms_key_policy_document.json
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
 }
 
 resource "aws_kms_alias" "access_token_store_signing_key_alias" {
@@ -516,21 +549,12 @@ resource "aws_kms_key" "bulk_email_users_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "key-policy-dynamodb",
-    Statement = [
-      {
-        Sid       = "Allow IAM to manage this key",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        Action = [
-          "kms:*"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "bulk_email_users_encryption_key_alias" {
+  name          = "alias/${var.environment}-bulk-email-users-table-encryption-key"
+  target_key_id = aws_kms_key.bulk_email_users_encryption_key.key_id
 }
 
 resource "aws_kms_key" "account_modifiers_table_encryption_key" {
@@ -539,7 +563,7 @@ resource "aws_kms_key" "account_modifiers_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.auth_dynamodb_kms_key_policy_document.json
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
 }
 
 resource "aws_kms_alias" "account_modifiers_table_encryption_key_alias" {
@@ -553,21 +577,12 @@ resource "aws_kms_key" "user_credentials_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "key-policy-dynamodb",
-    Statement = [
-      {
-        Sid       = "Allow IAM to manage this key",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        Action = [
-          "kms:*"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "user_credentials_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-user-credentials-table-encryption-key"
+  target_key_id = aws_kms_key.user_credentials_table_encryption_key.key_id
 }
 
 resource "aws_kms_key" "common_passwords_table_encryption_key" {
@@ -576,21 +591,12 @@ resource "aws_kms_key" "common_passwords_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "key-policy-dynamodb",
-    Statement = [
-      {
-        Sid       = "Allow IAM to manage this key",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        Action = [
-          "kms:*"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "common_passwords_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-common-passwords-table-encryption-key"
+  target_key_id = aws_kms_key.common_passwords_table_encryption_key.key_id
 }
 
 resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
@@ -599,7 +605,7 @@ resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.cross_account_doc_app_credential_table_encryption_key_policy.json
+  policy                   = data.aws_iam_policy_document.orch_dynamo_table_encryption_key_access_policy.json
 }
 
 resource "aws_kms_alias" "doc_app_credential_table_encryption_key_alias" {
@@ -607,7 +613,155 @@ resource "aws_kms_alias" "doc_app_credential_table_encryption_key_alias" {
   target_key_id = aws_kms_key.doc_app_credential_table_encryption_key.key_id
 }
 
-data "aws_iam_policy_document" "cross_account_doc_app_credential_table_encryption_key_policy" {
+resource "aws_kms_key" "client_registry_table_encryption_key" {
+  description              = "KMS encryption key for client registry table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.orch_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-client-registry-table-encryption-key"
+  target_key_id = aws_kms_key.client_registry_table_encryption_key.key_id
+}
+
+resource "aws_kms_key" "identity_credentials_table_encryption_key" {
+  description              = "KMS encryption key for identity credentials table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.orch_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "identity_credentials_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-identity-credentials-table-encryption-key"
+  target_key_id = aws_kms_key.identity_credentials_table_encryption_key.key_id
+}
+
+resource "aws_kms_key" "user_profile_table_encryption_key" {
+  description              = "KMS encryption key for user profile table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+
+  policy = data.aws_iam_policy_document.orch_dynamo_table_encryption_key_access_policy.json
+
+}
+
+resource "aws_kms_alias" "user_profile_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-user-profile-table-encryption-key"
+  target_key_id = aws_kms_key.user_profile_table_encryption_key.key_id
+}
+
+resource "aws_kms_key" "email_check_result_encryption_key" {
+  description              = "KMS encryption key for email check result table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "email_check_result_encryption_key_alias" {
+  name          = "alias/${var.environment}-email-check-result-table-encryption-key"
+  target_key_id = aws_kms_key.email_check_result_encryption_key.key_id
+}
+
+resource "aws_kms_key" "authentication_attempt_encryption_key" {
+  description              = "KMS encryption key for authentication attempt table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "authentication_attempt_encryption_key_alias" {
+  name          = "alias/${var.environment}-authentication-attempt-table-encryption-key"
+  target_key_id = aws_kms_key.authentication_attempt_encryption_key.key_id
+}
+
+resource "aws_kms_key" "auth_session_table_encryption_key" {
+  description              = "KMS encryption key for auth session table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "auth_session_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-auth-session-table-encryption-key"
+  target_key_id = aws_kms_key.auth_session_table_encryption_key.key_id
+}
+
+
+resource "aws_kms_key" "id_reverification_state_table_encryption_key" {
+  description              = "KMS encryption key for id_reverification_state table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
+}
+
+resource "aws_kms_alias" "id_reverification_state_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-id-reverification-state-table-encryption-key"
+  target_key_id = aws_kms_key.id_reverification_state_table_encryption_key.key_id
+}
+
+
+## KMS Key policy to Allow access to the KMS key for the new authentication AWS account to access DynamoDB table
+
+
+data "aws_iam_policy_document" "auth_dynamo_table_encryption_key_access_policy" {
+  #checkov:skip=CKV_AWS_109:Root requires all kms:* actions access
+  #checkov:skip=CKV_AWS_111:Root requires all kms:* actions access
+  #checkov:skip=CKV_AWS_356:Policy cannot self-reference the kms key, so resources wildcard is required
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.environment != "production" && var.environment != "integration" && var.environment != "staging" ? ["1"] : []
+    content {
+      sid    = "Allow Auth access to dynamo table encryption key"
+      effect = "Allow"
+
+      actions = [
+        "kms:Decrypt*"
+      ]
+      principals {
+        type = "AWS"
+        identifiers = [
+          format(
+            "arn:%s:iam::%s:root",
+            data.aws_partition.current.partition,
+            var.auth_new_account_id
+          )
+        ]
+      }
+      resources = ["*"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "orch_dynamo_table_encryption_key_access_policy" {
   statement {
     sid    = "DefaultAccessPolicy"
     effect = "Allow"
@@ -671,246 +825,4 @@ data "aws_iam_policy_document" "cross_account_doc_app_credential_table_encryptio
     }
   }
 
-}
-
-resource "aws_kms_key" "client_registry_table_encryption_key" {
-  description              = "KMS encryption key for client registry table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-}
-
-resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
-  name          = "alias/${var.environment}-client-registry-table-encryption-key"
-  target_key_id = aws_kms_key.client_registry_table_encryption_key.key_id
-}
-
-resource "aws_kms_key" "identity_credentials_table_encryption_key" {
-  description              = "KMS encryption key for identity credentials table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-}
-
-resource "aws_kms_alias" "identity_credentials_table_encryption_key_alias" {
-  name          = "alias/${var.environment}-identity-credentials-table-encryption-key"
-  target_key_id = aws_kms_key.identity_credentials_table_encryption_key.key_id
-}
-
-data "aws_iam_policy_document" "cross_account_table_encryption_key_access_policy" {
-  statement {
-    sid    = "key-policy-dynamodb"
-    effect = "Allow"
-    actions = [
-      "kms:*",
-    ]
-    principals {
-      identifiers = [data.aws_caller_identity.current.account_id]
-      type        = "AWS"
-    }
-    resources = ["*"]
-  }
-
-  statement {
-    sid    = "Allow Orch access to dynamo encryption key"
-    effect = "Allow"
-
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = [var.orchestration_account_id]
-    }
-  }
-
-  dynamic "statement" {
-    for_each = var.environment != "production" && var.environment != "integration" && var.environment != "staging" ? ["1"] : []
-    content {
-      sid    = "Allow Auth access to dynamo table encryption key"
-      effect = "Allow"
-
-      actions = [
-        "kms:Encrypt",
-        "kms:Decrypt",
-        "kms:ReEncrypt*",
-        "kms:GenerateDataKey*",
-        "kms:CreateGrant",
-        "kms:DescribeKey",
-      ]
-      principals {
-        type = "AWS"
-        identifiers = [
-          format(
-            "arn:%s:iam::%s:root",
-            data.aws_partition.current.partition,
-            var.auth_new_account_id
-          )
-        ]
-      }
-      resources = ["*"]
-    }
-  }
-
-}
-
-resource "aws_kms_key" "user_profile_table_encryption_key" {
-  description              = "KMS encryption key for user profile table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-
-  policy = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-
-}
-
-resource "aws_kms_alias" "user_profile_table_encryption_key_alias" {
-  name          = "alias/${var.environment}-user-profile-table-encryption-key"
-  target_key_id = aws_kms_key.user_profile_table_encryption_key.key_id
-}
-
-resource "aws_kms_key" "email_check_result_encryption_key" {
-  description              = "KMS encryption key for email check result table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.auth_dynamodb_kms_key_policy_document.json
-}
-
-resource "aws_kms_alias" "email_check_result_encryption_key_alias" {
-  name          = "alias/${var.environment}-email-check-result-table-encryption-key"
-  target_key_id = aws_kms_key.email_check_result_encryption_key.key_id
-}
-
-resource "aws_kms_key" "pending_email_check_queue_encryption_key" {
-  description              = "KMS signing key for encrypting pending email check audit queue at rest"
-  deletion_window_in_days  = 30
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  key_usage                = "ENCRYPT_DECRYPT"
-  enable_key_rotation      = true
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "key-policy-dynamodb",
-    Statement = [
-      {
-        Sid       = "DefaultAccessPolicy",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" },
-        Action    = ["kms:*"],
-        Resource  = "*"
-      },
-      {
-        Sid       = "AllowPendingEmailCheckAccessToKmsAuditEncryptionKey-${var.environment}",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${var.auth_check_account_id}:root" },
-        Action    = ["kms:Decrypt"],
-        Resource  = "*"
-      }
-    ]
-  })
-
-}
-
-resource "aws_kms_key" "authentication_attempt_encryption_key" {
-  description              = "KMS encryption key for authentication attempt table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.auth_dynamodb_kms_key_policy_document.json
-}
-
-resource "aws_kms_alias" "authentication_attempt_encryption_key_alias" {
-  name          = "alias/${var.environment}-authentication-attempt-table-encryption-key"
-  target_key_id = aws_kms_key.authentication_attempt_encryption_key.key_id
-}
-
-resource "aws_kms_key" "auth_session_table_encryption_key" {
-  description              = "KMS encryption key for auth session table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.auth_dynamodb_kms_key_policy_document.json
-}
-
-resource "aws_kms_alias" "auth_session_table_encryption_key_alias" {
-  name          = "alias/${var.environment}-auth-session-table-encryption-key"
-  target_key_id = aws_kms_key.auth_session_table_encryption_key.key_id
-}
-
-
-resource "aws_kms_key" "id_reverification_state_table_encryption_key" {
-  description              = "KMS encryption key for id_reverification_state table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.auth_dynamodb_kms_key_policy_document.json
-}
-
-resource "aws_kms_alias" "id_reverification_state_table_encryption_key_alias" {
-  name          = "alias/${var.environment}-id-reverification-state-table-encryption-key"
-  target_key_id = aws_kms_key.id_reverification_state_table_encryption_key.key_id
-}
-
-
-## KMS Key policy to Allow access to the KMS key for the new authentication AWS account to access DynamoDB table
-
-
-data "aws_iam_policy_document" "auth_dynamodb_kms_key_policy_document" {
-  #checkov:skip=CKV_AWS_109:Root requires all kms:* actions access
-  #checkov:skip=CKV_AWS_111:Root requires all kms:* actions access
-  #checkov:skip=CKV_AWS_356:Policy cannot self-reference the kms key, so resources wildcard is required
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
-
-  dynamic "statement" {
-    for_each = var.environment != "production" && var.environment != "integration" && var.environment != "staging" ? ["1"] : []
-    content {
-      sid    = "Allow Auth access to dynamo table encryption key"
-      effect = "Allow"
-
-      actions = [
-        "kms:Decrypt*"
-      ]
-      principals {
-        type = "AWS"
-        identifiers = [
-          format(
-            "arn:%s:iam::%s:root",
-            data.aws_partition.current.partition,
-            var.auth_new_account_id
-          )
-        ]
-      }
-      resources = ["*"]
-    }
-  }
 }
