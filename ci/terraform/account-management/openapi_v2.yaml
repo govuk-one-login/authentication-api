@@ -141,10 +141,6 @@ paths:
                   value:
                     code: 1063
                     message: "New method management api not available in environment"
-                get-when-error-retrieving-mfa-methods:
-                  value:
-                    code: 1064
-                    message: "Error retrieving MFA methods"
                 get-when-account-management-api-unexpected-error:
                   value:
                     code: 1071
@@ -221,6 +217,34 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/MfaMethodCreateRequest"
+            examples:
+              add-an-authapp-mfa:
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "BACKUP",
+                        "method":
+                          {
+                            "mfaMethodType": "AUTH_APP",
+                            "credential": "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444",
+                          },
+                      },
+                  }
+              add-an-sms-mfa:
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "BACKUP",
+                        "method":
+                          {
+                            "mfaMethodType": "SMS",
+                            "phoneNumber": "070",
+                            "otp": "123456",
+                          },
+                      },
+                  }
         required: true
       responses:
         "200":
@@ -356,6 +380,34 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/MfaMethodUpdateRequest"
+            examples:
+              update-sms:
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "DEFAULT",
+                        "method":
+                          {
+                            "mfaMethodType": "SMS",
+                            "phoneNumber": "070",
+                            "otp": "123456",
+                          },
+                      },
+                  }
+              update-auth-app:
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "BACKUP",
+                        "method":
+                          {
+                            "mfaMethodType": "AUTH_APP",
+                            "credential": "AABBCC",
+                          },
+                      },
+                  }
         required: true
       responses:
         "200":
