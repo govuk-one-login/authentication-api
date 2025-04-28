@@ -899,6 +899,37 @@ data "aws_iam_policy_document" "dynamo_orch_client_session_encryption_key_cross_
   }
 }
 
+data "aws_iam_policy_document" "dynamo_auth_user_info_cross_account_read_and_encryption_key_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  statement {
+    sid    = "AllowAuthUserInfoCrossAccountReadAccess"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-Auth-User-Info",
+    ]
+  }
+
+  statement {
+    sid    = "AllowAuthUserInfoEncryptionKeyCrossAccountEncryptAccess"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+    resources = [
+      var.auth_user_info_table_encryption_key_arn,
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_orch_identity_credentials_cross_account_read_access_policy_document" {
   count = var.is_orch_stubbed ? 0 : 1
 
@@ -1331,6 +1362,16 @@ resource "aws_iam_policy" "dynamo_orch_identity_credentials_cross_account_read_a
   description = "IAM policy for managing read permissions to the orch identity credentials table"
 
   policy = data.aws_iam_policy_document.dynamo_orch_identity_credentials_cross_account_read_access_policy_document[count.index].json
+}
+
+resource "aws_iam_policy" "dynamo_auth_user_info_cross_account_read_and_encryption_key_access_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-auth-user-info-cross-account-read-and-encryption-key-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read and encryption key permissions to the orch identity credentials table"
+
+  policy = data.aws_iam_policy_document.dynamo_auth_user_info_cross_account_read_and_encryption_key_access_policy_document[count.index].json
 }
 
 resource "aws_iam_policy" "dynamo_id_reverification_state_write_policy" {
