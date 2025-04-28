@@ -29,7 +29,6 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
-import java.net.URI;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -40,8 +39,6 @@ import java.text.ParseException;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Optional;
-
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 
 public class ClientSignatureValidationService {
 
@@ -114,7 +111,7 @@ public class ClientSignatureValidationService {
             ClientAuthenticationVerifier<?> authenticationVerifier =
                     new ClientAuthenticationVerifier<>(
                             new PrivateKeyJwtAuthPublicKeySelector(publicKey),
-                            Collections.singleton(new Audience(getTokenURI().toString())));
+                            Collections.singleton(new Audience(oidcAPI.tokenURI().toString())));
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException
                 | NoSuchAlgorithmException
@@ -214,9 +211,5 @@ public class ClientSignatureValidationService {
             LOG.error("LambdaException thrown while invoking FetchJwksFunction");
             throw new JwksException(e.getMessage());
         }
-    }
-
-    private URI getTokenURI() {
-        return buildURI(oidcAPI.baseURI(), TOKEN_PATH);
     }
 }
