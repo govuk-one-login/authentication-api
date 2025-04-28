@@ -730,6 +730,7 @@ data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_access_po
   }
 }
 
+// TODO: ATO-1128: delete this once no longer used
 data "aws_iam_policy_document" "dynamo_orch_session_cross_account_read_write_delete_access_policy_document" {
   count = var.is_orch_stubbed ? 0 : 1
 
@@ -779,7 +780,7 @@ data "aws_iam_policy_document" "dynamo_orch_session_cross_account_delete_access_
   }
 }
 
-
+// TODO: ATO-1128: delete this once no longer used
 data "aws_iam_policy_document" "dynamo_orch_client_session_cross_account_read_and_delete_access_policy_document" {
   count = var.is_orch_stubbed ? 0 : 1
   statement {
@@ -1189,6 +1190,7 @@ resource "aws_iam_policy" "dynamo_orch_session_cross_account_write_access_policy
   policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_write_access_policy_document[count.index].json
 }
 
+// TODO: ATO-1128: delete this once no longer used
 resource "aws_iam_policy" "dynamo_orch_session_cross_account_read_write_delete_access_policy" {
   count = var.is_orch_stubbed ? 0 : 1
 
@@ -1209,7 +1211,7 @@ resource "aws_iam_policy" "dynamo_orch_session_cross_account_delete_access_polic
   policy = data.aws_iam_policy_document.dynamo_orch_session_cross_account_delete_access_policy_document[count.index].json
 }
 
-
+// TODO: ATO-1128: delete once no longer used
 resource "aws_iam_policy" "dynamo_orch_client_session_cross_account_read_and_delete_access_policy" {
   count = var.is_orch_stubbed ? 0 : 1
 
