@@ -5,3 +5,6 @@ test_clients_enabled              = true
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
+
+# URIs
+internal_sector_uri = "https://identity.authdev1.sandpit.account.gov.uk"
