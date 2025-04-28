@@ -133,6 +133,29 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userProfile.getSubjectID(),
                             URI.create(configurationService.getInternalSectorURI()),
                             authenticationService.getOrGenerateSalt(userProfile));
+
+            // TODO: ATO-1128: temp logs to verify values are in sync:
+            try {
+                LOG.info(
+                        "is internalCommonSubjectId in sync {}",
+                        Objects.equals(
+                                userContext.getOrchSession().getInternalCommonSubjectId(),
+                                internalPairwiseSubjectId));
+
+                var authUserInfo = userContext.getAuthUserInfo();
+                if (authUserInfo.isPresent()) {
+                    LOG.info(
+                            "is email in sync {}",
+                            Objects.equals(
+                                    authUserInfo.get().getEmailAddress(), userProfile.getEmail()));
+                } else {
+                    LOG.info("authUserInfo is empty");
+                }
+            } catch (Exception e) {
+                LOG.info("temp logs failed, message: {}", e.getMessage());
+            }
+            //
+
             int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
