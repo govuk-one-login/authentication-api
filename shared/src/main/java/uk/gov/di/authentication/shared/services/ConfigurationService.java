@@ -702,4 +702,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .getOrDefault("USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
+
+    public long getRemoteJwksServiceCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("REMOTE_JWKS_SERVICE_CALL_TIMEOUT", "3000"));
+    }
 }
