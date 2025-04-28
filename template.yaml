@@ -570,6 +570,25 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+          - Sid: AllowAuthUserInfoKeyCrossAccountEncryptActions
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AuthAccountId}:root
+                - AuthAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: "*"
 
   AuthUserInfoTable:
     Type: AWS::DynamoDB::Table
@@ -580,6 +599,25 @@ Resources:
           AttributeType: S
         - AttributeName: ClientSessionId
           AttributeType: S
+      ResourcePolicy:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Sid: AllowAuthUserInfoTableCrossAccountReadAccess
+              Effect: Allow
+              Action:
+                - dynamodb:DescribeTable
+                - dynamodb:Get*
+              Resource: "*"
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
       KeySchema:
         - AttributeName: InternalCommonSubjectId
           KeyType: HASH
