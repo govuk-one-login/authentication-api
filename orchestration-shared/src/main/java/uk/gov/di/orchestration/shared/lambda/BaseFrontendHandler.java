@@ -139,6 +139,10 @@ public abstract class BaseFrontendHandler<T>
         Optional<Session> session = sessionService.getSession(sessionId);
         var orchClientSession =
                 orchClientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
+        if (orchClientSession.isEmpty()) {
+            LOG.warn("Orch Client session not found");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
 
         if (session.isEmpty()) {
             LOG.warn("Session cannot be found");
@@ -182,7 +186,7 @@ public abstract class BaseFrontendHandler<T>
 
         clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 
-        orchClientSession.ifPresent(userContextBuilder::withOrchClientSession);
+        userContextBuilder.withOrchClientSession(orchClientSession.get());
 
         session.map(Session::getEmailAddress)
                 .map(authenticationService::getUserProfileFromEmail)
