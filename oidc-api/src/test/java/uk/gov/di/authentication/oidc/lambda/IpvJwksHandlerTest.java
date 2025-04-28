@@ -28,8 +28,6 @@ class IpvJwksHandlerTest {
     private IpvJwksHandler handler;
     private final ECKey ipvTokenSigningKey =
             new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-    private final ECKey orchIpvTokenSigningKey =
-            new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
 
     IpvJwksHandlerTest() throws JOSEException {}
 
@@ -37,30 +35,14 @@ class IpvJwksHandlerTest {
     public void setUp() {
         handler = new IpvJwksHandler(jwksService);
         when(jwksService.getPublicIpvTokenJwkWithOpaqueId()).thenReturn(ipvTokenSigningKey);
-
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(false);
     }
 
     @Test
-    void shouldReturnOnlyIpvJwksWhenOrchIpvJwksDisabled() {
+    void shouldReturnASingleSigningKey() {
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
         var expectedJWKSet = new JWKSet(List.of(ipvTokenSigningKey));
-
-        assertThat(result, hasStatus(200));
-        assertThat(result, hasBody(expectedJWKSet.toString(true)));
-    }
-
-    @Test
-    void shouldReturnIpvJwkAndOrchIpvJwkWhenOrchIpvJwkEnabled() {
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-        when(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId()).thenReturn(orchIpvTokenSigningKey);
-
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-
-        var expectedJWKSet = new JWKSet(List.of(ipvTokenSigningKey, orchIpvTokenSigningKey));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));

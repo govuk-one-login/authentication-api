@@ -67,17 +67,6 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    // TODO: ATO-1585: Following migration to the new key, remove this helper and the associated env
-    // var.
-    public boolean isOrchIpvTokenSigningKeyPublishEnabled() {
-        return configurationService.isOrchIPVTokenSigningKeyPublishEnabled();
-    }
-
-    public JWK getPublicOrchIpvTokenJwkWithOpaqueId() {
-        LOG.info("Retrieving Orch IPV token public key");
-        return getPublicJWKWithKeyId(configurationService.getOrchIPVTokenSigningKeyAlias());
-    }
-
     public JWK getIpvJwk() {
         EncryptionJwkCache encryptionJwkCache = EncryptionJwkCache.getInstance();
         var ipvJwkCacheEntry =
