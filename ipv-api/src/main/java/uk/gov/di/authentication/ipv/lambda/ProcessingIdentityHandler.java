@@ -128,12 +128,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         try {
             UserProfile userProfile = userContext.getUserProfile().orElseThrow();
             ClientRegistry client = userContext.getClient().orElseThrow();
-            var rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            client,
-                            authenticationService,
-                            configurationService.getInternalSectorURI());
             var internalPairwiseSubjectId =
                     ClientSubjectHelper.calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
