@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.state;
 
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -14,6 +15,7 @@ public class UserContext {
     private final Session session;
     private final String sessionId;
     private final Optional<UserProfile> userProfile;
+    private final Optional<UserInfo> authUserInfo;
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
@@ -26,6 +28,7 @@ public class UserContext {
             Session session,
             String sessionId,
             Optional<UserProfile> userProfile,
+            Optional<UserInfo> authUserInfo,
             Optional<UserCredentials> userCredentials,
             boolean userAuthenticated,
             Optional<ClientRegistry> client,
@@ -36,6 +39,7 @@ public class UserContext {
         this.session = session;
         this.sessionId = sessionId;
         this.userProfile = userProfile;
+        this.authUserInfo = authUserInfo;
         this.userCredentials = userCredentials;
         this.userAuthenticated = userAuthenticated;
         this.client = client;
@@ -55,6 +59,10 @@ public class UserContext {
 
     public Optional<UserProfile> getUserProfile() {
         return userProfile;
+    }
+
+    public Optional<UserInfo> getAuthUserInfo() {
+        return authUserInfo;
     }
 
     public Optional<UserCredentials> getUserCredentials() {
@@ -101,6 +109,7 @@ public class UserContext {
         private final Session session;
         private String sessionId;
         private Optional<UserProfile> userProfile = Optional.empty();
+        private Optional<UserInfo> authUserInfo = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
@@ -124,6 +133,11 @@ public class UserContext {
 
         public Builder withUserProfile(Optional<UserProfile> userProfile) {
             this.userProfile = userProfile;
+            return this;
+        }
+
+        public Builder withAuthUserInfo(Optional<UserInfo> authUserInfo) {
+            this.authUserInfo = authUserInfo;
             return this;
         }
 
@@ -171,6 +185,7 @@ public class UserContext {
                     session,
                     sessionId,
                     userProfile,
+                    authUserInfo,
                     userCredentials,
                     userAuthenticated,
                     client,
