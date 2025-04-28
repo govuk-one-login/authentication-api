@@ -245,6 +245,12 @@ variable "dlq_alarm_threshold" {
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
 }
 
+variable "notifications_dlq_alarm_threshold" {
+  default     = 10
+  type        = number
+  description = "The number of messages on the notifications DLQ before a Cloudwatch alarm is generated"
+}
+
 variable "test_client_verify_email_otp" {
   type = string
 }
