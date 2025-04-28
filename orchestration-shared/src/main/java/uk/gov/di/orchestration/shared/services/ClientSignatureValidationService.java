@@ -121,8 +121,9 @@ public class ClientSignatureValidationService {
                 | InvalidKeySpecException
                 | JOSEException e) {
             LOG.error(
-                    "Error validating Token Client Assertion JWT for Client: {}",
-                    client.getClientID());
+                    "Error validating Token Client Assertion JWT for Client: {}. Error: {}",
+                    client.getClientID(),
+                    e.getMessage());
             throw new ClientSignatureValidationException(e);
         }
     }
