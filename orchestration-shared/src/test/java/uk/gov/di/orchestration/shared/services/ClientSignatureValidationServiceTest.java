@@ -23,6 +23,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.InvokeResponse;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
@@ -53,25 +54,31 @@ class ClientSignatureValidationServiceTest {
     private static final URI AUTHORIZE_URI = URI.create("https://localhost/authorize");
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final OidcAPI oidcAPI = mock(OidcAPI.class);
     private final RpPublicKeyCacheService rpPublicKeyCacheService =
             mock(RpPublicKeyCacheService.class);
     private final LambdaClient lambdaClient = mock(LambdaClient.class);
     private ClientSignatureValidationService clientSignatureValidationService;
 
+    private ClientRegistry client;
+    private KeyPair keyPair;
+
+    @BeforeEach
+    void setup() {
+        when(oidcAPI.tokenURI()).thenReturn(TOKEN_URI);
+        when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
+        keyPair = generateKeyPair();
+    }
+
     @Nested
     class StaticPublicKeySource {
-        ClientRegistry client;
-        KeyPair keyPair;
 
         @BeforeEach
         void setup() {
-            when(configurationService.getOidcApiBaseURL()).thenReturn(OIDC_BASE_URI);
-            when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
-            keyPair = generateKeyPair();
             client = generateClientWithStaticPublicKeySource(keyPair.getPublic());
             clientSignatureValidationService =
                     new ClientSignatureValidationService(
-                            configurationService, rpPublicKeyCacheService, lambdaClient);
+                            configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
         @Test
@@ -126,18 +133,13 @@ class ClientSignatureValidationServiceTest {
 
     @Nested
     class JwksPublicKeySource {
-        ClientRegistry client;
-        KeyPair keyPair;
 
         @BeforeEach
         void setup() {
-            when(configurationService.getOidcApiBaseURL()).thenReturn(OIDC_BASE_URI);
-            when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
-            keyPair = generateKeyPair();
             client = generateClientWithJwksPublicKeySource();
             clientSignatureValidationService =
                     new ClientSignatureValidationService(
-                            configurationService, rpPublicKeyCacheService, lambdaClient);
+                            configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
         @Test
