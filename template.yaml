@@ -141,6 +141,7 @@ Conditions:
       !Equals [dev, !Ref Environment],
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
     ]
 
 Mappings:
