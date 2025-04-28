@@ -23,6 +23,37 @@ module "ipv_processing_identity_role" {
   }
 }
 
+// ATO-1128: this is a duplicate of the below module, ipv_processing_identity_role_with_orch_session_table_read_write_delete_access
+// we have to create a temporary module in order to swap to using it safely
+module "ipv_processing_identity_role_with_orch_cross_account_access" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "ipv-processing-identity-role-with-orch-session-combined-access"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.dynamo_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
+    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn,
+    aws_iam_policy.pepper_parameter_policy.arn,
+    aws_iam_policy.redis_parameter_policy.arn,
+    module.oidc_txma_audit.access_policy_arn,
+    local.account_modifiers_encryption_policy_arn,
+    local.client_registry_encryption_policy_arn,
+    local.identity_credentials_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn,
+    aws_iam_policy.dynamo_orch_session_encryption_key_cross_account_encrypt_decrypt_policy[0].arn,
+    aws_iam_policy.dynamo_orch_session_cross_account_read_write_delete_access_policy[0].arn,
+    aws_iam_policy.dynamo_orch_client_session_encryption_key_cross_account_decrypt_policy[0].arn,
+    aws_iam_policy.dynamo_orch_client_session_cross_account_read_and_delete_access_policy[0].arn,
+    aws_iam_policy.dynamo_orch_identity_credentials_cross_account_read_access_policy[0].arn
+  ]
+}
+
 module "ipv_processing_identity_role_with_orch_session_table_read_write_delete_access" {
   count = var.is_orch_stubbed ? 0 : 1
 
