@@ -128,14 +128,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  UseOrchIpvTokenSigningKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2216,14 +2208,7 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
-            - UseOrchIpvTokenSigningKey
-            - !Ref OrchIPVTokenSigningKmsKeyAlias
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                ipvTokenKeyArn,
-              ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
@@ -3965,14 +3950,7 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
-            - UseOrchIpvTokenSigningKey
-            - !Ref OrchIPVTokenSigningKmsKeyAlias
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                ipvTokenKeyArn,
-              ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
