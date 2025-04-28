@@ -46,10 +46,8 @@ module "ipv_processing_identity_role_with_orch_cross_account_access" {
     local.client_registry_encryption_policy_arn,
     local.identity_credentials_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
-    aws_iam_policy.dynamo_orch_session_encryption_key_cross_account_encrypt_decrypt_policy[0].arn,
-    aws_iam_policy.dynamo_orch_session_cross_account_read_write_delete_access_policy[0].arn,
-    aws_iam_policy.dynamo_orch_client_session_encryption_key_cross_account_decrypt_policy[0].arn,
-    aws_iam_policy.dynamo_orch_client_session_cross_account_read_and_delete_access_policy[0].arn,
+    aws_iam_policy.dynamo_orch_session_cross_account_read_write_delete_and_encryption_key_access_policy[0].arn,
+    aws_iam_policy.dynamo_orch_client_session_cross_account_read_and_delete_and_encryption_key_access_policy[0].arn,
     aws_iam_policy.dynamo_orch_identity_credentials_cross_account_read_access_policy[0].arn
   ]
 }
