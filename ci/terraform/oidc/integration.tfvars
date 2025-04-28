@@ -42,6 +42,7 @@ orch_environment                                   = "integration"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:058264132019:key/1b5c001b-ed53-4a7b-bfbe-5d0f596110b5"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:058264132019:key/fdf1686f-2d4d-4c7b-b3be-324b6ebba370"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:058264132019:key/808a8c1e-82d8-487e-abb8-e13d6564b426"
+auth_user_info_table_encryption_key_arn            = "arn:aws:kms:eu-west-2:058264132019:key/abdc6b18-1ff5-48d8-acf2-c4caade743d0"
 
 orch_openid_configuration_enabled    = true
 orch_jwks_enabled                    = true

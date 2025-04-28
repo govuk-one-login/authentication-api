@@ -29,6 +29,7 @@ orch_environment                                   = "staging"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:590183975515:key/156f87e0-001a-4ae8-a6c1-23f8f68b6e84"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:590183975515:key/b94d81a1-a41f-4e61-859c-87dcacb32e51"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3"
+auth_user_info_table_encryption_key_arn            = "arn:aws:kms:eu-west-2:590183975515:key/e0e84378-2220-499d-bc5d-03f9068d5ae2"
 cmk_for_back_channel_logout_enabled                = true
 
 contra_state_bucket = "di-auth-staging-tfstate"
