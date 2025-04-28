@@ -30,6 +30,7 @@ import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationExcept
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -38,6 +39,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -66,6 +68,7 @@ class ClientSignatureValidationServiceTest {
     @BeforeEach
     void setup() {
         when(oidcAPI.tokenURI()).thenReturn(TOKEN_URI);
+        when(oidcAPI.getIssuerURI()).thenReturn(OIDC_BASE_URI);
         when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
         keyPair = generateKeyPair();
     }
@@ -93,6 +96,31 @@ class ClientSignatureValidationServiceTest {
             var privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
 
             assertDoesNotThrow(
+                    () ->
+                            clientSignatureValidationService.validateTokenClientAssertion(
+                                    privateKeyJWT, client));
+        }
+
+        @Test
+        void shouldSuccessfullyReturnWhenValidatingPrivateKeyJWTWithIssuerAud() {
+            var privateKeyJWT =
+                    generatePrivateKeyJWT(keyPair.getPrivate(), Optional.of(OIDC_BASE_URI));
+
+            assertDoesNotThrow(
+                    () ->
+                            clientSignatureValidationService.validateTokenClientAssertion(
+                                    privateKeyJWT, client));
+        }
+
+        @Test
+        void shouldThrowWhenInvalidAudProvided() throws URISyntaxException {
+            var privateKeyJWT =
+                    generatePrivateKeyJWT(
+                            keyPair.getPrivate(),
+                            Optional.of(new URI("https://example.com/token")));
+
+            assertThrows(
+                    ClientSignatureValidationException.class,
                     () ->
                             clientSignatureValidationService.validateTokenClientAssertion(
                                     privateKeyJWT, client));
@@ -226,10 +254,15 @@ class ClientSignatureValidationServiceTest {
     }
 
     private static PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) {
+        return generatePrivateKeyJWT(privateKey, Optional.empty());
+    }
+
+    private static PrivateKeyJWT generatePrivateKeyJWT(
+            PrivateKey privateKey, Optional<URI> audience) {
         try {
             return new PrivateKeyJWT(
                     new ClientID(CLIENT_ID),
-                    TOKEN_URI,
+                    audience.orElse(TOKEN_URI),
                     JWSAlgorithm.RS256,
                     privateKey,
                     "12345",

@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
@@ -185,6 +186,144 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo(expectedVotClaim));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+
+        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
+        assertEquals(idToken.serialize(), clientSession.getIdTokenHint());
+        var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+        assertTrue(orchClientSession.isPresent());
+        assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
+    }
+
+    @Test
+    void shouldAllowIssuerUriAsPrivateKeyJwtAudience() throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+
+        var response =
+                makeTokenRequestWithPrivateKeyJWTAndSpecificAudience(
+                        CLIENT_ID,
+                        baseTokenRequest,
+                        keyPair.getPrivate(),
+                        new Audience(ROOT_RESOURCE_URL));
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+
+        var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
+        assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+
+        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
+        assertEquals(idToken.serialize(), clientSession.getIdTokenHint());
+        var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+        assertTrue(orchClientSession.isPresent());
+        assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
+    }
+
+    @Test
+    void AllowBothTokenAndIssuerUriAsAudienceArrayInPrivateKeyJwt() throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+
+        var response =
+                makeTokenRequestWithPrivateKeyJWTAndSpecificAudience(
+                        CLIENT_ID,
+                        baseTokenRequest,
+                        keyPair.getPrivate(),
+                        new Audience(ROOT_RESOURCE_URL));
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+
+        var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
+        assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+
+        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
+        assertEquals(idToken.serialize(), clientSession.getIdTokenHint());
+        var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+        assertTrue(orchClientSession.isPresent());
+        assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
+    }
+
+    @Test
+    void shouldReturn200WithTokensWhenPrivateKeyJwtContainsBothIssuerAndTokenURIAsAudienceList()
+            throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+
+        var response =
+                makeTokenRequestWithPrivateKeyJWTAndMultipleAudienceValues(
+                        CLIENT_ID,
+                        baseTokenRequest,
+                        keyPair.getPrivate(),
+                        List.of(
+                                new Audience(ROOT_RESOURCE_URL),
+                                new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT)));
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+
+        var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
+        assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
 
@@ -732,13 +871,32 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return makeTokenRequestWithPrivateKeyJWT(CLIENT_ID, requestParams, privateKey);
     }
 
-    private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWT(
-            String clientId, Map<String, List<String>> requestParams, PrivateKey privateKey)
+    private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWTAndMultipleAudienceValues(
+            String clientId,
+            Map<String, List<String>> requestParams,
+            PrivateKey privateKey,
+            List<Audience> audience)
             throws JOSEException {
         var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
-                        new ClientID(clientId), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+                        new ClientID(clientId), audience, expiryDate, null, null, new JWTID());
+        var privateKeyJWT =
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
+        requestParams.putAll(privateKeyJWT.toParameters());
+
+        var requestBody = URLUtils.serializeParameters(requestParams);
+        return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
+    }
+
+    private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWTAndSpecificAudience(
+            String clientId,
+            Map<String, List<String>> requestParams,
+            PrivateKey privateKey,
+            Audience audience)
+            throws JOSEException {
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        var claimsSet = new JWTAuthenticationClaimsSet(new ClientID(clientId), audience);
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
@@ -746,6 +904,16 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var requestBody = URLUtils.serializeParameters(requestParams);
         return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
+    }
+
+    private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWT(
+            String clientId, Map<String, List<String>> requestParams, PrivateKey privateKey)
+            throws JOSEException {
+        return makeTokenRequestWithPrivateKeyJWTAndSpecificAudience(
+                clientId,
+                requestParams,
+                privateKey,
+                new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
     }
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
