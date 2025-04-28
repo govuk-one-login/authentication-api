@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -195,6 +196,21 @@ public abstract class BaseFrontendHandler<T>
         clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 
         userContextBuilder.withOrchClientSession(orchClientSession.get());
+
+        var internalCommonSubjectId = orchSession.get().getInternalCommonSubjectId();
+        if (internalCommonSubjectId != null
+                && !internalCommonSubjectId.isBlank()
+                && orchClientSession.isPresent()) {
+            try {
+                userContextBuilder.withAuthUserInfo(
+                        authUserInfoStorageService.getAuthenticationUserInfo(
+                                orchSession.get().getInternalCommonSubjectId(), clientSessionId));
+            } catch (ParseException e) {
+                LOG.warn("error parsing authUserInfo. Message: {}", e.getMessage());
+            }
+        } else {
+            LOG.warn("cannot get authUserInfo");
+        }
 
         session.map(Session::getEmailAddress)
                 .map(authenticationService::getUserProfileFromEmail)
