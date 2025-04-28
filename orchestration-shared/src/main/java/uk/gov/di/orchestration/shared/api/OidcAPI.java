@@ -18,6 +18,10 @@ public class OidcAPI {
         return oidcApiBaseUrl;
     }
 
+    public URI getIssuerURI() {
+        return buildURI(oidcApiBaseUrl);
+    }
+
     public URI trustmarkURI() {
         return buildURI(oidcApiBaseUrl, "trustmark");
     }

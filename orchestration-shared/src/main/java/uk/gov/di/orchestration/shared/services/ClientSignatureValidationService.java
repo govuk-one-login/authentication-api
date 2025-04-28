@@ -65,11 +65,12 @@ public class ClientSignatureValidationService {
     public ClientSignatureValidationService(
             ConfigurationService configurationService,
             RpPublicKeyCacheService rpPublicKeyCacheService,
-            LambdaClient lambdaClient) {
+            LambdaClient lambdaClient,
+            OidcAPI oidcAPI) {
         this.configurationService = configurationService;
         this.rpPublicKeyCacheService = rpPublicKeyCacheService;
         this.lambdaClient = lambdaClient;
-        this.oidcAPI = new OidcAPI(configurationService);
+        this.oidcAPI = oidcAPI;
     }
 
     public void validate(SignedJWT signedJWT, ClientRegistry client)
