@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.serialization;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
@@ -11,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MfaDetailDeserializerTest {
 
@@ -39,5 +41,19 @@ class MfaDetailDeserializerTest {
         assertInstanceOf(RequestAuthAppMfaDetail.class, mfaDetail);
         assertEquals(MFAMethodType.AUTH_APP, ((RequestAuthAppMfaDetail) mfaDetail).mfaMethodType());
         assertEquals("123456", ((RequestAuthAppMfaDetail) mfaDetail).credential());
+    }
+
+    @Test
+    void shouldHandleUnknownMfaDetail() {
+        String json =
+                "{\"mfaMethodType\": \"UNKNOWN\", \"phoneNumber\": \"+447700900123\", \"otp\":\"123456\"}";
+        Gson gson =
+                new GsonBuilder()
+                        .registerTypeAdapter(MfaDetail.class, new MfaDetailDeserializer())
+                        .create();
+        assertThrows(
+                JsonParseException.class,
+                () -> gson.fromJson(json, MfaDetail.class)
+        );
     }
 }

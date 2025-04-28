@@ -45,7 +45,7 @@ public class MFAMethodsPutHandler
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
 
-    private final Json objectMapper = SerializationService.getInstance();
+    private final Json serializationService = SerializationService.getInstance();
 
     public MFAMethodsPutHandler() {
         this(ConfigurationService.getInstance());
@@ -224,7 +224,7 @@ public class MFAMethodsPutHandler
 
         try {
             var mfaMethodUpdateRequest =
-                    objectMapper.readValue(
+                    serializationService.readValue(
                             input.getBody(), MfaMethodCreateOrUpdateRequest.class, true);
             var putRequest =
                     new ValidPutRequest(
