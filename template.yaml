@@ -136,6 +136,8 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
+  UseOrchIpvTokenSigningKey:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2216,12 +2218,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              ipvTokenKeyArn,
-            ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseOrchIpvTokenSigningKey
+            - !Ref OrchIPVTokenSigningKmsKeyAlias
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                ipvTokenKeyArn,
+              ]
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
@@ -2675,7 +2679,6 @@ Resources:
           ORCH_IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
       Policies:
         - !Ref IpvTokenSigningKmsAccessPolicy
-        - !Ref OrchIpvTokenSigningKmsAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3974,12 +3977,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              ipvTokenKeyArn,
-            ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseOrchIpvTokenSigningKey
+            - !Ref OrchIPVTokenSigningKmsKeyAlias
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                ipvTokenKeyArn,
+              ]
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
@@ -5464,6 +5469,7 @@ Resources:
                   !Ref Environment,
                   ipvTokenKeyArn,
                 ]
+              - !GetAtt OrchIPVTokenSigningKmsKey.Arn
 
   OrchToAuthSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -5861,19 +5867,6 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: "*"
-
-  OrchIpvTokenSigningKmsAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowOrchIpvTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !GetAtt OrchIPVTokenSigningKmsKey.Arn
 
   #endregion
 

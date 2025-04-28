@@ -74,9 +74,7 @@ public class JwksService {
     }
 
     public JWK getPublicOrchIpvTokenJwkWithOpaqueId() {
-        // TODO: ATO-1315: Remove "inactive" reference from this log once we begin signing using
-        // this pair.
-        LOG.info("Retrieving Orch IPV token public key (inactive/unused at present)");
+        LOG.info("Retrieving Orch IPV token public key");
         return getPublicJWKWithKeyId(configurationService.getOrchIPVTokenSigningKeyAlias());
     }
 
