@@ -30,6 +30,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -109,6 +110,8 @@ class ProcessingIdentityHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
+    private final AuthenticationUserInfoStorageService authUserInfoStorageService =
+            mock(AuthenticationUserInfoStorageService.class);
     private final Session session = new Session();
     private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -143,7 +146,8 @@ class ProcessingIdentityHandlerTest {
                         cloudwatchMetricsService,
                         logoutService,
                         orchSessionService,
-                        orchClientSessionService);
+                        orchClientSessionService,
+                        authUserInfoStorageService);
     }
 
     @Test

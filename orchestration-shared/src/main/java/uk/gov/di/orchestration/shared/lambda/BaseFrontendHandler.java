@@ -17,6 +17,7 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuthenticationService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -54,6 +55,7 @@ public abstract class BaseFrontendHandler<T>
     protected final SessionService sessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
+    protected final AuthenticationUserInfoStorageService authUserInfoStorageService;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final OrchSessionService orchSessionService;
     protected final OrchClientSessionService orchClientSessionService;
@@ -64,6 +66,7 @@ public abstract class BaseFrontendHandler<T>
             SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
+            AuthenticationUserInfoStorageService authUserInfoStorageService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
         this.clazz = clazz;
@@ -71,6 +74,7 @@ public abstract class BaseFrontendHandler<T>
         this.sessionService = sessionService;
         this.clientService = clientService;
         this.authenticationService = authenticationService;
+        this.authUserInfoStorageService = authUserInfoStorageService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
     }
@@ -81,6 +85,8 @@ public abstract class BaseFrontendHandler<T>
         this.sessionService = new SessionService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
+        this.authUserInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }
@@ -94,6 +100,8 @@ public abstract class BaseFrontendHandler<T>
         this.sessionService = new SessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
+        this.authUserInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }

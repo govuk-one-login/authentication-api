@@ -23,6 +23,7 @@ import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -92,13 +93,15 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             CloudwatchMetricsService cloudwatchMetricsService,
             LogoutService logoutService,
             OrchSessionService orchSessionService,
-            OrchClientSessionService orchClientSessionService) {
+            OrchClientSessionService orchClientSessionService,
+            AuthenticationUserInfoStorageService authUserInfoStorageService) {
         super(
                 ProcessingIdentityRequest.class,
                 configurationService,
                 sessionService,
                 dynamoClientService,
                 dynamoService,
+                authUserInfoStorageService,
                 orchSessionService,
                 orchClientSessionService);
         this.dynamoIdentityService = dynamoIdentityService;
