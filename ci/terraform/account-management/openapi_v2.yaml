@@ -400,7 +400,7 @@ paths:
                   {
                     "mfaMethod":
                       {
-                        "priorityIdentifier": "BACKUP",
+                        "priorityIdentifier": "DEFAULT",
                         "method":
                           {
                             "mfaMethodType": "AUTH_APP",
@@ -408,6 +408,8 @@ paths:
                           },
                       },
                   }
+              swap-backup-with-default:
+                value: { "mfaMethod": { "priorityIdentifier": "DEFAULT" } }
         required: true
       responses:
         "200":
@@ -704,10 +706,10 @@ components:
         method:
           mfaMethodType: AUTH_APP
           credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+
     MfaMethodUpdate:
       required:
         - priorityIdentifier
-        - method
       type: object
       properties:
         priorityIdentifier:
@@ -721,6 +723,7 @@ components:
         method:
           mfaMethodType: SMS
           phoneNumber: "070"
+
     MfaMethodCreateRequest:
       required:
         - mfaMethod
@@ -748,6 +751,7 @@ components:
           method:
             mfaMethodType: AUTH_APP
             credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+
     SimpleError:
       type: object
       required: [code, message]

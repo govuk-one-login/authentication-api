@@ -13,7 +13,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -184,7 +184,7 @@ public class MFAMethodsPutHandler
             String publicSubjectId,
             String mfaIdentifier,
             UserProfile userProfile,
-            MfaMethodCreateOrUpdateRequest request) {}
+            MfaMethodUpdateRequest request) {}
 
     private Result<APIGatewayProxyResponseEvent, ValidPutRequest> validatePutRequest(
             APIGatewayProxyRequestEvent input) {
@@ -224,8 +224,7 @@ public class MFAMethodsPutHandler
 
         try {
             var mfaMethodUpdateRequest =
-                    objectMapper.readValue(
-                            input.getBody(), MfaMethodCreateOrUpdateRequest.class, true);
+                    objectMapper.readValue(input.getBody(), MfaMethodUpdateRequest.class, true);
             var putRequest =
                     new ValidPutRequest(
                             publicSubjectId, mfaIdentifier, userProfile, mfaMethodUpdateRequest);

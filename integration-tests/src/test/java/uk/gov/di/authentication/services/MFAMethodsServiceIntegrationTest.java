@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -731,8 +732,7 @@ class MFAMethodsServiceIntegrationTest {
         void returnsAnErrorWhenTheMfaIdentifierIsNotFound() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-            var request =
-                    MfaMethodCreateOrUpdateRequest.from(PriorityIdentifier.BACKUP, authAppDetail);
+            var request = MfaMethodUpdateRequest.from(PriorityIdentifier.BACKUP, authAppDetail);
 
             var result = mfaMethodsService.updateMfaMethod(EMAIL, "some-other-identifier", request);
 
@@ -752,7 +752,7 @@ class MFAMethodsServiceIntegrationTest {
                 var detailWithUpdatedCredential =
                         new RequestAuthAppMfaDetail(AUTH_APP_CREDENTIAL_TWO);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT, detailWithUpdatedCredential);
 
                 var result =
@@ -798,7 +798,7 @@ class MFAMethodsServiceIntegrationTest {
                 var detailWithUpdatedNumber =
                         new RequestSmsMfaDetail(phoneNumberInRequest, "123456");
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
 
                 var result =
@@ -843,7 +843,7 @@ class MFAMethodsServiceIntegrationTest {
                 var detailWithUpdatedNumber =
                         new RequestSmsMfaDetail(phoneNumberInRequest, "123456");
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
 
                 var result =
@@ -866,7 +866,7 @@ class MFAMethodsServiceIntegrationTest {
             void returnsAnErrorWhenAttemptingToUpdateWithAnInvalidNumber() {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT,
                                 new RequestSmsMfaDetail("not a real phone number", "123456"));
 
@@ -883,9 +883,7 @@ class MFAMethodsServiceIntegrationTest {
             @Test
             void returnsAnErrorWhenAttemptingToChangePriorityOfDefaultMethod() {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
-                var request =
-                        MfaMethodCreateOrUpdateRequest.from(
-                                PriorityIdentifier.BACKUP, authAppDetail);
+                var request = MfaMethodUpdateRequest.from(PriorityIdentifier.BACKUP, authAppDetail);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -911,8 +909,7 @@ class MFAMethodsServiceIntegrationTest {
                     MFAMethod existingMethod, MfaDetail requestedUpdate) {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
-                                PriorityIdentifier.DEFAULT, requestedUpdate);
+                        MfaMethodUpdateRequest.from(PriorityIdentifier.DEFAULT, requestedUpdate);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -940,8 +937,7 @@ class MFAMethodsServiceIntegrationTest {
                     MFAMethod existingMethod, MfaDetail requestedUpdate) {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
-                                PriorityIdentifier.DEFAULT, requestedUpdate);
+                        MfaMethodUpdateRequest.from(PriorityIdentifier.DEFAULT, requestedUpdate);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -964,7 +960,7 @@ class MFAMethodsServiceIntegrationTest {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT,
                                 new RequestSmsMfaDetail(
                                         backupPrioritySms.getDestination(), "123456"));
@@ -1012,8 +1008,7 @@ class MFAMethodsServiceIntegrationTest {
                     MFAMethod existingMethod, MfaDetail requestedUpdate) {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
-                                PriorityIdentifier.BACKUP, requestedUpdate);
+                        MfaMethodUpdateRequest.from(PriorityIdentifier.BACKUP, requestedUpdate);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -1032,7 +1027,7 @@ class MFAMethodsServiceIntegrationTest {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.BACKUP,
                                 new RequestSmsMfaDetail("not a real phone number", "123456"));
 
@@ -1075,8 +1070,7 @@ class MFAMethodsServiceIntegrationTest {
                     MFAMethod existingMethod, MfaDetail requestedUpdate) {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
-                                PriorityIdentifier.BACKUP, requestedUpdate);
+                        MfaMethodUpdateRequest.from(PriorityIdentifier.BACKUP, requestedUpdate);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -1097,7 +1091,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 var detailWithUpdatedNumber = new RequestSmsMfaDetail("07900000111", "123456");
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.BACKUP, detailWithUpdatedNumber);
 
                 var result =
@@ -1125,7 +1119,7 @@ class MFAMethodsServiceIntegrationTest {
                 var detailWithUpdatedCredential =
                         new RequestAuthAppMfaDetail("a-very-different-credential");
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.BACKUP, detailWithUpdatedCredential);
 
                 var result =
@@ -1163,8 +1157,7 @@ class MFAMethodsServiceIntegrationTest {
                     MFAMethod existingMethod, MfaDetail requestedUpdate) {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
-                                PriorityIdentifier.BACKUP, requestedUpdate);
+                        MfaMethodUpdateRequest.from(PriorityIdentifier.BACKUP, requestedUpdate);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -1182,7 +1175,7 @@ class MFAMethodsServiceIntegrationTest {
             void returnsAFailureWhenAttemptingToUpdateABackupWithoutADefault() {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
                 var request =
-                        MfaMethodCreateOrUpdateRequest.from(
+                        MfaMethodUpdateRequest.from(
                                 PriorityIdentifier.DEFAULT,
                                 new RequestSmsMfaDetail(
                                         backupPrioritySms.getDestination(), "123456"));
