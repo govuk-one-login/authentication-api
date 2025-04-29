@@ -187,19 +187,14 @@ public abstract class BaseFrontendHandler<T>
         session.map(Session::getEmailAddress)
                 .map(authenticationService::getUserProfileFromEmail)
                 .ifPresentOrElse(
-                        userProfile ->
-                                userContextBuilder
-                                        .withUserProfile(userProfile)
-                                        .withUserAuthenticated(true),
+                        userContextBuilder::withUserProfile,
                         () -> {
                             if (request instanceof BaseFrontendRequest baseFrontendRequest)
-                                userContextBuilder
-                                        .withUserProfile(
-                                                authenticationService.getUserProfileFromEmail(
-                                                        baseFrontendRequest
-                                                                .getEmail()
-                                                                .toLowerCase(Locale.ROOT)))
-                                        .withUserAuthenticated(false);
+                                userContextBuilder.withUserProfile(
+                                        authenticationService.getUserProfileFromEmail(
+                                                baseFrontendRequest
+                                                        .getEmail()
+                                                        .toLowerCase(Locale.ROOT)));
                         });
 
         userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
