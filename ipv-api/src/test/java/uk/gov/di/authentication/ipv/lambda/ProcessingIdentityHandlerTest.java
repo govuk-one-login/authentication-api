@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityInterventionResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
@@ -25,6 +26,7 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -38,6 +40,7 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -52,6 +55,7 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -63,6 +67,7 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSIO
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -107,6 +112,10 @@ class ProcessingIdentityHandlerTest {
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private ProcessingIdentityHandler handler;
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(BaseFrontendHandler.class);
 
     @BeforeEach
     void setup() {
@@ -154,6 +163,22 @@ class ProcessingIdentityHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
         verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
+    void shouldReturnErrorIfOrchSessionHasNoInternalCommonSubjectId() throws Json.JsonException {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString()))
+                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        verifyNoInteractions(cloudwatchMetricsService);
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Orch session has no internalCommonSubjectId")));
     }
 
     @Test
