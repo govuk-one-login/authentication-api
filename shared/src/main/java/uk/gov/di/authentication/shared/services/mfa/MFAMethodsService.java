@@ -237,36 +237,13 @@ public class MFAMethodsService {
             MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
             List<MFAMethod> allMethods) {
-        if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            var maybePhoneNumberWithCountryCode =
-                    getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
 
-            if (maybePhoneNumberWithCountryCode.isFailure()) {
-                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
-                return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
-            }
-
-            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
-            var changesPhoneNumber =
-                    !phoneNumberWithCountryCode.equals(backupMethod.getDestination());
-            if (changesPhoneNumber) {
-                return Result.failure(
-                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER);
-            }
-        } else {
-            var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
-            var changesAuthAppCredential =
-                    !authAppDetail.credential().equals(backupMethod.getCredentialValue());
-            if (changesAuthAppCredential) {
-                return Result.failure(
-                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL);
-            }
-        }
-
-        if (updatedMethod.priorityIdentifier().equals(BACKUP)) {
+        if (updatedMethod.method() != null) {
+            // ERROR a backup method can not be edited.
             return Result.failure(
-                    MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+                    MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD);
         }
+
         var maybeDefaultMethod =
                 allMethods.stream()
                         .filter(m -> Objects.equals(m.getPriority(), DEFAULT.name()))
@@ -278,6 +255,7 @@ public class MFAMethodsService {
         }
 
         var defaultMethod = maybeDefaultMethod.get();
+
         var databaseUpdateResult =
                 persistentService.updateAllMfaMethodsForUser(
                         email,

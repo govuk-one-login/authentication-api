@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.api;
 
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -230,24 +231,16 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
-        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
         var backupMfaIdentifier = backupPrioritySms.getMfaIdentifier();
         var updateRequest =
-                format(
                         """
                                 {
                                   "mfaMethod": {
-                                    "priorityIdentifier": "DEFAULT",
-                                    "method": {
-                                        "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s",
-                                        "otp": "%s"
-                                    }
+                                    "priorityIdentifier": "DEFAULT"
                                   }
                                 }
-                                """,
-                        backupPrioritySms.getDestination(), otp);
+                                """;
 
         var response =
                 makeRequest(
@@ -473,7 +466,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void duplicateUpdatesShouldBeIdempotentForUpdateToBackupMethod() {
+    void cannotEditBackupMethod() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
         userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
@@ -486,7 +479,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.entry("publicSubjectId", testPublicSubject),
                         Map.entry("mfaIdentifier", mfaIdentifierOfBackup));
 
-        var firstResponse =
+        var response =
                 makeRequest(
                         Optional.of(updateRequest),
                         Collections.emptyMap(),
@@ -494,44 +487,18 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         requestPathParams,
                         Map.of("principalId", testInternalSubject));
 
-        assertEquals(200, firstResponse.getStatusCode());
+        assertEquals(400, response.getStatusCode());
 
         var retrievedMfaMethods = userStore.getMfaMethod(TEST_EMAIL);
 
         assertEquals(2, retrievedMfaMethods.size());
 
-        var retrievedDefaultAfterFirstRequest = getMethodWithPriority(retrievedMfaMethods, DEFAULT);
-        var retrievedBackupAfterFirstRequest = getMethodWithPriority(retrievedMfaMethods, BACKUP);
+        assertRetrievedMethodHasSameBasicFields(
+                defaultPriorityAuthApp, getMethodWithPriority(retrievedMfaMethods, DEFAULT));
 
-        assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
-                defaultPriorityAuthApp, retrievedBackupAfterFirstRequest, BACKUP);
-        assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
-                backupPrioritySms, retrievedDefaultAfterFirstRequest, DEFAULT);
-
-        for (int i = 0; i < 5; i++) {
-            updateRequest = buildUpdateRequestWithOtp();
-            var response =
-                    makeRequest(
-                            Optional.of(updateRequest),
-                            Collections.emptyMap(),
-                            Collections.emptyMap(),
-                            requestPathParams,
-                            Map.of("principalId", testInternalSubject));
-
-            assertEquals(204, response.getStatusCode());
-
-            var retrievedMethodsAfterSubsequentUpdates = userStore.getMfaMethod(TEST_EMAIL);
-
-            assertEquals(2, retrievedMethodsAfterSubsequentUpdates.size());
-
-            var retrievedDefault =
-                    getMethodWithPriority(retrievedMethodsAfterSubsequentUpdates, DEFAULT);
-            var retrievedBackup = getMethodWithPriority(retrievedMfaMethods, BACKUP);
-
-            assertEquals(retrievedBackupAfterFirstRequest, retrievedBackup);
-            assertEquals(retrievedDefaultAfterFirstRequest, retrievedDefault);
-        }
-    }
+        assertRetrievedMethodHasSameBasicFields(
+                backupPrioritySms, getMethodWithPriority(retrievedMfaMethods, BACKUP));
+  }
 
     private static String buildUpdateRequestWithOtp() {
         var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
