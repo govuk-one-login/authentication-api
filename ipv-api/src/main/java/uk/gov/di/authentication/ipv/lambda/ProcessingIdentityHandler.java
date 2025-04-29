@@ -15,7 +15,6 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
@@ -122,7 +121,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         LOG.info("ProcessingIdentity request received");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
-            UserProfile userProfile = userContext.getUserProfile().orElseThrow();
             ClientRegistry client = userContext.getClient().orElseThrow();
 
             int processingAttempts =
@@ -191,9 +189,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             LOG.error("Unable to generate ProcessingIdentityResponse");
             throw new RuntimeException();
         } catch (NoSuchElementException e) {
-            LOG.warn(
-                    "Issue retrieving UserProfile or ClientRegistry from UserContext. UserProfile is present: {}, ClientRegistry is present: {}",
-                    userContext.getUserProfile().isPresent(),
+            LOG.error(
+                    "Issue retrieving ClientRegistry from UserContext. ClientRegistry is present: {}",
                     userContext.getClient().isPresent());
             throw new RuntimeException();
         }

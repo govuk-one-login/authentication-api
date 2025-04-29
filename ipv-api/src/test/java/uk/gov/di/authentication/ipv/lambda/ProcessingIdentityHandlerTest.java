@@ -24,9 +24,7 @@ import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -44,9 +42,7 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,10 +73,6 @@ class ProcessingIdentityHandlerTest {
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
-    private static final String PHONE_NUMBER = "01234567890";
-    private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
-    private static final Date UPDATED_DATE_TIME = NowHelper.now();
-    private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
@@ -118,12 +110,8 @@ class ProcessingIdentityHandlerTest {
 
     @BeforeEach
     void setup() {
-        var userProfile = generateUserProfile();
         when(dynamoClientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry()));
-        when(dynamoService.getUserProfileFromEmail(EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         Map<String, String> headers = new HashMap<>();
@@ -399,18 +387,5 @@ class ProcessingIdentityHandlerTest {
                 .withScopes(singletonList("openid"))
                 .withCookieConsentShared(true)
                 .withSubjectType("pairwise");
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT_ID)
-                .withSubjectID(SUBJECT_ID)
-                .withSalt(SALT)
-                .withCreated(CREATED_DATE_TIME.toString())
-                .withUpdated(UPDATED_DATE_TIME.toString());
     }
 }
