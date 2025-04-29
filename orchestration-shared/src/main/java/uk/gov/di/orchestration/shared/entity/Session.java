@@ -67,10 +67,6 @@ public class Session {
         return this.emailAddress.equals(emailAddress);
     }
 
-    public String getEmailAddress() {
-        return emailAddress;
-    }
-
     public Session setEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
         return this;
