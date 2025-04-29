@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.state.UserContext;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -156,10 +157,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userContext.getSessionId(),
                             client.getClientID(),
                             AuditService.UNKNOWN,
-                            userContext
-                                    .getUserProfile()
-                                    .map(UserProfile::getEmail)
-                                    .orElse(AuditService.UNKNOWN),
+                            Optional.ofNullable(request.getEmail()).orElse(AuditService.UNKNOWN),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
