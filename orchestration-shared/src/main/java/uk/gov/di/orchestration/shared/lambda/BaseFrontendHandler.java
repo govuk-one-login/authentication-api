@@ -154,6 +154,12 @@ public abstract class BaseFrontendHandler<T>
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
+        if (orchSession.get().getInternalCommonSubjectId() == null
+                || orchSession.get().getInternalCommonSubjectId().isBlank()) {
+            LOG.warn("Orch session has no internalCommonSubjectId");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
         Optional<String> userLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;
