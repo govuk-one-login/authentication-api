@@ -15,7 +15,6 @@ public class UserContext {
     private final String sessionId;
     private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
-    private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
     private final OrchClientSessionItem orchClientSession;
     private final SupportedLanguage userLanguage;
@@ -27,7 +26,6 @@ public class UserContext {
             String sessionId,
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
-            boolean userAuthenticated,
             Optional<ClientRegistry> client,
             OrchClientSessionItem orchClientSession,
             SupportedLanguage userLanguage,
@@ -37,7 +35,6 @@ public class UserContext {
         this.sessionId = sessionId;
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
-        this.userAuthenticated = userAuthenticated;
         this.client = client;
         this.orchClientSession = orchClientSession;
         this.userLanguage = userLanguage;
@@ -59,10 +56,6 @@ public class UserContext {
 
     public Optional<UserCredentials> getUserCredentials() {
         return userCredentials;
-    }
-
-    public boolean isUserAuthenticated() {
-        return userAuthenticated;
     }
 
     public Optional<ClientRegistry> getClient() {
@@ -102,7 +95,6 @@ public class UserContext {
         private String sessionId;
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
-        private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
         private OrchClientSessionItem orchClientSession;
         private SupportedLanguage userLanguage;
@@ -129,11 +121,6 @@ public class UserContext {
 
         public Builder withUserCredentials(Optional<UserCredentials> userCredentials) {
             this.userCredentials = userCredentials;
-            return this;
-        }
-
-        public Builder withUserAuthenticated(boolean userAuthenticated) {
-            this.userAuthenticated = userAuthenticated;
             return this;
         }
 
@@ -172,7 +159,6 @@ public class UserContext {
                     sessionId,
                     userProfile,
                     userCredentials,
-                    userAuthenticated,
                     client,
                     orchClientSession,
                     userLanguage,
