@@ -5,7 +5,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserCredentials;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.util.Optional;
@@ -13,7 +12,6 @@ import java.util.Optional;
 public class UserContext {
     private final Session session;
     private final String sessionId;
-    private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
     private final Optional<ClientRegistry> client;
     private final OrchClientSessionItem orchClientSession;
@@ -24,7 +22,6 @@ public class UserContext {
     protected UserContext(
             Session session,
             String sessionId,
-            Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
             Optional<ClientRegistry> client,
             OrchClientSessionItem orchClientSession,
@@ -33,7 +30,6 @@ public class UserContext {
             OrchSessionItem orchSession) {
         this.session = session;
         this.sessionId = sessionId;
-        this.userProfile = userProfile;
         this.userCredentials = userCredentials;
         this.client = client;
         this.orchClientSession = orchClientSession;
@@ -48,10 +44,6 @@ public class UserContext {
 
     public String getSessionId() {
         return sessionId;
-    }
-
-    public Optional<UserProfile> getUserProfile() {
-        return userProfile;
     }
 
     public Optional<UserCredentials> getUserCredentials() {
@@ -93,7 +85,6 @@ public class UserContext {
     public static class Builder {
         private final Session session;
         private String sessionId;
-        private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private Optional<ClientRegistry> client = Optional.empty();
         private OrchClientSessionItem orchClientSession;
@@ -107,15 +98,6 @@ public class UserContext {
 
         public Builder withSessionId(String sessionId) {
             this.sessionId = sessionId;
-            return this;
-        }
-
-        public Builder withUserProfile(UserProfile userProfile) {
-            return withUserProfile(Optional.of(userProfile));
-        }
-
-        public Builder withUserProfile(Optional<UserProfile> userProfile) {
-            this.userProfile = userProfile;
             return this;
         }
 
@@ -157,7 +139,6 @@ public class UserContext {
             return new UserContext(
                     session,
                     sessionId,
-                    userProfile,
                     userCredentials,
                     client,
                     orchClientSession,
