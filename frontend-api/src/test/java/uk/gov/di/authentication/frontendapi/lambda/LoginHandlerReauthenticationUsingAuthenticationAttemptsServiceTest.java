@@ -55,6 +55,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -167,6 +168,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -210,7 +212,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         cloudwatchMetricsService,
                         commonPasswordsService,
                         authenticationAttemptsService,
-                        authSessionService);
+                        authSessionService,
+                        mfaMethodsService);
     }
 
     @ParameterizedTest
