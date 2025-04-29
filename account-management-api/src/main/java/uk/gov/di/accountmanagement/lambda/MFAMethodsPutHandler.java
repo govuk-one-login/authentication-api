@@ -11,6 +11,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
@@ -45,7 +46,7 @@ public class MFAMethodsPutHandler
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
 
-    private final Json objectMapper = SerializationService.getInstance();
+    private final Json serialisationService = SerializationService.getInstance();
 
     public MFAMethodsPutHandler() {
         this(ConfigurationService.getInstance());
@@ -99,23 +100,25 @@ public class MFAMethodsPutHandler
 
         var putRequest = validRequestOrErrorResponse.getSuccess();
 
-        var maybeMigrationErrorResponse =
-                migrateMfaCredentialsForUserIfRequired(
-                        putRequest.userProfile, mfaMethodsService, LOG);
+        if (putRequest.request().mfaMethod().priorityIdentifier().toString().equalsIgnoreCase(PriorityIdentifier.DEFAULT.name())) {
+            var maybeMigrationErrorResponse =
+                    migrateMfaCredentialsForUserIfRequired(
+                            putRequest.userProfile, mfaMethodsService, LOG);
 
-        if (maybeMigrationErrorResponse.isPresent()) {
-            return maybeMigrationErrorResponse.get();
-        }
+            if (maybeMigrationErrorResponse.isPresent()) {
+                return maybeMigrationErrorResponse.get();
+            }
 
-        if (putRequest.request.mfaMethod().method()
-                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            boolean isValidOtpCode =
-                    codeStorageService.isValidOtpCode(
-                            putRequest.userProfile.getEmail(),
-                            requestSmsMfaDetail.otp(),
-                            NotificationType.VERIFY_PHONE_NUMBER);
-            if (!isValidOtpCode) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+            if (putRequest.request.mfaMethod().method()
+                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+                boolean isValidOtpCode =
+                        codeStorageService.isValidOtpCode(
+                                putRequest.userProfile.getEmail(),
+                                requestSmsMfaDetail.otp(),
+                                NotificationType.VERIFY_PHONE_NUMBER);
+                if (!isValidOtpCode) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+                }
             }
         }
 
@@ -152,12 +155,10 @@ public class MFAMethodsPutHandler
                 switch (failureReason) {
                     case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1072);
-                    case ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1075);
-                    case ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1076);
                     case ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
                             500, ErrorResponse.ERROR_1077);
+                    case CANNOT_EDIT_MFA_BACKUP_METHOD -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1077);
                     case UNEXPECTED_ERROR -> generateApiGatewayProxyErrorResponse(
                             500, ErrorResponse.ERROR_1071);
                     case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
@@ -205,14 +206,17 @@ public class MFAMethodsPutHandler
 
         var maybeUserProfile =
                 authenticationService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+
         if (maybeUserProfile.isEmpty()) {
             LOG.error("Unknown public subject ID");
             return Result.failure(
                     generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
         }
+
         UserProfile userProfile = maybeUserProfile.get();
 
         Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+
         if (PrincipalValidationHelper.principalIsInvalid(
                 userProfile,
                 configurationService.getInternalSectorUri(),
@@ -224,10 +228,12 @@ public class MFAMethodsPutHandler
 
         try {
             var mfaMethodUpdateRequest =
-                    objectMapper.readValue(input.getBody(), MfaMethodUpdateRequest.class, true);
+                    serialisationService.readValue(input.getBody(), MfaMethodUpdateRequest.class, true);
+
             var putRequest =
                     new ValidPutRequest(
                             publicSubjectId, mfaIdentifier, userProfile, mfaMethodUpdateRequest);
+
             return Result.success(putRequest);
         } catch (Json.JsonException e) {
             return Result.failure(

@@ -269,14 +269,6 @@ class MFAMethodsPutHandlerTest {
                         404,
                         Optional.of(ErrorResponse.ERROR_1065)),
                 Arguments.of(
-                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL,
-                        400,
-                        Optional.of(ErrorResponse.ERROR_1076)),
-                Arguments.of(
-                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER,
-                        400,
-                        Optional.of(ErrorResponse.ERROR_1075)),
-                Arguments.of(
                         MfaUpdateFailureReason.INVALID_PHONE_NUMBER,
                         400,
                         Optional.of(ErrorResponse.ERROR_1012)),
