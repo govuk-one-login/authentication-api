@@ -7,8 +7,8 @@ public class DestroySessionsRequest {
     private final String sessionId;
     private final List<String> clientSessions;
 
-    public DestroySessionsRequest(String sessionId, Session session) {
-        this(sessionId, session.getClientSessions());
+    public DestroySessionsRequest(String sessionId, OrchSessionItem orchSession) {
+        this(sessionId, orchSession.getClientSessions());
     }
 
     public DestroySessionsRequest(String sessionId, List<String> clientSessions) {

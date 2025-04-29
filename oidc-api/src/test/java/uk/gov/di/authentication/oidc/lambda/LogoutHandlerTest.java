@@ -205,7 +205,7 @@ class LogoutHandlerTest {
 
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        session.getClientSessions().add("expired-client-session-id");
+        orchSession.getClientSessions().add("expired-client-session-id");
         saveSession(session);
         handler.handleRequest(event, context);
 
@@ -236,7 +236,8 @@ class LogoutHandlerTest {
     }
 
     private Session generateSession() {
-        return new Session().addClientSession(CLIENT_SESSION_ID);
+        orchSession.addClientSession(CLIENT_SESSION_ID);
+        return new Session();
     }
 
     private void saveSession(Session session) {
@@ -278,7 +279,7 @@ class LogoutHandlerTest {
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {
-        session.getClientSessions().add(clientSessionId);
+        orchSession.getClientSessions().add(clientSessionId);
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }
