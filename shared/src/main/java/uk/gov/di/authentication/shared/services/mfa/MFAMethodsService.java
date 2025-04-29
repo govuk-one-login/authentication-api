@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -200,7 +201,7 @@ public class MFAMethodsService {
     }
 
     public Result<MfaUpdateFailureReason, List<MFAMethod>> updateMfaMethod(
-            String email, String mfaIdentifier, MfaMethodCreateOrUpdateRequest request) {
+            String email, String mfaIdentifier, MfaMethodUpdateRequest request) {
         var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
 
         var maybeMethodToUpdate =
@@ -233,7 +234,7 @@ public class MFAMethodsService {
 
     private Result<MfaUpdateFailureReason, List<MFAMethod>> handleBackupMethodUpdate(
             MFAMethod backupMethod,
-            MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
+            MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
             List<MFAMethod> allMethods) {
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
@@ -301,7 +302,7 @@ public class MFAMethodsService {
 
     private Result<MfaUpdateFailureReason, List<MFAMethod>> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
-            MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
+            MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
             String mfaIdentifier,
             List<MFAMethod> allMethodsForUser) {
