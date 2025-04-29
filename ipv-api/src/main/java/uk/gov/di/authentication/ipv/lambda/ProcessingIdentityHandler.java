@@ -16,7 +16,6 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
@@ -35,7 +34,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -125,11 +123,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         try {
             UserProfile userProfile = userContext.getUserProfile().orElseThrow();
             ClientRegistry client = userContext.getClient().orElseThrow();
-            var internalPairwiseSubjectId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
-                            authenticationService.getOrGenerateSalt(userProfile));
 
             int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
@@ -183,7 +176,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                 "AIS: getAccountIntervention",
                                 () ->
                                         accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                userContext
+                                                        .getOrchSession()
+                                                        .getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getSuspended() || intervention.getBlocked())) {
                     return performIntervention(input, userContext, client, intervention);

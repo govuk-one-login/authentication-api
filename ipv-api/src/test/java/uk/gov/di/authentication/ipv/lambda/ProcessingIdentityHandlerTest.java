@@ -110,7 +110,8 @@ class ProcessingIdentityHandlerTest {
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final Session session = new Session();
-    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(PAIRWISE_SUBJECT);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private ProcessingIdentityHandler handler;
@@ -259,7 +260,7 @@ class ProcessingIdentityHandlerTest {
         verify(logoutService)
                 .handleAccountInterventionLogout(
                         new DestroySessionsRequest(SESSION_ID, List.of()),
-                        null,
+                        PAIRWISE_SUBJECT,
                         event,
                         CLIENT_ID,
                         intervention);
