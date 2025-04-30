@@ -20,7 +20,7 @@ variable "aws_dynamodb_endpoint" {
 
 variable "terms_and_conditions" {
   type    = string
-  default = "1.12"
+  default = "1.13"
 }
 
 variable "logging_endpoint_arns" {
