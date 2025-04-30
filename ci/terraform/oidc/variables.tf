@@ -116,7 +116,7 @@ variable "custom_doc_app_claim_enabled" {
 
 variable "terms_and_conditions" {
   type    = string
-  default = "1.12"
+  default = "1.13"
 }
 
 variable "enable_api_gateway_execution_logging" {
