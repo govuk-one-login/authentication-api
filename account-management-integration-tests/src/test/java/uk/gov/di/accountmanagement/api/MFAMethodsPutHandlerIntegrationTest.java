@@ -2,7 +2,6 @@ package uk.gov.di.accountmanagement.api;
 
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -234,7 +233,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var backupMfaIdentifier = backupPrioritySms.getMfaIdentifier();
         var updateRequest =
-                        """
+                """
                                 {
                                   "mfaMethod": {
                                     "priorityIdentifier": "DEFAULT"
@@ -498,7 +497,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertRetrievedMethodHasSameBasicFields(
                 backupPrioritySms, getMethodWithPriority(retrievedMfaMethods, BACKUP));
-  }
+    }
 
     private static String buildUpdateRequestWithOtp() {
         var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);

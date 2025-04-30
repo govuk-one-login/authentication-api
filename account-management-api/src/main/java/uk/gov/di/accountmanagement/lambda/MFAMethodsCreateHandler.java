@@ -16,7 +16,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -114,8 +114,7 @@ public class MFAMethodsCreateHandler
         if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
 
         try {
-            MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
-                    readMfaMethodCreateRequest(input);
+            MfaMethodCreateRequest mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
 
@@ -174,19 +173,17 @@ public class MFAMethodsCreateHandler
         };
     }
 
-    private MfaMethodCreateOrUpdateRequest readMfaMethodCreateRequest(
-            APIGatewayProxyRequestEvent input) throws Json.JsonException {
+    private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
+            throws Json.JsonException {
 
-        MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest;
+        MfaMethodCreateRequest mfaMethodCreateRequest;
         try {
             mfaMethodCreateRequest =
                     segmentedFunctionCall(
                             "SerializationService::GSON::fromJson",
                             () ->
                                     objectMapper.readValue(
-                                            input.getBody(),
-                                            MfaMethodCreateOrUpdateRequest.class,
-                                            true));
+                                            input.getBody(), MfaMethodCreateRequest.class, true));
 
         } catch (RuntimeException e) {
             LOG.error("Error during JSON deserialization", e);

@@ -100,7 +100,12 @@ public class MFAMethodsPutHandler
 
         var putRequest = validRequestOrErrorResponse.getSuccess();
 
-        if (putRequest.request().mfaMethod().priorityIdentifier().toString().equalsIgnoreCase(PriorityIdentifier.DEFAULT.name())) {
+        if (putRequest
+                .request()
+                .mfaMethod()
+                .priorityIdentifier()
+                .toString()
+                .equalsIgnoreCase(PriorityIdentifier.DEFAULT.name())) {
             var maybeMigrationErrorResponse =
                     migrateMfaCredentialsForUserIfRequired(
                             putRequest.userProfile, mfaMethodsService, LOG);
@@ -228,7 +233,8 @@ public class MFAMethodsPutHandler
 
         try {
             var mfaMethodUpdateRequest =
-                    serialisationService.readValue(input.getBody(), MfaMethodUpdateRequest.class, true);
+                    serialisationService.readValue(
+                            input.getBody(), MfaMethodUpdateRequest.class, true);
 
             var putRequest =
                     new ValidPutRequest(

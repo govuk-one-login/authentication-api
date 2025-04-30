@@ -43,7 +43,7 @@ http :8080/v1/mfa-methods/get-when-user-with-single-mfa-type-app
 # GET 400 error responses
 http :8080/v1/mfa-methods/get-when-user-not-found-or-no-match
 http :8080/v1/mfa-methods/get-when-new-method-management-api-not-available
-http :8080/v1/mfa-methods/get-when-error-retrieving-mfa-methods
+http :8080/v1/mfa-methods/get-when-500-error-retrieving-mfa-methods
 http :8080/v1/mfa-methods/get-when-account-management-api-unexpected-error
 http :8080/v1/mfa-methods/get-when-invalid-principal-in-request
 
