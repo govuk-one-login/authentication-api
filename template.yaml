@@ -128,14 +128,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  IsOrchIpvTokenSigningKeyPublishEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   UseOrchIpvTokenSigningKey:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -2678,10 +2670,6 @@ Resources:
               !Ref Environment,
               ipvTokenKeyArn,
             ]
-          ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED: !If
-            - IsOrchIpvTokenSigningKeyPublishEnabled
-            - true
-            - false
           ORCH_IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
       Policies:
         - !Ref IpvTokenSigningKmsAccessPolicy

@@ -39,9 +39,7 @@ class IpvJwksHandlerTest {
     }
 
     @Test
-    void shouldReturnASingleJwkWhenOrchIpvJwkPublishEnabled() {
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-
+    void shouldReturnASingleJwk() {
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
@@ -53,8 +51,6 @@ class IpvJwksHandlerTest {
 
     @Test
     void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-
         when(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
@@ -65,20 +61,7 @@ class IpvJwksHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenOrchIpvJwkPublishDisabled() {
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(false);
-
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(500));
-        assertThat(result, hasBody("Error providing IpvJwks data"));
-    }
-
-    @Test
     void shouldSetACacheHeaderOfOneDayOnSuccess() {
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
 
         assertThat(response, hasHeader("Cache-Control", "max-age=86400"));

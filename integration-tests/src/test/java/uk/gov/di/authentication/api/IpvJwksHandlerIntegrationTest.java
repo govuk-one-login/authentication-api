@@ -28,7 +28,7 @@ class IpvJwksHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
         assertThat(response, hasStatus(200));
-        assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(2));
+        assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(1));
 
         assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
@@ -46,11 +46,6 @@ class IpvJwksHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.orchIpvPrivateKeyJwtSignerExtension = orchIpvPrivateKeyJwtSigner;
-        }
-
-        @Override
-        public boolean isOrchIPVTokenSigningKeyPublishEnabled() {
-            return true;
         }
 
         @Override
