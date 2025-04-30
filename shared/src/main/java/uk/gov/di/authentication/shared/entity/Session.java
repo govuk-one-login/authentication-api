@@ -49,10 +49,6 @@ public class Session {
         initializeCodeRequestMap();
     }
 
-    public String getEmailAddress() {
-        return emailAddress;
-    }
-
     public Session setEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
         return this;
