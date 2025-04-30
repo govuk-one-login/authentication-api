@@ -50,14 +50,28 @@ public class RemoteJwksService {
                         .build();
 
         HttpResponse<String> response;
-        String jwksJson;
-        try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            jwksJson = response.body();
-        } catch (IOException ioException) {
-            return Result.failure(JwksServiceFailureReason.IO_FAILURE);
-        } catch (InterruptedException interruptedException) {
-            return Result.failure(JwksServiceFailureReason.INTERRUPTED_FAILURE);
+        String jwksJson = null;
+        int attemptCount = 0;
+        int maxAttempts = 3;
+
+        while (attemptCount <= maxAttempts) {
+            try {
+                response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                jwksJson = response.body();
+                break;
+            } catch (IOException ioException) {
+                if (attemptCount == maxAttempts) {
+                    return Result.failure(JwksServiceFailureReason.IO_FAILURE);
+                } else {
+                    attemptCount++;
+                }
+            } catch (InterruptedException interruptedException) {
+                if (attemptCount == maxAttempts) {
+                    return Result.failure(JwksServiceFailureReason.INTERRUPTED_FAILURE);
+                } else {
+                    attemptCount++;
+                }
+            }
         }
 
         JWKSet jwks;
