@@ -91,13 +91,6 @@ public class RedisExtension
         redis.saveWithExpiry("state:" + state.getValue(), clientSessionId, 3600);
     }
 
-    public void addClientSessionIdToSession(String clientSessionId, String sessionId)
-            throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.addClientSession(clientSessionId);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-    }
-
     public void addAuthRequestToSession(
             String clientSessionId,
             String sessionId,
@@ -116,7 +109,6 @@ public class RedisExtension
             LocalDateTime creationDate)
             throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.addClientSession(clientSessionId);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),

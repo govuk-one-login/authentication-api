@@ -285,7 +285,6 @@ class AuthenticationCallbackHandlerTest {
                         logoutService,
                         authFrontend,
                         noSessionOrchestrationService);
-        session.resetClientSessions();
         orchSession.resetClientSessions();
     }
 
@@ -1356,7 +1355,6 @@ class AuthenticationCallbackHandlerTest {
 
         private void withPreviousSharedSessionDueToMaxAge() {
             var previousSharedSession = new Session();
-            PREVIOUS_CLIENT_SESSIONS.forEach(previousSharedSession::addClientSession);
             previousSharedSession.setEmailAddress(TEST_EMAIL_ADDRESS);
             when(sessionService.getSession(PREVIOUS_SESSION_ID))
                     .thenReturn(Optional.of(previousSharedSession));
@@ -1382,7 +1380,7 @@ class AuthenticationCallbackHandlerTest {
         }
 
         private void withMaxAgeSharedSession() {
-            var session = new Session().addClientSession(CLIENT_SESSION_ID);
+            var session = new Session();
             when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         }
     }
