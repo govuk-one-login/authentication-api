@@ -20,7 +20,7 @@ dependencies {
             configurations.cloudwatch,
             configurations.pact_provider,
             "org.eclipse.jetty:jetty-server:12.0.19",
-            "com.google.code.gson:gson:2.13.0"
+            "com.google.code.gson:gson:2.13.1"
 
     implementation project(":orchestration-shared")
     implementation project(":frontend-api")
