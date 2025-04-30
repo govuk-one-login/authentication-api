@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -60,9 +61,9 @@ public class DynamoService implements AuthenticationService {
 
     public DynamoService(ConfigurationService configurationService) {
         String userProfileTableName =
-                configurationService.getEnvironment() + "-" + USER_PROFILE_TABLE;
+                TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
         String userCredentialsTableName =
-                configurationService.getEnvironment() + "-" + USER_CREDENTIAL_TABLE;
+                TableNameHelper.getFullTableName(USER_CREDENTIAL_TABLE, configurationService);
         dynamoDbEnhancedClient =
                 DynamoClientHelper.createDynamoEnhancedClient(configurationService);
         this.dynamoUserProfileTable =

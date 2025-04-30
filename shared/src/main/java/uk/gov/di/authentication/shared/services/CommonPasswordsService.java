@@ -9,6 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import uk.gov.di.authentication.shared.entity.CommonPassword;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +25,8 @@ public class CommonPasswordsService {
     private final DynamoDbEnhancedClient dynamoDbEnhancedClient;
 
     public CommonPasswordsService(ConfigurationService configurationService) {
-        String tableName = configurationService.getEnvironment() + "-" + COMMON_PASSWORDS_TABLE;
+        String tableName =
+                TableNameHelper.getFullTableName(COMMON_PASSWORDS_TABLE, configurationService);
         dynamoDbEnhancedClient = createDynamoEnhancedClient(configurationService);
         this.dynamoCommonPasswordTable =
                 dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(CommonPassword.class));

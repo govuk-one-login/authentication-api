@@ -562,6 +562,14 @@ Resources:
         Variables:
           AUTHENTICATION_AUTHORIZATION_CALLBACK_URI: ""
           AUTHENTICATION_BACKEND_URI: ""
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
@@ -847,6 +855,14 @@ Resources:
       Handler: uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest
       Environment:
         Variables:
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           ENVIRONMENT: !Ref Environment
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction

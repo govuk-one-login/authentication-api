@@ -271,6 +271,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getDynamoArnPrefixShouldDefault() {
+        assertFalse(configurationService.getDynamoArnPrefix().isPresent());
+    }
+
+    @Test
     void getDynamoEndpointUriShouldDefault() {
         assertFalse(configurationService.getDynamoEndpointUri().isPresent());
     }
