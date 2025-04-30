@@ -15,7 +15,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
@@ -492,8 +492,8 @@ class MFAMethodsServiceIntegrationTest {
             RequestSmsMfaDetail requestSmsMfaDetail =
                     new RequestSmsMfaDetail(PHONE_NUMBER_WITH_COUNTRY_CODE, "123456");
 
-            MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod =
-                    new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest.MfaMethod mfaMethod =
+                    new MfaMethodCreateRequest.MfaMethod(
                             PriorityIdentifier.BACKUP, requestSmsMfaDetail);
 
             var result =
@@ -528,8 +528,8 @@ class MFAMethodsServiceIntegrationTest {
             RequestSmsMfaDetail requestSmsMfaDetail =
                     new RequestSmsMfaDetail(PHONE_NUMBER_WITHOUT_COUNTRY_CODE, "123456");
 
-            MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod =
-                    new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest.MfaMethod mfaMethod =
+                    new MfaMethodCreateRequest.MfaMethod(
                             PriorityIdentifier.BACKUP, requestSmsMfaDetail);
 
             var result =
@@ -563,8 +563,8 @@ class MFAMethodsServiceIntegrationTest {
             RequestAuthAppMfaDetail requestAuthAppMfaDetail =
                     new RequestAuthAppMfaDetail(AUTH_APP_CREDENTIAL);
 
-            MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod =
-                    new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest.MfaMethod mfaMethod =
+                    new MfaMethodCreateRequest.MfaMethod(
                             PriorityIdentifier.BACKUP, requestAuthAppMfaDetail);
 
             var result =
@@ -594,9 +594,9 @@ class MFAMethodsServiceIntegrationTest {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
-            MfaMethodCreateOrUpdateRequest request =
-                    new MfaMethodCreateOrUpdateRequest(
-                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest request =
+                    new MfaMethodCreateRequest(
+                            new MfaMethodCreateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new RequestSmsMfaDetail(
                                             PHONE_NUMBER_WITH_COUNTRY_CODE, "123456")));
@@ -614,9 +614,9 @@ class MFAMethodsServiceIntegrationTest {
         void shouldReturnPhoneNumberAlreadyExistsErrorWhenSmsMfaUserAddsBackupWithSameNumber() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
 
-            MfaMethodCreateOrUpdateRequest request =
-                    new MfaMethodCreateOrUpdateRequest(
-                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest request =
+                    new MfaMethodCreateRequest(
+                            new MfaMethodCreateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new RequestSmsMfaDetail(
                                             PHONE_NUMBER_WITH_COUNTRY_CODE, "123456")));
@@ -640,9 +640,9 @@ class MFAMethodsServiceIntegrationTest {
                             PriorityIdentifier.DEFAULT,
                             "some-id"));
 
-            MfaMethodCreateOrUpdateRequest request =
-                    new MfaMethodCreateOrUpdateRequest(
-                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest request =
+                    new MfaMethodCreateRequest(
+                            new MfaMethodCreateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new RequestSmsMfaDetail(
                                             PHONE_NUMBER_WITHOUT_COUNTRY_CODE, "123456")));
@@ -659,9 +659,9 @@ class MFAMethodsServiceIntegrationTest {
                 shouldReturnInvalidPhoneNumberErrorWhenPhoneNumberCannotBeConvertedToOneWithCountryCode() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-            MfaMethodCreateOrUpdateRequest request =
-                    new MfaMethodCreateOrUpdateRequest(
-                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest request =
+                    new MfaMethodCreateRequest(
+                            new MfaMethodCreateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new RequestSmsMfaDetail(
                                             "this is not a phone number", "123456")));
@@ -677,9 +677,9 @@ class MFAMethodsServiceIntegrationTest {
         void shouldReturnAuthAppAlreadyExistsErrorWhenAuthAppMfaUserAddsSecondAuthAppMfa() {
             userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
 
-            MfaMethodCreateOrUpdateRequest request =
-                    new MfaMethodCreateOrUpdateRequest(
-                            new MfaMethodCreateOrUpdateRequest.MfaMethod(
+            MfaMethodCreateRequest request =
+                    new MfaMethodCreateRequest(
+                            new MfaMethodCreateRequest.MfaMethod(
                                     PriorityIdentifier.BACKUP,
                                     new RequestAuthAppMfaDetail(AUTH_APP_CREDENTIAL)));
 

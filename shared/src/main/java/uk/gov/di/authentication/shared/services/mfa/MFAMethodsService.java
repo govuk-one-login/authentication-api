@@ -9,7 +9,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
@@ -130,7 +130,7 @@ public class MFAMethodsService {
     }
 
     public Result<MfaCreateFailureReason, MFAMethod> addBackupMfa(
-            String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
+            String email, MfaMethodCreateRequest.MfaMethod mfaMethod) {
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
         var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
 
@@ -240,8 +240,7 @@ public class MFAMethodsService {
 
         if (updatedMethod.method() != null) {
             // ERROR a backup method can not be edited.
-            return Result.failure(
-                    MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD);
+            return Result.failure(MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD);
         }
 
         var maybeDefaultMethod =

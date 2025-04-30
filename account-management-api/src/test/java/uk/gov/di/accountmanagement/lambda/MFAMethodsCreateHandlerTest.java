@@ -19,7 +19,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -146,8 +146,8 @@ class MFAMethodsCreateHandlerTest {
 
         var result = handler.handleRequest(event, context);
 
-        ArgumentCaptor<MfaMethodCreateOrUpdateRequest.MfaMethod> mfaMethodCaptor =
-                ArgumentCaptor.forClass(MfaMethodCreateOrUpdateRequest.MfaMethod.class);
+        ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
+                ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
 
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
@@ -192,8 +192,8 @@ class MFAMethodsCreateHandlerTest {
 
         var result = handler.handleRequest(event, context);
 
-        ArgumentCaptor<MfaMethodCreateOrUpdateRequest.MfaMethod> mfaMethodCaptor =
-                ArgumentCaptor.forClass(MfaMethodCreateOrUpdateRequest.MfaMethod.class);
+        ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
+                ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
 
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
