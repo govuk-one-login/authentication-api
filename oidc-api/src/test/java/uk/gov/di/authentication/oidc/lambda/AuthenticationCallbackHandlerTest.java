@@ -155,10 +155,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String SESSION_ID = "a-session-id";
 
     private static final Session session =
-            new Session()
-                    .setAuthenticated(false)
-                    .setCurrentCredentialStrength(null)
-                    .setEmailAddress(TEST_EMAIL_ADDRESS);
+            new Session().setAuthenticated(false).setEmailAddress(TEST_EMAIL_ADDRESS);
     public static final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAuthenticated(false)
@@ -246,7 +243,6 @@ class AuthenticationCallbackHandlerTest {
 
         clearInvocations(orchAuthCodeService);
 
-        session.setCurrentCredentialStrength(null);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
                 .thenReturn(null);
@@ -671,11 +667,11 @@ class AuthenticationCallbackHandlerTest {
     @Test
     void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
             throws UnsuccessfulCredentialResponseException {
-        Session mediumLevelSession =
-                new Session().setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
-        when(orchSessionService.getSession(SESSION_ID))
-                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+        var mediumLevelSession =
+                new OrchSessionItem(SESSION_ID)
+                        .withCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(new Session()));
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
         usingValidClientSession();
         usingValidClient();
 
@@ -1519,9 +1515,6 @@ class AuthenticationCallbackHandlerTest {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         verify(sessionService, times(2))
                 .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
-        assertThat(
-                sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                equalTo(lowestCredentialTrustLevel));
         assertThat(
                 Session.AccountState.NEW,
                 equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
