@@ -28,8 +28,6 @@ class IpvJwksHandlerTest {
     private IpvJwksHandler handler;
     private final ECKey ipvTokenSigningKey =
             new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-    private final ECKey orchIpvTokenSigningKey =
-            new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
 
     IpvJwksHandlerTest() throws JOSEException {}
 
@@ -37,14 +35,12 @@ class IpvJwksHandlerTest {
     public void setUp() {
         handler = new IpvJwksHandler(jwksService);
 
-        when(jwksService.getPublicIpvTokenJwkWithOpaqueId()).thenReturn(ipvTokenSigningKey);
-        when(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId()).thenReturn(orchIpvTokenSigningKey);
+        when(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId()).thenReturn(ipvTokenSigningKey);
     }
 
     @Test
-    void shouldReturnOnlyAuthIpvJwkWhenAuthIpvJwkPublishEnabledAndOrchIpvJwkPublishDisabled() {
-        when(jwksService.isAuthIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(false);
+    void shouldReturnASingleJwkWhenOrchIpvJwkPublishEnabled() {
+        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -56,39 +52,10 @@ class IpvJwksHandlerTest {
     }
 
     @Test
-    void shouldReturnOnlyOrchIpvJwkWhenAuthIpvJwkPublishDisabledAndOrchIpvJwkPublishEnabled() {
-        when(jwksService.isAuthIpvTokenSigningKeyPublishEnabled()).thenReturn(false);
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-
-        var expectedJWKSet = new JWKSet(List.of(orchIpvTokenSigningKey));
-
-        assertThat(result, hasStatus(200));
-        assertThat(result, hasBody(expectedJWKSet.toString(true)));
-    }
-
-    @Test
-    void
-            shouldReturnBothAuthIpvJwkAndOrchIpvJwkWhenAuthIpvJwkPublishEnabledAndOrchIpvJwkPublishEnabled() {
-        when(jwksService.isAuthIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
-
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-
-        var expectedJWKSet = new JWKSet(List.of(ipvTokenSigningKey, orchIpvTokenSigningKey));
-
-        assertThat(result, hasStatus(200));
-        assertThat(result, hasBody(expectedJWKSet.toString(true)));
-    }
-
-    @Test
     void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(jwksService.isAuthIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
+        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
 
-        when(jwksService.getPublicIpvTokenJwkWithOpaqueId()).thenReturn(null);
+        when(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -98,8 +65,7 @@ class IpvJwksHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenAuthIpvJwkPublishDisabledAndOrchIpvJwkPublishDisabled() {
-        when(jwksService.isAuthIpvTokenSigningKeyPublishEnabled()).thenReturn(false);
+    void shouldReturn500WhenOrchIpvJwkPublishDisabled() {
         when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(false);
 
         var event = new APIGatewayProxyRequestEvent();
@@ -111,7 +77,7 @@ class IpvJwksHandlerTest {
 
     @Test
     void shouldSetACacheHeaderOfOneDayOnSuccess() {
-        when(jwksService.isAuthIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
+        when(jwksService.isOrchIpvTokenSigningKeyPublishEnabled()).thenReturn(true);
 
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
 

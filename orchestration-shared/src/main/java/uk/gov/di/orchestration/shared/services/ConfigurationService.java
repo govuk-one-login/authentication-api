@@ -295,10 +295,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("IPV_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public boolean isAuthIPVTokenSigningKeyPublishEnabled() {
-        return getFlagOrFalse("AUTH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED");
-    }
-
     public boolean isOrchIPVTokenSigningKeyPublishEnabled() {
         return getFlagOrFalse("ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED");
     }

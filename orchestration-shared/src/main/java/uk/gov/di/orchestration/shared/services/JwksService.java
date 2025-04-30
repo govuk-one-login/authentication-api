@@ -67,10 +67,6 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    public boolean isAuthIpvTokenSigningKeyPublishEnabled() {
-        return configurationService.isAuthIPVTokenSigningKeyPublishEnabled();
-    }
-
     // TODO: ATO-1585: Following migration to the new key, remove this helper and the associated env
     // var.
     public boolean isOrchIpvTokenSigningKeyPublishEnabled() {

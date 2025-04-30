@@ -52,10 +52,6 @@ public class IpvJwksHandler
 
             List<JWK> signingKeys = new ArrayList<>();
 
-            if (jwksService.isAuthIpvTokenSigningKeyPublishEnabled()) {
-                signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
-            }
-
             if (jwksService.isOrchIpvTokenSigningKeyPublishEnabled()) {
                 signingKeys.add(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId());
             }

@@ -2678,7 +2678,6 @@ Resources:
               !Ref Environment,
               ipvTokenKeyArn,
             ]
-          AUTH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED: false
           ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED: !If
             - IsOrchIpvTokenSigningKeyPublishEnabled
             - true
