@@ -52,7 +52,7 @@ public class IpvJwksHandler
 
             List<JWK> signingKeys = new ArrayList<>();
 
-            signingKeys.add(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId());
+            signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
 
             JWKSet jwkSet = new JWKSet(signingKeys);
 

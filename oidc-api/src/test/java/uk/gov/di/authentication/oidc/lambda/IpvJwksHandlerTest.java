@@ -35,7 +35,7 @@ class IpvJwksHandlerTest {
     public void setUp() {
         handler = new IpvJwksHandler(jwksService);
 
-        when(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId()).thenReturn(ipvTokenSigningKey);
+        when(jwksService.getPublicIpvTokenJwkWithOpaqueId()).thenReturn(ipvTokenSigningKey);
     }
 
     @Test
@@ -51,7 +51,7 @@ class IpvJwksHandlerTest {
 
     @Test
     void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId()).thenReturn(null);
+        when(jwksService.getPublicIpvTokenJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);

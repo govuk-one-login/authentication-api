@@ -67,11 +67,6 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    public JWK getPublicOrchIpvTokenJwkWithOpaqueId() {
-        LOG.info("Retrieving Orch IPV token public key");
-        return getPublicJWKWithKeyId(configurationService.getOrchIPVTokenSigningKeyAlias());
-    }
-
     public JWK getIpvJwk() {
         EncryptionJwkCache encryptionJwkCache = EncryptionJwkCache.getInstance();
         var ipvJwkCacheEntry =
