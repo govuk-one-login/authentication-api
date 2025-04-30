@@ -49,6 +49,11 @@ class IpvJwksHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Override
+        public boolean isAuthIPVTokenSigningKeyPublishEnabled() {
+            return true;
+        }
+
+        @Override
         public boolean isOrchIPVTokenSigningKeyPublishEnabled() {
             return true;
         }

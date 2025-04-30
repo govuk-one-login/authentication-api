@@ -52,13 +52,17 @@ public class IpvJwksHandler
 
             List<JWK> signingKeys = new ArrayList<>();
 
-            // TODO: ATO-1585: Following migration to the new key (below), stop publishing this key
-            // pair (that resides in the shared account).
-            signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
+            if (jwksService.isAuthIpvTokenSigningKeyPublishEnabled()) {
+                signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
+            }
 
-            // TODO: ATO-1585: Following migration to the new key, remove this check.
             if (jwksService.isOrchIpvTokenSigningKeyPublishEnabled()) {
                 signingKeys.add(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId());
+            }
+
+            if (signingKeys.isEmpty()) {
+                throw new RuntimeException(
+                        "Feature flag misconfiguration - response must contain at least one signing key. Check at least one of AUTH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED and ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED is true.");
             }
 
             JWKSet jwkSet = new JWKSet(signingKeys);
