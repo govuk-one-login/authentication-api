@@ -60,6 +60,8 @@ Conditions:
     Fn::And:
       - !Condition NotSubEnvironment
       - Fn::Not:
+          - !Condition EnableSnapStart
+      - Fn::Not:
           - Fn::Equals:
               - !FindInMap [
                   EnvironmentConfiguration,
@@ -68,6 +70,18 @@ Conditions:
                   DefaultValue: "0",
                 ]
               - "0"
+
+  EnableSnapStart:
+    Fn::And:
+      - !Condition NotSubEnvironment
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              EnableSnapStart,
+              DefaultValue: "No",
+            ]
+          - "Yes"
 
   IsNotProduction:
     Fn::Not:
@@ -112,6 +126,7 @@ Conditions:
                   DefaultValue: "No",
                 ]
               - "Yes"
+
   UseCodeSigning:
     Fn::Not:
       - Fn::Equals:
@@ -282,6 +297,8 @@ Globals:
           ]
       - !Ref AWS::NoValue
     Runtime: java17
+    SnapStart:
+      ApplyOn: !If [EnableSnapStart, PublishedVersions, None]
     Timeout: 30
 
 Resources:
