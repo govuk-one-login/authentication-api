@@ -286,6 +286,64 @@ class LoginHandlerTest {
     }
 
     @Test
+    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequired() throws Json.JsonException {
+        // Arrange
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSession();
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
+        assertThat(
+                response.redactedPhoneNumber(),
+                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID.getValue(),
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        false);
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getAchievedCredentialStrength() == LOW_LEVEL
+                                                && as.getIsNewAccount()
+                                                        == AuthSessionItem.AccountState.EXISTING));
+        verifyInternalCommonSubjectIdentifierSaved();
+    }
+
+    @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
