@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -328,6 +329,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     "P0",
                     clientService.isTestJourney(userContext.getClientId(), userProfile.getEmail()),
                     false);
+            authSessionItem.setAchievedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
         }
 
         authSessionService.updateSession(
