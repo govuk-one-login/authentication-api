@@ -17,7 +17,9 @@ public class PhoneNumberHelper {
             var parsedPhoneNumber = phoneUtil.parse(phoneNumber, "GB");
             return phoneUtil.format(parsedPhoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
         } catch (NumberParseException e) {
-            LOG.warn("Error when trying to parse phone number");
+            LOG.warn(
+                    "Error when trying to parse phone number for formatPhoneNumber: {}",
+                    e.getErrorType());
             throw new RuntimeException(e);
         }
     }
@@ -27,7 +29,8 @@ public class PhoneNumberHelper {
             return Integer.toString(
                     PhoneNumberUtil.getInstance().parse(phoneNumber, "GB").getCountryCode());
         } catch (NumberParseException e) {
-            LOG.warn("Error when trying to parse phone number");
+            LOG.warn(
+                    "Error when trying to parse phone number for getCountry: {}", e.getErrorType());
             throw new RuntimeException(e);
         }
     }
