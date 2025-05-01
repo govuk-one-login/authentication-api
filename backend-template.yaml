@@ -56,6 +56,17 @@ Parameters:
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
+  AddOrchApiVpcEndpointId:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              orchApiVpcEndpointId,
+              DefaultValue: "",
+            ]
+          - ""
+
   EnableProvisionedConcurrency:
     Fn::And:
       - !Condition NotSubEnvironment
@@ -336,6 +347,15 @@ Resources:
           - PRIVATE
         VpcEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+          - !If
+            - AddOrchApiVpcEndpointId
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                orchApiVpcEndpointId,
+                DefaultValue: "",
+              ]
+            - !Ref AWS::NoValue
       Policy:
         Version: "2012-10-17"
         Statement:
@@ -353,6 +373,15 @@ Resources:
               StringNotEquals:
                 aws:SourceVpce:
                   - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                  - !If
+                    - AddOrchApiVpcEndpointId
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        orchApiVpcEndpointId,
+                        DefaultValue: "",
+                      ]
+                    - !Ref AWS::NoValue
 
   AuthExternalApiDeployment:
     Type: AWS::ApiGateway::Deployment
@@ -366,7 +395,7 @@ Resources:
     Type: AWS::ApiGateway::Stage
     Properties:
       AccessLogSetting:
-        DestinationArn: !GetAtt AuthExternalApiLogGroup.Arn
+        DestinationArn: !GetAtt AuthExternalApiAccessLogGroup.Arn
         Format:
           Fn::ToJsonString:
             requestId: $context.requestId
@@ -394,11 +423,11 @@ Resources:
       StageName: !Ref Environment
       TracingEnabled: true
 
-  AuthExternalApiLogGroup:
+  AuthExternalApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      LogGroupName: !Sub "${Environment}-AuthExternalApi-access-logs"
+      LogGroupName: !Sub "${Environment}-auth-ext-api-access-logs"
       RetentionInDays:
         !FindInMap [
           EnvironmentConfiguration,
@@ -407,19 +436,27 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-AuthExternalApiLogGroup"
+          Value: !Sub "${AWS::StackName}-AuthExternalApiAccessLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
           Value: govuk-one-login/authentication-api/backend-template.yaml
 
-  AuthExternalApiSubscriptionFilter:
+  AuthExternalApiAccessLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref AuthExternalApiLogGroup
+      LogGroupName: !Ref AuthExternalApiAccessLogGroup
+
+  AuthExternalApiExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Sub API-Gateway-Execution-Logs_${AuthExternalApi}/${Environment}
 
   AuthExternalApiDashboard:
     Type: AWS::CloudWatch::Dashboard
@@ -949,6 +986,7 @@ Resources:
         - !Ref DynamoAccessTokenStoreAccessPolicy
         - !Ref DynamoAuthSessionStoreAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref RedisParametersAccessPolicy
         - !Ref TxMAAuditQueueAccessPolicy
       VpcConfig:
         SecurityGroupIds:
@@ -957,8 +995,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
-    # TODO
-    # aws_iam_policy.redis_parameter_policy.arn,
 
   AuthUserInfoFunctionPermission:
     Type: AWS::Lambda::Permission
@@ -1354,6 +1390,12 @@ Resources:
               ArnLike:
                 kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
 
+  MainKmsKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: !Sub "alias/${Environment}-auth-external-api-main-kms-alias"
+      TargetKeyId: !Ref MainKmsKey
+
   # ----------------
   # Managed policies
   # ----------------
@@ -1727,6 +1769,27 @@ Resources:
                     !Ref Environment,
                     authSessionTableEncryptionKey,
                   ]
+
+  RedisParametersAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource:
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
 
   TxMAAuditQueueAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
