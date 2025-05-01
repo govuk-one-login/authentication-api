@@ -23,6 +23,8 @@ import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 
 import java.security.interfaces.RSAPublicKey;
@@ -39,6 +41,32 @@ public class IPVReverificationService {
     private final JwtService jwtService;
     private final NowClock nowClock;
     private final TokenService tokenService;
+
+    /**
+     * Constructs the IPVReverificationService with all necessary services required to create, sign
+     * and encrypt the JWT sent over to IPV in the MfaResetAuthorizeHandler.
+     *
+     * @param configurationService the service used to get environment variables for each
+     *     environment.
+     */
+    public IPVReverificationService(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        try {
+            RedisConnectionService redisConnectionService =
+                    new RedisConnectionService(configurationService);
+            KmsConnectionService kmsConnectionService =
+                    new KmsConnectionService(configurationService);
+            this.jwtService = new JwtService(kmsConnectionService);
+            this.tokenService =
+                    new TokenService(
+                            configurationService, redisConnectionService, kmsConnectionService);
+            this.nowClock = new NowClock(Clock.systemUTC());
+        } catch (Exception e) {
+            LOG.error("Error while initializing IPVReverificationService", e);
+            throw new IPVReverificationServiceException(
+                    "Failed to initialize IPVReverificationService");
+        }
+    }
 
     public IPVReverificationService(
             ConfigurationService configurationService,

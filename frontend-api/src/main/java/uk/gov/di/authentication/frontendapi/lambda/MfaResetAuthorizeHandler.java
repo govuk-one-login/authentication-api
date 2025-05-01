@@ -76,18 +76,10 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
     public MfaResetAuthorizeHandler(ConfigurationService configurationService) {
         super(MfaResetRequest.class, configurationService);
-        RedisConnectionService redisConnectionService =
-                new RedisConnectionService(configurationService);
-        KmsConnectionService kmsConnectionService = new KmsConnectionService(configurationService);
-        JwtService jwtService = new JwtService(kmsConnectionService);
-        TokenService tokenService =
-                new TokenService(
-                        configurationService, redisConnectionService, kmsConnectionService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.ipvReverificationService =
-                new IPVReverificationService(configurationService, jwtService, tokenService);
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
+        this.ipvReverificationService = new IPVReverificationService(configurationService);
     }
 
     public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService) {
