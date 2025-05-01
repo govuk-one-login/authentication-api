@@ -15,14 +15,41 @@ public class MfaDetailDeserializer implements JsonDeserializer<MfaDetail> {
     public MfaDetail deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
             throws JsonParseException {
         JsonObject jsonObject = json.getAsJsonObject();
-        String type = jsonObject.get("mfaMethodType").getAsString();
+        JsonElement typeAsJsonElement = jsonObject.get("mfaMethodType");
+
+        if (typeAsJsonElement == null) {
+            throw new JsonParseException("MFA method type is missing");
+        }
+
+        var type = typeAsJsonElement.getAsString();
 
         if (MFAMethodType.SMS.getValue().equalsIgnoreCase(type)) {
-            String phoneNumber = jsonObject.get("phoneNumber").getAsString();
-            String otp = jsonObject.get("otp").getAsString();
+            JsonElement phoneNumberAsJson = jsonObject.get("phoneNumber");
+
+            if (phoneNumberAsJson == null) {
+                throw new JsonParseException("Phone number is missing");
+            }
+
+            var phoneNumber = phoneNumberAsJson.getAsString();
+
+            JsonElement otpAsJson = jsonObject.get("otp");
+
+            if (otpAsJson == null) {
+                throw new JsonParseException("OTP is missing");
+            }
+
+            var otp = otpAsJson.getAsString();
+
             return new RequestSmsMfaDetail(phoneNumber, otp);
         } else if (MFAMethodType.AUTH_APP.getValue().equalsIgnoreCase(type)) {
-            String credential = jsonObject.get("credential").getAsString();
+            JsonElement credentialAsJson = jsonObject.get("credential");
+
+            if (credentialAsJson == null) {
+                throw new JsonParseException("Credential is missing");
+            }
+
+            var credential = credentialAsJson.getAsString();
+
             return new RequestAuthAppMfaDetail(credential);
         } else {
             throw new JsonParseException("Unknown mfa detail type: " + type);

@@ -9,7 +9,8 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -129,7 +130,7 @@ public class MFAMethodsService {
     }
 
     public Result<MfaCreateFailureReason, MFAMethod> addBackupMfa(
-            String email, MfaMethodCreateOrUpdateRequest.MfaMethod mfaMethod) {
+            String email, MfaMethodCreateRequest.MfaMethod mfaMethod) {
         UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
         var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
 
@@ -200,7 +201,7 @@ public class MFAMethodsService {
     }
 
     public Result<MfaUpdateFailureReason, List<MFAMethod>> updateMfaMethod(
-            String email, String mfaIdentifier, MfaMethodCreateOrUpdateRequest request) {
+            String email, String mfaIdentifier, MfaMethodUpdateRequest request) {
         var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
 
         var maybeMethodToUpdate =
@@ -233,39 +234,15 @@ public class MFAMethodsService {
 
     private Result<MfaUpdateFailureReason, List<MFAMethod>> handleBackupMethodUpdate(
             MFAMethod backupMethod,
-            MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
+            MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
             List<MFAMethod> allMethods) {
-        if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            var maybePhoneNumberWithCountryCode =
-                    getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
 
-            if (maybePhoneNumberWithCountryCode.isFailure()) {
-                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
-                return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
-            }
-
-            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
-            var changesPhoneNumber =
-                    !phoneNumberWithCountryCode.equals(backupMethod.getDestination());
-            if (changesPhoneNumber) {
-                return Result.failure(
-                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_PHONE_NUMBER);
-            }
-        } else {
-            var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
-            var changesAuthAppCredential =
-                    !authAppDetail.credential().equals(backupMethod.getCredentialValue());
-            if (changesAuthAppCredential) {
-                return Result.failure(
-                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_METHOD_AUTH_APP_CREDENTIAL);
-            }
+        if (updatedMethod.method() != null) {
+            // ERROR a backup method can not be edited.
+            return Result.failure(MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD);
         }
 
-        if (updatedMethod.priorityIdentifier().equals(BACKUP)) {
-            return Result.failure(
-                    MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
-        }
         var maybeDefaultMethod =
                 allMethods.stream()
                         .filter(m -> Objects.equals(m.getPriority(), DEFAULT.name()))
@@ -277,6 +254,7 @@ public class MFAMethodsService {
         }
 
         var defaultMethod = maybeDefaultMethod.get();
+
         var databaseUpdateResult =
                 persistentService.updateAllMfaMethodsForUser(
                         email,
@@ -301,7 +279,7 @@ public class MFAMethodsService {
 
     private Result<MfaUpdateFailureReason, List<MFAMethod>> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
-            MfaMethodCreateOrUpdateRequest.MfaMethod updatedMethod,
+            MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
             String mfaIdentifier,
             List<MFAMethod> allMethodsForUser) {

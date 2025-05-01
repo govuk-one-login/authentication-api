@@ -1,0 +1,20 @@
+[
+  {
+    "method": {
+      "credential": "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444",
+      "mfaMethodType": "AUTH_APP"
+    },
+    "methodVerified": true,
+    "mfaIdentifier": "20AAB6CB-773D-45A8-82DE-D3EE785995E8",
+    "priorityIdentifier": "DEFAULT"
+  },
+  {
+    "method": {
+      "phone": "071",
+      "mfaMethodType": "SMS"
+    },
+    "methodVerified": true,
+    "mfaIdentifier": "3C0AE0A9-157F-4E4F-A13F-78ACFF650D17",
+    "priorityIdentifier": "BACKUP"
+  }
+]
