@@ -68,6 +68,7 @@ locals {
   pending_email_check_queue_id                = data.terraform_remote_state.shared.outputs.pending_email_check_queue_id
   pending_email_check_queue_access_policy_arn = data.terraform_remote_state.shared.outputs.pending_email_check_queue_access_policy_arn
   user_profile_kms_key_arn                    = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
+  user_credentials_kms_key_arn                = data.terraform_remote_state.shared.outputs.user_credentials_kms_key_arn
   authentication_attempt_kms_key_arn          = data.terraform_remote_state.shared.outputs.authentication_attempt_kms_key_arn
   auth_session_table_encryption_key_arn       = data.terraform_remote_state.shared.outputs.auth_session_table_encryption_key_arn
   email_check_results_encryption_policy_arn   = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
