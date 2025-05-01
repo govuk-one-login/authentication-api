@@ -300,11 +300,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditContext auditContext,
             AuthSessionItem authSessionItem) {
 
-        authSessionService.updateSession(
-                authSessionItem
-                        .withAccountState(AuthSessionItem.AccountState.EXISTING)
-                        .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
-
         var userMfaDetail = getUserMFADetail(userContext, userCredentials, userProfile);
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
@@ -334,6 +329,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     clientService.isTestJourney(userContext.getClientId(), userProfile.getEmail()),
                     false);
         }
+
+        authSessionService.updateSession(
+                authSessionItem
+                        .withAccountState(AuthSessionItem.AccountState.EXISTING)
+                        .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
 
         String redactedPhoneNumber =
                 userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()
