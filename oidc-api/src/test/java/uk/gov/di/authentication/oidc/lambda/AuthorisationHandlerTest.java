@@ -395,7 +395,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"email_verified\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"email_verified\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -436,7 +436,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null, \"uplift_required\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -473,7 +473,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null, \"uplift_required\":null}}");
+                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null, \"uplift_required\":null , \"achieved_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -1393,7 +1393,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
@@ -1416,7 +1416,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
@@ -1437,7 +1437,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"legacy_subject_id\":null,\"local_account_id\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null}}");
+                            "{\"userinfo\":{\"legacy_subject_id\":null,\"local_account_id\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
