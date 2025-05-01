@@ -94,6 +94,7 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CO
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -558,6 +559,9 @@ class VerifyCodeHandlerTest {
                                 s ->
                                         s.getInternalCommonSubjectId()
                                                 .equals(INTERNAL_COMMON_SUBJECT_ID)));
+        verify(authSessionService, atLeastOnce())
+                .updateSession(
+                        argThat(s -> s.getAchievedCredentialStrength().equals(MEDIUM_LEVEL)));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -624,7 +628,7 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
-    void shouldUpdateAuthSessionMfaTypeFotValidRequest() {
+    void shouldUpdateAuthSessionMfaTypeAndAchievedCredentialStrength() {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES - 1);
@@ -637,7 +641,12 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(authSessionService)
-                .updateSession(authSession.withVerifiedMfaMethodType(MFAMethodType.SMS));
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getVerifiedMfaMethodType().equals(MFAMethodType.SMS)
+                                                && as.getAchievedCredentialStrength()
+                                                        .equals(MEDIUM_LEVEL)));
     }
 
     @Test
