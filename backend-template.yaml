@@ -328,59 +328,61 @@ Resources:
   # -----------------
 
   AuthExternalApi:
-    Type: AWS::Serverless::Api
+    Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub ${Environment}-di-auth-ext-api
-      StageName: !Ref Environment
+      EndpointConfiguration:
+        Types:
+          - PRIVATE
+        VpcEndpointIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      Policy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "execute-api:Invoke"
+            Principal: "*"
+            Resource:
+              - "execute-api:/*"
+          - Effect: Deny
+            Action: "execute-api:Invoke"
+            Principal: "*"
+            Resource:
+              - "execute-api:/*"
+            Condition:
+              StringNotEquals:
+                aws:SourceVpce:
+                  - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+
+  AuthExternalApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - AuthTokenEndpointMethod
+      - AuthUserInfoEndpointMethod
+    Properties:
+      RestApiId: !Ref AuthExternalApi
+
+  AuthExternalApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
       AccessLogSetting:
         DestinationArn: !GetAtt AuthExternalApiLogGroup.Arn
-        Format: >-
-          {
-          "requestId":"$context.requestId",
-          "ip":"$context.identity.sourceIp",
-          "userAgent":"$context.identity.userAgent",
-          "requestTime":"$context.requestTime",
-          "httpMethod":"$context.httpMethod",
-          "resourcePath":"$context.resourcePath",
-          "status":"$context.status",
-          "protocol":"$context.protocol",
-          "responseLength":"$context.responseLength",
-          "integrationStatus":"$context.integration.integrationStatus",
-          "integrationLatency":"$context.integration.latency",
-          "integrationRequestId":"$context.integration.requestId"
-          }
-      Auth:
-        ResourcePolicy:
-          CustomStatements:
-            - Effect: Allow
-              Action: "execute-api:Invoke"
-              Principal: "*"
-              Resource:
-                - "execute-api:/*"
-            - Effect: Deny
-              Action: "execute-api:Invoke"
-              Principal: "*"
-              Resource:
-                - "execute-api:/*"
-              Condition:
-                StringNotEquals:
-                  aws:SourceVpce:
-                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
       CacheClusterEnabled: false
-      DefinitionBody:
-        openapi: "3.0.1" # workaround to get `sam validate` to work
-        paths: # workaround to get `sam validate` to work
-          /never-created:
-            options: {} # workaround to get `sam validate` to work
-        Fn::Transform:
-          Name: AWS::Include
-          Parameters:
-            Location: "./openAPI/AuthExternalApi.yaml"
-      OpenApiVersion: 3.0.1
-      EndpointConfiguration:
-        Type: PRIVATE
-        VPCEndpointIds:
-          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      DeploymentId: !Ref AuthExternalApiDeployment
       MethodSettings:
         - CachingEnabled: false
           DataTraceEnabled: false
@@ -388,6 +390,8 @@ Resources:
           ResourcePath: "/*"
           LoggingLevel: INFO
           MetricsEnabled: true
+      RestApiId: !Ref AuthExternalApi
+      StageName: !Ref Environment
       TracingEnabled: true
 
   AuthExternalApiLogGroup:
@@ -403,7 +407,7 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-AuthTokenFunctionLogGroup"
+          Value: !Sub "${AWS::StackName}-AuthExternalApiLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
@@ -601,7 +605,10 @@ Resources:
       Environment:
         Variables:
           AUTHENTICATION_AUTHORIZATION_CALLBACK_URI: ""
-          AUTHENTICATION_BACKEND_URI: ""
+          AUTHENTICATION_BACKEND_URI: !Sub
+            - "https://${AuthExternalApi}-${AuthApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+            - AuthApiVpcEndpointId:
+                Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -617,7 +624,15 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
-          ORCHESTRATION_BACKEND_URI: ""
+          ORCHESTRATION_BACKEND_URI: !Sub
+            - "https://${AuthExternalApi}-${orchApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+            - orchApiVpcEndpointId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  orchApiVpcEndpointId,
+                  DefaultValue: "",
+                ]
           ORCH_CLIENT_ID: "orchestrationAuth"
           ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
             - UseSubEnvironment
@@ -677,6 +692,28 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref AuthTokenFunction.Alias
       Principal: apigateway.amazonaws.com
+
+  AuthTokenEndpointResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AuthExternalApi
+      ParentId: !GetAtt AuthExternalApi.RootResourceId
+      PathPart: "token"
+
+  AuthTokenEndpointMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref AuthTokenEndpointResource
+      RestApiId: !Ref AuthExternalApi
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthTokenFunction.Arn}:active/invocations
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
 
   AuthTokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -936,6 +973,28 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref AuthUserInfoFunction.Alias
       Principal: apigateway.amazonaws.com
+
+  AuthUserInfoEndpointResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AuthExternalApi
+      ParentId: !GetAtt AuthExternalApi.RootResourceId
+      PathPart: "userinfo"
+
+  AuthUserInfoEndpointMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref AuthUserInfoEndpointResource
+      RestApiId: !Ref AuthExternalApi
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthUserInfoFunction.Arn}:active/invocations
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
 
   AuthUserInfoFunctionLogGroup:
     Type: AWS::Logs::LogGroup
