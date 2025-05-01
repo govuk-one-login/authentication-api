@@ -31,7 +31,7 @@ public class MfaResetStorageTokenJwkHandler
 
     public MfaResetStorageTokenJwkHandler(ConfigurationService configurationService) {
         this.jwksService =
-                new JwksService(
+                JwksService.getInstance(
                         configurationService, new KmsConnectionService(configurationService));
     }
 

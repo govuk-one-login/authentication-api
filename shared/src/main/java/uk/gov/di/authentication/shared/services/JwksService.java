@@ -34,11 +34,19 @@ import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256Strin
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class JwksService {
-
+    private static JwksService jwksService;
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
     private static final Map<String, JWK> KEY_CACHE = new HashMap<>();
     private static final Logger LOG = LogManager.getLogger(JwksService.class);
+
+    public static JwksService getInstance(
+            ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
+        if (jwksService == null) {
+            jwksService = new JwksService(configurationService, kmsConnectionService);
+        }
+        return jwksService;
+    }
 
     public JwksService(
             ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
