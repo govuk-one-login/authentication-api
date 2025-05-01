@@ -128,11 +128,7 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  IsAuthIpvTokenSigningKeyPublishEnabled:
-    !Or [
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
+  IsAuthIpvTokenSigningKeyPublishEnabled: !Equals [production, !Ref Environment]
   IsOrchIpvTokenSigningKeyPublishEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
