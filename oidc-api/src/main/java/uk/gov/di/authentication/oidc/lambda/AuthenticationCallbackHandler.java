@@ -478,6 +478,9 @@ public class AuthenticationCallbackHandler
                                                         requestedCredentialTrustLevel))
                                 .orElse(requestedCredentialTrustLevel);
 
+                logComparisonRequestCredentialTrustAndAchieved(
+                        userInfo, requestedCredentialTrustLevel);
+
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         clientId,
@@ -894,5 +897,39 @@ public class AuthenticationCallbackHandler
                     user);
         }
         currentOrchSession.setPreviousSessionId(null);
+    }
+
+    private void logComparisonRequestCredentialTrustAndAchieved(
+            UserInfo authUserInfo, CredentialTrustLevel requestedCredentialStrength) {
+
+        try {
+            var userInfoAchievedCredentialStrength =
+                    authUserInfo.getStringClaim(
+                            AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH.getValue());
+            var isAchievedCredentialStrengthNull =
+                    Objects.isNull(userInfoAchievedCredentialStrength);
+
+            LOG.info("Is Achieved Credential strength null: {}", isAchievedCredentialStrengthNull);
+            LOG.info("Lowest requested credential strength value: {}", requestedCredentialStrength);
+            if (isAchievedCredentialStrengthNull) {
+                return;
+            }
+
+            var achievedCredentialStrength =
+                    CredentialTrustLevel.valueOf(userInfoAchievedCredentialStrength);
+            var isEqualToOrHigherThanRequested =
+                    achievedCredentialStrength.equals(requestedCredentialStrength)
+                            || achievedCredentialStrength.isHigherThan(requestedCredentialStrength);
+
+            LOG.info("Achieved credential strength value: {}", achievedCredentialStrength);
+            LOG.info(
+                    "Is Achieved credential strength higher or equal to requested value: {}",
+                    isEqualToOrHigherThanRequested);
+
+        } catch (Exception e) {
+            LOG.warn(
+                    "Exception when trying to compare requested and achieved credential strength levels: {}. Continuing as normal",
+                    e.getMessage());
+        }
     }
 }
