@@ -85,7 +85,7 @@ public class JwksService {
                 JWKSourceBuilder.create(url)
                         .retrying(true)
                         .refreshAheadCache(false)
-                        .cache(false)
+                        .cache(true)
                         .rateLimited(false)
                         .build();
         try {
