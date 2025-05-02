@@ -984,8 +984,16 @@ public class AuthorisationHandler
                         .endpointURI(URI.create(redirectURI))
                         .requestObject(encryptedJWT)
                         .build();
-        redirectURI = authorizationRequest.toURI().toString();
+        try {
+            cloudwatchMetricsService.putEmbeddedValue(
+                    "AuthRedirectQueryParamSize",
+                    authorizationRequest.toQueryString().length(),
+                    Map.of("clientId", client.getClientID()));
+        } catch (Exception e) {
+            LOG.warn("Error recording query params length, continuing: ", e);
+        }
 
+        redirectURI = authorizationRequest.toURI().toString();
         return generateApiGatewayProxyResponse(
                 302,
                 "",

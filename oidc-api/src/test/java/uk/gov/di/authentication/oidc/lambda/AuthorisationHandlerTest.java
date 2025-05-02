@@ -360,6 +360,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -395,6 +400,11 @@ class AuthorisationHandlerTest {
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
                     expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            1003,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -625,6 +635,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -691,6 +706,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            61,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @ParameterizedTest
@@ -762,6 +782,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -808,6 +833,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -851,6 +881,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -1072,6 +1107,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -1122,6 +1162,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
@@ -1205,6 +1250,11 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", false));
+            verify(cloudwatchMetricsService)
+                    .putEmbeddedValue(
+                            "AuthRedirectQueryParamSize",
+                            48,
+                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
