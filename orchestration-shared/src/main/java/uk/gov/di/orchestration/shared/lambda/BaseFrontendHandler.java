@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.orchestration.shared.entity.BaseFrontendRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -28,7 +27,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
-import java.util.Locale;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -156,6 +154,12 @@ public abstract class BaseFrontendHandler<T>
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
+        if (orchSession.get().getInternalCommonSubjectId() == null
+                || orchSession.get().getInternalCommonSubjectId().isBlank()) {
+            LOG.warn("Orch session has no internalCommonSubjectId");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
         Optional<String> userLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;
@@ -183,24 +187,6 @@ public abstract class BaseFrontendHandler<T>
         clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 
         orchClientSession.ifPresent(userContextBuilder::withOrchClientSession);
-
-        session.map(Session::getEmailAddress)
-                .map(authenticationService::getUserProfileFromEmail)
-                .ifPresentOrElse(
-                        userProfile ->
-                                userContextBuilder
-                                        .withUserProfile(userProfile)
-                                        .withUserAuthenticated(true),
-                        () -> {
-                            if (request instanceof BaseFrontendRequest baseFrontendRequest)
-                                userContextBuilder
-                                        .withUserProfile(
-                                                authenticationService.getUserProfileFromEmail(
-                                                        baseFrontendRequest
-                                                                .getEmail()
-                                                                .toLowerCase(Locale.ROOT)))
-                                        .withUserAuthenticated(false);
-                        });
 
         userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
 

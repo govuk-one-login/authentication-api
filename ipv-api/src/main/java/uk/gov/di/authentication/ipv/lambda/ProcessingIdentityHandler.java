@@ -15,8 +15,6 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
@@ -35,10 +33,10 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -123,19 +121,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         LOG.info("ProcessingIdentity request received");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
-            UserProfile userProfile = userContext.getUserProfile().orElseThrow();
             ClientRegistry client = userContext.getClient().orElseThrow();
-            var rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            client,
-                            authenticationService,
-                            configurationService.getInternalSectorURI());
-            var internalPairwiseSubjectId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
-                            authenticationService.getOrGenerateSalt(userProfile));
+
             int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
             LOG.info(
@@ -168,10 +155,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userContext.getSessionId(),
                             client.getClientID(),
                             AuditService.UNKNOWN,
-                            userContext
-                                    .getUserProfile()
-                                    .map(UserProfile::getEmail)
-                                    .orElse(AuditService.UNKNOWN),
+                            Optional.ofNullable(request.getEmail()).orElse(AuditService.UNKNOWN),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -188,7 +172,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                 "AIS: getAccountIntervention",
                                 () ->
                                         accountInterventionService.getAccountIntervention(
-                                                internalPairwiseSubjectId, auditContext));
+                                                userContext
+                                                        .getOrchSession()
+                                                        .getInternalCommonSubjectId(),
+                                                auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getSuspended() || intervention.getBlocked())) {
                     return performIntervention(input, userContext, client, intervention);
@@ -202,9 +189,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             LOG.error("Unable to generate ProcessingIdentityResponse");
             throw new RuntimeException();
         } catch (NoSuchElementException e) {
-            LOG.warn(
-                    "Issue retrieving UserProfile or ClientRegistry from UserContext. UserProfile is present: {}, ClientRegistry is present: {}",
-                    userContext.getUserProfile().isPresent(),
+            LOG.error(
+                    "Issue retrieving ClientRegistry from UserContext. ClientRegistry is present: {}",
                     userContext.getClient().isPresent());
             throw new RuntimeException();
         }
@@ -219,7 +205,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         var logoutResult =
                 logoutService.handleAccountInterventionLogout(
                         new DestroySessionsRequest(
-                                userContext.getSessionId(), userContext.getSession()),
+                                userContext.getSessionId(), userContext.getOrchSession()),
                         userContext.getOrchSession().getInternalCommonSubjectId(),
                         input,
                         client.getClientID(),

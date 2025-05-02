@@ -23,7 +23,11 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
+import uk.gov.di.authentication.frontendapi.entity.mfa.AuthAppMfaMethodResponse;
+import uk.gov.di.authentication.frontendapi.entity.mfa.MfaMethodResponse;
+import uk.gov.di.authentication.frontendapi.entity.mfa.SmsMfaMethodResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.frontendapi.serialization.MfaMethodResponseAdapter;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -32,6 +36,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -55,10 +60,13 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -91,9 +99,11 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.V
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -121,7 +131,19 @@ class LoginHandlerTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
-    private static final Json objectMapper = SerializationService.getInstance();
+    private static final MFAMethod DEFAULT_SMS_MFA_METHOD =
+            MFAMethod.smsMfaMethod(
+                    true,
+                    true,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    PriorityIdentifier.DEFAULT,
+                    "some-mfa-id");
+    private static final MFAMethod DEFAULT_AUTH_APP_MFA_METHOD =
+            MFAMethod.authAppMfaMethod(
+                    "some-credential", true, true, PriorityIdentifier.DEFAULT, "another-mfa-id");
+    private static final Json objectMapper =
+            new SerializationService(
+                    Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
     private static final Session session = new Session();
     private LoginHandler handler;
     private final Context context = mock(Context.class);
@@ -141,6 +163,7 @@ class LoginHandlerTest {
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -207,7 +230,8 @@ class LoginHandlerTest {
                         cloudwatchMetricsService,
                         commonPasswordsService,
                         authenticationAttemptsService,
-                        authSessionService);
+                        authSessionService,
+                        mfaMethodsService);
     }
 
     @Test
@@ -341,21 +365,25 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200WithCorrectMfaMethodVerifiedStatus() throws Json.JsonException {
+        MFAMethod mfaMethod =
+                MFAMethod.authAppMfaMethod(
+                        "some-credential",
+                        false,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        "another-mfa-id");
         var userProfile = generateUserProfile(null);
         var userCredentials =
                 new UserCredentials()
                         .withEmail(EMAIL)
                         .withPassword(CommonTestVariables.PASSWORD)
-                        .setMfaMethod(
-                                new MFAMethod()
-                                        .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
-                                        .withMethodVerified(false)
-                                        .withEnabled(true));
+                        .setMfaMethod(mfaMethod);
         when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidSession();
         usingValidAuthSession();
 
@@ -376,34 +404,42 @@ class LoginHandlerTest {
     }
 
     private static Stream<Arguments> migratedMfaMethodsToExpectedLoginResponse() {
-        var defaultSmsMethod =
-                MFAMethod.smsMfaMethod(
-                        true,
-                        true,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        PriorityIdentifier.DEFAULT,
-                        "some-mfa-id");
         var expectedRedactedPhoneNumber = redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
-        var defaultAuthAppMethod =
-                MFAMethod.authAppMfaMethod(
-                        "some-credential",
-                        true,
-                        true,
-                        PriorityIdentifier.DEFAULT,
-                        "another-mfa-id");
         return Stream.of(
                 Arguments.of(
-                        defaultSmsMethod,
+                        DEFAULT_SMS_MFA_METHOD,
                         new LoginResponse(
-                                expectedRedactedPhoneNumber, true, true, SMS, true, false)),
+                                expectedRedactedPhoneNumber,
+                                true,
+                                true,
+                                SMS,
+                                true,
+                                List.of(
+                                        new SmsMfaMethodResponse(
+                                                "some-mfa-id",
+                                                SMS,
+                                                PriorityIdentifier.DEFAULT,
+                                                expectedRedactedPhoneNumber)),
+                                false)),
                 Arguments.of(
-                        defaultAuthAppMethod,
-                        new LoginResponse(null, true, true, AUTH_APP, true, false)));
+                        DEFAULT_AUTH_APP_MFA_METHOD,
+                        new LoginResponse(
+                                null,
+                                true,
+                                true,
+                                AUTH_APP,
+                                true,
+                                List.of(
+                                        new AuthAppMfaMethodResponse(
+                                                "another-mfa-id",
+                                                AUTH_APP,
+                                                PriorityIdentifier.DEFAULT)),
+                                false)));
     }
 
     @ParameterizedTest
     @MethodSource("migratedMfaMethodsToExpectedLoginResponse")
-    void shouldReturn200WithCorrectMfaMethodForMigratedUser(
+    void shouldReturn200WithCorrectMfaMethodsForMigratedUser(
             MFAMethod mfaMethod, LoginResponse expectedResponse) throws Json.JsonException {
         var userProfile =
                 generateUserProfile(null)
@@ -422,6 +458,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(migratedUserCredentials);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidSession();
         usingValidAuthSession();
 
@@ -430,6 +467,122 @@ class LoginHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertEquals(expectedResponse, response);
+    }
+
+    private static Stream<Arguments> mfaMethodsExpectedFromMfaMethodsService() {
+        var expectedRedactedPhoneNumber = redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+        return Stream.of(
+                Arguments.of(
+                        true,
+                        List.of(DEFAULT_SMS_MFA_METHOD),
+                        new LoginResponse(
+                                expectedRedactedPhoneNumber,
+                                true,
+                                true,
+                                SMS,
+                                true,
+                                List.of(
+                                        new SmsMfaMethodResponse(
+                                                "some-mfa-id",
+                                                SMS,
+                                                PriorityIdentifier.DEFAULT,
+                                                expectedRedactedPhoneNumber)),
+                                false)),
+                Arguments.of(
+                        true,
+                        List.of(DEFAULT_AUTH_APP_MFA_METHOD),
+                        new LoginResponse(
+                                null,
+                                true,
+                                true,
+                                AUTH_APP,
+                                true,
+                                List.of(
+                                        new AuthAppMfaMethodResponse(
+                                                "another-mfa-id",
+                                                AUTH_APP,
+                                                PriorityIdentifier.DEFAULT)),
+                                false)),
+                Arguments.of(
+                        false,
+                        List.of(DEFAULT_SMS_MFA_METHOD),
+                        new LoginResponse(
+                                expectedRedactedPhoneNumber,
+                                true,
+                                true,
+                                SMS,
+                                true,
+                                List.of(
+                                        new SmsMfaMethodResponse(
+                                                "some-mfa-id",
+                                                SMS,
+                                                PriorityIdentifier.DEFAULT,
+                                                expectedRedactedPhoneNumber)),
+                                false)),
+                Arguments.of(
+                        false,
+                        List.of(DEFAULT_AUTH_APP_MFA_METHOD),
+                        new LoginResponse(
+                                null,
+                                true,
+                                true,
+                                AUTH_APP,
+                                true,
+                                List.of(
+                                        new AuthAppMfaMethodResponse(
+                                                "another-mfa-id",
+                                                AUTH_APP,
+                                                PriorityIdentifier.DEFAULT)),
+                                false)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaMethodsExpectedFromMfaMethodsService")
+    void shouldReturnCorrectMfaMethodsFromMfaMethodsService(
+            boolean migrated, List<MFAMethod> mfaMethods, LoginResponse expectedResponse)
+            throws Json.JsonException {
+        // Arrange
+        var defaultMfa =
+                mfaMethods.stream()
+                        .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
+                        .findFirst();
+        boolean hasPhoneNumberDefaultMfaMethod =
+                defaultMfa.isPresent()
+                        && MFAMethodType.valueOf(defaultMfa.get().getMfaMethodType()) == SMS;
+        var testUserProfile =
+                generateUserProfile(null)
+                        .withMfaMethodsMigrated(migrated)
+                        .withPhoneNumber(
+                                hasPhoneNumberDefaultMfaMethod && !migrated
+                                        ? defaultMfa.get().getDestination()
+                                        : null)
+                        .withPhoneNumberVerified(hasPhoneNumberDefaultMfaMethod && !migrated);
+        var testUserCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(CommonTestVariables.PASSWORD)
+                        .setMfaMethod(mfaMethods.get(0));
+
+        when(authenticationService.login(testUserCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(testUserProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(testUserCredentials);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
+        usingValidSession();
+        usingValidAuthSession();
+        usingDefaultVectorOfTrust();
+
+        // Act
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        // Assert
         assertThat(result, hasStatus(200));
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
@@ -626,6 +779,13 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Result.success(
+                                List.of(
+                                        mfaMethodType.equals(AUTH_APP)
+                                                ? DEFAULT_AUTH_APP_MFA_METHOD
+                                                : DEFAULT_SMS_MFA_METHOD)));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
         usingValidSession();
         usingValidAuthSession();
@@ -793,6 +953,59 @@ class LoginHandlerTest {
     }
 
     @Test
+    void shouldReturn500IfFailedToGetMfaMethods() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingValidSession();
+        usingValidAuthSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingDefaultVectorOfTrust();
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Result.failure(
+                                UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP));
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1078));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+    }
+
+    @Test
+    void shouldReturn500IfFailedToConvertMfaMethodsForResponse() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingValidSession();
+        usingValidAuthSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingDefaultVectorOfTrust();
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Result.success(
+                                List.of(
+                                        new MFAMethod()
+                                                .withMfaMethodType("invalid-type")
+                                                .withMethodVerified(true)
+                                                .withEnabled(true)
+                                                .withDestination("phone-number")
+                                                .withPriority(DEFAULT.name())
+                                                .withMfaIdentifier("mfa-id"))));
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1064));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+    }
+
+    @Test
     void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         setUpSmokeTestClient();
@@ -922,6 +1135,13 @@ class LoginHandlerTest {
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
         when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(loginSuccessful);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Result.success(
+                                List.of(
+                                        mfaMethodType.equals(AUTH_APP)
+                                                ? DEFAULT_AUTH_APP_MFA_METHOD
+                                                : DEFAULT_SMS_MFA_METHOD)));
         return applicableUserCredentials;
     }
 

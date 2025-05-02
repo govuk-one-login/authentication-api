@@ -308,7 +308,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldCreateNewSessionAndConsiderUserNotAuthenticatedWhenUserProfileNotPresent()
+    void shouldConsiderUserNotAuthenticatedWhenUserProfileNotPresent()
             throws ParseException, Json.JsonException {
         withNoUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
@@ -323,8 +323,6 @@ class StartHandlerTest {
         handler.handleRequest(event, context);
 
         verify(startService)
-                .createNewSessionWithExistingIdAndClientSession(SESSION_ID, CLIENT_SESSION_ID);
-        verify(startService)
                 .buildUserStartInfo(
                         any(),
                         any(),
@@ -337,7 +335,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void retainsExistingSessionAndConsidersUserAuthenticatedWhenUserProfilePresent()
+    void considersUserAuthenticatedWhenUserProfilePresent()
             throws ParseException, Json.JsonException {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false);
@@ -351,8 +349,6 @@ class StartHandlerTest {
 
         handler.handleRequest(event, context);
 
-        verify(startService, never())
-                .createNewSessionWithExistingIdAndClientSession(SESSION_ID, CLIENT_SESSION_ID);
         verify(startService)
                 .buildUserStartInfo(
                         any(),
@@ -552,9 +548,6 @@ class StartHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
-        when(startService.createNewSessionWithExistingIdAndClientSession(
-                        SESSION_ID, CLIENT_SESSION_ID))
-                .thenReturn(session);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any(), any()))
                 .thenReturn(new AuthSessionItem().withSessionId(SESSION_ID));
     }

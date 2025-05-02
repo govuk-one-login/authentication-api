@@ -1,0 +1,24 @@
+plugin: rest
+resources:
+  - path: "/v1/mfa-methods/one-mfa"
+    contentType: "application/json"
+    method: GET
+    response:
+      statusCode: 200
+      file: one-mfa.json
+  - path: "/v1/mfa-methods/two-mfa"
+    contentType: "application/json"
+    method: GET
+    response:
+      statusCode: 200
+      file: two-mfa.json
+  - path: "/v1/mfa-methods/not-found"
+    contentType: "application/json"
+    method: GET
+    response:
+      statusCode: 404
+  - path: "/v1/mfa-methods/internal-server-error"
+    contentType: "application/json"
+    method: GET
+    response:
+      statusCode: 500

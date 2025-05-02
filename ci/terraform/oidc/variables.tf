@@ -116,7 +116,7 @@ variable "custom_doc_app_claim_enabled" {
 
 variable "terms_and_conditions" {
   type    = string
-  default = "1.12"
+  default = "1.13"
 }
 
 variable "enable_api_gateway_execution_logging" {
@@ -243,6 +243,12 @@ variable "dlq_alarm_threshold" {
   default     = 1
   type        = number
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
+}
+
+variable "notifications_dlq_alarm_threshold" {
+  default     = 10
+  type        = number
+  description = "The number of messages on the notifications DLQ before a Cloudwatch alarm is generated"
 }
 
 variable "test_client_verify_email_otp" {

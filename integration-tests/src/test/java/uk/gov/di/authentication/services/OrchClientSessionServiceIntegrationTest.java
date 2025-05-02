@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.SubjectType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -72,7 +73,9 @@ class OrchClientSessionServiceIntegrationTest {
         assertThat(session.get().getIdTokenHint(), equalTo(idTokenHint));
         assertThat(session.get().getCreationDate(), equalTo(creationDate));
         assertThat(session.get().getVtrList(), equalTo(VTR_LIST));
-        assertThat(session.get().getRpPairwiseId(), equalTo(rpPairwiseId));
+        assertThat(
+                session.get().getCorrectPairwiseIdGivenSubjectType(SubjectType.PAIRWISE.toString()),
+                equalTo(rpPairwiseId));
         assertThat(session.get().getDocAppSubjectId(), equalTo(docAppSubjectId.getValue()));
         assertThat(session.get().getClientName(), equalTo(clientName));
         // Default expiry is 1 hour (3600 seconds)

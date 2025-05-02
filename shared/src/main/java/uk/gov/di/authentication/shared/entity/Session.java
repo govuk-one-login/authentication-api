@@ -49,15 +49,6 @@ public class Session {
         initializeCodeRequestMap();
     }
 
-    public List<String> getClientSessions() {
-        return clientSessions;
-    }
-
-    public Session addClientSession(String clientSessionId) {
-        this.clientSessions.add(clientSessionId);
-        return this;
-    }
-
     public String getEmailAddress() {
         return emailAddress;
     }

@@ -75,7 +75,6 @@ class LogoutHandlerTest {
     private SignedJWT signedIDToken;
     private String idTokenHint;
     private static final Subject SUBJECT = new Subject();
-    private static final String EMAIL = "joe.bloggs@test.com";
     private Session session;
     private OrchSessionItem orchSession;
 
@@ -126,7 +125,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldDestroySessionAndLogoutWhenSessionIsAvailable() {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -192,7 +191,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -205,7 +204,7 @@ class LogoutHandlerTest {
 
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        session.getClientSessions().add("expired-client-session-id");
+        orchSession.getClientSessions().add("expired-client-session-id");
         saveSession(session);
         handler.handleRequest(event, context);
 
@@ -236,7 +235,8 @@ class LogoutHandlerTest {
     }
 
     private Session generateSession() {
-        return new Session().addClientSession(CLIENT_SESSION_ID);
+        orchSession.addClientSession(CLIENT_SESSION_ID);
+        return new Session();
     }
 
     private void saveSession(Session session) {
@@ -278,7 +278,7 @@ class LogoutHandlerTest {
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {
-        session.getClientSessions().add(clientSessionId);
+        orchSession.getClientSessions().add(clientSessionId);
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }

@@ -14,7 +14,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
+import uk.gov.di.authentication.frontendapi.entity.mfa.MfaMethodResponse;
 import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
+import uk.gov.di.authentication.frontendapi.serialization.MfaMethodResponseAdapter;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -24,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
@@ -73,6 +76,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             new ClientID(CLIENT_ID),
                             URI.create(REDIRECT_URI))
                     .nonce(new Nonce());
+    protected final Json objectMapper =
+            new SerializationService(
+                    Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
 
     @BeforeEach
     void setup() {

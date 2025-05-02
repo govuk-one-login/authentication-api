@@ -24,7 +24,7 @@ class SessionServiceTest {
     void shouldPersistSessionToRedisWithExpiry() throws Json.JsonException {
         when(configuration.getSessionExpiry()).thenReturn(1234L);
 
-        var session = new Session().addClientSession("client-session-id");
+        var session = new Session();
 
         sessionService.storeOrUpdateSession(session, "session-id");
 
@@ -34,7 +34,7 @@ class SessionServiceTest {
 
     @Test
     void shouldUpdateSessionIdInRedisAndDeleteOldKey() {
-        var session = new Session().addClientSession("client-session-id");
+        var session = new Session();
 
         sessionService.storeOrUpdateSession(session, "session-id");
         sessionService.updateWithNewSessionId(session, "session-id", "new-session-id");
@@ -46,7 +46,7 @@ class SessionServiceTest {
 
     @Test
     void shouldDeleteSessionIdFromRedis() {
-        var session = new Session().addClientSession("client-session-id");
+        var session = new Session();
 
         sessionService.storeOrUpdateSession(session, "session-id");
         sessionService.deleteStoredSession("session-id");

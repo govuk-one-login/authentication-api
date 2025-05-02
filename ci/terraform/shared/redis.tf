@@ -58,6 +58,15 @@ data "aws_sns_topic" "slack_events" {
   name = "${var.environment}-slack-events"
 }
 
+resource "random_password" "frontend_redis_password" {
+  length = 32
+
+  override_special = "!&#$^<>-"
+  min_lower        = 3
+  min_numeric      = 3
+  min_special      = 3
+  min_upper        = 3
+}
 
 resource "aws_elasticache_subnet_group" "frontend_redis_session_store" {
   name       = "${var.environment}-frontend-redis-subnet"

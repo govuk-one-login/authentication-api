@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity.mfa.response;
+package uk.gov.di.accountmanagement.entity.mfa.response;
 
 import com.google.gson.annotations.Expose;
 import org.jetbrains.annotations.NotNull;

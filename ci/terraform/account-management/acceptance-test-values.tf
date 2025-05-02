@@ -20,3 +20,9 @@ resource "aws_ssm_parameter" "at_phone_verify_code" {
   type  = "String"
   value = var.test_client_verify_phone_number_otp
 }
+
+resource "aws_ssm_parameter" "at_internal_sector_uri" {
+  name  = "/acceptance-tests/${var.environment}/INTERNAL_SECTOR_URI"
+  type  = "String"
+  value = var.internal_sector_uri
+}

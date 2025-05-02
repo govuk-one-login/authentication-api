@@ -4,6 +4,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.TypeAdapter;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
@@ -15,7 +16,10 @@ import uk.gov.di.authentication.shared.serialization.SubjectAdapter;
 import uk.gov.di.authentication.shared.validation.RequiredFieldValidator;
 import uk.gov.di.authentication.shared.validation.Validator;
 
+import java.lang.reflect.Type;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -33,11 +37,19 @@ public class SerializationService implements Json {
     private final RequiredFieldValidator defaultValidator = new RequiredFieldValidator();
 
     public SerializationService() {
+        this(new HashMap<>());
+    }
+
+    public SerializationService(Map<Type, TypeAdapter<?>> extraTypeAdapters) {
         gsonWithUnderscores =
-                createGsonBuilder(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
-        gsonWithCamelCase = createGsonBuilder(FieldNamingPolicy.IDENTITY).create();
+                createGsonBuilder(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES, extraTypeAdapters)
+                        .create();
+        gsonWithCamelCase =
+                createGsonBuilder(FieldNamingPolicy.IDENTITY, extraTypeAdapters).create();
         gsonWithUnderscoresNoNulls =
-                createNoNullGsonBuilder(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
+                createNoNullGsonBuilder(
+                                FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES, extraTypeAdapters)
+                        .create();
     }
 
     @Override
@@ -121,16 +133,21 @@ public class SerializationService implements Json {
         return INSTANCE;
     }
 
-    private GsonBuilder createGsonBuilder(FieldNamingPolicy namingPolicy) {
-        return createNoNullGsonBuilder(namingPolicy).serializeNulls();
+    private GsonBuilder createGsonBuilder(
+            FieldNamingPolicy namingPolicy, Map<Type, TypeAdapter<?>> extraTypeAdapters) {
+        return createNoNullGsonBuilder(namingPolicy, extraTypeAdapters).serializeNulls();
     }
 
-    private GsonBuilder createNoNullGsonBuilder(FieldNamingPolicy namingPolicy) {
-        return new GsonBuilder()
-                .setFieldNamingPolicy(namingPolicy)
-                .excludeFieldsWithoutExposeAnnotation()
-                .registerTypeAdapter(State.class, new StateAdapter())
-                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
-                .registerTypeAdapter(Subject.class, new SubjectAdapter());
+    private GsonBuilder createNoNullGsonBuilder(
+            FieldNamingPolicy namingPolicy, Map<Type, TypeAdapter<?>> extraTypeAdapters) {
+        var builder =
+                new GsonBuilder()
+                        .setFieldNamingPolicy(namingPolicy)
+                        .excludeFieldsWithoutExposeAnnotation()
+                        .registerTypeAdapter(State.class, new StateAdapter())
+                        .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                        .registerTypeAdapter(Subject.class, new SubjectAdapter());
+        extraTypeAdapters.forEach(builder::registerTypeAdapter);
+        return builder;
     }
 }

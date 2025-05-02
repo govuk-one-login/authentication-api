@@ -13,7 +13,7 @@ plugins {
     id "com.avast.gradle.docker-compose" version "0.17.12"
     id "org.sonarqube" version "6.1.0.5360"
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.1.7'
+    id 'com.github.spotbugs' version '6.1.10'
 }
 
 apply plugin: "java"
@@ -22,10 +22,10 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.31.22",
+        aws_sdk_v2_version: "2.31.34",
         aws_lambda_core_version: "1.2.3",
         aws_lambda_events_version: "3.15.0",
-        gson: "2.13.0",
+        gson: "2.13.1",
         jetbrains_annotations: "26.0.2",
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "10.2",
@@ -146,7 +146,7 @@ subprojects {
 
         apache "commons-codec:commons-codec:1.18.0",
                 "org.apache.httpcomponents:httpclient:4.5.14",
-                "org.apache.commons:commons-collections4:4.1",
+                "org.apache.commons:commons-collections4:4.5.0",
                 "commons-net:commons-net:3.11.1",
                 "commons-io:commons-io:2.19.0",
                 "org.apache.commons:commons-lang3:3.17.0"
@@ -177,9 +177,9 @@ subprojects {
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
 
         lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.5.5.RELEASE"
+                "io.lettuce:lettuce-core:6.6.0.RELEASE"
 
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.3"
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.4"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
                 "org.slf4j:slf4j-nop:2.0.17"
@@ -201,7 +201,7 @@ subprojects {
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
                 "org.mockito:mockito-core:5.17.0",
                 "org.awaitility:awaitility:4.3.0",
-                "com.approvaltests:approvaltests:24.20.0",
+                "com.approvaltests:approvaltests:24.21.0",
                 configurations.hamcrest,
                 "org.reflections:reflections:0.10.2"
 

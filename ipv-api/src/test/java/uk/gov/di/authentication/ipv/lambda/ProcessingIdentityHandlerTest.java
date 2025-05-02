@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityInterventionResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
@@ -24,9 +25,8 @@ import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -40,13 +40,12 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +55,7 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -67,6 +67,7 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSIO
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -77,10 +78,6 @@ class ProcessingIdentityHandlerTest {
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
-    private static final String PHONE_NUMBER = "01234567890";
-    private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
-    private static final Date UPDATED_DATE_TIME = NowHelper.now();
-    private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
@@ -110,19 +107,20 @@ class ProcessingIdentityHandlerTest {
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final Session session = new Session();
-    private final OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID);
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(PAIRWISE_SUBJECT);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private ProcessingIdentityHandler handler;
 
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(BaseFrontendHandler.class);
+
     @BeforeEach
     void setup() {
-        var userProfile = generateUserProfile();
         when(dynamoClientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry()));
-        when(dynamoService.getUserProfileFromEmail(EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         Map<String, String> headers = new HashMap<>();
@@ -165,6 +163,22 @@ class ProcessingIdentityHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
         verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
+    void shouldReturnErrorIfOrchSessionHasNoInternalCommonSubjectId() throws Json.JsonException {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(anyString()))
+                .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        verifyNoInteractions(cloudwatchMetricsService);
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Orch session has no internalCommonSubjectId")));
     }
 
     @Test
@@ -259,7 +273,7 @@ class ProcessingIdentityHandlerTest {
         verify(logoutService)
                 .handleAccountInterventionLogout(
                         new DestroySessionsRequest(SESSION_ID, List.of()),
-                        null,
+                        PAIRWISE_SUBJECT,
                         event,
                         CLIENT_ID,
                         intervention);
@@ -398,18 +412,5 @@ class ProcessingIdentityHandlerTest {
                 .withScopes(singletonList("openid"))
                 .withCookieConsentShared(true)
                 .withSubjectType("pairwise");
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT_ID)
-                .withSubjectID(SUBJECT_ID)
-                .withSalt(SALT)
-                .withCreated(CREATED_DATE_TIME.toString())
-                .withUpdated(UPDATED_DATE_TIME.toString());
     }
 }

@@ -60,7 +60,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
@@ -100,20 +99,6 @@ class StartServiceTest {
     @BeforeEach
     void setup() {
         startService = new StartService(dynamoClientService, dynamoService, sessionService);
-    }
-
-    @Test
-    void shouldOverwriteSessionWithNewSessionUsingExistingSessionAndClientSessionIds() {
-        var currentClientSessionId = "some-client-session-id";
-        SESSION.addClientSession("previous-session-client-session-id");
-
-        var session =
-                startService.createNewSessionWithExistingIdAndClientSession(
-                        SESSION_ID, currentClientSessionId);
-
-        assertTrue(session.getClientSessions().contains("some-client-session-id"));
-        assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
-        verify(sessionService).storeOrUpdateSession(session, SESSION_ID);
     }
 
     @Test

@@ -63,6 +63,7 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   IsNotProduction: !Not [!Equals [!Ref Environment, production]]
+  IsNotIntegration: !Not [!Equals [!Ref Environment, integration]]
   IsNotDevOrProd:
     !Not [
       !Or [
@@ -119,11 +120,29 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
-  SnapStartEnabled:
+  SnapStartEnabledSpotResponse:
     !Or [
       !Equals [dev, !Ref Environment],
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
+  IsOrchIpvTokenSigningKeyPublishEnabled:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
+  UseOrchIpvTokenSigningKey:
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
     ]
 
 Mappings:
@@ -1262,6 +1281,8 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt BackChannelLogoutQueue.Arn
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -2203,12 +2224,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              ipvTokenKeyArn,
-            ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseOrchIpvTokenSigningKey
+            - !Ref OrchIPVTokenSigningKmsKeyAlias
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                ipvTokenKeyArn,
+              ]
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
@@ -2655,6 +2678,12 @@ Resources:
               !Ref Environment,
               ipvTokenKeyArn,
             ]
+          AUTH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED: false
+          ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED: !If
+            - IsOrchIpvTokenSigningKeyPublishEnabled
+            - true
+            - false
+          ORCH_IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
       Policies:
         - !Ref IpvTokenSigningKmsAccessPolicy
       Tags:
@@ -3955,12 +3984,14 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              ipvTokenKeyArn,
-            ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseOrchIpvTokenSigningKey
+            - !Ref OrchIPVTokenSigningKmsKeyAlias
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                ipvTokenKeyArn,
+              ]
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
@@ -4224,7 +4255,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       SnapStart: !If
-        - SnapStartEnabled
+        - SnapStartEnabledSpotResponse
         - ApplyOn: PublishedVersions
         - !Ref AWS::NoValue
       Tags:
@@ -4345,7 +4376,7 @@ Resources:
       QueueName: !Sub ${Environment}-BackChannelLogoutDlq
       KmsMasterKeyId: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
       KmsDataKeyReusePeriodSeconds: 300
-      MessageRetentionPeriod: 21600
+      MessageRetentionPeriod: 259200
 
   BackChannelLogoutQueueEncryptionKey:
     Type: AWS::KMS::Key
@@ -4355,6 +4386,29 @@ Resources:
       KeyUsage: ENCRYPT_DECRYPT
       KeySpec: SYMMETRIC_DEFAULT
       EnableKeyRotation: true
+
+  BackChannelLogoutDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotIntegration
+    Properties:
+      AlarmName: !Sub ${Environment}-backchannel-logout-dlq-alarm
+      AlarmDescription: !Sub "${Environment} backchannel logout DLQ has a message.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5292228639/Runbook+Backchannel+Logout+DLQ+Alarm"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::GetAtt:
+              - BackChannelLogoutDeadLetterQueue
+              - QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
   #endregion
 
   #region Storage Token Jwk Lambda
@@ -5422,6 +5476,7 @@ Resources:
                   !Ref Environment,
                   ipvTokenKeyArn,
                 ]
+              - !GetAtt OrchIPVTokenSigningKmsKey.Arn
 
   OrchToAuthSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -5792,6 +5847,33 @@ Resources:
               - kms:Decrypt
               - kms:Encrypt
             Resource: !GetAtt OrchAuthCodeTableEncryptionKey.Arn
+
+  #endregion
+
+  #region Orch IPV token signing key pair
+
+  OrchIPVTokenSigningKmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${Environment}-orch-ipv-token-auth-kms-key-alias"
+      TargetKeyId: !Ref OrchIPVTokenSigningKmsKey
+
+  OrchIPVTokenSigningKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for authentication to the IPV token endpoint
+      PendingWindowInDays: 30
+      KeyUsage: SIGN_VERIFY
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
 
   #endregion
 

@@ -1,0 +1,11 @@
+[
+  {
+    "method": {
+      "credential": "one-mfa::AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444",
+      "mfaMethodType": "AUTH_APP"
+    },
+    "methodVerified": true,
+    "mfaIdentifier": "5FFF6570-F27E-465B-8E59-A5DD11D31879",
+    "priorityIdentifier": "DEFAULT"
+  }
+]

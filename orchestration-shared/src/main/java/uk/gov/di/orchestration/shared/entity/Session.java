@@ -63,26 +63,8 @@ public class Session {
         initializeCodeRequestMap();
     }
 
-    public List<String> getClientSessions() {
-        return clientSessions;
-    }
-
-    public Session addClientSession(String clientSessionId) {
-        this.clientSessions.add(clientSessionId);
-        return this;
-    }
-
     public boolean validateSession(String emailAddress) {
         return this.emailAddress.equals(emailAddress);
-    }
-
-    public String getEmailAddress() {
-        return emailAddress;
-    }
-
-    public Session setEmailAddress(String emailAddress) {
-        this.emailAddress = emailAddress;
-        return this;
     }
 
     public CredentialTrustLevel getCurrentCredentialStrength() {
@@ -116,9 +98,5 @@ public class Session {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
         }
-    }
-
-    public void resetClientSessions() {
-        this.clientSessions = new ArrayList<>();
     }
 }

@@ -186,7 +186,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
-        redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -324,7 +323,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
-        redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
 
         makeRequest(
                 Optional.empty(),
@@ -502,7 +500,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
-        redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -600,7 +597,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
-        redis.addEmailToSession(SESSION_ID, TEST_EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -662,7 +658,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
 
         var response =
                 makeRequest(

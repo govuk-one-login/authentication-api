@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
@@ -60,6 +61,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     public static final State STATE = new State();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
 
     @RegisterExtension
     protected static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
@@ -81,10 +83,9 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
             throws Json.JsonException {
         setupSession(false);
         setupClient();
-        byte[] salt = setupUser();
         var signedCredential = SignedCredentialHelper.generateCredential();
         var pairwiseIdentifier =
-                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
+                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", SALT);
         identityStore.addCoreIdentityJWT(
                 CLIENT_SESSION_ID, pairwiseIdentifier, signedCredential.serialize());
 
@@ -113,9 +114,8 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
             throws Json.JsonException {
         setupSession(false);
         setupClient();
-        byte[] salt = setupUser();
         var pairwiseIdentifier =
-                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
+                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", SALT);
         identityStore.saveIdentityClaims(
                 CLIENT_SESSION_ID,
                 pairwiseIdentifier,
@@ -148,7 +148,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
             throws Json.JsonException {
         setupSession(true);
         setupClient();
-        setupUser();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
@@ -175,7 +174,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
             throws Json.JsonException {
         setupSession(false);
         setupClient();
-        setupUser();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
@@ -250,10 +248,5 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 ClientType.WEB,
                 ES256.getName(),
                 true);
-    }
-
-    private byte[] setupUser() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, "password-1", INTERNAL_SUBJECT);
-        return userStore.addSalt(TEST_EMAIL_ADDRESS);
     }
 }

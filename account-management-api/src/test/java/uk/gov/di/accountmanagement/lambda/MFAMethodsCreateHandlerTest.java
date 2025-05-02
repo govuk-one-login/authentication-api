@@ -17,12 +17,11 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.response.MfaMethodResponse;
-import uk.gov.di.authentication.shared.entity.mfa.response.ResponseSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -104,7 +103,7 @@ class MFAMethodsCreateHandlerTest {
                 Arguments.of(
                         MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
                         ErrorResponse.ERROR_1056,
-                        400),
+                        404),
                 Arguments.of(
                         MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS,
                         ErrorResponse.ERROR_1064,
@@ -134,14 +133,10 @@ class MFAMethodsCreateHandlerTest {
 
     @Test
     void shouldReturn200AndCreateMfaSmsMfaMethod() {
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(
-                        Result.success(
-                                new MfaMethodResponse(
-                                        TEST_SMS_MFA_ID,
-                                        PriorityIdentifier.BACKUP,
-                                        true,
-                                        new ResponseSmsMfaDetail(TEST_PHONE_NUMBER))));
+        var backupMfa =
+                MFAMethod.smsMfaMethod(
+                        true, true, TEST_PHONE_NUMBER, PriorityIdentifier.BACKUP, TEST_SMS_MFA_ID);
+        when(mfaMethodsService.addBackupMfa(any(), any())).thenReturn(Result.success(backupMfa));
 
         var event =
                 generateApiGatewayEvent(
@@ -151,8 +146,8 @@ class MFAMethodsCreateHandlerTest {
 
         var result = handler.handleRequest(event, context);
 
-        ArgumentCaptor<MfaMethodCreateOrUpdateRequest.MfaMethod> mfaMethodCaptor =
-                ArgumentCaptor.forClass(MfaMethodCreateOrUpdateRequest.MfaMethod.class);
+        ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
+                ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
 
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
@@ -183,14 +178,11 @@ class MFAMethodsCreateHandlerTest {
 
     @Test
     void shouldReturn200AndCreateAuthAppMfa() {
+        var authAppBackup =
+                MFAMethod.authAppMfaMethod(
+                        TEST_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, TEST_AUTH_APP_ID);
         when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(
-                        Result.success(
-                                new MfaMethodResponse(
-                                        TEST_AUTH_APP_ID,
-                                        PriorityIdentifier.BACKUP,
-                                        true,
-                                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL))));
+                .thenReturn(Result.success(authAppBackup));
 
         var event =
                 generateApiGatewayEvent(
@@ -200,8 +192,8 @@ class MFAMethodsCreateHandlerTest {
 
         var result = handler.handleRequest(event, context);
 
-        ArgumentCaptor<MfaMethodCreateOrUpdateRequest.MfaMethod> mfaMethodCaptor =
-                ArgumentCaptor.forClass(MfaMethodCreateOrUpdateRequest.MfaMethod.class);
+        ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
+                ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
 
         verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
         var capturedRequest = mfaMethodCaptor.getValue();
@@ -410,7 +402,9 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenMfaMethodServiceReturnsRetrieveError() {
+    void shouldReturn500WhenReturnedMfaMethodDoesNotConvertToMfaResponse() {
+        var mfaMethodWithInvalidMfaType =
+                new MFAMethod("invalid mfa type", TEST_CREDENTIAL, true, true, "updated-timestamp");
         var event =
                 generateApiGatewayEvent(
                         PriorityIdentifier.BACKUP,
@@ -419,7 +413,7 @@ class MFAMethodsCreateHandlerTest {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Result.failure(MfaCreateFailureReason.ERROR_RETRIEVING_MFA_METHODS));
+                .thenReturn(Result.success(mfaMethodWithInvalidMfaType));
 
         var result = handler.handleRequest(event, context);
 

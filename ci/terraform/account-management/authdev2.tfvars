@@ -7,3 +7,6 @@ mfa_method_management_api_enabled = true
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
+
+# URIs
+internal_sector_uri = "https://identity.authdev2.sandpit.account.gov.uk"

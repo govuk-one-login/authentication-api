@@ -88,7 +88,7 @@ public enum ErrorResponse {
     ERROR_1074(1074, "Cannot update primary sms number to number already in use by backup"),
     ERROR_1075(1075, "Cannot update a backup sms mfa method's phone number"),
     ERROR_1076(1076, "Cannot update a backup sms mfa method's auth app credential"),
-    ERROR_1077(1076, "Attempted to update a backup mfa method without a default present"),
+    ERROR_1077(1077, "Cannot edit a backup mfa method"),
     ERROR_1078(1078, "Unexpected error creating mfa identifier for auth app mfa method"),
     ERROR_1079(1079, "Invalid principal in request"),
     ERROR_1080(1080, "Default method already exists, new one cannot be created."),

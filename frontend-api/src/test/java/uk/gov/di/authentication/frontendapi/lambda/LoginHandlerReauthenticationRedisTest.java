@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -122,6 +123,7 @@ class LoginHandlerReauthenticationRedisTest {
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -183,7 +185,8 @@ class LoginHandlerReauthenticationRedisTest {
                         cloudwatchMetricsService,
                         commonPasswordsService,
                         null,
-                        authSessionService);
+                        authSessionService,
+                        mfaMethodsService);
     }
 
     @ParameterizedTest
