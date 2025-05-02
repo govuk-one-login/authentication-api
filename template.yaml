@@ -128,22 +128,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  IsOrchIpvTokenSigningKeyPublishEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
-  UseOrchIpvTokenSigningKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2224,14 +2208,7 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
-            - UseOrchIpvTokenSigningKey
-            - !Ref OrchIPVTokenSigningKmsKeyAlias
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                ipvTokenKeyArn,
-              ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
@@ -2672,18 +2649,7 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          IPV_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              ipvTokenKeyArn,
-            ]
-          AUTH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED: false
-          ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED: !If
-            - IsOrchIpvTokenSigningKeyPublishEnabled
-            - true
-            - false
-          ORCH_IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
       Policies:
         - !Ref IpvTokenSigningKmsAccessPolicy
       Tags:
@@ -3984,14 +3950,7 @@ Resources:
                     !Ref Environment,
                     serviceDomain,
                   ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS: !If
-            - UseOrchIpvTokenSigningKey
-            - !Ref OrchIPVTokenSigningKmsKeyAlias
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                ipvTokenKeyArn,
-              ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
             - IpvExists
             - !Sub
@@ -5850,7 +5809,7 @@ Resources:
 
   #endregion
 
-  #region Orch IPV token signing key pair
+  #region IPV token signing key pair
 
   OrchIPVTokenSigningKmsKeyAlias:
     Type: AWS::KMS::Alias

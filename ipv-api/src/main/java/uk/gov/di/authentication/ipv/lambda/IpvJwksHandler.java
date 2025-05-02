@@ -52,18 +52,7 @@ public class IpvJwksHandler
 
             List<JWK> signingKeys = new ArrayList<>();
 
-            if (jwksService.isAuthIpvTokenSigningKeyPublishEnabled()) {
-                signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
-            }
-
-            if (jwksService.isOrchIpvTokenSigningKeyPublishEnabled()) {
-                signingKeys.add(jwksService.getPublicOrchIpvTokenJwkWithOpaqueId());
-            }
-
-            if (signingKeys.isEmpty()) {
-                throw new RuntimeException(
-                        "Feature flag misconfiguration - response must contain at least one signing key. Check at least one of AUTH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED and ORCH_IPV_TOKEN_SIGNING_KEY_PUBLISH_ENABLED is true.");
-            }
+            signingKeys.add(jwksService.getPublicIpvTokenJwkWithOpaqueId());
 
             JWKSet jwkSet = new JWKSet(signingKeys);
 
