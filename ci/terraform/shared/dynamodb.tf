@@ -792,12 +792,6 @@ resource "aws_dynamodb_resource_policy" "user_credentials_table" {
   policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
 }
 
-resource "aws_dynamodb_resource_policy" "doc_app_credential_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
-  resource_arn = aws_dynamodb_table.doc_app_credential_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
-}
-
 resource "aws_dynamodb_resource_policy" "common_passwords_table" {
   count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.common_passwords_table.arn
