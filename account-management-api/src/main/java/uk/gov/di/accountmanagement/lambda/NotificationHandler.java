@@ -233,6 +233,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         .contains(notifyRequest.getDestination());
 
         LOG.info("Sending notification to test destination {}", notifyRequest.getDestination());
+
         LOG.info("isTestClient: {} ", notifyRequest.isTestClient());
 
         var isTestUserThatShouldNotInvokeNotify =
