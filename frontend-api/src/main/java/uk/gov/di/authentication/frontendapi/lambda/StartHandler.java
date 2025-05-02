@@ -357,15 +357,6 @@ public class StartHandler
     private static void logIfNewFieldsDoNotMatchClientSessionAuthParameters(
             StartRequest startRequest, ClientSession clientSession) {
         LOG.info("Checking if new fields match client session auth parameters");
-        if (!Objects.equals(
-                startRequest.cookieConsent(),
-                getAuthRequestParam(clientSession, "cookie_consent"))) {
-            LOG.warn(
-                    "\"cookie_consent\" field does not match custom parameter in auth request params");
-        }
-        if (!Objects.equals(startRequest.ga(), getAuthRequestParam(clientSession, "_ga"))) {
-            LOG.warn("\"_ga\" field does not match custom parameter in auth request params");
-        }
         var requestedVtr = clientSession.getEffectiveVectorOfTrust();
         var requestedLevelOfConfidence =
                 Optional.ofNullable(requestedVtr.getLevelOfConfidence())
@@ -374,29 +365,49 @@ public class StartHandler
         if (!Objects.equals(
                 startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence)) {
             LOG.warn(
-                    "\"requested_level_of_confidence\" field does not match levelOfConfidence in effectiveVectorOfTrust");
+                    "\"requested_level_of_confidence\" field does not match levelOfConfidence in clientSession ({})",
+                    createNotEqualLog(
+                            startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence));
         }
         if (!Objects.equals(
                 startRequest.requestedCredentialStrength(),
                 requestedVtr.getCredentialTrustLevel().getValue())) {
             LOG.warn(
-                    "\"requested_credential_strength\" field does not match credentialTrustLevel in effectiveVectorOfTrust");
+                    "\"requested_credential_strength\" field does not match credentialTrustLevel in clientSession ({})",
+                    createNotEqualLog(
+                            startRequest.requestedCredentialStrength(),
+                            requestedVtr.getCredentialTrustLevel().getValue()));
         }
-        if (!Objects.equals(startRequest.state(), getAuthRequestParam(clientSession, "state"))) {
-            LOG.warn("\"state\" field does not match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.clientId(), getAuthRequestParam(clientSession, "client_id"))) {
-            LOG.warn("\"client_id\" field does not match custom parameter in auth request params");
-        }
-        if (!Objects.equals(
-                startRequest.redirectUri(), getAuthRequestParam(clientSession, "redirect_uri"))) {
+        checkCustomFieldsEqual("cookie_consent", startRequest.cookieConsent(), clientSession);
+        checkCustomFieldsEqual("_ga", startRequest.ga(), clientSession);
+        checkCustomFieldsEqual("state", startRequest.state(), clientSession);
+        checkCustomFieldsEqual("client_id", startRequest.clientId(), clientSession);
+        checkCustomFieldsEqual("redirect_uri", startRequest.redirectUri(), clientSession);
+        checkCustomFieldsEqual("scope", startRequest.scope(), clientSession);
+    }
+
+    private static void checkCustomFieldsEqual(
+            String fieldName, String startRequestField, ClientSession clientSession) {
+        var authRequestParam = getAuthRequestParam(clientSession, fieldName);
+        if (!Objects.equals(startRequestField, authRequestParam)) {
+            var details = createNotEqualLog(startRequestField, authRequestParam);
             LOG.warn(
-                    "\"redirect_uri\" field does not match custom parameter in auth request params");
+                    "\"{}\" field does not match custom parameter in clientSession ({})",
+                    fieldName,
+                    details);
         }
-        if (!Objects.equals(startRequest.scope(), getAuthRequestParam(clientSession, "scope"))) {
-            LOG.warn("\"scope\" field does not match custom parameter in auth request params");
+    }
+
+    private static <T> String createNotEqualLog(T startRequestField, T clientSessionParam) {
+        String details = "";
+        if (Objects.isNull(startRequestField)) {
+            details = "startRequest field is null";
+        } else if (Objects.isNull(clientSessionParam)) {
+            details = "clientSession field is null";
+        } else {
+            details = "both are not null";
         }
+        return details;
     }
 
     private static String getAuthRequestParam(ClientSession clientSession, String parameter) {
