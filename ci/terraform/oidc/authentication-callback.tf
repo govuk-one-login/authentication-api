@@ -8,7 +8,6 @@ module "oidc_api_authentication_callback_role_1" {
     aws_iam_policy.storage_token_kms_signing_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.ipv_token_auth_kms_policy.arn,
     aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
     aws_iam_policy.orch_to_auth_kms_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
