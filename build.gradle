@@ -199,6 +199,7 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
+                "org.junit.platform:junit-platform-launcher",
                 "org.mockito:mockito-core:5.17.0",
                 "org.awaitility:awaitility:4.3.0",
                 "com.approvaltests:approvaltests:24.20.0",
