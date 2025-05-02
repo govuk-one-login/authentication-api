@@ -43,6 +43,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
@@ -54,6 +55,7 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
+import static uk.gov.di.authentication.frontendapi.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
@@ -84,6 +86,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final MFAMethodsService mfaMethodsService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -97,7 +100,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             CloudwatchMetricsService cloudwatchMetricsService,
             CommonPasswordsService commonPasswordsService,
             AuthenticationAttemptsService authenticationAttemptsService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -113,6 +117,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -126,6 +131,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -139,6 +145,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public LoginHandler() {
@@ -333,6 +340,23 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         ? redactPhoneNumber(userMfaDetail.phoneNumber())
                         : null;
 
+        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
+        if (retrieveMfaMethods.isFailure()) {
+            return switch (retrieveMfaMethods.getFailure()) {
+                case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.ERROR_1078);
+            };
+        }
+
+        var retrievedMfaMethods = retrieveMfaMethods.getSuccess();
+        var maybeMfaMethodResponses = convertMfaMethodsToMfaMethodResponse(retrievedMfaMethods);
+        if (maybeMfaMethodResponses.isFailure()) {
+            LOG.error(maybeMfaMethodResponses.getFailure());
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+        }
+
+        var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
+
         boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
 
         try {
@@ -342,6 +366,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             redactedPhoneNumber,
                             userMfaDetail,
                             termsAndConditionsAccepted,
+                            mfaMethodResponses,
                             isPasswordChangeRequired));
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

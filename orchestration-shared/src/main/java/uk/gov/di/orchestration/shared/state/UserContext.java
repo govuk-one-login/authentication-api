@@ -5,7 +5,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserCredentials;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.util.Optional;
@@ -13,9 +12,7 @@ import java.util.Optional;
 public class UserContext {
     private final Session session;
     private final String sessionId;
-    private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
-    private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
     private final OrchClientSessionItem orchClientSession;
     private final SupportedLanguage userLanguage;
@@ -25,9 +22,7 @@ public class UserContext {
     protected UserContext(
             Session session,
             String sessionId,
-            Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
-            boolean userAuthenticated,
             Optional<ClientRegistry> client,
             OrchClientSessionItem orchClientSession,
             SupportedLanguage userLanguage,
@@ -35,9 +30,7 @@ public class UserContext {
             OrchSessionItem orchSession) {
         this.session = session;
         this.sessionId = sessionId;
-        this.userProfile = userProfile;
         this.userCredentials = userCredentials;
-        this.userAuthenticated = userAuthenticated;
         this.client = client;
         this.orchClientSession = orchClientSession;
         this.userLanguage = userLanguage;
@@ -53,16 +46,8 @@ public class UserContext {
         return sessionId;
     }
 
-    public Optional<UserProfile> getUserProfile() {
-        return userProfile;
-    }
-
     public Optional<UserCredentials> getUserCredentials() {
         return userCredentials;
-    }
-
-    public boolean isUserAuthenticated() {
-        return userAuthenticated;
     }
 
     public Optional<ClientRegistry> getClient() {
@@ -100,9 +85,7 @@ public class UserContext {
     public static class Builder {
         private final Session session;
         private String sessionId;
-        private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
-        private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
         private OrchClientSessionItem orchClientSession;
         private SupportedLanguage userLanguage;
@@ -118,22 +101,8 @@ public class UserContext {
             return this;
         }
 
-        public Builder withUserProfile(UserProfile userProfile) {
-            return withUserProfile(Optional.of(userProfile));
-        }
-
-        public Builder withUserProfile(Optional<UserProfile> userProfile) {
-            this.userProfile = userProfile;
-            return this;
-        }
-
         public Builder withUserCredentials(Optional<UserCredentials> userCredentials) {
             this.userCredentials = userCredentials;
-            return this;
-        }
-
-        public Builder withUserAuthenticated(boolean userAuthenticated) {
-            this.userAuthenticated = userAuthenticated;
             return this;
         }
 
@@ -170,9 +139,7 @@ public class UserContext {
             return new UserContext(
                     session,
                     sessionId,
-                    userProfile,
                     userCredentials,
-                    userAuthenticated,
                     client,
                     orchClientSession,
                     userLanguage,

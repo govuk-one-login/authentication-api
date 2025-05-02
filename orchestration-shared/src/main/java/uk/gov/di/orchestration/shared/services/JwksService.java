@@ -67,15 +67,18 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    // TODO: ATO-1314: Remove this method once publishing has been enabled on all environments.
+    public boolean isAuthIpvTokenSigningKeyPublishEnabled() {
+        return configurationService.isAuthIPVTokenSigningKeyPublishEnabled();
+    }
+
+    // TODO: ATO-1585: Following migration to the new key, remove this helper and the associated env
+    // var.
     public boolean isOrchIpvTokenSigningKeyPublishEnabled() {
         return configurationService.isOrchIPVTokenSigningKeyPublishEnabled();
     }
 
     public JWK getPublicOrchIpvTokenJwkWithOpaqueId() {
-        // TODO: ATO-1315: Remove "inactive" reference from this log once we begin signing using
-        // this pair.
-        LOG.info("Retrieving Orch IPV token public key (inactive/unused at present)");
+        LOG.info("Retrieving Orch IPV token public key");
         return getPublicJWKWithKeyId(configurationService.getOrchIPVTokenSigningKeyAlias());
     }
 

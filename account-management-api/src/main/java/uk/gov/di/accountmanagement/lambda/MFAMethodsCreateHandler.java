@@ -16,7 +16,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateOrUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -25,11 +25,11 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -109,12 +109,12 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
         }
 
-        var maybeMigrationErrorResponse = migrateMfaCredentialsForUserIfRequired(userProfile);
+        var maybeMigrationErrorResponse =
+                migrateMfaCredentialsForUserIfRequired(userProfile, mfaMethodsService, LOG);
         if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
 
         try {
-            MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest =
-                    readMfaMethodCreateRequest(input);
+            MfaMethodCreateRequest mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
 
             LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
 
@@ -173,46 +173,17 @@ public class MFAMethodsCreateHandler
         };
     }
 
-    private Optional<APIGatewayProxyResponseEvent> migrateMfaCredentialsForUserIfRequired(
-            UserProfile userProfile) {
-        if (!userProfile.getMfaMethodsMigrated()) {
-            Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
-                    mfaMethodsService.migrateMfaCredentialsForUser(userProfile.getEmail());
+    private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
+            throws Json.JsonException {
 
-            if (maybeMfaMigrationFailureReason.isPresent()) {
-                MfaMigrationFailureReason mfaMigrationFailureReason =
-                        maybeMfaMigrationFailureReason.get();
-
-                LOG.warn(
-                        "Failed to migrate user's MFA credentials due to {}",
-                        mfaMigrationFailureReason);
-
-                return switch (mfaMigrationFailureReason) {
-                    case NO_USER_FOUND_FOR_EMAIL -> Optional.of(
-                            generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056));
-                    case UNEXPECTED_ERROR_RETRIEVING_METHODS -> Optional.of(
-                            generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064));
-                    case ALREADY_MIGRATED -> Optional.empty();
-                };
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    private MfaMethodCreateOrUpdateRequest readMfaMethodCreateRequest(
-            APIGatewayProxyRequestEvent input) throws Json.JsonException {
-
-        MfaMethodCreateOrUpdateRequest mfaMethodCreateRequest;
+        MfaMethodCreateRequest mfaMethodCreateRequest;
         try {
             mfaMethodCreateRequest =
                     segmentedFunctionCall(
                             "SerializationService::GSON::fromJson",
                             () ->
                                     objectMapper.readValue(
-                                            input.getBody(),
-                                            MfaMethodCreateOrUpdateRequest.class,
-                                            true));
+                                            input.getBody(), MfaMethodCreateRequest.class, true));
 
         } catch (RuntimeException e) {
             LOG.error("Error during JSON deserialization", e);

@@ -22,7 +22,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
@@ -41,13 +40,12 @@ public class RedisExtension
     }
 
     public String createSession(String sessionId) throws Json.JsonException {
-        return createSession(sessionId, false, Optional.empty());
+        return createSession(sessionId, false);
     }
 
-    private String createSession(String sessionId, boolean isAuthenticated, Optional<String> email)
+    private String createSession(String sessionId, boolean isAuthenticated)
             throws Json.JsonException {
         Session session = new Session().setAuthenticated(isAuthenticated);
-        email.ifPresent(session::setEmailAddress);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         return sessionId;
     }
@@ -62,7 +60,7 @@ public class RedisExtension
     }
 
     public String createSession(boolean isAuthenticated) throws Json.JsonException {
-        return createSession(IdGenerator.generate(), isAuthenticated, Optional.empty());
+        return createSession(IdGenerator.generate(), isAuthenticated);
     }
 
     public void addDocAppSubjectIdToClientSession(Subject subject, String clientSessionId)
@@ -91,13 +89,6 @@ public class RedisExtension
         redis.saveWithExpiry("state:" + state.getValue(), clientSessionId, 3600);
     }
 
-    public void addClientSessionIdToSession(String clientSessionId, String sessionId)
-            throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.addClientSession(clientSessionId);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-    }
-
     public void addAuthRequestToSession(
             String clientSessionId,
             String sessionId,
@@ -116,7 +107,6 @@ public class RedisExtension
             LocalDateTime creationDate)
             throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.addClientSession(clientSessionId);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
@@ -140,12 +130,6 @@ public class RedisExtension
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(clientSession),
                 3600);
-    }
-
-    public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setEmailAddress(emailAddress);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public void setSessionCredentialTrustLevel(

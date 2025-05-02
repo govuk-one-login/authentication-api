@@ -42,7 +42,6 @@ import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -100,7 +99,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSession
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
-import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -318,7 +316,7 @@ public class AuthenticationCallbackHandler
 
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
-                            authenticationRequest, input, user, session, sessionId, orchSession);
+                            authenticationRequest, input, user, sessionId, orchSession);
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
@@ -428,7 +426,7 @@ public class AuthenticationCallbackHandler
                 if (configurationService.supportMaxAgeEnabled()
                         && Objects.nonNull(orchSession.getPreviousSessionId())) {
                     LOG.info("Previous session id is present - handling max age");
-                    handleMaxAgeSession(session, orchSession, user);
+                    handleMaxAgeSession(orchSession, user);
                 }
 
                 session.setAuthenticated(true);
@@ -445,7 +443,6 @@ public class AuthenticationCallbackHandler
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
-                logIfClientSessionListOnSessionsAreEqual(session, orchSession);
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
@@ -519,7 +516,7 @@ public class AuthenticationCallbackHandler
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    new DestroySessionsRequest(sessionId, session),
+                                    new DestroySessionsRequest(sessionId, orchSession),
                                     orchSession.getInternalCommonSubjectId(),
                                     input,
                                     clientId,
@@ -528,7 +525,7 @@ public class AuthenticationCallbackHandler
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        new DestroySessionsRequest(sessionId, session),
+                                        new DestroySessionsRequest(sessionId, orchSession),
                                         orchSession.getInternalCommonSubjectId(),
                                         input,
                                         clientId,
@@ -776,7 +773,6 @@ public class AuthenticationCallbackHandler
                     AuthenticationRequest authenticationRequest,
                     APIGatewayProxyRequestEvent input,
                     TxmaAuditUser user,
-                    Session session,
                     String sessionId,
                     OrchSessionItem orchSession) {
         try {
@@ -784,13 +780,7 @@ public class AuthenticationCallbackHandler
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
-                            authenticationRequest,
-                            input,
-                            e,
-                            user,
-                            session,
-                            sessionId,
-                            orchSession));
+                            authenticationRequest, input, e, user, sessionId, orchSession));
         }
         return Optional.empty();
     }
@@ -800,7 +790,6 @@ public class AuthenticationCallbackHandler
             APIGatewayProxyRequestEvent input,
             AuthenticationCallbackValidationException exception,
             TxmaAuditUser user,
-            Session session,
             String sessionId,
             OrchSessionItem orchSession) {
         var error = exception.getError();
@@ -823,7 +812,7 @@ public class AuthenticationCallbackHandler
 
         if (exception.getLogoutRequired()) {
             return logoutService.handleReauthenticationFailureLogout(
-                    new DestroySessionsRequest(sessionId, session),
+                    new DestroySessionsRequest(sessionId, orchSession),
                     orchSession.getInternalCommonSubjectId(),
                     input,
                     authenticationRequest.getClientID().getValue(),
@@ -877,8 +866,7 @@ public class AuthenticationCallbackHandler
         orchSessionService.updateSession(updatedOrchSession);
     }
 
-    private void handleMaxAgeSession(
-            Session currentSharedSession, OrchSessionItem currentOrchSession, TxmaAuditUser user) {
+    private void handleMaxAgeSession(OrchSessionItem currentOrchSession, TxmaAuditUser user) {
         var previousSessionId = currentOrchSession.getPreviousSessionId();
         var previousSharedSession = sessionService.getSession(previousSessionId);
         var previousOrchSession = orchSessionService.getSession(previousSessionId);
@@ -897,10 +885,6 @@ public class AuthenticationCallbackHandler
                 .getInternalCommonSubjectId()
                 .equals(previousInternalCommonSubjectId)) {
             LOG.info("Previous OrchSession InternalCommonSubjectId matches Auth UserInfo response");
-            previousSharedSession
-                    .get()
-                    .getClientSessions()
-                    .forEach(currentSharedSession::addClientSession);
 
             previousOrchSession
                     .get()
@@ -911,7 +895,7 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "Previous OrchSession InternalCommonSubjectId does not match Auth UserInfo response");
             logoutService.handleMaxAgeLogout(
-                    new DestroySessionsRequest(previousSessionId, previousSharedSession.get()),
+                    new DestroySessionsRequest(previousSessionId, previousOrchSession.get()),
                     previousOrchSession.get(),
                     user);
         }

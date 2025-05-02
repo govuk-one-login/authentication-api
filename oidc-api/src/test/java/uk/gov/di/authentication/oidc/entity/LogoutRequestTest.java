@@ -227,7 +227,7 @@ class LogoutRequestTest {
                                 CLIENT_LOGOUT_URI.toString(),
                                 "state",
                                 STATE.toString()));
-        session.getClientSessions().add(CLIENT_SESSION_ID);
+        orchSession.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
@@ -271,7 +271,7 @@ class LogoutRequestTest {
                                 serializedJwt,
                                 "post_logout_redirect_uri",
                                 CLIENT_LOGOUT_URI.toString()));
-        session.getClientSessions().add(CLIENT_SESSION_ID);
+        orchSession.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
@@ -324,7 +324,7 @@ class LogoutRequestTest {
                                 CLIENT_LOGOUT_URI.toString(),
                                 "state",
                                 STATE.toString()));
-        session.getClientSessions().add(CLIENT_SESSION_ID);
+        orchSession.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
@@ -358,7 +358,7 @@ class LogoutRequestTest {
     @Test
     void shouldCorrectlyParseLogoutRequestWhenRedirectUriIsMissing() {
         session = generateSession();
-        session.getClientSessions().add(CLIENT_SESSION_ID);
+        orchSession.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session, orchSession);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
 
@@ -408,7 +408,7 @@ class LogoutRequestTest {
                                 "http://localhost/invalidlogout",
                                 "state",
                                 STATE.toString()));
-        session.getClientSessions().add(CLIENT_SESSION_ID);
+        orchSession.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session, orchSession);
 
         LogoutRequest logoutRequest =
@@ -442,7 +442,7 @@ class LogoutRequestTest {
     }
 
     private Session generateSession() {
-        return new Session().addClientSession(CLIENT_SESSION_ID);
+        return new Session();
     }
 
     private void generateSessionFromCookie(Session session, OrchSessionItem orchSession) {
@@ -490,7 +490,7 @@ class LogoutRequestTest {
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {
-        session.getClientSessions().add(clientSessionId);
+        orchSession.getClientSessions().add(clientSessionId);
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }

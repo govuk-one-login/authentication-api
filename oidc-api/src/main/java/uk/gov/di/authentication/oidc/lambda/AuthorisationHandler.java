@@ -119,7 +119,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttache
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
-import static uk.gov.di.orchestration.shared.utils.SessionMigrationUtils.logIfClientSessionListOnSessionsAreEqual;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -462,20 +461,12 @@ public class AuthorisationHandler
                     user);
         }
 
-        Optional<String> browserSessionIdFromSession =
-                orchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
 
-        boolean newAuthenticationRequired = false;
-        if (browserSessionIdFromSession.isPresent()
-                && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
-            sessionId = Optional.empty();
-            newAuthenticationRequired = true;
-        }
-
         return handleAuthJourney(
                 sessionId,
+                browserSessionIdFromCookie,
                 orchSessionOptional,
                 clientSession,
                 orchClientSession,
@@ -484,7 +475,6 @@ public class AuthorisationHandler
                 client,
                 clientSessionId,
                 reauthRequested,
-                newAuthenticationRequired,
                 requestedVtr,
                 user);
     }
@@ -585,7 +575,6 @@ public class AuthorisationHandler
                 orchClientSession.withDocAppSubjectId(subjectId.getValue()));
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
 
-        session.addClientSession(clientSessionId);
         orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
@@ -594,7 +583,7 @@ public class AuthorisationHandler
                 s -> orchSessionService.updateSession(orchSession),
                 () -> orchSessionService.addSession(orchSession));
         LOG.info("Session saved successfully");
-        logIfClientSessionListOnSessionsAreEqual(session, orchSession);
+
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
@@ -642,6 +631,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<String> previousSessionIdFromCookie,
+            Optional<String> browserSessionIdFromCookie,
             Optional<OrchSessionItem> existingOrchSessionOptional,
             ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
@@ -650,7 +640,6 @@ public class AuthorisationHandler
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
-            boolean newAuthenticationRequired,
             VectorOfTrust requestedVtr,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
@@ -664,6 +653,12 @@ public class AuthorisationHandler
                     user);
         }
 
+        Optional<String> browserSessionIdFromSession =
+                existingOrchSessionOptional.map(OrchSessionItem::getBrowserSessionId);
+        boolean doesBrowserSessionIdFromSessionNotMatchCookie =
+                browserSessionIdFromSession.isPresent()
+                        && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie);
+
         Session session;
         OrchSessionItem orchSession;
         var newSessionId = IdGenerator.generate();
@@ -671,7 +666,8 @@ public class AuthorisationHandler
         var existingSession = previousSessionIdFromCookie.flatMap(sessionService::getSession);
         if (previousSessionIdFromCookie.isEmpty()
                 || existingSession.isEmpty()
-                || existingOrchSessionOptional.isEmpty()) {
+                || existingOrchSessionOptional.isEmpty()
+                || doesBrowserSessionIdFromSessionNotMatchCookie) {
             session = sessionService.generateSession();
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
@@ -741,19 +737,17 @@ public class AuthorisationHandler
                 authenticationRequest.getClientID().getValue(),
                 user,
                 pair("client-name", client.getClientName()),
-                pair("new_authentication_required", newAuthenticationRequired));
+                pair("new_authentication_required", doesBrowserSessionIdFromSessionNotMatchCookie));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
         orchClientSessionService.storeClientSession(orchClientSession);
 
-        session.addClientSession(clientSessionId);
         orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionService.addSession(orchSession);
         LOG.info("Session saved successfully");
-        logIfClientSessionListOnSessionsAreEqual(session, orchSession);
         return generateAuthRedirect(
                 newSessionId,
                 clientSessionId,

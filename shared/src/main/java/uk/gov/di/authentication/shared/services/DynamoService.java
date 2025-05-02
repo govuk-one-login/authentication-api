@@ -579,16 +579,26 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void setMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
-        dynamoUserProfileTable.updateItem(buildSetMfaMethodsMigrated(email, mfaMethodsMigrated));
+        var updatedUserProfile =
+                mfaMethodsMigrated
+                        ? buildSetMfaMethodsMigratedTrue(email)
+                        : buildSetMfaMethodsMigratedFalse(email);
+        dynamoUserProfileTable.updateItem(updatedUserProfile);
     }
 
-    private UserProfile buildSetMfaMethodsMigrated(String email, boolean mfaMethodsMigrated) {
+    private UserProfile buildSetMfaMethodsMigratedTrue(String email) {
         return dynamoUserProfileTable
                 .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
-                .withMfaMethodsMigrated(mfaMethodsMigrated)
+                .withMfaMethodsMigrated(true)
                 .withPhoneNumber(null)
                 .withPhoneNumberVerified(false)
                 .withMfaIdentifier(null);
+    }
+
+    private UserProfile buildSetMfaMethodsMigratedFalse(String email) {
+        return dynamoUserProfileTable
+                .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                .withMfaMethodsMigrated(false);
     }
 
     @Override
@@ -600,7 +610,7 @@ public class DynamoService implements AuthenticationService {
                                 dynamoUserCredentialsTable,
                                 overwriteUserCredentialsMfaMethods(email, List.of(mfaMethod)))
                         .addUpdateItem(
-                                dynamoUserProfileTable, buildSetMfaMethodsMigrated(email, true))
+                                dynamoUserProfileTable, buildSetMfaMethodsMigratedTrue(email))
                         .build());
     }
 

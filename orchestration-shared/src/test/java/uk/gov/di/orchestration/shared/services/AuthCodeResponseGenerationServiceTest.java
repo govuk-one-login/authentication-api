@@ -24,7 +24,6 @@ import static uk.gov.di.orchestration.sharedtest.helper.Constants.SESSION_ID;
 class AuthCodeResponseGenerationServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private OrchSessionItem orchSession;
@@ -41,7 +40,7 @@ class AuthCodeResponseGenerationServiceTest {
                         .withVerifiedMfaMethodType(AUTH_APP.toString());
         session = new Session();
         authCodeResponseGenerationService =
-                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+                new AuthCodeResponseGenerationService(configurationService);
     }
 
     @Test

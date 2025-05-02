@@ -31,6 +31,7 @@ import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -897,6 +898,38 @@ class DynamoServiceIntegrationTest {
                 dynamoService.getOptionalUserProfileFromSubject("7777"), equalTo(Optional.empty()));
         assertThat(
                 dynamoService.getOptionalUserProfileFromSubject("8888"), equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldSetMfaMethodsMigratedToTrueAndWipeExistingMfaInformationFromUserProfile() {
+        var email = "email1@example.com";
+        var phoneNumber = "+447900000000";
+        userStore.signUp(email, "password-1", new Subject("1111"));
+        userStore.setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
+        userStore.setPhoneNumberMfaIdentifer(email, "some-identifier");
+
+        dynamoService.setMfaMethodsMigrated(email, true);
+
+        var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
+        assertTrue(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertFalse(userProfileAfterUpdate.isPhoneNumberVerified());
+        assertNull(userProfileAfterUpdate.getPhoneNumber());
+    }
+
+    @Test
+    void shouldSetMfaMethodsMigratedToFalseAndLeaveExistingMfaInformationInUserProfile() {
+        var email = "email1@example.com";
+        var phoneNumber = "+447900000000";
+        userStore.signUp(email, "password-1", new Subject("1111"));
+        userStore.setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
+        userStore.setPhoneNumberMfaIdentifer(email, "some-identifier");
+
+        dynamoService.setMfaMethodsMigrated(email, false);
+
+        var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
+        assertFalse(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertTrue(userProfileAfterUpdate.isPhoneNumberVerified());
+        assertEquals(phoneNumber, userProfileAfterUpdate.getPhoneNumber());
     }
 
     private void setupDynamoWithMultipleUsers() {

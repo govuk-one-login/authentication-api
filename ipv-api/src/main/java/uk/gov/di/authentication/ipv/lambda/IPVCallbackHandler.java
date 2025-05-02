@@ -28,6 +28,7 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -35,7 +36,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -48,7 +48,6 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
@@ -87,7 +86,6 @@ public class IPVCallbackHandler
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
-    private final DynamoService dynamoService;
     private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
@@ -109,7 +107,6 @@ public class IPVCallbackHandler
             SessionService sessionService,
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
-            DynamoService dynamoService,
             OrchClientSessionService orchClientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
@@ -124,7 +121,6 @@ public class IPVCallbackHandler
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
-        this.dynamoService = dynamoService;
         this.orchClientSessionService = orchClientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
@@ -148,7 +144,6 @@ public class IPVCallbackHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -175,7 +170,6 @@ public class IPVCallbackHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -270,13 +264,6 @@ public class IPVCallbackHandler
                             () ->
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(), sessionId));
-            var userProfile =
-                    dynamoService
-                            .getUserProfileByEmailMaybe(session.getEmailAddress())
-                            .orElseThrow(
-                                    () ->
-                                            new IpvCallbackException(
-                                                    "Email from session does not have a user profile"));
 
             UserInfo authUserInfo =
                     getAuthUserInfo(
@@ -293,11 +280,11 @@ public class IPVCallbackHandler
                             sessionId,
                             clientId,
                             orchSession.getInternalCommonSubjectId(),
-                            session.getEmailAddress(),
+                            authUserInfo.getEmailAddress(),
                             ipAddress,
-                            Objects.isNull(userProfile.getPhoneNumber())
+                            Objects.isNull(authUserInfo.getPhoneNumber())
                                     ? AuditService.UNKNOWN
-                                    : userProfile.getPhoneNumber(),
+                                    : authUserInfo.getPhoneNumber(),
                             persistentId);
 
             if (errorObject.isPresent()) {
@@ -311,7 +298,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, session),
+                            new DestroySessionsRequest(sessionId, orchSession),
                             orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId,
@@ -336,24 +323,15 @@ public class IPVCallbackHandler
                             .withGovukSigninJourneyId(clientSessionId)
                             .withSessionId(sessionId)
                             .withUserId(orchSession.getInternalCommonSubjectId())
-                            .withEmail(session.getEmailAddress())
-                            .withPhone(userProfile.getPhoneNumber())
+                            .withEmail(authUserInfo.getEmailAddress())
+                            .withPhone(
+                                    Objects.isNull(authUserInfo.getPhoneNumber())
+                                            ? AuditService.UNKNOWN
+                                            : authUserInfo.getPhoneNumber())
                             .withPersistentSessionId(persistentId);
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
-
-            // TODO: ATO-1117: temporary logs to check values are as expected
-            LOG.info(
-                    "is email the same on authUserInfo as on session: {}",
-                    Objects.equals(session.getEmailAddress(), authUserInfo.getEmailAddress()));
-            if (userProfile.getPhoneNumber() != null) {
-                LOG.info(
-                        "is phone number the same on authUserInfo as on UserProfile: {}",
-                        Objects.equals(
-                                userProfile.getPhoneNumber(), authUserInfo.getPhoneNumber()));
-            }
-            //
 
             var tokenResponse =
                     segmentedFunctionCall(
@@ -401,7 +379,7 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, session),
+                            new DestroySessionsRequest(sessionId, orchSession),
                             orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId,
@@ -416,7 +394,6 @@ public class IPVCallbackHandler
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
                                         clientSessionId,
-                                        userProfile,
                                         session,
                                         sessionId,
                                         orchSession,
@@ -426,7 +403,10 @@ public class IPVCallbackHandler
                                         userIdentityUserInfo,
                                         ipAddress,
                                         persistentId,
-                                        clientId);
+                                        clientId,
+                                        authUserInfo.getEmailAddress(),
+                                        authUserInfo.getStringClaim(
+                                                AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()));
                         return generateApiGatewayProxyResponse(
                                 302,
                                 "",
@@ -503,9 +483,6 @@ public class IPVCallbackHandler
             return RedirectService.redirectToFrontendErrorPage(
                     frontend.errorURI(),
                     new Error("Unable to serialize SPOTRequest when placing on queue"));
-        } catch (UserNotFoundException e) {
-            LOG.error(e.getMessage());
-            throw new RuntimeException(e);
         } catch (OrchAuthCodeException e) {
             return RedirectService.redirectToFrontendErrorPage(
                     frontend.errorURI(),
