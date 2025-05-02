@@ -70,7 +70,7 @@ class StartServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final String SESSION_ID = "a-session-id";
-    private static final Session SESSION = new Session().setEmailAddress(EMAIL);
+    private static final Session SESSION = new Session();
     private static final AuthSessionItem AUTH_SESSION =
             new AuthSessionItem().withEmailAddress(EMAIL).withSessionId(SESSION_ID);
     private static final Scope SCOPES =
@@ -408,7 +408,6 @@ class StartServiceTest {
                         Optional.of(userProfile),
                         Optional.of(userCredentials),
                         false);
-        userContext.getSession().setEmailAddress(EMAIL);
 
         var upliftRequired =
                 startService.isUpliftRequired(userContext.getClientSession(), credentialTrustLevel);
