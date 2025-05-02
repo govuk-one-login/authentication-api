@@ -5809,7 +5809,7 @@ Resources:
 
   #endregion
 
-  #region Orch IPV token signing key pair
+  #region IPV token signing key pair
 
   OrchIPVTokenSigningKmsKeyAlias:
     Type: AWS::KMS::Alias
