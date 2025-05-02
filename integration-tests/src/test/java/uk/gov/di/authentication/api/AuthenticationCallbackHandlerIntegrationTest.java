@@ -959,7 +959,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupPreviousSessions(String internalCommonSubjectId)
                 throws Json.JsonException {
-            var session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
+            var session = new Session();
             var orchSession =
                     new OrchSessionItem(PREVIOUS_SESSION_ID)
                             .withInternalCommonSubjectId(internalCommonSubjectId)

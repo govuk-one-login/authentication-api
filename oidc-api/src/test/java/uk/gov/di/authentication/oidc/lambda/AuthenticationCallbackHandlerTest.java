@@ -155,10 +155,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String SESSION_ID = "a-session-id";
 
     private static final Session session =
-            new Session()
-                    .setAuthenticated(false)
-                    .setCurrentCredentialStrength(null)
-                    .setEmailAddress(TEST_EMAIL_ADDRESS);
+            new Session().setAuthenticated(false).setCurrentCredentialStrength(null);
     public static final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAuthenticated(false)
@@ -1355,7 +1352,6 @@ class AuthenticationCallbackHandlerTest {
 
         private void withPreviousSharedSessionDueToMaxAge() {
             var previousSharedSession = new Session();
-            previousSharedSession.setEmailAddress(TEST_EMAIL_ADDRESS);
             when(sessionService.getSession(PREVIOUS_SESSION_ID))
                     .thenReturn(Optional.of(previousSharedSession));
         }

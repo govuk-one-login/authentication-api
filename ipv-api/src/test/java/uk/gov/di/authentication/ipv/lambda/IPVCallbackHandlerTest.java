@@ -206,7 +206,7 @@ class IPVCallbackHandlerTest {
     private final CaptureLoggingExtension redirectLogging =
             new CaptureLoggingExtension(RedirectService.class);
 
-    private final Session session = new Session().setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session = new Session();
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)

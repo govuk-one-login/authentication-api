@@ -75,7 +75,6 @@ class LogoutHandlerTest {
     private SignedJWT signedIDToken;
     private String idTokenHint;
     private static final Subject SUBJECT = new Subject();
-    private static final String EMAIL = "joe.bloggs@test.com";
     private Session session;
     private OrchSessionItem orchSession;
 
@@ -126,7 +125,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldDestroySessionAndLogoutWhenSessionIsAvailable() {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -192,7 +191,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
-        session = generateSession().setEmailAddress(EMAIL);
+        session = generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
