@@ -41,7 +41,6 @@ module "authentication_callback" {
     IPV_AUTHORISATION_CALLBACK_URI              = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_URI                       = var.ipv_authorisation_uri
-    IPV_TOKEN_SIGNING_KEY_ALIAS                 = local.ipv_token_auth_key_alias_name
     ORCH_CLIENT_ID                              = var.orch_client_id
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS        = local.orch_to_auth_signing_key_alias_name
     REDIS_KEY                                   = local.redis_key
