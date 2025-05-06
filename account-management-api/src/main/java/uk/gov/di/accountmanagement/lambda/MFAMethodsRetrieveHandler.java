@@ -64,6 +64,8 @@ public class MFAMethodsRetrieveHandler
     public APIGatewayProxyResponseEvent getMFAMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
 
+        LOG.info("MFA Methods retrieve request received");
+
         addSessionIdToLogs(input);
 
         if (!configurationService.isMfaMethodManagementApiEnabled()) {
