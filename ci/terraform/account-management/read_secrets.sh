@@ -8,10 +8,6 @@ set -euo pipefail
 
 ENVIRONMENT="${1}"
 
-if [ "$ENVIRONMENT" = "dev" ]; then
-  ENVIRONMENT="build"
-fi
-
 secrets="$(
   aws secretsmanager list-secrets \
     --filter "Key=\"name\",Values=\"/deploy/${ENVIRONMENT}/\"" --region eu-west-2 |
