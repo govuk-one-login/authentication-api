@@ -55,7 +55,8 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
+    kms_key_arn = contains(["build", "integration", "production"], var.environment) ? null : aws_kms_key.user_credentials_table_encryption_key.arn
   }
 
   point_in_time_recovery {
