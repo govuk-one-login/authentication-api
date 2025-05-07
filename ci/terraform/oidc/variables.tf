@@ -734,3 +734,15 @@ variable "frontend_api_fms_tag_value" {
   description = "Tag value to be used for FMS WAF association for frontend API"
   type        = string
 }
+
+variable "ipv_jwks_url" {
+  type        = string
+  default     = ""
+  description = "Endpoint to get the IPV JWKS to encrypt and verify JWTs in the MFA reset journey"
+}
+
+variable "ipv_auth_public_encryption_key_id" {
+  type        = string
+  default     = ""
+  description = "Key ID for to encrypt JWT to send to IPV"
+}

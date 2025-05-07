@@ -15,7 +15,9 @@ import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
@@ -701,5 +703,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
+    }
+
+    public URL getIpvJwksUrl() throws MalformedURLException {
+        try {
+            return new URL(System.getenv().getOrDefault("IPV_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid JWKS URL: {}", e.getMessage());
+            throw new MalformedURLException(e.getMessage());
+        }
     }
 }

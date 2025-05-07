@@ -40,6 +40,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.sharedtest.helper.TestClockHelper;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
@@ -101,6 +102,8 @@ class IPVReverificationServiceTest {
     private SignedJWT testSignedJwt;
     private EncryptedJWT testEncryptedJwt;
     MockedStatic<IdGenerator> mockIdGen;
+
+    IPVReverificationServiceTest() throws MalformedURLException {}
 
     @BeforeEach
     void testSetup() throws URISyntaxException, ParseException, JOSEException {

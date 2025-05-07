@@ -46,6 +46,8 @@ module "mfa_reset_authorize" {
     EVCS_AUDIENCE                                 = var.evcs_audience
     AUTH_ISSUER_CLAIM_FOR_EVCS                    = var.auth_issuer_claim_for_evcs
     USE_STRONGLY_CONSISTENT_READS                 = var.use_strongly_consistent_reads
+    IPV_JWKS_URL                                  = var.ipv_jwks_url
+    IPV_AUTH_PUBLIC_ENCRYPTION_KEY_ID             = var.ipv_auth_public_encryption_key_id
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler::handleRequest"

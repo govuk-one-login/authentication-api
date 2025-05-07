@@ -34,6 +34,8 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.net.MalformedURLException;
+
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -82,7 +84,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
         this.ipvReverificationService = new IPVReverificationService(configurationService);
     }
 
-    public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService) {
+    public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService)
+            throws MalformedURLException {
         super(MfaResetRequest.class, ConfigurationService.getInstance(), redisConnectionService);
         KmsConnectionService kmsConnectionService = new KmsConnectionService(configurationService);
         JwtService jwtService = new JwtService(kmsConnectionService);
