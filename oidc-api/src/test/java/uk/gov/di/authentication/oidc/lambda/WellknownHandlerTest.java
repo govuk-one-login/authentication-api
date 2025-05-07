@@ -47,6 +47,13 @@ class WellknownHandlerTest {
     }
 
     @Test
+    void shouldReturnCacheControlHeader() {
+        APIGatewayProxyResponseEvent result = getWellKnown();
+
+        assertThat(result.getHeaders().get("Cache-Control"), equalTo("max-age=86400"));
+    }
+
+    @Test
     void shouldContainAllOneLoginClaims() throws ParseException {
         APIGatewayProxyResponseEvent result = getWellKnown();
         var metadata = OIDCProviderMetadata.parse(result.getBody());

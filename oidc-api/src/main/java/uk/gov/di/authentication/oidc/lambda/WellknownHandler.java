@@ -27,6 +27,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static com.nimbusds.langtag.LangTagUtils.parseLangTagList;
@@ -72,7 +73,8 @@ public class WellknownHandler
     public APIGatewayProxyResponseEvent wellknownRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Wellknown request received");
-        return generateApiGatewayProxyResponse(200, providerMetadata);
+        return generateApiGatewayProxyResponse(
+                200, providerMetadata, Map.of("Cache-Control", "max-age=86400"), null);
     }
 
     private String constructProviderMetadata(ConfigurationService configService) {
