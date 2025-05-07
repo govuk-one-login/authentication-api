@@ -14,6 +14,7 @@ locals {
   common_passwords_encryption_policy_arn      = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
   client_registry_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.client_registry_encryption_policy_arn
   user_profile_encryption_policy_arn          = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
+  user_credentials_kms_key_arn                = data.terraform_remote_state.shared.outputs.user_credentials_kms_key_arn
   pending_email_check_queue_id                = data.terraform_remote_state.shared.outputs.pending_email_check_queue_id
   pending_email_check_queue_access_policy_arn = data.terraform_remote_state.shared.outputs.pending_email_check_queue_access_policy_arn
   client_registry_encryption_key_arn          = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn
