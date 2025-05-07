@@ -82,6 +82,7 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
     resources = [
       aws_kms_key.client_registry_table_encryption_key.arn,
       aws_kms_key.user_profile_table_encryption_key.arn,
+      aws_kms_key.user_credentials_table_encryption_key.arn,
       aws_kms_key.account_modifiers_table_encryption_key.arn
     ]
   }
