@@ -170,6 +170,8 @@ public class MFAMethodsPutHandler
                             404, ErrorResponse.ERROR_1065);
                     case CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1073);
+                    case CANNOT_ADD_SECOND_AUTH_APP -> generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ERROR_1082);
                     case REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE -> generateEmptySuccessApiGatewayResponse();
                     case ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1074);
