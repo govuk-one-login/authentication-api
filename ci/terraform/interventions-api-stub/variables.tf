@@ -88,3 +88,9 @@ variable "vpc_environment" {
   type        = string
   default     = null
 }
+
+variable "auth_new_account_id" {
+  type        = string
+  description = "Account id of the auth new AWS account"
+  default     = ""
+}
