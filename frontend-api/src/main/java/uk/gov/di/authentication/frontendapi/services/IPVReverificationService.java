@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.KeySourceException;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -68,13 +69,16 @@ public class IPVReverificationService {
                     new TokenService(
                             configurationService, redisConnectionService, kmsConnectionService);
             this.nowClock = new NowClock(Clock.systemUTC());
+
             this.jwkSource =
-                    JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
-                            .retrying(true)
-                            .refreshAheadCache(false)
-                            .cache(true)
-                            .rateLimited(false)
-                            .build();
+                    configurationService.isIpvJwksCallEnabled()
+                            ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
+                                    .retrying(true)
+                                    .refreshAheadCache(false)
+                                    .cache(true)
+                                    .rateLimited(false)
+                                    .build()
+                            : null;
         } catch (Exception e) {
             LOG.error("Error while initializing IPVReverificationService", e);
             throw new IPVReverificationServiceException(
@@ -101,12 +105,14 @@ public class IPVReverificationService {
         this.jwtService = jwtService;
         this.tokenService = tokenService;
         this.jwkSource =
-                JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
-                        .retrying(true)
-                        .refreshAheadCache(false)
-                        .cache(false)
-                        .rateLimited(false)
-                        .build();
+                configurationService.isIpvJwksCallEnabled()
+                        ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
+                                .retrying(true)
+                                .refreshAheadCache(false)
+                                .cache(true)
+                                .rateLimited(false)
+                                .build()
+                        : null;
     }
 
     public String buildIpvReverificationRedirectUri(
@@ -186,19 +192,35 @@ public class IPVReverificationService {
     }
 
     private RSAPublicKey getPublicKey() {
+        RSAPublicKey publicKey;
         try {
             LOG.info("Getting IPV Auth Encryption Public Key");
 
-            RSAKey rsaKey =
-                    this.jwkSource
-                            .get(new JWKSelector(new JWKMatcher.Builder().build()), null)
-                            .stream()
-                            .filter(jwk -> jwk instanceof RSAKey)
-                            .map(jwk -> (RSAKey) jwk)
-                            .findFirst()
-                            .orElseThrow(() -> new KeySourceException("No RSA key found"));
+            if (configurationService.isIpvJwksCallEnabled()) {
+                RSAKey rsaKey =
+                        this.jwkSource
+                                .get(new JWKSelector(new JWKMatcher.Builder().build()), null)
+                                .stream()
+                                .filter(jwk -> jwk instanceof RSAKey)
+                                .map(jwk -> (RSAKey) jwk)
+                                .findFirst()
+                                .orElseThrow(() -> new KeySourceException("No RSA key found"));
 
-            return rsaKey.toRSAPublicKey();
+                publicKey = rsaKey.toRSAPublicKey();
+
+            } else {
+                String ipvAuthEncryptionPublicKey =
+                        configurationService.getIPVAuthEncryptionPublicKey();
+                publicKey =
+                        new RSAKey.Builder(
+                                        (RSAKey)
+                                                JWK.parseFromPEMEncodedObjects(
+                                                        ipvAuthEncryptionPublicKey))
+                                .build()
+                                .toRSAPublicKey();
+            }
+
+            return publicKey;
 
         } catch (JOSEException e) {
             LOG.error("Error retrieving or parsing public key", e);

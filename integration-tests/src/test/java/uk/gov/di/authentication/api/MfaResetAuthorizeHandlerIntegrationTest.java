@@ -22,9 +22,10 @@ import net.minidev.json.parser.ParseException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler;
@@ -194,8 +195,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                                         .withHeader("Content-Type", "application/json")
                                         .withBody(jwkSet.toString())));
 
-        handler = new MfaResetAuthorizeHandler(redisConnectionService);
-
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         new Subject().getValue(),
@@ -260,8 +259,13 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
     }
 
-    @Test
-    void shouldAuthenticateMfaReset() {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldAuthenticateMfaReset(boolean isIpvJwksCallEnabled) throws MalformedURLException {
+        environment.set("IPV_JWKS_CALL_ENABLED", String.valueOf(isIpvJwksCallEnabled));
+
+        handler = new MfaResetAuthorizeHandler(redisConnectionService);
+
         idReverificationStateExtension.store("orch-redirect-url", "client-session-id");
 
         wireMockServer.stubFor(
@@ -280,7 +284,9 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         checkJwksRetrievedFromWellKnownEndpoint();
         checkCorrectKeysUsedViaIntegrationWithKms();
         checkTxmaEventPublishedViaIntegrationWithSQS();
-        checkThatJwtCanBeDecryptedWithMatchingPrivateKey(response.getBody());
+        if (isIpvJwksCallEnabled) {
+            checkThatJwtCanBeDecryptedWithMatchingPrivateKey(response.getBody());
+        }
     }
 
     private static void checkJwksRetrievedFromWellKnownEndpoint() {

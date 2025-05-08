@@ -713,4 +713,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             throw new MalformedURLException(e.getMessage());
         }
     }
+
+    public boolean isIpvJwksCallEnabled() {
+        return System.getenv()
+                .getOrDefault("IPV_JWKS_CALL_ENABLED", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
 }

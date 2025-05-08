@@ -746,3 +746,8 @@ variable "ipv_auth_public_encryption_key_id" {
   default     = ""
   description = "Key ID for to encrypt JWT to send to IPV"
 }
+
+variable "ipv_jwks_call_enabled" {
+  type    = bool
+  default = false
+}
