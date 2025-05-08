@@ -2,6 +2,7 @@ common_state_bucket = "digital-identity-dev-tfstate"
 
 # Account IDs
 orchestration_account_id = "816047645251"
+auth_new_account_id      = "975050272416"
 
 # CIDR blocks
 orch_privatesub_cidr_blocks   = ["10.1.10.0/23", "10.1.12.0/23", "10.1.14.0/23"]
