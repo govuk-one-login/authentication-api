@@ -34,7 +34,7 @@ data "aws_iam_policy_document" "dynamo_user_read_policy_document" {
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.user_profile_kms_key_arn]
+    resources = [local.user_profile_kms_key_arn, local.user_credentials_encryption_policy_arn]
   }
 }
 
@@ -65,7 +65,7 @@ data "aws_iam_policy_document" "dynamo_user_delete_policy_document" {
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.user_profile_kms_key_arn]
+    resources = [local.user_profile_kms_key_arn, local.user_credentials_encryption_policy_arn]
   }
 }
 
