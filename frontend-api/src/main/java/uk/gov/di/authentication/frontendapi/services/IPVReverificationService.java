@@ -54,6 +54,9 @@ public class IPVReverificationService {
      * Constructs the IPVReverificationService with all necessary services required to create, sign
      * and encrypt the JWT sent over to IPV in the MfaResetAuthorizeHandler.
      *
+     * <p>The jwkSource is created in the handler INIT phase so that the cache persists between
+     * invocations.
+     *
      * @param configurationService the service used to get environment variables for each
      *     environment.
      */
@@ -69,7 +72,6 @@ public class IPVReverificationService {
                     new TokenService(
                             configurationService, redisConnectionService, kmsConnectionService);
             this.nowClock = new NowClock(Clock.systemUTC());
-
             this.jwkSource =
                     configurationService.isIpvJwksCallEnabled()
                             ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
@@ -79,6 +81,7 @@ public class IPVReverificationService {
                                     .rateLimited(false)
                                     .build()
                             : null;
+
         } catch (Exception e) {
             LOG.error("Error while initializing IPVReverificationService", e);
             throw new IPVReverificationServiceException(
@@ -91,19 +94,10 @@ public class IPVReverificationService {
             JwtService jwtService,
             TokenService tokenService)
             throws MalformedURLException {
-        this(configurationService, new NowClock(Clock.systemUTC()), jwtService, tokenService);
-    }
-
-    public IPVReverificationService(
-            ConfigurationService configurationService,
-            NowClock nowClock,
-            JwtService jwtService,
-            TokenService tokenService)
-            throws MalformedURLException {
         this.configurationService = configurationService;
-        this.nowClock = nowClock;
         this.jwtService = jwtService;
         this.tokenService = tokenService;
+        this.nowClock = new NowClock(Clock.systemUTC());
         this.jwkSource =
                 configurationService.isIpvJwksCallEnabled()
                         ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
@@ -113,6 +107,19 @@ public class IPVReverificationService {
                                 .rateLimited(false)
                                 .build()
                         : null;
+    }
+
+    public IPVReverificationService(
+            ConfigurationService configurationService,
+            NowClock nowClock,
+            JwtService jwtService,
+            TokenService tokenService,
+            JWKSource<SecurityContext> jwkSource) {
+        this.configurationService = configurationService;
+        this.nowClock = nowClock;
+        this.jwtService = jwtService;
+        this.tokenService = tokenService;
+        this.jwkSource = jwkSource;
     }
 
     public String buildIpvReverificationRedirectUri(

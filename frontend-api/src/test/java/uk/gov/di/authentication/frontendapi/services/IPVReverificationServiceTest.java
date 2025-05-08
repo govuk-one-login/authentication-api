@@ -12,7 +12,10 @@ import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -23,10 +26,13 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import org.approvaltests.Approvals;
 import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -43,12 +49,15 @@ import uk.gov.di.authentication.sharedtest.helper.TestClockHelper;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -76,6 +85,8 @@ class IPVReverificationServiceTest {
     private static final String TEST_IPV_AUTHORIZE_URI = "https://some.uri.gov.uk/authorize";
     private static final String TEST_IPV_AUTH_CLIENT_ID = "someClientId";
     private static final String TEST_KEY_ID = "123456";
+    private static final String TEST_IPV_JWKS_URL =
+            "https://api.identity.test.account.gov.uk/.well-known/jwks.json";
     private static final String TEST_STORAGE_TOKEN =
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLmFjY291bnQuZ292LnVrIiwiaHR0cHM6Ly9pZGVudGl0eS50ZXN0LmFjY291bnQuZ292LnVrIl0sInN1YiI6InVybjpmZGM6Z292LnVrOjIwMjI6VEpMdDNXYWlHa0xoOFVxZWlzSDJ6VktHQVAwIiwic2NvcGUiOiJwcm92aW5nIiwiaXNzIjoiaHR0cHM6Ly9vaWRjLnRlc3QuYWNjb3VudC5nb3YudWsiLCJleHAiOjE3MTgxOTU3NjMsImlhdCI6MTcxODE5NTQ2MywianRpIjoiMWQyZTdmODgtYWIwNy00NWU5LThkYTAtOWEyMzIyMWFhZjM3In0.6MpC8IZbOICVjvf_97ySj6yOO6khQGhkEGHvYB6kXGMroSQgF0z0-Z1EVJi5sVXwmbe4X6eDRTIYtM07xItiMg";
     private static final String TEST_STORAGE_TOKEN_CLAIM =
@@ -95,10 +106,12 @@ class IPVReverificationServiceTest {
     private final JwtService jwtService = mock(JwtService.class);
     private final NowHelper.NowClock nowClock = TestClockHelper.getInstance();
     private final TokenService tokenService = mock(TokenService.class);
+    private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final JWTClaimsSet testJwtClaims = constructTestClaimSet();
     private final IPVReverificationService ipvReverificationService =
-            new IPVReverificationService(configurationService, nowClock, jwtService, tokenService);
+            new IPVReverificationService(
+                    configurationService, nowClock, jwtService, tokenService, jwkSource);
     private SignedJWT testSignedJwt;
     private EncryptedJWT testEncryptedJwt;
     MockedStatic<IdGenerator> mockIdGen;
@@ -139,8 +152,25 @@ class IPVReverificationServiceTest {
         mockIdGen.close();
     }
 
-    @Test
-    void shouldReturn200WithAuthorizeUrlInBody() throws JOSEException, ParseException {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldReturn200WithAuthorizeUrlInBody(boolean isIpvJwksCallEnabled)
+            throws JOSEException, ParseException, MalformedURLException, NoSuchAlgorithmException {
+        when(configurationService.isIpvJwksCallEnabled()).thenReturn(isIpvJwksCallEnabled);
+        if (isIpvJwksCallEnabled) {
+            when(configurationService.getIpvJwksUrl()).thenReturn(new URL(TEST_IPV_JWKS_URL));
+
+            when(jwkSource.get(Mockito.any(JWKSelector.class), Mockito.isNull()))
+                    .thenReturn(
+                            Collections.singletonList(
+                                    new RSAKey.Builder(IPVReverificationServiceTest.TEST_PUBLIC_KEY)
+                                            .build()));
+        }
+
+        IPVReverificationService ipvReverificationService =
+                new IPVReverificationService(
+                        configurationService, nowClock, jwtService, tokenService, jwkSource);
+
         try (MockedConstruction<State> mockedState =
                 Mockito.mockConstruction(
                         State.class,
@@ -174,6 +204,8 @@ class IPVReverificationServiceTest {
                             + TEST_IPV_AUTH_CLIENT_ID;
 
             assertEquals(expectedUri, redirectUri);
+
+            Approvals.settings().allowMultipleVerifyCallsForThisMethod();
             assertClaims(redirectUri);
         }
     }
