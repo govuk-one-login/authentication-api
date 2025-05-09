@@ -67,6 +67,7 @@ stub_rp_clients = [
 enforce_code_signing = false
 
 # CIDR blocks
+new_auth_privatesub_cidr_blocks   = ["10.6.10.0/23", "10.6.12.0/23", "10.6.14.0/23"]
 new_auth_protectedsub_cidr_blocks = ["10.6.4.0/23", "10.6.6.0/23", "10.6.8.0/23"]
 
 # Sizing
