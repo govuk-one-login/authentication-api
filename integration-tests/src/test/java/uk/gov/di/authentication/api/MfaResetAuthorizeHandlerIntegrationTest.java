@@ -4,7 +4,10 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.matching.ContainsPattern;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -13,12 +16,16 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import net.minidev.json.JSONObject;
+import net.minidev.json.parser.JSONParser;
+import net.minidev.json.parser.ParseException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler;
@@ -38,19 +45,27 @@ import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.time.LocalDateTime;
+import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.any;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -58,6 +73,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -72,6 +88,8 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String CLIENT_NAME = "some-client-name";
+    private static final String testRsaKeyId = "test-key-rsa";
+    private static RSAKey rsaKey;
 
     private static WireMockServer wireMockServer;
 
@@ -114,6 +132,10 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                 any(urlPathMatching("/.*"))
                         .willReturn(aResponse().proxiedFrom("http://localhost:45678")));
         environment.set("LOCALSTACK_ENDPOINT", "http://localhost:" + wireMockServer.port());
+        environment.set("IPV_AUTH_PUBLIC_ENCRYPTION_KEY_ID", testRsaKeyId);
+        environment.set(
+                "IPV_JWKS_URL",
+                "http://localhost:" + wireMockServer.port() + "/.well-known/jwks.json");
     }
 
     @AfterAll
@@ -155,8 +177,23 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     }
 
     @BeforeEach
-    void setup() throws Json.JsonException {
-        handler = new MfaResetAuthorizeHandler(redisConnectionService);
+    void setup() throws Json.JsonException, MalformedURLException, NoSuchAlgorithmException {
+        rsaKey =
+                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                        .privateKey(
+                                (RSAPrivateKey)
+                                        keyPair.getPrivate()) // Include private key if needed
+                        .keyID("dynamic-test-key") // Set a key ID
+                        .build();
+
+        JWKSet jwkSet = new JWKSet(singletonList(rsaKey));
+
+        wireMockServer.stubFor(
+                get(urlPathMatching("/.well-known/jwks.json"))
+                        .willReturn(
+                                aResponse()
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(jwkSet.toString())));
 
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -222,8 +259,13 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
     }
 
-    @Test
-    void shouldAuthenticateMfaReset() {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldAuthenticateMfaReset(boolean isIpvJwksCallEnabled) throws MalformedURLException {
+        environment.set("IPV_JWKS_CALL_ENABLED", String.valueOf(isIpvJwksCallEnabled));
+
+        handler = new MfaResetAuthorizeHandler(redisConnectionService);
+
         idReverificationStateExtension.store("orch-redirect-url", "client-session-id");
 
         wireMockServer.stubFor(
@@ -239,8 +281,16 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
         assertThat(response, hasStatus(200));
 
+        checkJwksRetrievedFromWellKnownEndpoint();
         checkCorrectKeysUsedViaIntegrationWithKms();
         checkTxmaEventPublishedViaIntegrationWithSQS();
+        if (isIpvJwksCallEnabled) {
+            checkThatJwtCanBeDecryptedWithMatchingPrivateKey(response.getBody());
+        }
+    }
+
+    private static void checkJwksRetrievedFromWellKnownEndpoint() {
+        wireMockServer.verify(1, getRequestedFor(urlPathMatching("/.well-known/jwks.json")));
     }
 
     private static void checkCorrectKeysUsedViaIntegrationWithKms() {
@@ -255,5 +305,41 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     private static void checkTxmaEventPublishedViaIntegrationWithSQS() {
         assertEquals(1, txmaAuditQueue.getRawMessages().size());
+    }
+
+    private static void checkThatJwtCanBeDecryptedWithMatchingPrivateKey(String body) {
+        try {
+            JSONParser parser = new JSONParser(JSONParser.MODE_PERMISSIVE);
+            JSONObject json = (JSONObject) parser.parse(body);
+            String authorizeUrl = (String) json.get("authorize_url");
+
+            String queryString = authorizeUrl.substring(authorizeUrl.indexOf("?") + 1);
+
+            Map<String, String> queryParams =
+                    Arrays.stream(queryString.split("&"))
+                            .map(MfaResetAuthorizeHandlerIntegrationTest::splitQueryParameter)
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+            String jwt = queryParams.get("request");
+
+            EncryptedJWT encryptedJWT = EncryptedJWT.parse(jwt);
+
+            RSADecrypter decrypter = new RSADecrypter(rsaKey.toPrivateKey());
+
+            assertDoesNotThrow(
+                    () -> {
+                        encryptedJWT.decrypt(decrypter);
+                    });
+
+        } catch (JOSEException | ParseException | java.text.ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static Map.Entry<String, String> splitQueryParameter(String param) {
+        String[] parts = param.split("=", 2);
+        String key = parts[0];
+        String value = (parts.length > 1) ? parts[1] : "";
+        return new AbstractMap.SimpleImmutableEntry<>(key, value);
     }
 }
