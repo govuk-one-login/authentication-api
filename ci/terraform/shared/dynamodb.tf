@@ -363,7 +363,7 @@ resource "aws_dynamodb_table" "common_passwords_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = contains(["build", "integration", "production"], var.environment) ? null : aws_kms_key.common_passwords_table_encryption_key.arn
+    kms_key_arn = var.environment != "production" ? aws_kms_key.common_passwords_table_encryption_key.arn : null
   }
 
   point_in_time_recovery {
