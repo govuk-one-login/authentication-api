@@ -71,6 +71,7 @@ module "mfa_reset_authorize" {
   security_group_ids = [
     local.authentication_security_group_id,
     local.authentication_oidc_redis_security_group_id,
+    local.authentication_egress_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.mfa_reset_authorize_role.arn
