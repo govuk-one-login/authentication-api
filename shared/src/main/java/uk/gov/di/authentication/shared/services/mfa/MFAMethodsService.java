@@ -319,6 +319,9 @@ public class MFAMethodsService {
             }
         } else {
             var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
+
+            // check BACKUP is not an auth app.
+
             if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
                 return Result.failure(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
