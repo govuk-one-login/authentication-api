@@ -164,3 +164,9 @@ variable "new_auth_protectedsub_cidr_blocks" {
   default     = []
   description = "New Auth equivalent environment protected subnets"
 }
+
+variable "new_auth_privatesub_cidr_blocks" {
+  type        = list(string)
+  default     = []
+  description = "New Auth equivalent environment private subnets"
+}
