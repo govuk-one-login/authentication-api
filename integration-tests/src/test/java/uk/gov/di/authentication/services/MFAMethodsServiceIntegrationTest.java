@@ -896,32 +896,6 @@ class MFAMethodsServiceIntegrationTest {
                 assertEquals(List.of(defaultPriorityAuthApp), remainingMfaMethods);
             }
 
-            private static Stream<Arguments> existingMethodsAndRequestedUpdates() {
-                return Stream.of(
-                        Arguments.of(defaultPriorityAuthApp, REQUEST_SMS_MFA_DETAIL),
-                        Arguments.of(defaultPrioritySms, authAppDetail));
-            }
-
-            @ParameterizedTest
-            @MethodSource("existingMethodsAndRequestedUpdates")
-            void returnsAFailureWhenAttemptingToChangeTypeOfExistingDefaultMethod(
-                    MFAMethod existingMethod, MfaDetail requestedUpdate) {
-                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, existingMethod);
-                var request =
-                        MfaMethodUpdateRequest.from(PriorityIdentifier.DEFAULT, requestedUpdate);
-
-                var result =
-                        mfaMethodsService.updateMfaMethod(
-                                EMAIL, existingMethod.getMfaIdentifier(), request);
-
-                assertEquals(
-                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD,
-                        result.getFailure());
-
-                var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
-                assertEquals(List.of(existingMethod), remainingMfaMethods);
-            }
-
             private static Stream<Arguments> existingMethodsAndNoChangeUpdates() {
                 return Stream.of(
                         Arguments.of(defaultPriorityAuthApp, authAppDetail),
@@ -1010,8 +984,7 @@ class MFAMethodsServiceIntegrationTest {
                                 EMAIL, existingMethod.getMfaIdentifier(), request);
 
                 assertEquals(
-                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD,
-                        result.getFailure());
+                        MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD, result.getFailure());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(existingMethod), remainingMfaMethods);

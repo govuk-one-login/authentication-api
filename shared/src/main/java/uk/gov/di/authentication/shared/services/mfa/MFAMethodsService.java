@@ -8,7 +8,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
@@ -211,13 +210,8 @@ public class MFAMethodsService {
 
         return maybeMethodToUpdate
                 .map(
-                        method -> {
-                            if (updateRequestChangesMethodType(
-                                    method.getMfaMethodType(), request.mfaMethod().method())) {
-                                return Result.<MfaUpdateFailureReason, List<MFAMethod>>failure(
-                                        MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD);
-                            } else {
-                                return switch (PriorityIdentifier.valueOf(method.getPriority())) {
+                        method ->
+                                switch (PriorityIdentifier.valueOf(method.getPriority())) {
                                     case DEFAULT -> handleDefaultMethodUpdate(
                                             method,
                                             request.mfaMethod(),
@@ -226,9 +220,7 @@ public class MFAMethodsService {
                                             mfaMethods);
                                     case BACKUP -> handleBackupMethodUpdate(
                                             method, request.mfaMethod(), email, mfaMethods);
-                                };
-                            }
-                        })
+                                })
                 .orElse(Result.failure(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
     }
 
@@ -327,6 +319,9 @@ public class MFAMethodsService {
             }
         } else {
             var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
+
+            // check BACKUP is not an auth app.
+
             if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
                 return Result.failure(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
@@ -338,13 +333,6 @@ public class MFAMethodsService {
         }
 
         return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
-    }
-
-    private boolean updateRequestChangesMethodType(
-            String methodTypeFromExisting, MfaDetail updatedMethodDetail) {
-        return updatedMethodDetail instanceof RequestAuthAppMfaDetail
-                ? !MFAMethodType.AUTH_APP.name().equals(methodTypeFromExisting)
-                : !MFAMethodType.SMS.name().equals(methodTypeFromExisting);
     }
 
     public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(String email) {
