@@ -8,7 +8,6 @@ module "oidc_api_authentication_callback_role_1" {
     aws_iam_policy.storage_token_kms_signing_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.ipv_token_auth_kms_policy.arn,
     aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
     aws_iam_policy.orch_to_auth_kms_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
@@ -41,7 +40,6 @@ module "authentication_callback" {
     IPV_AUTHORISATION_CALLBACK_URI              = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_URI                       = var.ipv_authorisation_uri
-    IPV_TOKEN_SIGNING_KEY_ALIAS                 = local.ipv_token_auth_key_alias_name
     ORCH_CLIENT_ID                              = var.orch_client_id
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS        = local.orch_to_auth_signing_key_alias_name
     REDIS_KEY                                   = local.redis_key
