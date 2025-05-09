@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
 import java.util.List;
 import java.util.Objects;
@@ -24,7 +25,8 @@ public class DynamoClientService implements ClientService {
     private final DynamoDbTable<ClientRegistry> dynamoClientRegistryTable;
 
     public DynamoClientService(ConfigurationService configurationService) {
-        String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+        String tableName =
+                TableNameHelper.getFullTableName(CLIENT_REGISTRY_TABLE, configurationService);
         var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
@@ -34,7 +36,8 @@ public class DynamoClientService implements ClientService {
     public DynamoClientService(
             ConfigurationService configurationService,
             DynamoDbEnhancedClient dynamoDbEnhancedClient) {
-        String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+        String tableName =
+                TableNameHelper.getFullTableName(CLIENT_REGISTRY_TABLE, configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(ClientRegistry.class));
     }

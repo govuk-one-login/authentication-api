@@ -290,6 +290,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv("DOC_APP_DOMAIN"));
     }
 
+    public Optional<String> getDynamoArnPrefix() {
+        return Optional.ofNullable(System.getenv("DYNAMO_ARN_PREFIX"));
+    }
+
     public Optional<String> getDynamoEndpointUri() {
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
