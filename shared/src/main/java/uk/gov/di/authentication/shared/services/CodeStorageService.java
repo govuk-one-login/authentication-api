@@ -169,13 +169,13 @@ public class CodeStorageService {
     }
 
     public void saveOtpCode(
-            String emailAddress,
+            String unhashedIdentifier,
             String code,
             long codeExpiryTime,
             NotificationType notificationType) {
-        String hashedEmailAddress = HashHelper.hashSha256String(emailAddress);
+        String hashedIdentifier = HashHelper.hashSha256String(unhashedIdentifier);
         String prefix = getPrefixForNotificationType(notificationType);
-        String key = prefix + hashedEmailAddress;
+        String key = prefix + hashedIdentifier;
         try {
             redisConnectionService.saveWithExpiry(key, code, codeExpiryTime);
         } catch (Exception e) {
@@ -183,18 +183,19 @@ public class CodeStorageService {
         }
     }
 
-    public Optional<String> getOtpCode(String emailAddress, NotificationType notificationType) {
+    public Optional<String> getOtpCode(
+            String unhashedIdentifier, NotificationType notificationType) {
         String prefix = getPrefixForNotificationType(notificationType);
         return Optional.ofNullable(
                 redisConnectionService.getValue(
-                        prefix + HashHelper.hashSha256String(emailAddress)));
+                        prefix + HashHelper.hashSha256String(unhashedIdentifier)));
     }
 
-    public void deleteOtpCode(String emailAddress, NotificationType notificationType) {
+    public void deleteOtpCode(String unhashedIdentifier, NotificationType notificationType) {
         String prefix = getPrefixForNotificationType(notificationType);
         long numberOfKeysRemoved =
                 redisConnectionService.deleteValue(
-                        prefix + HashHelper.hashSha256String(emailAddress));
+                        prefix + HashHelper.hashSha256String(unhashedIdentifier));
 
         if (numberOfKeysRemoved == 0) {
             LOG.info(format("No %s key was deleted", prefix));
