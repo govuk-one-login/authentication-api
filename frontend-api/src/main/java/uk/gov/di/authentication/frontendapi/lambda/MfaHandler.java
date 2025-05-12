@@ -229,17 +229,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             String code =
                     codeStorageService
                             .getOtpCode(email, notificationType)
-                            .orElseGet(
-                                    () -> {
-                                        LOG.info("No existing OTP found; generating new code");
-                                        String newCode = codeGeneratorService.sixDigitCode();
-                                        codeStorageService.saveOtpCode(
-                                                email,
-                                                newCode,
-                                                configurationService.getDefaultOtpCodeExpiry(),
-                                                notificationType);
-                                        return newCode;
-                                    });
+                            .orElseGet(() -> generateAndSaveOtpCode(email, notificationType));
 
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
@@ -275,6 +265,17 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+    }
+
+    private String generateAndSaveOtpCode(String identifier, NotificationType notificationType) {
+        LOG.info("No existing OTP found; generating new code");
+        String newCode = codeGeneratorService.sixDigitCode();
+        codeStorageService.saveOtpCode(
+                identifier,
+                newCode,
+                configurationService.getDefaultOtpCodeExpiry(),
+                notificationType);
+        return newCode;
     }
 
     private Optional<ErrorResponse> validateCodeRequestAttempts(
