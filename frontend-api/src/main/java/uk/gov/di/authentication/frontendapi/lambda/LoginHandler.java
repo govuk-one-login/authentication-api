@@ -50,6 +50,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -329,7 +330,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     "P0",
                     clientService.isTestJourney(userContext.getClientId(), userProfile.getEmail()),
                     false);
-            authSessionItem.setAchievedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
+
+            if (Objects.isNull(authSessionItem.getAchievedCredentialStrength())
+                    || !authSessionItem
+                            .getAchievedCredentialStrength()
+                            .isHigherThan(CredentialTrustLevel.LOW_LEVEL)) {
+                authSessionItem.setAchievedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
+            }
         }
 
         authSessionService.updateSession(
