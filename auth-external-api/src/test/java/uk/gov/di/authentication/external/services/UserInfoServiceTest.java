@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -57,21 +58,6 @@ public class UserInfoServiceTest {
     private static final boolean TEST_UPLIFT_REQUIRED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
-    private static final UserProfile TEST_USER_PROFILE =
-            new UserProfile()
-                    .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
-                    .withPublicSubjectID(TEST_PUBLIC_SUBJECT_ID)
-                    .withSubjectID(TEST_SUBJECT.getValue())
-                    .withEmail(TEST_EMAIL)
-                    .withEmailVerified(TEST_EMAIL_VERIFIED)
-                    .withPhoneNumber(TEST_PHONE)
-                    .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
-                    .withSalt(TEST_SALT);
-    private static final AuthSessionItem authSession =
-            new AuthSessionItem()
-                    .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
-                    .withCurrentCredentialStrength(TEST_CURRENT_CREDENTIAL_STRENGTH)
-                    .withUpliftRequired(TEST_UPLIFT_REQUIRED);
 
     @BeforeEach
     public void setUp() {
@@ -79,9 +65,8 @@ public class UserInfoServiceTest {
         configurationService = mock(ConfigurationService.class);
         userInfoService = new UserInfoService(authenticationService, configurationService);
 
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(TEST_USER_PROFILE);
-        when(authenticationService.getOrGenerateSalt(TEST_USER_PROFILE)).thenCallRealMethod();
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn(SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
         when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
     }
 
@@ -100,7 +85,11 @@ public class UserInfoServiceTest {
             MFAMethodType expectedVerifiedMfaMethod,
             CredentialTrustLevel expectedCurrentCredentialStrength,
             Boolean expectedUpliftRequired) {
-        UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
+        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
+                .thenReturn(generateUserProfile());
+
+        UserInfo actual =
+                userInfoService.populateUserInfo(mockAccessTokenStore, generateAuthSessionItem());
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
@@ -175,6 +164,25 @@ public class UserInfoServiceTest {
                         TEST_VERIFIED_MFA_METHOD_TYPE,
                         TEST_CURRENT_CREDENTIAL_STRENGTH,
                         TEST_UPLIFT_REQUIRED));
+    }
+
+    private static UserProfile generateUserProfile() {
+        return new UserProfile()
+                .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
+                .withPublicSubjectID(TEST_PUBLIC_SUBJECT_ID)
+                .withSubjectID(TEST_SUBJECT.getValue())
+                .withEmail(TEST_EMAIL)
+                .withEmailVerified(TEST_EMAIL_VERIFIED)
+                .withPhoneNumber(TEST_PHONE)
+                .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
+                .withSalt(TEST_SALT);
+    }
+
+    private static AuthSessionItem generateAuthSessionItem() {
+        return new AuthSessionItem()
+                .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
+                .withCurrentCredentialStrength(TEST_CURRENT_CREDENTIAL_STRENGTH)
+                .withUpliftRequired(TEST_UPLIFT_REQUIRED);
     }
 
     private static AccessTokenStore getMockAccessTokenStore(List<String> claims) {
