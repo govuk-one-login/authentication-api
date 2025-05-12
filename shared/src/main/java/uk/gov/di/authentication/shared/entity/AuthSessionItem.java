@@ -32,6 +32,8 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_CODE_REQUEST_COUNT_MAP = "CodeRequestCountMap";
     public static final String ATTRIBUTE_PRESERVED_REAUTH_COUNTS_FOR_AUDIT_MAP =
             "PreservedReauthCountsForAuditMap";
+    public static final String ATTRIBUTE_ACHIEVED_CREDENTIAL_STRENGTH =
+            "AchievedCredentialStrength";
 
     public enum AccountState {
         NEW,
@@ -65,6 +67,7 @@ public class AuthSessionItem {
     private Map<CodeRequestType, Integer> codeRequestCountMap;
     private int passwordResetCount;
     private Map<CountType, Integer> preservedReauthCountsForAuditMap;
+    private CredentialTrustLevel achievedCredentialStrength;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -304,6 +307,20 @@ public class AuthSessionItem {
     public AuthSessionItem withPreservedReauthCountsForAuditMap(
             Map<CountType, Integer> preservedReauthCountsForAuditMap) {
         this.preservedReauthCountsForAuditMap = preservedReauthCountsForAuditMap;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_ACHIEVED_CREDENTIAL_STRENGTH)
+    public CredentialTrustLevel getAchievedCredentialStrength() {
+        return this.achievedCredentialStrength;
+    }
+
+    public void setAchievedCredentialStrength(CredentialTrustLevel credentialStrength) {
+        this.achievedCredentialStrength = credentialStrength;
+    }
+
+    public AuthSessionItem withAchievedCredentialStrength(CredentialTrustLevel credentialStrength) {
+        this.achievedCredentialStrength = credentialStrength;
         return this;
     }
 
