@@ -179,6 +179,11 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
 
+        var loginHint = Optional.ofNullable(authRequest.getLoginHint());
+        if (loginHint.isPresent()) {
+            LOG.info("login_hint attached to query params");
+        }
+
         return Optional.empty();
     }
 
