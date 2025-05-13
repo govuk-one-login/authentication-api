@@ -17,10 +17,8 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -39,9 +37,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
@@ -171,8 +167,6 @@ public class StartHandler
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-
-        logIfNewFieldsDoNotMatchClientSessionAuthParameters(startRequest, clientSession);
 
         boolean isUserAuthenticatedWithValidProfile;
         try {
@@ -361,68 +355,5 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
-    }
-
-    private static void logIfNewFieldsDoNotMatchClientSessionAuthParameters(
-            StartRequest startRequest, ClientSession clientSession) {
-        LOG.info("Checking if new fields match client session auth parameters");
-        var requestedVtr = clientSession.getEffectiveVectorOfTrust();
-        var requestedLevelOfConfidence =
-                Optional.ofNullable(requestedVtr.getLevelOfConfidence())
-                        .map(LevelOfConfidence::getValue)
-                        .orElse(null);
-        if (!Objects.equals(
-                startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence)) {
-            LOG.warn(
-                    "\"requested_level_of_confidence\" field does not match levelOfConfidence in clientSession ({})",
-                    createNotEqualLog(
-                            startRequest.requestedLevelOfConfidence(), requestedLevelOfConfidence));
-        }
-        if (!Objects.equals(
-                startRequest.requestedCredentialStrength(),
-                requestedVtr.getCredentialTrustLevel().getValue())) {
-            LOG.warn(
-                    "\"requested_credential_strength\" field does not match credentialTrustLevel in clientSession ({})",
-                    createNotEqualLog(
-                            startRequest.requestedCredentialStrength(),
-                            requestedVtr.getCredentialTrustLevel().getValue()));
-        }
-        checkCustomFieldsEqual("cookie_consent", startRequest.cookieConsent(), clientSession);
-        checkCustomFieldsEqual("_ga", startRequest.ga(), clientSession);
-        checkCustomFieldsEqual("state", startRequest.state(), clientSession);
-        checkCustomFieldsEqual("client_id", startRequest.clientId(), clientSession);
-        checkCustomFieldsEqual("redirect_uri", startRequest.redirectUri(), clientSession);
-        checkCustomFieldsEqual("scope", startRequest.scope(), clientSession);
-    }
-
-    private static void checkCustomFieldsEqual(
-            String fieldName, String startRequestField, ClientSession clientSession) {
-        var authRequestParam = getAuthRequestParam(clientSession, fieldName);
-        if (!Objects.equals(startRequestField, authRequestParam)) {
-            var details = createNotEqualLog(startRequestField, authRequestParam);
-            LOG.warn(
-                    "\"{}\" field does not match custom parameter in clientSession ({})",
-                    fieldName,
-                    details);
-        }
-    }
-
-    private static <T> String createNotEqualLog(T startRequestField, T clientSessionParam) {
-        String details = "";
-        if (Objects.isNull(startRequestField)) {
-            details = "startRequest field is null";
-        } else if (Objects.isNull(clientSessionParam)) {
-            details = "clientSession field is null";
-        } else {
-            details = "both are not null";
-        }
-        return details;
-    }
-
-    private static String getAuthRequestParam(ClientSession clientSession, String parameter) {
-        return Optional.ofNullable(clientSession.getAuthRequestParams().get(parameter)).stream()
-                .flatMap(List::stream)
-                .findFirst()
-                .orElse(null);
     }
 }
