@@ -7,6 +7,7 @@ Metadata:
   cfn-lint:
     config:
       ignore_checks:
+        - W1028
         - W8003
         - E3033
 
@@ -43,7 +44,7 @@ Parameters:
     Description: >
       When deploying to dev, optionally configure which sub-environment to deploy to
       i.e. authdev1, authdev2. This feature is not available for route-to-live environments
-    Default: none
+    Default: "none"
 
   LambdaDeploymentPreference:
     Type: String
@@ -113,7 +114,7 @@ Conditions:
   NotSubEnvironment:
     Fn::Equals:
       - !Ref SubEnvironment
-      - none
+      - "none"
 
   UseAlarmActions:
     Fn::Or:
@@ -163,9 +164,23 @@ Conditions:
 Mappings:
   EnvironmentConfiguration:
     authdev1:
+      accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/89650062-091c-465d-b1db-98ba23a72fc2
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/a65848e5-74da-4ea2-9d6d-0a025c35a73f
+      authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/85da3e1d-de4f-4f23-813f-efc4d42b10c8
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/03871a19-836e-457e-9179-7870bcbe6c67
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
     authdev2:
+      accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/9f2c0adf-ca5d-42a2-966f-6424311c2ba7
+      authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/0c1930f0-3cb2-4d71-b4a1-e2b9bdd6668c
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/70a5d810-8dcf-449d-bdf0-aed149c52302
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
     dev:
@@ -238,7 +253,8 @@ Globals:
       Role: !GetAtt CodeDeployServiceRole.Arn
     Environment:
       Variables:
-        ENVIRONMENT: !Ref Environment
+        ENVIRONMENT:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
         AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
         DT_CONNECTION_AUTH_TOKEN: !Sub
           - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}"
@@ -341,7 +357,9 @@ Resources:
   AuthExternalApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: !Sub ${Environment}-di-auth-ext-api
+      Name: !Sub
+        - ${Env}-di-auth-ext-api
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       EndpointConfiguration:
         Types:
           - PRIVATE
@@ -420,14 +438,16 @@ Resources:
           LoggingLevel: INFO
           MetricsEnabled: true
       RestApiId: !Ref AuthExternalApi
-      StageName: !Ref Environment
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TracingEnabled: true
 
   AuthExternalApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      LogGroupName: !Sub "${Environment}-auth-ext-api-access-logs"
+      LogGroupName: !Sub
+        - "${Env}-auth-ext-api-access-logs"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       RetentionInDays:
         !FindInMap [
           EnvironmentConfiguration,
@@ -456,177 +476,183 @@ Resources:
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Sub API-Gateway-Execution-Logs_${AuthExternalApi}/${Environment}
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${AuthExternalApi}/${Env}
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
   AuthExternalApiDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
-      DashboardName: !Sub "${Environment}-di-auth-ext-api-dashboard"
+      DashboardName: !Sub
+        - "${Env}-di-auth-ext-api-dashboard"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       DashboardBody:
-        Fn::Sub: |-
-          {
-            "start": "-PT336H",
-            "widgets": [
-              {
-                "height": 6,
-                "width": 12,
-                "y": 6,
-                "x": 0,
-                "type": "metric",
-                "properties": {
-                  "metrics": [
-                    [
-                      {
-                        "expression": "FILL(m1, 0)",
-                        "label": "",
-                        "id": "e1",
-                        "region": "${AWS::Region}",
-                        "period": 900
-                      }
+        Fn::Sub:
+          - |
+            {
+              "start": "-PT336H",
+              "widgets": [
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 6,
+                  "x": 0,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(m1, 0)",
+                          "label": "",
+                          "id": "e1",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "Latency",
+                        "ApiName",
+                        "${Env}-di-auth-ext-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ]
                     ],
-                    [
-                      "AWS/ApiGateway",
-                      "Latency",
-                      "ApiName",
-                      "${Environment}-di-auth-ext-api",
-                      {
-                        "id": "m1",
-                        "visible": false
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Average",
+                    "title": "Latency",
+                    "yAxis": {
+                      "left": {
+                        "label": "Millis",
+                        "showUnits": false,
+                        "min": 0
+                      },
+                      "right": {
+                        "showUnits": false
                       }
-                    ]
-                  ],
-                  "view": "timeSeries",
-                  "stacked": false,
-                  "region": "${AWS::Region}",
-                  "period": 900,
-                  "stat": "Average",
-                  "title": "Latency",
-                  "yAxis": {
-                    "left": {
-                      "label": "Millis",
-                      "showUnits": false,
-                      "min": 0
                     },
-                    "right": {
-                      "showUnits": false
-                    }
-                  },
-                  "setPeriodToTimeRange": true,
-                  "legend": {
-                    "position": "bottom"
-                  },
-                  "liveData": false
-                }
-              },
-              {
-                "height": 6,
-                "width": 12,
-                "y": 0,
-                "x": 0,
-                "type": "metric",
-                "properties": {
-                  "metrics": [
-                    [
-                      {
-                        "expression": "FILL(m1, 0)",
-                        "label": "",
-                        "id": "e1",
-                        "region": "${AWS::Region}",
-                        "period": 900
-                      }
+                    "setPeriodToTimeRange": true,
+                    "legend": {
+                      "position": "bottom"
+                    },
+                    "liveData": false
+                  }
+                },
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 0,
+                  "x": 0,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(m1, 0)",
+                          "label": "",
+                          "id": "e1",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "Count",
+                        "ApiName",
+                        "${Env}-di-auth-ext-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ]
                     ],
-                    [
-                      "AWS/ApiGateway",
-                      "Count",
-                      "ApiName",
-                      "${Environment}-di-auth-ext-api",
-                      {
-                        "id": "m1",
-                        "visible": false
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Sum",
+                    "title": "Requests (sum/hr)",
+                    "yAxis": {
+                      "left": {
+                        "label": "Requests",
+                        "showUnits": false
+                      },
+                      "right": {
+                        "showUnits": false
                       }
-                    ]
-                  ],
-                  "view": "timeSeries",
-                  "stacked": false,
-                  "region": "${AWS::Region}",
-                  "period": 900,
-                  "stat": "Sum",
-                  "title": "Requests (sum/hr)",
-                  "yAxis": {
-                    "left": {
-                      "label": "Requests",
-                      "showUnits": false
-                    },
-                    "right": {
-                      "showUnits": false
                     }
                   }
-                }
-              },
-              {
-                "height": 6,
-                "width": 12,
-                "y": 0,
-                "x": 12,
-                "type": "metric",
-                "properties": {
-                  "metrics": [
-                    [
-                      {
-                        "expression": "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100",
+                },
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 0,
+                  "x": 12,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100",
+                          "label": "",
+                          "id": "e2",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "5XXError",
+                        "ApiName",
+                        "${Env}-di-auth-ext-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ],
+                      [
+                        ".",
+                        "Count",
+                        ".",
+                        ".",
+                        {
+                          "id": "m2",
+                          "visible": false
+                        }
+                      ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Sum",
+                    "title": "Successful requests",
+                    "yAxis": {
+                      "left": {
                         "label": "",
-                        "id": "e2",
-                        "region": "${AWS::Region}",
-                        "period": 900
+                        "showUnits": false,
+                        "min": 0,
+                        "max": 100
+                      },
+                      "right": {
+                        "showUnits": false
                       }
-                    ],
-                    [
-                      "AWS/ApiGateway",
-                      "5XXError",
-                      "ApiName",
-                      "${Environment}-di-auth-ext-api",
-                      {
-                        "id": "m1",
-                        "visible": false
-                      }
-                    ],
-                    [
-                      ".",
-                      "Count",
-                      ".",
-                      ".",
-                      {
-                        "id": "m2",
-                        "visible": false
-                      }
-                    ]
-                  ],
-                  "view": "timeSeries",
-                  "stacked": false,
-                  "region": "${AWS::Region}",
-                  "period": 900,
-                  "stat": "Sum",
-                  "title": "Successful requests",
-                  "yAxis": {
-                    "left": {
-                      "label": "",
-                      "showUnits": false,
-                      "min": 0,
-                      "max": 100
                     },
-                    "right": {
-                      "showUnits": false
-                    }
-                  },
-                  "setPeriodToTimeRange": true,
-                  "legend": {
-                    "position": "bottom"
-                  },
-                  "liveData": false
+                    "setPeriodToTimeRange": true,
+                    "legend": {
+                      "position": "bottom"
+                    },
+                    "liveData": false
+                  }
                 }
-              }
-            ]
-          }
+              ]
+            }
+          - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
   # ----------------------
   # /token lambda function
@@ -635,7 +661,9 @@ Resources:
   AuthTokenFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${Environment}-auth-token-lambda
+      FunctionName: !Sub
+        - ${Env}-auth-token-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./auth-external-api/build/distributions/auth-external-api.zip
       Handler: uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest
@@ -643,9 +671,11 @@ Resources:
         Variables:
           AUTHENTICATION_AUTHORIZATION_CALLBACK_URI: ""
           AUTHENTICATION_BACKEND_URI: !Sub
-            - "https://${AuthExternalApi}-${AuthApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+            - "https://${AuthExternalApi}-${AuthApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Env}/"
             - AuthApiVpcEndpointId:
                 Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -662,7 +692,7 @@ Resources:
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           ORCHESTRATION_BACKEND_URI: !Sub
-            - "https://${AuthExternalApi}-${orchApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+            - "https://${AuthExternalApi}-${orchApiVpcEndpointId}.execute-api.${AWS::Region}.amazonaws.com/${Env}/"
             - orchApiVpcEndpointId:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -670,6 +700,8 @@ Resources:
                   orchApiVpcEndpointId,
                   DefaultValue: "",
                 ]
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ORCH_CLIENT_ID: "orchestrationAuth"
           ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
             - UseSubEnvironment
@@ -755,7 +787,9 @@ Resources:
   AuthTokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-auth-token-lambda
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-auth-token-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
         !FindInMap [
@@ -774,11 +808,16 @@ Resources:
   AuthTokenFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-auth-token-errors
+      FilterName: !Sub
+        - ${Env}-auth-token-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthTokenFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-auth-token-error-count
+        - MetricName: !Sub
+            - ${Env}-auth-token-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -790,7 +829,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Environment}-auth-token-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-auth-token-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -798,6 +837,7 @@ Resources:
               lambdaLogAlarmThreshold,
               DefaultValue: 5,
             ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
@@ -805,10 +845,14 @@ Resources:
               RunbookLink,
               DefaultValue: "",
             ]
-      AlarmName: !Sub ${Environment}-auth-token-alarm
+      AlarmName: !Sub
+        - ${Env}-auth-token-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-auth-token-error-count
+      MetricName: !Sub
+        - ${Env}-auth-token-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -828,8 +872,9 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Environment}-auth-token-lambda. ${RunbookLink}"
-        - ErrorRateThreshold:
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-auth-token-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
@@ -843,7 +888,9 @@ Resources:
               RunbookLink,
               DefaultValue: "",
             ]
-      AlarmName: !Sub ${Environment}-auth-token-error-rate-alarm
+      AlarmName: !Sub
+        - ${Env}-auth-token-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
       EvaluationPeriods: 1
@@ -860,7 +907,14 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-auth-token-lambda
+                  Value: !Sub
+                    - ${Env}-auth-token-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
             Period: 60
             Stat: Sum
             Unit: Count
@@ -872,7 +926,14 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-auth-token-lambda
+                  Value: !Sub
+                    - ${Env}-auth-token-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
             Period: 60
             Stat: Sum
             Unit: Count
@@ -926,7 +987,9 @@ Resources:
     Condition: NotSubEnvironment
     DependsOn: AuthTokenFunctionScalableTarget
     Properties:
-      PolicyName: !Sub "LambdaProvisionedConcurrency:${Environment}-auth-token-lambda"
+      PolicyName: !Sub
+        - "LambdaProvisionedConcurrency:${Env}-auth-token-lambda"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyType: TargetTrackingScaling
       ResourceId: !Join
         - ":"
@@ -953,7 +1016,9 @@ Resources:
   AuthUserInfoFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${Environment}-auth-userinfo-lambda
+      FunctionName: !Sub
+        - ${Env}-auth-userinfo-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./auth-external-api/build/distributions/auth-external-api.zip
       Handler: uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest
@@ -967,7 +1032,6 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          ENVIRONMENT: !Ref Environment
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
@@ -1035,7 +1099,9 @@ Resources:
   AuthUserInfoFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-auth-userinfo-lambda
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-auth-userinfo-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
         !FindInMap [
@@ -1054,11 +1120,16 @@ Resources:
   AuthUserInfoFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-auth-userinfo-errors
+      FilterName: !Sub
+        - ${Env}-auth-userinfo-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthUserInfoFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-auth-userinfo-error-count
+        - MetricName: !Sub
+            - ${Env}-auth-userinfo-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -1070,7 +1141,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Environment}-auth-userinfo-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-auth-userinfo-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -1078,6 +1149,7 @@ Resources:
               lambdaLogAlarmThreshold,
               DefaultValue: 5,
             ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
@@ -1085,10 +1157,14 @@ Resources:
               RunbookLink,
               DefaultValue: "",
             ]
-      AlarmName: !Sub ${Environment}-auth-userinfo-alarm
+      AlarmName: !Sub
+        - ${Env}-auth-userinfo-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-auth-userinfo-error-count
+      MetricName: !Sub
+        - ${Env}-auth-userinfo-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -1108,8 +1184,9 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Environment}-auth-userinfo-lambda. ${RunbookLink}"
-        - ErrorRateThreshold:
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-auth-userinfo-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
@@ -1123,7 +1200,9 @@ Resources:
               RunbookLink,
               DefaultValue: "",
             ]
-      AlarmName: !Sub ${Environment}-auth-userinfo-error-rate-alarm
+      AlarmName: !Sub
+        - ${Env}-auth-userinfo-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
       EvaluationPeriods: 1
@@ -1140,7 +1219,14 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-auth-userinfo-lambda
+                  Value: !Sub
+                    - ${Env}-auth-userinfo-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1152,7 +1238,14 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-auth-userinfo-lambda
+                  Value: !Sub
+                    - ${Env}-auth-userinfo-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1206,7 +1299,9 @@ Resources:
     Condition: NotSubEnvironment
     DependsOn: AuthUserInfoFunctionScalableTarget
     Properties:
-      PolicyName: !Sub "LambdaProvisionedConcurrency:${Environment}-auth-token-lambda"
+      PolicyName: !Sub
+        - "LambdaProvisionedConcurrency:${Env}-auth-token-lambda"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyType: TargetTrackingScaling
       ResourceId: !Join
         - ":"
@@ -1233,7 +1328,9 @@ Resources:
   AuthExternalApiTxMAAuditQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${Environment}-auth-external-api-txma-audit-queue
+      QueueName: !Sub
+        - ${Env}-auth-external-api-txma-audit-queue
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsDataKeyReusePeriodSeconds: 300
       KmsMasterKeyId: !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
       MessageRetentionPeriod: 1209600
@@ -1278,7 +1375,9 @@ Resources:
   AuthExternalApiTxMAAuditDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${Environment}-auth-external-api-txma-audit-dlq
+      QueueName: !Sub
+        - ${Env}-auth-external-api-txma-audit-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsDataKeyReusePeriodSeconds: 300
       KmsMasterKeyId: !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
       MessageRetentionPeriod: 604800
@@ -1332,7 +1431,9 @@ Resources:
   AuthExternalApiTxMAAuditQueueEncryptionKeyAlias:
     Type: AWS::KMS::Alias
     Properties:
-      AliasName: !Sub alias/${Environment}-auth-external-api-audit-kms-alias
+      AliasName: !Sub
+        - alias/${Env}-auth-external-api-audit-kms-alias
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TargetKeyId: !Ref AuthExternalApiTxMAAuditQueueEncryptionKey
 
   # ----------------
@@ -1393,7 +1494,9 @@ Resources:
   MainKmsKeyAlias:
     Type: "AWS::KMS::Alias"
     Properties:
-      AliasName: !Sub "alias/${Environment}-auth-external-api-main-kms-alias"
+      AliasName: !Sub
+        - "alias/${Env}-auth-external-api-main-kms-alias"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TargetKeyId: !Ref MainKmsKey
 
   # ----------------
@@ -1404,7 +1507,9 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for Lambda Basic Execution"
-      Path: !Sub /${Environment}/auth-ext-default/
+      Path: !Sub
+        - /${Env}/auth-ext-default/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -1438,7 +1543,9 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing KMS connection for a lambda"
-      Path: !Sub /${Environment}/auth-ext-default/
+      Path: !Sub
+        - /${Env}/auth-ext-default/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -1470,17 +1577,26 @@ Resources:
               - kms:GenerateDataKey
               - kms:Decrypt
             Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                eventsTopicEncryptionKey,
-              ]
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    eventsTopicEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    eventsTopicEncryptionKey,
+                  ]
 
   AuditSigningKeyLambdaKmsSigningPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
-      Path: !Sub /${Environment}/auth-ext-default/
+      Path: !Sub
+        - /${Env}/auth-ext-default/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -1491,17 +1607,26 @@ Resources:
               - kms:GetPublicKey
               - kms:Verify
             Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                auditPayloadSigningKey,
-              ]
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    auditPayloadSigningKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    auditPayloadSigningKey,
+                  ]
 
   DynamoAuthCodeStoreAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing read and write permissions to the Dynamo Auth Code table"
-      Path: !Sub /${Environment}/auth-ext/
+      Path: !Sub
+        - /${Env}/auth-ext/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -1509,11 +1634,18 @@ Resources:
             Effect: Allow
             Action: kms:Decrypt*
             Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                authCodeStoreSigningKey,
-              ]
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authCodeStoreSigningKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authCodeStoreSigningKey,
+                  ]
           - Sid: AllowAccessToDynamoTables
             Effect: Allow
             Action:
@@ -1541,7 +1673,9 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing read and write permissions to the Dynamo Access Token Store table"
-      Path: !Sub /${Environment}/auth-ext/
+      Path: !Sub
+        - /${Env}/auth-ext/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -1549,11 +1683,18 @@ Resources:
             Effect: Allow
             Action: kms:Decrypt*
             Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                accessTokenStoreSigningKey,
-              ]
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    accessTokenStoreSigningKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    accessTokenStoreSigningKey,
+                  ]
           - Sid: AllowAccessToDynamoTables
             Effect: Allow
             Action:
@@ -1600,7 +1741,9 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing read permissions to the Dynamo User tables"
-      Path: !Sub /${Environment}/auth-ext/
+      Path: !Sub
+        - /${Env}/auth-ext/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -1709,7 +1852,9 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing read and write permissions to the auth session table"
-      Path: !Sub /${Environment}/auth-ext/
+      Path: !Sub
+        - /${Env}/auth-ext/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -1776,16 +1921,28 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowGetParameters
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-              - ssm:GetParameters
-            Resource:
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
+          - !If
+            - UseSubEnvironment
+            - Sid: AllowGetParameters
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-master-host
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-password
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-port
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-tls
+            - Sid: AllowGetParameters
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
@@ -1795,7 +1952,9 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM Policy for write access to the TxMA audit queue"
-      Path: !Sub /${Environment}/
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
