@@ -1,0 +1,33 @@
+version = 0.1
+[dev.deploy.parameters]
+stack_name = "authentication-api"
+resolve_s3 = false
+s3_bucket = "backend-pipeline-githubartifactsourcebucket-vljykfjnlde3"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-0a3c0dd11f680b73a\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/backend-pipeline-AppProgrammaticPermissionsBoundary-0ac7b09460c7\" Environment=\"dev\" SubEnvironment=\"none\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "AuthTokenFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthUserInfoFunction=\"SigningProfile_bdzyxbYzrSD8\" SecretString-JAVA_LAYER}}-cd3ae82ef4=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev1.deploy.parameters]
+stack_name = "authdev1-api"
+resolve_s3 = false
+s3_bucket = "authdev1-backend-pipeline-githubartifactsourcebuck-bcng2i0vvjvk"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-0c4d8707da47fdcde\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev1-backend-pipeline-AppProgrammaticPermissionsBoundary-0affff764169\" Environment=\"dev\" SubEnvironment=\"authdev1\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "AuthTokenFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthUserInfoFunction=\"SigningProfile_bdzyxbYzrSD8\" SecretString-JAVA_LAYER}}-cd3ae82ef4=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev2.deploy.parameters]
+stack_name = "authdev2-api"
+resolve_s3 = false
+s3_bucket = "authdev2-backend-pipeline-githubartifactsourcebuck-yhjfufnmjvxr"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-0db659c12e9b7dec5\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev2-backend-pipeline-AppProgrammaticPermissionsBoundary-06f1a429bf5d\" Environment=\"dev\" SubEnvironment=\"authdev2\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "AuthTokenFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthUserInfoFunction=\"SigningProfile_bdzyxbYzrSD8\" SecretString-JAVA_LAYER}}-cd3ae82ef4=\"SigningProfile_bdzyxbYzrSD8\""
