@@ -832,28 +832,29 @@ public class DynamoService implements AuthenticationService {
                                                 mfaMethodIdentifier)));
     }
 
-    @Override
-    public Result<String, List<MFAMethod>> updateMigratedAuthAppCredential(
-            String email, String updatedCredential, String mfaMethodIdentifier) {
+    public Result<String, List<MFAMethod>> updateMigratedDefaultMfaMethod(
+            String email, MFAMethodType type, String target, String mfaMethodIdentifier) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
                         Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+
         var maybeExistingMethod = getMfaMethodByIdentifier(userCredentials, mfaMethodIdentifier);
+
+        if (maybeExistingMethod.isFailure()) {
+            return Result.failure(
+                    "Mfa method with identifier %s does not exist".formatted(mfaMethodIdentifier));
+        }
+
         return maybeExistingMethod.flatMap(
                 existingMethod -> {
-                    if (!existingMethod
-                            .getMfaMethodType()
-                            .equals(MFAMethodType.AUTH_APP.getValue())) {
-                        return Result.failure(
-                                format(
-                                        "Attempted to update auth app credential for non auth app method with identifier %s",
-                                        mfaMethodIdentifier));
+                    if (type.equals(MFAMethodType.AUTH_APP)) {
+                        existingMethod.setCredentialValue(target);
+                    } else {
+                        existingMethod.setDestination(target);
                     }
                     return Result.success(
                             updateMigratedMfaMethod(
-                                    existingMethod.withCredentialValue(updatedCredential),
-                                    mfaMethodIdentifier,
-                                    userCredentials));
+                                    existingMethod, mfaMethodIdentifier, userCredentials));
                 });
     }
 
