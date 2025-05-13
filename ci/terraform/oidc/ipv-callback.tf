@@ -13,7 +13,6 @@ module "ipv_callback_role" {
     aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.ipv_token_auth_kms_policy.arn,
     aws_iam_policy.spot_queue_encryption_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
@@ -49,7 +48,6 @@ module "ipv-callback" {
     IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_URI                       = var.ipv_authorisation_uri
     IPV_BACKEND_URI                             = var.ipv_backend_uri
-    IPV_TOKEN_SIGNING_KEY_ALIAS                 = local.ipv_token_auth_key_alias_name
     OIDC_API_BASE_URL                           = local.api_base_url
     REDIS_KEY                                   = local.redis_key
     SPOT_QUEUE_URL                              = aws_sqs_queue.spot_request_queue.id
