@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -31,6 +32,7 @@ public class UserInfoServiceTest {
     private UserInfoService userInfoService;
     private ConfigurationService configurationService;
     private AuthenticationService authenticationService;
+    private MFAMethodsService mfaMethodsService;
     public static final ByteBuffer TEST_SALT = ByteBuffer.allocate(10);
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_RP_SECTOR_HOST = "test-rp-sector-uri";
@@ -62,8 +64,10 @@ public class UserInfoServiceTest {
     @BeforeEach
     public void setUp() {
         authenticationService = mock(DynamoService.class);
+        mfaMethodsService = mock(MFAMethodsService.class);
         configurationService = mock(ConfigurationService.class);
-        userInfoService = new UserInfoService(authenticationService, configurationService);
+        userInfoService =
+                new UserInfoService(authenticationService, mfaMethodsService, configurationService);
 
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class)))
                 .thenReturn(SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
