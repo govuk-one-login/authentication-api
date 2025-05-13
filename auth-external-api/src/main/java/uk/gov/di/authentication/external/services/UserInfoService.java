@@ -7,7 +7,10 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -16,6 +19,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.Objects;
 
 public class UserInfoService {
 
@@ -38,6 +42,8 @@ public class UserInfoService {
         LOG.info("Populating Authentication UserInfo");
         String internalSubjectId = accessTokenInfo.getSubjectID();
         var userProfile = authenticationService.getUserProfileFromSubject(internalSubjectId);
+        var userCredentials =
+                authenticationService.getUserCredentialsFromSubject(internalSubjectId);
 
         Subject internalPairwiseId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -46,7 +52,8 @@ public class UserInfoService {
                         authenticationService);
 
         var userInfo = new UserInfo(internalPairwiseId);
-        addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
+        addClaimsFromToken(
+                accessTokenInfo, internalSubjectId, userProfile, userCredentials, userInfo);
         addClaimsFromSession(accessTokenInfo, authSession, userInfo);
         return userInfo;
     }
@@ -55,6 +62,7 @@ public class UserInfoService {
             AccessTokenStore accessTokenInfo,
             String internalSubjectId,
             UserProfile userProfile,
+            UserCredentials userCredentials,
             UserInfo userInfo) {
         var rpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -82,17 +90,51 @@ public class UserInfoService {
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL_VERIFIED.getValue())) {
             userInfo.setEmailVerified(userProfile.isEmailVerified());
         }
-        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_NUMBER.getValue())) {
-            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
-        }
-        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_VERIFIED.getValue())) {
-            userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
-        }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.SALT.getValue())) {
             String base64StringFromSalt = bytesToBase64(userProfile.getSalt());
             LOG.info("is salt from UserProfile defined: {}", base64StringFromSalt != null);
             userInfo.setClaim("salt", base64StringFromSalt);
         }
+
+        var phoneData = getPhoneDataIfSMSIsDefault(userProfile, userCredentials);
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_NUMBER.getValue())) {
+            userInfo.setPhoneNumber(phoneData.phoneNumber());
+        }
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_VERIFIED.getValue())) {
+            userInfo.setPhoneNumberVerified(phoneData.phoneNumberVerified());
+        }
+    }
+
+    public record PhoneData(String phoneNumber, boolean phoneNumberVerified) {}
+
+    public PhoneData getPhoneDataIfSMSIsDefault(
+            UserProfile userProfile, UserCredentials userCredentials) {
+        var retrievedMfaMethods = mfaMethodsService.getMfaMethods(userProfile, userCredentials);
+        if (retrievedMfaMethods.isFailure()) {
+            LOG.warn("Default MFA retrieval failed, error: {}", retrievedMfaMethods.getFailure());
+            return new PhoneData(null, false);
+        }
+
+        var defaultMfaMethod =
+                retrievedMfaMethods.getSuccess().stream()
+                        .filter(
+                                method ->
+                                        Objects.equals(
+                                                method.getPriority(),
+                                                PriorityIdentifier.DEFAULT.toString()))
+                        .findFirst();
+        if (defaultMfaMethod.isEmpty()) {
+            LOG.warn("No default MFA method found");
+            return new PhoneData(null, false);
+        }
+
+        if (Objects.equals(
+                defaultMfaMethod.get().getMfaMethodType(), MFAMethodType.SMS.getValue())) {
+            return new PhoneData(
+                    defaultMfaMethod.get().getDestination(),
+                    defaultMfaMethod.get().isMethodVerified());
+        }
+        return new PhoneData(null, false);
     }
 
     private void addClaimsFromSession(
