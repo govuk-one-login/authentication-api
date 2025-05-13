@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -19,13 +20,16 @@ import java.util.Base64;
 public class UserInfoService {
 
     private final AuthenticationService authenticationService;
+    private final MFAMethodsService mfaMethodsService;
     private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
             AuthenticationService authenticationService,
+            MFAMethodsService mfaMethodsService,
             ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
+        this.mfaMethodsService = mfaMethodsService;
         this.configurationService = configurationService;
     }
 
