@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -557,38 +556,6 @@ class StartServiceTest {
             expectedScopes = DOC_APP_SCOPES;
         }
         assertThat(clientStartInfo.scopes(), equalTo(expectedScopes.toStringList()));
-    }
-
-    @Test
-    void shouldReturnGaTrackingIdWhenPresentInAuthRequest() {
-        var gaTrackingId = IdGenerator.generate();
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .customParameter("_ga", gaTrackingId)
-                        .build();
-
-        assertThat(startService.getGATrackingId(authRequest.toParameters()), equalTo(gaTrackingId));
-    }
-
-    @Test
-    void shouldReturnNullWhenGaTrackingIdIsNotPresentInAuthRequest() {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-
-        assertThat(startService.getGATrackingId(authRequest.toParameters()), equalTo(null));
     }
 
     @ParameterizedTest

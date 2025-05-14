@@ -167,7 +167,6 @@ class StartHandlerTest {
             throws ParseException, Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
         usingValidClientSession();
         usingValidSession();
 
@@ -595,7 +594,6 @@ class StartHandlerTest {
         when(startService.buildUserContext(eq(session), any(), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.buildUserStartInfo(
                         eq(userContext),
                         any(),

@@ -28,13 +28,11 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.function.Predicate.not;
-import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
 
 public class StartService {
 
@@ -174,15 +172,6 @@ public class StartService {
                 .filter(MFAMethod::isMethodVerified)
                 .map(MFAMethod::getMfaMethodType)
                 .anyMatch(MFAMethodType.AUTH_APP.getValue()::equals);
-    }
-
-    public String getGATrackingId(Map<String, List<String>> authRequestParameters) {
-        if (authRequestParameters.containsKey(GA)) {
-            String gaId = authRequestParameters.get(GA).get(0);
-            LOG.info("GA value present in request {}", gaId);
-            return gaId;
-        }
-        return null;
     }
 
     public String getCookieConsentValue(String cookieConsentValue, String clientID) {
