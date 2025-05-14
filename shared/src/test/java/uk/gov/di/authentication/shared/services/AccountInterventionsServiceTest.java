@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.google.gson.JsonParseException;
 import net.minidev.json.JSONObject;
@@ -9,9 +9,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import uk.gov.di.authentication.frontendapi.entity.State;
+import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.io.IOException;
 import java.net.URI;
