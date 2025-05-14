@@ -232,6 +232,13 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 return errorResponse(redirectURI, maxAgeError.get(), state);
             }
 
+            var loginHint = Optional.ofNullable(jwtClaimsSet.getStringClaim("login_hint"));
+            loginHint.ifPresent(
+                    hint ->
+                            LOG.info(
+                                    "login_hint present in request object, length: {}",
+                                    hint.length()));
+
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
         } catch (ParseException e) {
