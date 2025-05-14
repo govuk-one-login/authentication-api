@@ -141,6 +141,10 @@ subprojects {
                 add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
                     because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
                 }
+
+                add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.17,12.1.0)') {
+                    because 'CVE-2025-1948 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.17 and higher'
+                }
             }
         }
 
