@@ -508,16 +508,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             AuthenticationRequest authRequest,
             Optional<LevelOfConfidence> levelOfConfidenceOpt,
             String credentialStrength) {
-        return makeRequestBody(
-                isAuthenticated, authRequest, levelOfConfidenceOpt, credentialStrength, Map.of());
-    }
-
-    private String makeRequestBody(
-            boolean isAuthenticated,
-            AuthenticationRequest authRequest,
-            Optional<LevelOfConfidence> levelOfConfidenceOpt,
-            String credentialStrength,
-            Map<String, Object> paramOverrides) {
         Map<String, Object> requestBodyMap =
                 new HashMap<>(
                         Map.of(
@@ -541,7 +531,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 levelOfConfidence ->
                         requestBodyMap.put(
                                 "requested_level_of_confidence", levelOfConfidence.getValue()));
-        requestBodyMap.putAll(paramOverrides);
         return SerializationService.getInstance().writeValueAsString(requestBodyMap);
     }
 
