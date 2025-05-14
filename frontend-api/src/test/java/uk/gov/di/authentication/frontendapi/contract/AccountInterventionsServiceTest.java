@@ -11,9 +11,9 @@ import au.com.dius.pact.core.model.RequestResponsePact;
 import au.com.dius.pact.core.model.annotations.Pact;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
-import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
+import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
+import uk.gov.di.authentication.shared.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.shared.entity;
 
 import com.google.gson.annotations.Expose;
 import uk.gov.di.authentication.shared.validation.Required;
