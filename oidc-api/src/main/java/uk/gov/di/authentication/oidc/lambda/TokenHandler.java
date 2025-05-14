@@ -277,24 +277,10 @@ public class TokenHandler
                     400, e.getErrorObject().toJSONObject().toJSONString());
         }
 
-        // ATO-1372: add logging to see how many RPs are sending the correct code verifiers
-        var codeChallenge = authRequest.getCodeChallenge();
-        var codeVerifierString = requestBody.get("code_verifier");
-
-        try {
-            if (!isPKCEValid(
-                    Optional.ofNullable(codeChallenge), Optional.ofNullable(codeVerifierString))) {
-                LOG.info("PKCE validation failed");
-            } else {
-                LOG.info("PKCE validation passed");
-            }
-        } catch (Exception e) {
-            LOG.info("PKCE FAILED {}", e.getMessage());
-        }
-
         if (configurationService.isPkceEnabled()) {
             if (!isPKCEValid(
-                    Optional.ofNullable(codeChallenge), Optional.ofNullable(codeVerifierString))) {
+                    Optional.ofNullable(authRequest.getCodeChallenge()),
+                    Optional.ofNullable(requestBody.get("code_verifier")))) {
                 LOG.warn("PKCE validation failed, returning invalid_grant error");
                 return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
             }
