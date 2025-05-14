@@ -777,29 +777,6 @@ public class DynamoService implements AuthenticationService {
                         .withUpdated(dateTime));
     }
 
-    @Override
-    public Result<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
-            String email, String updatedPhoneNumber, String mfaMethodIdentifier) {
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-        var maybeExistingMethod = getMfaMethodByIdentifier(userCredentials, mfaMethodIdentifier);
-        return maybeExistingMethod.flatMap(
-                existingMethod -> {
-                    if (!existingMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
-                        return Result.failure(
-                                format(
-                                        "Attempted to update phone number for non sms method with identifier %s",
-                                        mfaMethodIdentifier));
-                    }
-                    return Result.success(
-                            updateMigratedMfaMethod(
-                                    existingMethod.withDestination(updatedPhoneNumber),
-                                    mfaMethodIdentifier,
-                                    userCredentials));
-                });
-    }
-
     private List<MFAMethod> updateMigratedMfaMethod(
             MFAMethod updatedMFAMethod,
             String mfaMethodIdentifier,
@@ -849,8 +826,10 @@ public class DynamoService implements AuthenticationService {
                 existingMethod -> {
                     if (type.equals(MFAMethodType.AUTH_APP)) {
                         existingMethod.setCredentialValue(target);
+                        existingMethod.setDestination(null);
                     } else {
                         existingMethod.setDestination(target);
+                        existingMethod.setCredentialValue(null);
                     }
                     return Result.success(
                             updateMigratedMfaMethod(
