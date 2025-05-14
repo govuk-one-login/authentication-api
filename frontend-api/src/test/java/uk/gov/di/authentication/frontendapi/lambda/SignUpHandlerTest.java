@@ -101,7 +101,8 @@ class SignUpHandlerTest {
     private final AuthSessionItem authSessionItem =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
-                    .withAccountState(AuthSessionItem.AccountState.UNKNOWN);
+                    .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                    .withClientId(CLIENT_ID.getValue());
 
     private SignUpHandler handler;
 
