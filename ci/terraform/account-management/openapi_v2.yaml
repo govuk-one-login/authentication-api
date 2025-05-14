@@ -16,6 +16,31 @@ paths:
         uri: "${endpoint_modules.authenticate.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      responses:
+        "204":
+          description: Successful Operation. The password is correct for this user.
+        "400":
+          description: One of the required fields is missing.
+        "401":
+          description: This user does not have an account or the password is wrong.
+        "403":
+          description: This user cannot authenticate because of a suspension.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserAccountBlocked"
+                  - $ref: "#/components/schemas/UserAccountSuspended"
+              examples:
+                post-when-user-has-blocked-intervention:
+                  value:
+                    code: 1084
+                    message: "User's account is blocked"
+                post-when-user-has-suspended-intervention:
+                  value:
+                    code: 1083
+                    message: "User's account is suspended"
+
   /update-password:
     post:
       security:
@@ -985,6 +1010,22 @@ components:
           example:
             code: 1080
             message: "Default method already exists, new one cannot be created."
+    UserAccountBlocked:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1084]
+    UserAccountSuspended:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1083]
 
   securitySchemes:
     authorise-access-token:
