@@ -1,9 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -81,33 +78,6 @@ public class StartService {
             throw new RuntimeException("Error when creating UserContext", e);
         }
         return userContext;
-    }
-
-    public ClientStartInfo buildClientStartInfo(UserContext userContext) throws ParseException {
-        List<String> scopes;
-        URI redirectURI;
-        State state;
-        try {
-            var authenticationRequest =
-                    AuthenticationRequest.parse(
-                            userContext.getClientSession().getAuthRequestParams());
-            if (Objects.nonNull(authenticationRequest.getRequestObject())) {
-                var claimSet = authenticationRequest.getRequestObject().getJWTClaimsSet();
-                scopes = Scope.parse((String) claimSet.getClaim("scope")).toStringList();
-                redirectURI = URI.create((String) claimSet.getClaim("redirect_uri"));
-                state = State.parse((String) claimSet.getClaim("state"));
-            } else {
-                scopes = authenticationRequest.getScope().toStringList();
-                redirectURI = authenticationRequest.getRedirectionURI();
-                state = authenticationRequest.getState();
-            }
-        } catch (ParseException e) {
-            throw new ParseException("Unable to parse authentication request");
-        } catch (java.text.ParseException e) {
-            throw new RuntimeException("Unable to parse claims in request object");
-        }
-        return buildClientStartInfo(
-                userContext.getClient().orElseThrow(), scopes, redirectURI, state);
     }
 
     public ClientStartInfo buildClientStartInfo(
