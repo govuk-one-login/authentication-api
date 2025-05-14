@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.util.HashMap;
@@ -83,10 +84,20 @@ class AuthSessionServiceIntegrationTest {
         var session = withStoredSession(SESSION_ID);
 
         session.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+        session.setRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        session.setRequestedLevelOfConfidence(LevelOfConfidence.MEDIUM_LEVEL);
+        session.setClientId("test-client-id");
         authSessionExtension.updateSession(session);
         var updatedSession = authSessionExtension.getSession(SESSION_ID).get();
         assertThat(
                 updatedSession.getIsNewAccount(), equalTo(AuthSessionItem.AccountState.EXISTING));
+        assertThat(
+                updatedSession.getRequestedCredentialStrength(),
+                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(
+                updatedSession.getRequestedLevelOfConfidence(),
+                equalTo(LevelOfConfidence.MEDIUM_LEVEL));
+        assertThat(updatedSession.getClientId(), equalTo("test-client-id"));
     }
 
     @Test
