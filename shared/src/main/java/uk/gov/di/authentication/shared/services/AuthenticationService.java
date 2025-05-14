@@ -93,9 +93,6 @@ public interface AuthenticationService {
 
     void deleteMfaMethodByIdentifier(String email, String mfaMethodIdentifier);
 
-    Result<String, List<MFAMethod>> updateMigratedMethodPhoneNumber(
-            String email, String updatedPhoneNumber, String mfaMethodIdentifier);
-
     Result<String, List<MFAMethod>> updateMigratedDefaultMfaMethod(
             String email, MFAMethodType type, String destination, String mfaMethodIdentifier);
 
