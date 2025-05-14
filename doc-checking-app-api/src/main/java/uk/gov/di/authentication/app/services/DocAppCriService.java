@@ -88,7 +88,9 @@ public class DocAppCriService {
                 generatePrivateKeyJwt(claimsSet),
                 codeGrant,
                 null,
+                null,
                 singletonList(tokenURI),
+                null,
                 Map.of(
                         "client_id",
                         singletonList(configurationService.getDocAppAuthorisationClientId())));
@@ -109,7 +111,7 @@ public class DocAppCriService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from DocApp token endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
             return tokenResponse;
@@ -137,7 +139,7 @@ public class DocAppCriService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from DocApp userinfo endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
 
@@ -145,11 +147,11 @@ public class DocAppCriService {
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call CRI data endpoint: %s",
-                                response.getStatusCode(), response.getContent()),
+                                response.getStatusCode(), response.getBody()),
                         response.getStatusCode());
             }
 
-            if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
+            if (!response.getBodyAsJSONObject().get("sub").equals(docAppSubjectId)
                     && !configurationService.getEnvironment().equals("dev")
                     && !configurationService.getEnvironment().equals("build")) {
                 throw new UnsuccessfulCredentialResponseException(
@@ -170,7 +172,7 @@ public class DocAppCriService {
     private List<SignedJWT> parseResponse(HTTPResponse response)
             throws UnsuccessfulCredentialResponseException {
         try {
-            var contentAsJSONObject = response.getContentAsJSONObject();
+            var contentAsJSONObject = response.getBodyAsJSONObject();
             if (Objects.isNull(contentAsJSONObject.get(CREDENTIAL_JWT.getValue()))) {
                 throw new UnsuccessfulCredentialResponseException(
                         "No Credential JWT claim present");

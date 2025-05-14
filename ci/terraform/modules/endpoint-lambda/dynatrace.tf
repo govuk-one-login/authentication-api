@@ -1,5 +1,5 @@
 locals {
-  dynatrace_layer_arn = var.dynatrace_secret.JAVA_LAYER
+  dynatrace_layer_arn = "arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1"
   dynatrace_environment_variables = {
     AWS_LAMBDA_EXEC_WRAPPER = "/opt/dynatrace"
 

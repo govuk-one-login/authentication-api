@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
+import com.nimbusds.oauth2.sdk.auth.verifier.JWTAudienceCheck;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -80,7 +81,8 @@ public class TokenRequestValidator {
             ClientAuthenticationVerifier<?> signatureVerifier =
                     new ClientAuthenticationVerifier<>(
                             new PrivateKeyJwtAuthPublicKeySelector(publicKeys, KeyType.EC),
-                            expectedAudience);
+                            expectedAudience,
+                            JWTAudienceCheck.LEGACY);
             signatureVerifier.verify(privateKeyJWT, null, null);
         } catch (ParseException e) {
             LOG.warn("Unable to parse private_key_jwt", e);

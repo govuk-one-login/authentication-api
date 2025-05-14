@@ -90,6 +90,8 @@ public class IPVTokenService {
                 codeGrant,
                 null,
                 null,
+                null,
+                null,
                 Map.of(
                         "client_id",
                         singletonList(configurationService.getIPVAuthorisationClientId())));
@@ -110,7 +112,7 @@ public class IPVTokenService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from IPV token endpoint on attempt %d: %s ",
-                                    response.getStatusCode(), count, response.getContent()));
+                                    response.getStatusCode(), count, response.getBody()));
                 }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
@@ -140,9 +142,7 @@ public class IPVTokenService {
                     LOG.warn(
                             format(
                                     "Unsuccessful %s response from IPV user identity endpoint on attempt %d: %s ",
-                                    httpResponse.getStatusCode(),
-                                    count,
-                                    httpResponse.getContent()));
+                                    httpResponse.getStatusCode(), count, httpResponse.getBody()));
                 }
             } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
 

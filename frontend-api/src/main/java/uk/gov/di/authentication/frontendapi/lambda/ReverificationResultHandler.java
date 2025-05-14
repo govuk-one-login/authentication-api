@@ -175,7 +175,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             LOG.info("ReverificationResult response received from IPV");
 
-            var reverificationResultJson = reverificationResult.getContentAsJSONObject();
+            var reverificationResultJson = reverificationResult.getBodyAsJSONObject();
 
             var validMetadata =
                     extractValidMetadata(
@@ -198,7 +198,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
             }
 
-            return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
+            return generateApiGatewayProxyResponse(200, reverificationResult.getBody());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {
             LOG.error("Error getting reverification result", e);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
