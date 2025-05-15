@@ -315,56 +315,6 @@ data "aws_iam_policy_document" "events_encryption_key_permissions" {
   }
 }
 
-# IPV Token Authentication KMS key
-
-resource "aws_kms_key" "ipv_token_auth_signing_key" {
-  description              = "KMS signing key for authentication to the IPV token endpoint"
-  deletion_window_in_days  = 30
-  key_usage                = "SIGN_VERIFY"
-  customer_master_key_spec = "ECC_NIST_P256"
-
-  policy = data.aws_iam_policy_document.ipv_token_signing_key_access_policy.json
-
-}
-
-resource "aws_kms_alias" "ipv_token_auth_signing_key_alias" {
-  name          = "alias/${var.environment}-ipv-token-auth-kms-key-alias"
-  target_key_id = aws_kms_key.ipv_token_auth_signing_key.key_id
-}
-
-data "aws_iam_policy_document" "ipv_token_signing_key_access_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
-
-  statement {
-    sid    = "AllowOrchAccessToKmsIpvTokenSigningKey-${var.environment}"
-    effect = "Allow"
-
-    actions = [
-      "kms:Sign",
-      "kms:GetPublicKey",
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
-    }
-  }
-}
-
 # Doc Checking App Authentication Signing KMS key
 
 resource "aws_kms_key" "doc_app_auth_signing_key" {
