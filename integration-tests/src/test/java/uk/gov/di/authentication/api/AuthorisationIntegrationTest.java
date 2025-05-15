@@ -994,7 +994,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             null,
                             null,
                             vtrString,
-                            extraParams);
+                            extraParams,
+                            null);
             Map<String, String> requestParams =
                     Map.of(
                             "client_id",
@@ -1462,7 +1463,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 throws JOSEException {
             setupForAuthJourney();
 
-            SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
+            SignedJWT signedJWT =
+                    createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, null);
 
             Map<String, String> requestParams =
                     Map.of(
@@ -1553,7 +1555,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
 
             SignedJWT signedJWT =
-                    createSignedJWT("", CLAIMS, List.of("openid"), null, aCodeChallenge, null);
+                    createSignedJWT(
+                            "", CLAIMS, List.of("openid"), null, aCodeChallenge, null, null);
 
             Map<String, String> requestParams =
                     Map.of(
@@ -1650,7 +1653,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             List.of("openid"),
                             null,
                             aCodeChallenge,
-                            codeChallengeMethod);
+                            codeChallengeMethod,
+                            null);
 
             Map<String, String> requestParams =
                     Map.of(
@@ -1751,7 +1755,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             List.of("openid"),
                             null,
                             codeChallenge,
-                            codeChallengeMethod);
+                            codeChallengeMethod,
+                            null);
 
             Map<String, String> requestParams =
                     Map.of(
@@ -1843,7 +1848,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 throws JOSEException, ParseException {
             setupForAuthJourneyWithPKCEEnforced();
 
-            SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), null, null, null);
+            SignedJWT signedJWT =
+                    createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, null);
 
             Map<String, String> requestParams =
                     Map.of(
@@ -1891,16 +1897,159 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
     }
 
+    @Nested
+    class LoginHint {
+        @Test
+        void shouldRedirectToFrontendWhenValidLoginHintProvidedInRequestObject() throws Exception {
+            setupForAuthJourney();
+            SignedJWT signedJWT =
+                    createSignedJWT("", CLAIMS, List.of("openid"), TEST_EMAIL_ADDRESS);
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldReturnInvalidRequestWhenInvalidLoginHintProvidedInRequestObject()
+                throws JOSEException {
+            setupForAuthJourney();
+
+            SignedJWT signedJWT =
+                    createSignedJWT(
+                            "",
+                            CLAIMS,
+                            List.of("openid"),
+                            "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111@email.com");
+
+            Map<String, String> requestParams =
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID,
+                            "response_type",
+                            "code",
+                            "request",
+                            signedJWT.serialize(),
+                            "scope",
+                            "openid");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    Optional.of(
+                                            new HttpCookie(
+                                                    "di-persistent-session-id",
+                                                    "persistent-id-value"))),
+                            requestParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=ui_locales+parameter+is+invalid"));
+        }
+
+        @Test
+        void shouldRedirectToFrontendWithoutLoginHintWhenValidLoginHintProvided() throws Exception {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            var previousClientSessionId = "a-previous-client-session";
+            var previousSessionId =
+                    givenAnExistingSessionWithClientSession(previousClientSessionId);
+            orchSessionExtension.addSession(
+                    new OrchSessionItem(previousSessionId)
+                            .withAuthenticated(true)
+                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var previousSession = orchSessionExtension.getSession(previousSessionId);
+            assertTrue(previousSession.isPresent());
+            assertTrue(previousSession.get().getAuthenticated());
+            assertNull(previousSession.get().getPreviousSessionId());
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(
+                                    new HttpCookie[] {
+                                        buildSessionCookie(
+                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                    }),
+                            constructQueryStringParameters(
+                                    CLIENT_ID,
+                                    null,
+                                    "openid",
+                                    "P2.Cl.Cm",
+                                    null,
+                                    RP_REDIRECT_URI,
+                                    null,
+                                    null,
+                                    null,
+                                    TEST_EMAIL_ADDRESS),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+            assertThat(getLocationResponseHeader(response), not(containsString("login_hint")));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, null, null, null);
+                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, null, null, null, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, Long maxAge) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, maxAge, null, null);
+                clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI, maxAge, null, null, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
@@ -1919,19 +2068,20 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 RP_REDIRECT_URI,
                 null,
                 codeChallenge,
-                codeChallengeMethod);
+                codeChallengeMethod,
+                null);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, String uiLocales) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, uiLocales, RP_REDIRECT_URI, null, null, null);
+                clientId, prompt, scopes, vtr, uiLocales, RP_REDIRECT_URI, null, null, null, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, URI redirectUri) {
         return constructQueryStringParameters(
-                clientId, prompt, scopes, vtr, null, redirectUri, null, null, null);
+                clientId, prompt, scopes, vtr, null, redirectUri, null, null, null, null);
     }
 
     private Map<String, String> constructQueryStringParameters(
@@ -1943,7 +2093,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             URI redirectUri,
             Long maxAge,
             CodeChallenge codeChallenge,
-            CodeChallengeMethod codeChallengeMethod) {
+            CodeChallengeMethod codeChallengeMethod,
+            String loginHint) {
         final Map<String, String> queryStringParameters =
                 new HashMap<>(
                         Map.of(
@@ -1974,6 +2125,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         s ->
                                 queryStringParameters.put(
                                         "code_challenge_method", codeChallengeMethod.getValue()));
+        Optional.ofNullable(loginHint).ifPresent(s -> queryStringParameters.put("login_hint", s));
 
         return queryStringParameters;
     }
@@ -2064,18 +2216,24 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
-        return createSignedJWT(uiLocales, null, null, null, null, null);
+        return createSignedJWT(uiLocales, null, null, null, null, null, null);
     }
 
     private SignedJWT createSignedJWT(String uiLocales, String claims, List<String> scopes)
             throws JOSEException {
-        return createSignedJWT(uiLocales, claims, scopes, null, null, null);
+        return createSignedJWT(uiLocales, claims, scopes, null, null, null, null);
     }
 
     private SignedJWT createSignedJWT(
             String uiLocales, String claims, List<String> scopes, Integer maxAge)
             throws JOSEException {
-        return createSignedJWT(uiLocales, claims, scopes, maxAge, null, null);
+        return createSignedJWT(uiLocales, claims, scopes, maxAge, null, null, null);
+    }
+
+    private SignedJWT createSignedJWT(
+            String uiLocales, String claims, List<String> scopes, String loginHint)
+            throws JOSEException {
+        return createSignedJWT(uiLocales, claims, scopes, null, null, null, loginHint);
     }
 
     private SignedJWT createSignedJWT(
@@ -2084,7 +2242,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             List<String> scopes,
             Integer maxAge,
             CodeChallenge codeChallenge,
-            CodeChallengeMethod codeChallengeMethod)
+            CodeChallengeMethod codeChallengeMethod,
+            String loginHint)
             throws JOSEException {
         return createSignedJWT(
                 uiLocales,
@@ -2094,7 +2253,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 codeChallenge,
                 codeChallengeMethod,
                 jsonArrayOf("P2.Cl.Cm", "PCL200.Cl.Cm"),
-                Map.of());
+                Map.of(),
+                loginHint);
     }
 
     private SignedJWT createSignedJWT(
@@ -2105,7 +2265,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             CodeChallenge codeChallenge,
             CodeChallengeMethod codeChallengeMethod,
             String vtrString,
-            Map<String, String> extraClaims)
+            Map<String, String> extraClaims,
+            String loginHint)
             throws JOSEException {
         var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
@@ -2146,6 +2307,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         if (codeChallengeMethod != null) {
             jwtClaimsSetBuilder.claim("code_challenge_method", codeChallengeMethod.getValue());
         }
+
+        if (loginHint != null) {
+            jwtClaimsSetBuilder.claim("login_hint", loginHint);
+        }
+
         extraClaims.forEach(jwtClaimsSetBuilder::claim);
 
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
