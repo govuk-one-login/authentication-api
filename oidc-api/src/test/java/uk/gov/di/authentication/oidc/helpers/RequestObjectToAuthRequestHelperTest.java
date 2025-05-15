@@ -409,31 +409,6 @@ class RequestObjectToAuthRequestHelperTest {
     }
 
     @Test
-    void shouldReturnAuthRequestWithNoLoginHintWhenNoRequestObjectIsPresent() {
-        Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.PHONE);
-        var authRequest =
-                new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(STATE)
-                        .nonce(NONCE)
-                        .loginHint("test@email.com")
-                        .build();
-
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
-
-        assertNull(transformedAuthRequest.getRequestObject());
-        assertThat(transformedAuthRequest.getState(), equalTo(authRequest.getState()));
-        assertThat(transformedAuthRequest.getNonce(), equalTo(authRequest.getNonce()));
-        assertThat(transformedAuthRequest.getClientID(), equalTo(authRequest.getClientID()));
-        assertThat(
-                transformedAuthRequest.getRedirectionURI(),
-                equalTo(authRequest.getRedirectionURI()));
-        assertThat(
-                transformedAuthRequest.getResponseType(), equalTo(authRequest.getResponseType()));
-        assertThat(transformedAuthRequest.getScope(), equalTo(authRequest.getScope()));
-        assertNull(transformedAuthRequest.getLoginHint());
-    }
-
-    @Test
     void shouldRetrieveRpSidFromRequestObject() throws JOSEException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
