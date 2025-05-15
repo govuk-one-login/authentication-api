@@ -239,7 +239,11 @@ class PhoneNumberCodeProcessorTest {
     @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
         setupPhoneNumberCode(
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, INVALID_CODE, JourneyType.SIGN_IN),
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        JourneyType.SIGN_IN,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_SIGN_IN);
 
         var expectedException =
@@ -310,7 +314,11 @@ class PhoneNumberCodeProcessorTest {
     @Test
     void shouldNotUpdateDynamoOrCreateAuditEventWhenSignIn() {
         setupPhoneNumberCode(
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, JourneyType.SIGN_IN),
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.SIGN_IN,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
@@ -407,9 +415,12 @@ class PhoneNumberCodeProcessorTest {
         when(userProfile.getPhoneNumber()).thenReturn(differentPhoneNumber);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
-                        CommonTestVariables.EMAIL, NotificationType.VERIFY_PHONE_NUMBER))
+                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
+                        NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, NotificationType.MFA_SMS))
+        when(codeStorageService.getOtpCode(
+                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
+                        NotificationType.MFA_SMS))
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(
                         CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
@@ -433,7 +444,8 @@ class PhoneNumberCodeProcessorTest {
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
-                        CommonTestVariables.EMAIL, NotificationType.VERIFY_PHONE_NUMBER))
+                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
+                        NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(
                         CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX))
@@ -456,7 +468,8 @@ class PhoneNumberCodeProcessorTest {
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
-                        CommonTestVariables.EMAIL, NotificationType.VERIFY_PHONE_NUMBER))
+                        CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
+                        NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(
                         CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
