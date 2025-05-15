@@ -323,7 +323,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     PhoneNumberHelper.formatPhoneNumber(defaultSmsMfaMethod.getDestination());
             identifier = emailAddress.concat(formattedPhoneNumber);
         }
-        return codeStorageService.getOtpCode(identifier, notificationType);
+        return codeStorageService
+                .getOtpCode(identifier, notificationType)
+                .or( // Temporary fallback for old phone number key with just email
+                        () ->
+                                notificationType.isForPhoneNumber()
+                                        ? codeStorageService.getOtpCode(
+                                                emailAddress, notificationType)
+                                        : Optional.empty());
     }
 
     private void handleInvalidVerificationCode(
@@ -483,6 +490,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             identifier = emailAddress.concat(formattedPhoneNumber);
         }
         codeStorageService.deleteOtpCode(identifier, notificationType);
+        if (notificationType.isForPhoneNumber()) {
+            // Temporary fallback for old phone number key with just email
+            codeStorageService.deleteOtpCode(emailAddress, notificationType);
+        }
 
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
