@@ -208,6 +208,13 @@ variable "mfa_method_management_api_enabled" {
   type        = bool
   default     = false
 }
+
+variable "ais_call_in_authenticate_enabled" {
+  description = "Feature flag to call AIS in the /authenticate handler when a user reverifies their password"
+  type        = bool
+  default     = false
+}
+
 variable "home_vpc_endpoint_id" {
   description = "The execute API vpc endpoint ID of Home AWS account to give execute access on method mgmt API"
   type        = string
