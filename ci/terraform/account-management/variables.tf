@@ -209,6 +209,11 @@ variable "mfa_method_management_api_enabled" {
   default     = false
 }
 
+variable "account_intervention_service_uri" {
+  default = ""
+  type    = string
+}
+
 variable "ais_call_in_authenticate_enabled" {
   description = "Feature flag to call AIS in the /authenticate handler when a user reverifies their password"
   type        = bool

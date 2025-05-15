@@ -26,6 +26,7 @@ module "authenticate" {
     INTERNAl_SECTOR_URI                                       = var.internal_sector_uri
     TXMA_AUDIT_QUEUE_URL                                      = module.account_management_txma_audit.queue_url
     REDIS_KEY                                                 = local.redis_key
+    ACCOUNT_INTERVENTION_SERVICE_URI                          = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_CALL_IN_AUTHENTICATE_ENABLED = var.ais_call_in_authenticate_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest"
