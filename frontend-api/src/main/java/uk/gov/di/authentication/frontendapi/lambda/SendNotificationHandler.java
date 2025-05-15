@@ -306,16 +306,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var authSession = userContext.getAuthSession();
         var sessionId = authSession.getSessionId();
 
-        String code =
-                requestNewCode != null && requestNewCode
-                        ? generateAndSaveNewCode(authSession.getEmailAddress(), notificationType)
-                        : codeStorageService
-                                .getOtpCode(authSession.getEmailAddress(), notificationType)
-                                .orElseGet(
-                                        () ->
-                                                generateAndSaveNewCode(
-                                                        authSession.getEmailAddress(),
-                                                        notificationType));
+        String emailAddress = authSession.getEmailAddress();
+        String codeIdentifier =
+                notificationType.isForPhoneNumber()
+                        ? emailAddress.concat(PhoneNumberHelper.formatPhoneNumber(destination))
+                        : emailAddress;
+        String code;
+        if (requestNewCode != null && requestNewCode) {
+            code = generateAndSaveNewCode(codeIdentifier, notificationType);
+        } else {
+            code =
+                    codeStorageService
+                            .getOtpCode(codeIdentifier, notificationType)
+                            .orElseGet(
+                                    () -> generateAndSaveNewCode(codeIdentifier, notificationType));
+        }
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 METRICS,
@@ -394,10 +399,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         return generateEmptySuccessApiGatewayResponse();
     }
 
-    private String generateAndSaveNewCode(String email, NotificationType notificationType) {
+    private String generateAndSaveNewCode(String identifier, NotificationType notificationType) {
         String newCode = codeGeneratorService.sixDigitCode();
         codeStorageService.saveOtpCode(
-                email,
+                identifier,
                 newCode,
                 notificationType.equals(VERIFY_PHONE_NUMBER)
                                 || notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
