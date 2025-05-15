@@ -35,7 +35,7 @@ import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestExce
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
-import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
+import uk.gov.di.authentication.oidc.helpers.AuthRequestTransformHelper;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
@@ -380,7 +380,7 @@ public class AuthorisationHandler
                     authRequest.getClientID().getValue(),
                     user);
         }
-        authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        authRequest = AuthRequestTransformHelper.transform(authRequest);
 
         try {
             cloudwatchMetricsService.putEmbeddedValue(

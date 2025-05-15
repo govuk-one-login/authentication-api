@@ -26,16 +26,21 @@ import java.util.Objects;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.parse;
 import static java.lang.String.format;
 
-public class RequestObjectToAuthRequestHelper {
+public class AuthRequestTransformHelper {
     private static final Json objectMapper = SerializationService.getInstance();
 
-    private static final Logger LOG = LogManager.getLogger(RequestObjectToAuthRequestHelper.class);
+    private static final Logger LOG = LogManager.getLogger(AuthRequestTransformHelper.class);
 
-    private RequestObjectToAuthRequestHelper() {}
+    private AuthRequestTransformHelper() {}
 
     @SuppressWarnings("deprecation")
     public static AuthenticationRequest transform(AuthenticationRequest authRequest) {
         if (Objects.isNull(authRequest.getRequestObject())) {
+            if (authRequest.getLoginHint() != null) {
+                var builder = new AuthenticationRequest.Builder(authRequest);
+                builder.loginHint(null);
+                authRequest = builder.build();
+            }
             return authRequest;
         }
         try {
@@ -105,6 +110,10 @@ public class RequestObjectToAuthRequestHelper {
             if (Objects.nonNull(jwtClaimsSet.getStringClaim("cookie_consent"))) {
                 builder.customParameter(
                         "cookie_consent", jwtClaimsSet.getStringClaim("cookie_consent"));
+            }
+
+            if (Objects.nonNull(jwtClaimsSet.getClaim("login_hint"))) {
+                builder.loginHint(jwtClaimsSet.getStringClaim("login_hint"));
             }
 
             return builder.build();
