@@ -213,6 +213,14 @@ Mappings:
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
     staging:
+      accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:758531536632:key/60b5781c-9507-4faf-ab0b-faef7cd7dbd6
+      authCodeStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/b52a2843-0d62-404a-a04c-5d47ba9ae54e
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/4ee87f07-df3a-4745-9734-6e9cc7995270
+      dataStoreAccountId: 758531536632
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "Yes"
