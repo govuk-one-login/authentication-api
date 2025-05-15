@@ -318,6 +318,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             code =
                     codeStorageService
                             .getOtpCode(codeIdentifier, notificationType)
+                            .or( // Temporary fallback for old phone number key with just email
+                                    () ->
+                                            notificationType.isForPhoneNumber()
+                                                    ? codeStorageService.getOtpCode(
+                                                            emailAddress, notificationType)
+                                                    : Optional.empty())
                             .orElseGet(
                                     () -> generateAndSaveNewCode(codeIdentifier, notificationType));
         }
