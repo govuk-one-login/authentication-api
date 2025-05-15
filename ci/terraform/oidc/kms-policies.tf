@@ -64,31 +64,6 @@ resource "aws_iam_policy" "orch_to_auth_kms_policy" {
   policy = data.aws_iam_policy_document.orch_to_auth_kms_policy_document.json
 }
 
-### IPV Token signing key access
-
-data "aws_iam_policy_document" "ipv_token_auth_kms_policy_document" {
-  statement {
-    sid    = "AllowAccessToKmsSigningKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:Sign",
-      "kms:GetPublicKey",
-    ]
-    resources = [
-      local.ipv_token_auth_signing_key_arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "ipv_token_auth_kms_policy" {
-  name_prefix = "kms-ipv-token-auth-policy"
-  path        = "/${var.environment}/ipv-token/"
-  description = "IAM policy for managing IPV authentication token KMS key access"
-
-  policy = data.aws_iam_policy_document.ipv_token_auth_kms_policy_document.json
-}
-
 ### Doc App signing key access
 
 data "aws_iam_policy_document" "doc_app_auth_kms_policy_document" {
