@@ -104,6 +104,8 @@ public class MFAMethodsRetrieveHandler
             return switch (retrieveResult.getFailure()) {
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
                         500, ErrorResponse.ERROR_1078);
+                case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.ERROR_1010);
             };
         }
 
