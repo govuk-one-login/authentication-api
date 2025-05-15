@@ -952,8 +952,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var expectedClaims =
                     new HashMap<String, Object>(
                             Map.of(
-                                    "confidence",
-                                    expectedCredentialStrength.getValue(),
                                     "requested_credential_strength",
                                     expectedCredentialStrength.getValue(),
                                     "_ga",
@@ -1015,8 +1013,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var expectedClaims =
                     new HashMap<String, Object>(
                             Map.of(
-                                    "confidence",
-                                    expectedCredentialStrength.getValue(),
                                     "requested_credential_strength",
                                     expectedCredentialStrength.getValue(),
                                     "_ga",

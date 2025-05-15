@@ -268,7 +268,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("rp_sector_host")));
         assertTrue(
                 Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id")));
-        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("confidence")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("client_id")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("redirect_uri")));
