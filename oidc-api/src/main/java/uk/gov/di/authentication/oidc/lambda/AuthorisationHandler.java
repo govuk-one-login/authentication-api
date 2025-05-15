@@ -288,6 +288,7 @@ public class AuthorisationHandler
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
             authRequest = stripOutReauthenticateQueryParams(authRequest);
+            authRequest = stripOutLoginHintQueryParams(authRequest);
         } catch (ParseException e) {
             LOG.warn("Authentication request could not be parsed", e);
             return generateParseExceptionResponse(e, user);
@@ -1177,6 +1178,10 @@ public class AuthorisationHandler
         return new AuthenticationRequest.Builder(authRequest)
                 .customParameter("id_token_hint")
                 .build();
+    }
+
+    private AuthenticationRequest stripOutLoginHintQueryParams(AuthenticationRequest authRequest) {
+        return new AuthenticationRequest.Builder(authRequest).loginHint(null).build();
     }
 
     private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
