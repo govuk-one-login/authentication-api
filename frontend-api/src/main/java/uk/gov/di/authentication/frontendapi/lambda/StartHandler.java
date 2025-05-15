@@ -163,7 +163,6 @@ public class StartHandler
         if (clientSessionOpt.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
-        var clientSession = clientSessionOpt.get();
 
         StartRequest startRequest;
         try {
@@ -202,7 +201,7 @@ public class StartHandler
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
-            var userContext = startService.buildUserContext(session, clientSession, authSession);
+            var userContext = startService.buildUserContext(session, authSession);
 
             var scopes = List.of(startRequest.scope().split(" "));
             var redirectURI = new URI(startRequest.redirectUri());

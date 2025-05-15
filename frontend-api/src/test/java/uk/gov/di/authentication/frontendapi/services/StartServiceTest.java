@@ -106,7 +106,7 @@ class StartServiceTest {
     }
 
     @Test
-    void shouldCreateUserContextFromSessionAuthSessionAndClientSession() {
+    void shouldCreateUserContextFromSessionAndAuthSession() {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(
                         Optional.of(
@@ -116,26 +116,10 @@ class StartServiceTest {
                 .thenReturn(Optional.of(mock(UserProfile.class)));
         when(dynamoService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn((mock(UserCredentials.class)));
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-        var clientSession =
-                new ClientSession(
-                        authRequest.toParameters(),
-                        LocalDateTime.now(),
-                        mock(VectorOfTrust.class),
-                        CLIENT_NAME);
-        var userContext = startService.buildUserContext(SESSION, clientSession, AUTH_SESSION);
+        var userContext = startService.buildUserContext(SESSION, AUTH_SESSION);
 
         assertThat(userContext.getSession(), equalTo(SESSION));
         assertThat(userContext.getAuthSession(), equalTo(AUTH_SESSION));
-        assertThat(userContext.getClientSession(), equalTo(clientSession));
     }
 
     @Test

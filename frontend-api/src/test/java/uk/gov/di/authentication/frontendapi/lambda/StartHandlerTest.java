@@ -563,7 +563,7 @@ class StartHandlerTest {
 
     private void usingStartServiceThatReturns(
             UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
-        when(startService.buildUserContext(eq(session), any(), any(AuthSessionItem.class)))
+        when(startService.buildUserContext(eq(session), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
         when(startService.buildClientStartInfo(eq(clientRegistry), any(), any(), any()))
                 .thenReturn(clientStartInfo);
