@@ -444,8 +444,6 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
 
         Map<String, String> queryParameters = new HashMap<>();
-        queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
-        queryParameters.put("state", STATE.getValue());
         event.setQueryStringParameters(queryParameters);
         event.setHeaders(Collections.emptyMap());
 

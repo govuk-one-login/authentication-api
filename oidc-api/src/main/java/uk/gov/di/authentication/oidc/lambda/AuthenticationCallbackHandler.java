@@ -259,7 +259,7 @@ public class AuthenticationCallbackHandler
                     CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
 
             if (sessionCookiesIds == null) {
-                return handleMissingSession(input);
+                return handleCrossBrowserError(input);
             }
 
             var sessionId = sessionCookiesIds.getSessionId();
@@ -655,15 +655,9 @@ public class AuthenticationCallbackHandler
             return RedirectService.redirectToFrontendErrorPage(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
-        }
-    }
-
-    private APIGatewayProxyResponseEvent handleMissingSession(APIGatewayProxyRequestEvent input)
-            throws ParseException {
-        try {
-            return handleCrossBrowserError(input);
         } catch (NoSessionException e) {
-            throw new AuthenticationCallbackException("No session cookie found", e);
+            return RedirectService.redirectToFrontendErrorPageForNoSessionCookies(
+                    authFrontend.errorURI(), e);
         }
     }
 
