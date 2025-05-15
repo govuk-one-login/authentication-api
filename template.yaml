@@ -135,6 +135,7 @@ Mappings:
   EnvironmentConfiguration:
     dev:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_277_157_20231019-162516_with_collector_java:2
       authApiId: "dfwubyergf"
       authExternalApiId: "48oqh70cm7"
       authAccountId: "761723964695"
@@ -163,6 +164,7 @@ Mappings:
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_277_157_20231019-162516_with_collector_java:2
       authApiId: "6of9f4amvg"
       authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
@@ -191,6 +193,7 @@ Mappings:
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_277_157_20231019-162516_with_collector_java:2
       authApiId: "1rvwudxmbk"
       authExternalApiId: "rr86yg3r28"
       authAccountId: "758531536632"
@@ -219,6 +222,7 @@ Mappings:
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_299_23_20240903-115619_with_collector_java:2
       authApiId: "k2skqhxed6"
       authExternalApiId: "ivaclg7wrf"
       authAccountId: "761723964695"
@@ -247,6 +251,7 @@ Mappings:
       aisUriSecretId: ""
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_277_157_20231019-162516_with_collector_java:2
       authApiId: "s4gj268zy6"
       authExternalApiId: "crf9dwolp4"
       authAccountId: "172348255554"
@@ -344,14 +349,11 @@ Globals:
       - !Ref CodeSigningConfigArn
       - !Ref AWS::NoValue
     Layers:
-      - !Sub
-        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}"
-        - SecretArn:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              dynatraceSecretArn,
-            ]
+      - !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          dynatraceLayerArn,
+        ]
 
 Resources:
   CodeDeployServiceRole:
