@@ -473,12 +473,15 @@ Resources:
   AuthExternalApiExecutionLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
+    DependsOn:
+      - AuthExternalApiStage
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Sub
-        - API-Gateway-Execution-Logs_${AuthExternalApi}/${Env}
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - API-Gateway-Execution-Logs_${AuthExternalApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
   AuthExternalApiDashboard:
     Type: AWS::CloudWatch::Dashboard
