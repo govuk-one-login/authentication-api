@@ -90,18 +90,18 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public Optional<ErrorResponse> validateCode() {
-        if (codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)) {
+        JourneyType journeyType = codeRequest.getJourneyType();
+        if (journeyType.equals(JourneyType.SIGN_IN)) {
             LOG.error("Sign In Phone number codes are not supported");
             throw new RuntimeException("Sign In Phone number codes are not supported");
         }
         var notificationType =
                 List.of(JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATION)
-                                .contains(codeRequest.getJourneyType())
+                                .contains(journeyType)
                         ? NotificationType.MFA_SMS
                         : NotificationType.VERIFY_PHONE_NUMBER;
 
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(notificationType, codeRequest.getJourneyType());
+        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
@@ -115,15 +115,19 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             LOG.error("No client found", e);
             throw new RuntimeException(e);
         }
+
+        var formattedPhoneNumber =
+                PhoneNumberHelper.formatPhoneNumber(codeRequest.getProfileInformation());
+        String codeIdentifier = emailAddress.concat(formattedPhoneNumber);
         var storedCode =
                 isTestClient
                         ? configurationService.getTestClientVerifyPhoneNumberOTP()
-                        : codeStorageService.getOtpCode(emailAddress, notificationType);
+                        : codeStorageService.getOtpCode(codeIdentifier, notificationType);
 
         var errorResponse =
                 ValidationHelper.validateVerificationCode(
                         notificationType,
-                        codeRequest.getJourneyType(),
+                        journeyType,
                         storedCode,
                         codeRequest.getCode(),
                         codeStorageService,
@@ -131,7 +135,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         configurationService);
 
         if (errorResponse.isEmpty()) {
-            codeStorageService.deleteOtpCode(emailAddress, notificationType);
+            codeStorageService.deleteOtpCode(codeIdentifier, notificationType);
         }
 
         return errorResponse;
