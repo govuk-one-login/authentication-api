@@ -15,11 +15,13 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -30,6 +32,19 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
+    public static final String UPDATE_SMS_MFA_METHOD_REQUEST =
+            """
+            {
+              "mfaMethod": {
+                "priorityIdentifier": "DEFAULT",
+                "method": {
+                    "mfaMethodType": "SMS",
+                    "phoneNumber": "%s",
+                    "otp": "%s"
+                }
+              }
+            }
+            """;
     private static String testInternalSubject;
 
     private static final String TEST_EMAIL = "test@email.com";
@@ -76,6 +91,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         salt);
     }
 
+    // Update Auth App
     @Test
     void shouldReturn200AndMfaMethodDataWhenAuthAppUserUpdatesTheirCredential() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
@@ -151,21 +167,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var secondPhoneNumber = "+447900000100";
         var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
-        var updateRequest =
-                format(
-                        """
-                                {
-                                  "mfaMethod": {
-                                    "priorityIdentifier": "DEFAULT",
-                                    "method": {
-                                        "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s",
-                                        "otp": "%s"
-                                    }
-                                  }
-                                }
-                                """,
-                        secondPhoneNumber, otp);
+        var updateRequest = format(UPDATE_SMS_MFA_METHOD_REQUEST, secondPhoneNumber, otp);
 
         var response =
                 makeRequest(
@@ -303,6 +305,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 defaultPrioritySms, retrievedBackup, BACKUP);
     }
 
+    // Update SMS
     @Test
     void shouldReturn200AndMfaMethodDataWhenSmsUserUpdatesTheirPhoneNumber() {
         userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySms);
@@ -313,21 +316,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var mfaIdentifier = defaultPrioritySms.getMfaIdentifier();
         var updatedPhoneNumber = "07900000123";
         var updatedPhoneNumberWithCountryCode = "+447900000123";
-        var updateRequest =
-                format(
-                        """
-                                {
-                                  "mfaMethod": {
-                                    "priorityIdentifier": "DEFAULT",
-                                    "method": {
-                                        "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s",
-                                        "otp": "%s"
-                                    }
-                                  }
-                                }
-                                """,
-                        updatedPhoneNumber, otp);
+        var updateRequest = format(UPDATE_SMS_MFA_METHOD_REQUEST, updatedPhoneNumber, otp);
 
         var response =
                 makeRequest(
@@ -390,6 +379,63 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertRetrievedMethodHasSameBasicFields(defaultPrioritySms, retrievedDefault);
         assertMfaPhoneNumberUpdated(retrievedDefault, updatedPhoneNumberWithCountryCode);
     }
+
+    // Change from Auth App to SMS
+    @Test
+    void canChangeDefaultMethodFromAuthAppToSMS() {
+        // A User with default Auth App and SMS backup.
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthApp);
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupPrioritySms);
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+
+        // Request SMS as Default
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+        var updateRequest = format(UPDATE_SMS_MFA_METHOD_REQUEST, "+447900000123", otp);
+        var mfaIdentifier = defaultPriorityAuthApp.getMfaIdentifier();
+
+        var response =
+                makeRequest(
+                        Optional.of(updateRequest),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.ofEntries(
+                                Map.entry("publicSubjectId", testPublicSubject),
+                                Map.entry("mfaIdentifier", mfaIdentifier)),
+                        Map.of("principalId", testInternalSubject));
+
+        assertEquals(200, response.getStatusCode());
+
+        var userCredentials = userStore.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        assertTrue(userCredentials.isPresent());
+
+        var defaultMfa =
+                userCredentials.get().getMfaMethods().stream()
+                        .filter(method -> Objects.equals(method.getPriority(), DEFAULT.name()))
+                        .findFirst();
+
+        assertTrue(defaultMfa.isPresent());
+        assertAll(
+                () -> assertEquals(MFAMethodType.SMS.name(), defaultMfa.get().getMfaMethodType()),
+                () -> assertNull(defaultMfa.get().getCredentialValue()),
+                () -> assertEquals("+447900000123", defaultMfa.get().getDestination()));
+
+        var backupMfa =
+                userCredentials.get().getMfaMethods().stream()
+                        .filter(method -> Objects.equals(method.getPriority(), BACKUP.name()))
+                        .findFirst();
+
+        assertTrue(backupMfa.isPresent());
+        assertAll(
+                () -> assertEquals(MFAMethodType.SMS.name(), backupMfa.get().getMfaMethodType()),
+                () -> assertNull(backupMfa.get().getCredentialValue()),
+                () ->
+                        assertEquals(
+                                backupPrioritySms.getDestination(),
+                                backupMfa.get().getDestination()));
+    }
+
+    // Change from SMS to Auth App
 
     @Test
     void duplicateUpdatesShouldBeIdempotentForUpdatesToDefaultMethod() {
@@ -501,20 +547,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     private static String buildUpdateRequestWithOtp() {
         var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
-        return format(
-                """
-                        {
-                          "mfaMethod": {
-                            "priorityIdentifier": "DEFAULT",
-                            "method": {
-                                "mfaMethodType": "SMS",
-                                "phoneNumber": "%s",
-                                "otp": "%s"
-                            }
-                          }
-                        }
-                        """,
-                backupPrioritySms.getDestination(), otp);
+        return format(UPDATE_SMS_MFA_METHOD_REQUEST, backupPrioritySms.getDestination(), otp);
     }
 
     @Test
