@@ -824,6 +824,7 @@ public class DynamoService implements AuthenticationService {
 
         return maybeExistingMethod.flatMap(
                 existingMethod -> {
+                    existingMethod.setMfaMethodType(type.getValue());
                     if (type.equals(MFAMethodType.AUTH_APP)) {
                         existingMethod.setCredentialValue(target);
                         existingMethod.setDestination(null);
