@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
@@ -53,7 +52,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             DynamoAuthCodeService dynamoAuthCodeService,
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
@@ -63,7 +61,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 AuthCodeRequest.class,
                 configurationService,
                 sessionService,
-                clientSessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
