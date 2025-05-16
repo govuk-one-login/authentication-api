@@ -36,7 +36,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 
 public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailFraudBlockRequest> {
 
-    private static final Logger LOG = LogManager.getLogger(CheckEmailFraudBlockRequest.class);
+    private static final Logger LOG = LogManager.getLogger(CheckEmailFraudBlockHandler.class);
 
     private final AuditService auditService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
