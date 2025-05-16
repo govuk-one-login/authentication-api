@@ -1,13 +1,6 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -36,7 +29,6 @@ import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
-import java.net.URI;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -68,7 +60,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String USER_PASSWORD = "TestPassword123!";
     private static final String CLIENT_ID = "test-client-id";
-    private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String AUTH_APP_SECRET_BASE_32 = "ORSXG5BNORSXQ5A=";
     private static final String ALTERNATIVE_AUTH_APP_SECRET_BASE_32 =
@@ -78,7 +69,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final AuthAppStub AUTH_APP_STUB = new AuthAppStub();
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
-    private static final String CLIENT_NAME = "test-client-name";
     private final String internalCommonSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
@@ -113,7 +103,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         authSessionExtension.addClientIdToSession(this.sessionId, CLIENT_ID);
-        setupUser(sessionId, withScope(), EMAIL_ADDRESS, false);
+        setupUser(sessionId, EMAIL_ADDRESS, false);
     }
 
     private static Stream<Arguments> verifyMfaCodeRequest() {
@@ -152,9 +142,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("existingUserAuthAppJourneyTypes")
     void whenValidAuthAppOtpCodeReturn204ForSignInOrPasswordResetForMigratedUser(
-            JourneyType journeyType) throws Json.JsonException {
+            JourneyType journeyType) {
         var emailAddressOfMigratedUser = "migrated.user@example.com";
-        setupUser(sessionId, withScope(), emailAddressOfMigratedUser, true);
+        setupUser(sessionId, emailAddressOfMigratedUser, true);
 
         userStore.setAccountVerified(emailAddressOfMigratedUser);
         userStore.addMfaMethodSupportingMultiple(
@@ -181,10 +171,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("existingUserAuthAppJourneyTypes")
-    void whenAuthAppMethodIsBackupReturnsErrorForMigratedUser(JourneyType journeyType)
-            throws Json.JsonException {
+    void whenAuthAppMethodIsBackupReturnsErrorForMigratedUser(JourneyType journeyType) {
         var emailAddressOfMigratedUser = "migrated.user@example.com";
-        setupUser(sessionId, withScope(), emailAddressOfMigratedUser, true);
+        setupUser(sessionId, emailAddressOfMigratedUser, true);
 
         userStore.setAccountVerified(emailAddressOfMigratedUser);
         userStore.addMfaMethodSupportingMultiple(
@@ -1059,21 +1048,10 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
     }
 
-    private void setupUser(String sessionId, Scope scope, String email, boolean mfaMethodsMigrated)
-            throws Json.JsonException {
+    private void setupUser(String sessionId, String email, boolean mfaMethodsMigrated) {
         userStore.addUnverifiedUser(email, USER_PASSWORD);
         authSessionExtension.addEmailToSession(sessionId, email);
         userStore.setMfaMethodsMigrated(email, mfaMethodsMigrated);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(new State())
-                        .build();
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -1086,13 +1064,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public");
-    }
-
-    private Scope withScope() {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add(OIDCScopeValue.EMAIL);
-        return scope;
     }
 
     public void setUpAuthAppRequest(JourneyType journeyType) {

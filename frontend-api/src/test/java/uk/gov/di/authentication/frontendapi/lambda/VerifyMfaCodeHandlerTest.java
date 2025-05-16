@@ -2,14 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +26,6 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -41,7 +33,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -52,7 +43,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -60,7 +50,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -148,12 +137,10 @@ class VerifyMfaCodeHandlerTest {
     private final AuthAppCodeProcessor authAppCodeProcessor = mock(AuthAppCodeProcessor.class);
     private final PhoneNumberCodeProcessor phoneNumberCodeProcessor =
             mock(PhoneNumberCodeProcessor.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -186,9 +173,6 @@ class VerifyMfaCodeHandlerTest {
         when(clientRegistry.getClientName()).thenReturn(CLIENT_NAME);
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest().toParameters());
-
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getLockoutDuration()).thenReturn(900L);
@@ -196,8 +180,6 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
 
@@ -205,7 +187,6 @@ class VerifyMfaCodeHandlerTest {
                 new VerifyMfaCodeHandler(
                         configurationService,
                         sessionService,
-                        clientSessionService,
                         clientService,
                         authenticationService,
                         codeStorageService,
@@ -294,11 +275,6 @@ class VerifyMfaCodeHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
-        when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
 
         var result = handler.handleRequest(event, context);
 
@@ -1054,23 +1030,7 @@ class VerifyMfaCodeHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
-        when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
         return handler.handleRequest(event, context);
-    }
-
-    private AuthenticationRequest withAuthenticationRequest() {
-        return new AuthenticationRequest.Builder(
-                        new ResponseType(ResponseType.Value.CODE),
-                        new Scope(OIDCScopeValue.OPENID),
-                        new ClientID(CLIENT_ID),
-                        URI.create("https://redirectUri"))
-                .state(new State())
-                .nonce(new Nonce())
-                .build();
     }
 
     private void assertAuditEventSubmittedWithMetadata(
