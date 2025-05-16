@@ -429,7 +429,6 @@ public class AuthenticationCallbackHandler
                     handleMaxAgeSession(orchSession, user);
                 }
 
-                session.setAuthenticated(true);
                 orchSession.setAuthenticated(true);
                 clientSession.setRpPairwiseId(
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));

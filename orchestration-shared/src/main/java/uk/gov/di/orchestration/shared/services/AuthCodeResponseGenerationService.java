@@ -85,8 +85,7 @@ public class AuthCodeResponseGenerationService {
                     orchSession.withAccountState(
                             OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
         } else {
-            sessionService.storeOrUpdateSession(
-                    session.setAuthenticated(true).setNewAccount(EXISTING), sessionId);
+            sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING), sessionId);
             orchSessionService.updateSession(
                     orchSession
                             .withAuthenticated(true)
