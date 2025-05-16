@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -108,38 +107,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 LoginRequest.class,
                 configurationService,
                 sessionService,
-                clientService,
-                authenticationService,
-                true,
-                authSessionService);
-        this.codeStorageService = codeStorageService;
-        this.userMigrationService = userMigrationService;
-        this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.commonPasswordsService = commonPasswordsService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
-        this.mfaMethodsService = mfaMethodsService;
-    }
-
-    public LoginHandler(
-            ConfigurationService configurationService,
-            SessionService sessionService,
-            AuthenticationService authenticationService,
-            ClientSessionService clientSessionService,
-            ClientService clientService,
-            CodeStorageService codeStorageService,
-            UserMigrationService userMigrationService,
-            AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            CommonPasswordsService commonPasswordsService,
-            AuthenticationAttemptsService authenticationAttemptsService,
-            AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
-        super(
-                LoginRequest.class,
-                configurationService,
-                sessionService,
-                clientSessionService,
                 clientService,
                 authenticationService,
                 true,
