@@ -2,13 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +14,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -40,7 +32,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -49,7 +40,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -98,17 +88,14 @@ class MfaHandlerTest {
     private static final long LOCKOUT_DURATION = 799;
     private static final String TEST_CLIENT_ID = "test-client-id";
 
-    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ClientService clientService = mock(ClientService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final int MAX_CODE_RETRIES = 6;
@@ -199,7 +186,6 @@ class MfaHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_CODE_RETRIES);
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(UK_MOBILE_NUMBER));
-        usingValidClientSession(TEST_CLIENT_ID);
         when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -210,7 +196,6 @@ class MfaHandlerTest {
                         sessionService,
                         codeGeneratorService,
                         codeStorageService,
-                        clientSessionService,
                         clientService,
                         authenticationService,
                         auditService,
@@ -664,7 +649,6 @@ class MfaHandlerTest {
     void shouldReturn204AndNotSendMessageForSuccessfulMfaRequestOnTestClient()
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -751,26 +735,6 @@ class MfaHandlerTest {
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
-    }
-
-    private void usingValidClientSession(String clientId) {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(withAuthenticationRequest(clientId).toParameters());
-    }
-
-    private AuthenticationRequest withAuthenticationRequest(String clientId) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        return new AuthenticationRequest.Builder(
-                        new ResponseType(ResponseType.Value.CODE),
-                        scope,
-                        new ClientID(clientId),
-                        REDIRECT_URI)
-                .state(new State())
-                .nonce(new Nonce())
-                .build();
     }
 
     private static Stream<Arguments> smsJourneyTypes() {
