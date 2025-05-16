@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
 
 public class UserInfoServiceTest {
     private UserInfoService userInfoService;
@@ -54,6 +55,8 @@ public class UserInfoServiceTest {
     private static final MFAMethodType TEST_VERIFIED_MFA_METHOD_TYPE = MFAMethodType.EMAIL;
     private static final CredentialTrustLevel TEST_CURRENT_CREDENTIAL_STRENGTH =
             CredentialTrustLevel.MEDIUM_LEVEL;
+    private static final CredentialTrustLevel TEST_ACHIEVED_CREDENTIAL_STRENGTH =
+            CredentialTrustLevel.MEDIUM_LEVEL;
     private static final boolean TEST_UPLIFT_REQUIRED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
@@ -71,6 +74,7 @@ public class UserInfoServiceTest {
             new AuthSessionItem()
                     .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
                     .withCurrentCredentialStrength(TEST_CURRENT_CREDENTIAL_STRENGTH)
+                    .withAchievedCredentialStrength(TEST_ACHIEVED_CREDENTIAL_STRENGTH)
                     .withUpliftRequired(TEST_UPLIFT_REQUIRED);
 
     @BeforeEach
@@ -99,7 +103,8 @@ public class UserInfoServiceTest {
             String expectedSalt,
             MFAMethodType expectedVerifiedMfaMethod,
             CredentialTrustLevel expectedCurrentCredentialStrength,
-            Boolean expectedUpliftRequired) {
+            Boolean expectedUpliftRequired,
+            CredentialTrustLevel expectedAchievedCredentialStrength) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
@@ -119,6 +124,9 @@ public class UserInfoServiceTest {
                 expectedCurrentCredentialStrength, actual.getClaim("current_credential_strength"));
         assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
         assertEquals(expectedUpliftRequired, actual.getClaim("uplift_required"));
+        assertEquals(
+                expectedAchievedCredentialStrength,
+                actual.getClaim(ACHIEVED_CREDENTIAL_STRENGTH.getValue()));
     }
 
     private static Stream<Arguments> provideTestData() {
@@ -128,6 +136,7 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         TEST_SUBJECT.getValue(),
+                        null,
                         null,
                         null,
                         null,
@@ -149,6 +158,7 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         null,
+                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -163,7 +173,8 @@ public class UserInfoServiceTest {
                                         "salt",
                                         "verified_mfa_method_type",
                                         "current_credential_strength",
-                                        "uplift_required")),
+                                        "uplift_required",
+                                        "achieved_credential_strength")),
                         TEST_LEGACY_SUBJECT_ID,
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
@@ -174,7 +185,8 @@ public class UserInfoServiceTest {
                         bytesToBase64(TEST_SALT),
                         TEST_VERIFIED_MFA_METHOD_TYPE,
                         TEST_CURRENT_CREDENTIAL_STRENGTH,
-                        TEST_UPLIFT_REQUIRED));
+                        TEST_UPLIFT_REQUIRED,
+                        TEST_ACHIEVED_CREDENTIAL_STRENGTH));
     }
 
     private static AccessTokenStore getMockAccessTokenStore(List<String> claims) {
