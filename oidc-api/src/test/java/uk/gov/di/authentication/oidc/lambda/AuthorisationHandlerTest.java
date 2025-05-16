@@ -1695,7 +1695,9 @@ class AuthorisationHandlerTest {
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(argument.getValue().getClaim("confidence"), equalTo("Cl.Cm"));
+            assertThat(
+                    argument.getValue().getClaim("requested_credential_strength"),
+                    equalTo("Cl.Cm"));
         }
 
         @Test

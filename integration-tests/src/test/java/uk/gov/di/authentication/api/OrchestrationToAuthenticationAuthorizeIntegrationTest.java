@@ -13,12 +13,17 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -66,6 +71,13 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final ConfigurationService configurationService =
             new OrchestrationToAuthenticationAuthorizeIntegrationTest.TestConfigurationService();
 
+    @RegisterExtension
+    public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
+
+    @RegisterExtension
+    public static final OrchClientSessionExtension orchClientSessionExtension =
+            new OrchClientSessionExtension();
+
     @BeforeEach
     void setup() {
         handler = new AuthorisationHandler(configurationService, redisConnectionService);
@@ -86,7 +98,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                         constructQueryStringParameters(rpRequestedScopes.toString(), "P2.Cl.Cm"),
                         Optional.of("GET"));
 
-        var claimsRequest = getValidatedClaimsRequest(response);
+        var claimsRequest =
+                getValidatedClaimsRequest(
+                        response,
+                        Optional.of(LevelOfConfidence.MEDIUM_LEVEL),
+                        CredentialTrustLevel.MEDIUM_LEVEL);
 
         assertTrue(Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("salt")));
         assertTrue(
@@ -244,11 +260,20 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
 
     private OIDCClaimsRequest getValidatedClaimsRequest(APIGatewayProxyResponseEvent response)
             throws ParseException, JOSEException, java.text.ParseException {
+        return getValidatedClaimsRequest(
+                response, Optional.empty(), CredentialTrustLevel.getDefault());
+    }
+
+    private OIDCClaimsRequest getValidatedClaimsRequest(
+            APIGatewayProxyResponseEvent response,
+            Optional<LevelOfConfidence> levelOfConfidence,
+            CredentialTrustLevel credentialTrustLevel)
+            throws ParseException, JOSEException, java.text.ParseException {
         var authorizationRequest =
                 validateQueryRequestToAuthenticationAndReturnAuthRequest(response);
         var encryptedRequestObject = authorizationRequest.getRequestObject();
         var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
-        validateStandardClaimsInJar(signedJWTResponse);
+        validateStandardClaimsInJar(signedJWTResponse, levelOfConfidence, credentialTrustLevel);
         assertThat(
                 Objects.nonNull(signedJWTResponse.getJWTClaimsSet().getClaim("claim")),
                 equalTo(true));
@@ -257,7 +282,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 (String) signedJWTResponse.getJWTClaimsSet().getClaim("claim"));
     }
 
-    private void validateStandardClaimsInJar(SignedJWT signedJWT) throws java.text.ParseException {
+    private void validateStandardClaimsInJar(
+            SignedJWT signedJWT,
+            Optional<LevelOfConfidence> levelOfConfidenceOpt,
+            CredentialTrustLevel credentialTrustLevel)
+            throws java.text.ParseException {
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("jti")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("client_name")));
@@ -268,7 +297,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("rp_sector_host")));
         assertTrue(
                 Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id")));
-        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("confidence")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("client_id")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("redirect_uri")));
@@ -299,6 +327,16 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 signedJWT.getJWTClaimsSet().getClaim("rp_sector_host"),
                 equalTo("rp-sector-uri.com"));
         assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(ES256));
+
+        if (levelOfConfidenceOpt.isPresent()) {
+            assertThat(
+                    signedJWT.getJWTClaimsSet().getClaim("requested_level_of_confidence"),
+                    equalTo(levelOfConfidenceOpt.get().getValue()));
+        }
+        assertThat(
+                signedJWT.getJWTClaimsSet().getClaim("requested_credential_strength"),
+                equalTo(credentialTrustLevel.getValue()));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("scope")));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
