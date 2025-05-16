@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
@@ -49,6 +50,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_START_INFO_FOUND;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -496,6 +498,168 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
                     equalTo(false));
             assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
+        }
+    }
+
+    @Nested
+    class Uplift {
+        String sessionId;
+        State state = new State();
+        Scope scope = new Scope();
+
+        @BeforeEach
+        void setup() throws Json.JsonException {
+            handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+            txmaAuditQueue.clear();
+            sessionId = IdGenerator.generate();
+            redis.createSession(sessionId);
+            userStore.signUp(EMAIL, "password");
+            registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        }
+
+        @Test
+        void upliftNotRequiredWhenNoPreviousAuthSession() throws Json.JsonException {
+            setupClientSessionWithRequestedCredentialTrust(CredentialTrustLevel.MEDIUM_LEVEL);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    makeRequestBody(
+                                            false,
+                                            Map.of(
+                                                    "state",
+                                                    state.getValue(),
+                                                    "redirect_uri",
+                                                    REDIRECT_URI.toString(),
+                                                    "scope",
+                                                    scope.toString(),
+                                                    "client_id",
+                                                    CLIENT_ID,
+                                                    "requested_level_of_confidence",
+                                                    "P1",
+                                                    "requested_credential_strength",
+                                                    "Cl.Cm"))),
+                            standardHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+            assertFalse(startResponse.user().isUpliftRequired());
+        }
+
+        @Test
+        void upliftNotRequiredWhenPreviousSessionHasNullAchievedCredentialTrust()
+                throws Json.JsonException {
+            setupClientSessionWithRequestedCredentialTrust(CredentialTrustLevel.MEDIUM_LEVEL);
+            authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+            authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, null);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    makeRequestBody(
+                                            false,
+                                            Map.of(
+                                                    "state",
+                                                    state.getValue(),
+                                                    "redirect_uri",
+                                                    REDIRECT_URI.toString(),
+                                                    "scope",
+                                                    scope.toString(),
+                                                    "client_id",
+                                                    CLIENT_ID,
+                                                    "requested_level_of_confidence",
+                                                    "P1",
+                                                    "requested_credential_strength",
+                                                    "Cl.Cm"))),
+                            standardHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+            assertFalse(startResponse.user().isUpliftRequired());
+        }
+
+        @Test
+        void
+                upliftRequiredWhenPreviousAuthSessionAchievedLowCredentialTrustButClientSessionIsMedium()
+                        throws Json.JsonException {
+            setupClientSessionWithRequestedCredentialTrust(CredentialTrustLevel.MEDIUM_LEVEL);
+            authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+            authSessionExtension.addAchievedCredentialTrustToSession(
+                    PREVIOUS_SESSION_ID, CredentialTrustLevel.LOW_LEVEL);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    makeRequestBody(
+                                            false,
+                                            Map.of(
+                                                    "state",
+                                                    state.getValue(),
+                                                    "redirect_uri",
+                                                    REDIRECT_URI.toString(),
+                                                    "scope",
+                                                    scope.toString(),
+                                                    "client_id",
+                                                    CLIENT_ID,
+                                                    "requested_level_of_confidence",
+                                                    "P1",
+                                                    "requested_credential_strength",
+                                                    "Cl.Cm"))),
+                            standardHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+            assertTrue(startResponse.user().isUpliftRequired());
+        }
+
+        @Test
+        void
+                upliftNotRequiredWhenPreviousAuthSessionAchievedMediumCredentialTrustAndClientSessionIsMedium()
+                        throws Json.JsonException {
+            setupClientSessionWithRequestedCredentialTrust(CredentialTrustLevel.MEDIUM_LEVEL);
+            authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+            authSessionExtension.addAchievedCredentialTrustToSession(
+                    PREVIOUS_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    makeRequestBody(
+                                            false,
+                                            Map.of(
+                                                    "state",
+                                                    state.getValue(),
+                                                    "redirect_uri",
+                                                    REDIRECT_URI.toString(),
+                                                    "scope",
+                                                    scope.toString(),
+                                                    "client_id",
+                                                    CLIENT_ID,
+                                                    "requested_level_of_confidence",
+                                                    "P1",
+                                                    "requested_credential_strength",
+                                                    "Cl.Cm"))),
+                            standardHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+            assertFalse(startResponse.user().isUpliftRequired());
+        }
+
+        private void setupClientSessionWithRequestedCredentialTrust(
+                CredentialTrustLevel requestedCredentialTrustLevel) throws Json.JsonException {
+
+            scope.add(OIDCScopeValue.OPENID);
+            var builder =
+                    new AuthenticationRequest.Builder(
+                                    ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                            .nonce(new Nonce())
+                            .state(state)
+                            .customParameter(
+                                    "vtr", jsonArrayOf(requestedCredentialTrustLevel.getValue()));
+            var authRequest = builder.build();
+            redis.createClientSession(
+                    CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
         }
     }
 

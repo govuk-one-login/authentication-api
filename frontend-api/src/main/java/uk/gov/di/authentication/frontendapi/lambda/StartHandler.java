@@ -196,7 +196,7 @@ public class StartHandler
 
             var upliftRequired =
                     startService.isUpliftRequired(
-                            clientSession, startRequest.currentCredentialStrength());
+                            clientSession, authSession.getAchievedCredentialStrength());
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
