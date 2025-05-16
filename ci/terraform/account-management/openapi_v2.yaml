@@ -1,7 +1,7 @@
 openapi: "3.0.1"
 info:
   title: "auth-account-management-method-management-api"
-  version: 1.0.1
+  version: 1.0.2
   description: Auth Account Management API
 servers:
   - url: "https://localhost:8080/"
