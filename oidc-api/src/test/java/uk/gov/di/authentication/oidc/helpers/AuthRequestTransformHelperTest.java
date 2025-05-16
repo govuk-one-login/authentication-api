@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 
-class RequestObjectToAuthRequestHelperTest {
+class AuthRequestTransformHelperTest {
 
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String AUDIENCE = "https://localhost/authorize";
@@ -59,7 +59,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
@@ -88,7 +88,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         var vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
@@ -124,7 +124,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
@@ -178,7 +178,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(new State("test-state")));
         assertThat(transformedAuthRequest.getNonce(), equalTo(new Nonce("test-nonce")));
@@ -217,7 +217,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
@@ -245,7 +245,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
@@ -273,7 +273,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
@@ -283,6 +283,33 @@ class RequestObjectToAuthRequestHelperTest {
         assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
         assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
         assertThat(transformedAuthRequest.getMaxAge(), equalTo(123));
+    }
+
+    @Test
+    void shouldConvertRequestObjectToAuthRequestWhenLoginHintClaimPresent() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet = getClaimsSetBuilder(scope).claim("login_hint", "test@email.com").build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+        assertThat(transformedAuthRequest.getLoginHint(), equalTo("test@email.com"));
     }
 
     @Test
@@ -307,7 +334,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
@@ -345,7 +372,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
@@ -367,7 +394,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .nonce(NONCE)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertNull(transformedAuthRequest.getRequestObject());
         assertThat(transformedAuthRequest.getState(), equalTo(authRequest.getState()));
@@ -379,6 +406,31 @@ class RequestObjectToAuthRequestHelperTest {
         assertThat(
                 transformedAuthRequest.getResponseType(), equalTo(authRequest.getResponseType()));
         assertThat(transformedAuthRequest.getScope(), equalTo(authRequest.getScope()));
+    }
+
+    @Test
+    void shouldReturnAuthRequestWithNoLoginHintWhenNoRequestObjectIsPresent() {
+        Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.PHONE);
+        var authRequest =
+                new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(STATE)
+                        .nonce(NONCE)
+                        .loginHint("test@email.com")
+                        .build();
+
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
+
+        assertNull(transformedAuthRequest.getRequestObject());
+        assertThat(transformedAuthRequest.getState(), equalTo(authRequest.getState()));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(authRequest.getNonce()));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(authRequest.getClientID()));
+        assertThat(
+                transformedAuthRequest.getRedirectionURI(),
+                equalTo(authRequest.getRedirectionURI()));
+        assertThat(
+                transformedAuthRequest.getResponseType(), equalTo(authRequest.getResponseType()));
+        assertThat(transformedAuthRequest.getScope(), equalTo(authRequest.getScope()));
+        assertNull(transformedAuthRequest.getLoginHint());
     }
 
     @Test
@@ -397,7 +449,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getCustomParameter("rp_sid"), contains(rpSid));
 
@@ -429,7 +481,7 @@ class RequestObjectToAuthRequestHelperTest {
                         .requestObject(signedJWT)
                         .build();
 
-        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var transformedAuthRequest = AuthRequestTransformHelper.transform(authRequest);
 
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
