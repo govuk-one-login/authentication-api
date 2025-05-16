@@ -1,10 +1,6 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +27,6 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 
-import java.net.URI;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +48,6 @@ import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -69,13 +63,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     private final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
     private static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
-    private static AuthenticationRequest.Builder basicAuthRequestBuilder =
-            new AuthenticationRequest.Builder(
-                            ResponseType.CODE,
-                            SCOPE,
-                            new ClientID(CLIENT_ID),
-                            URI.create(REDIRECT_URI))
-                    .nonce(new Nonce());
     protected final Json objectMapper =
             new SerializationService(
                     Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
@@ -130,12 +117,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.updateMFAMethod(
                     email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
         }
-
-        AuthenticationRequest.Builder builder = basicAuthRequestBuilder;
-        if (level != null) {
-            builder.customParameter("vtr", jsonArrayOf(level.getValue()));
-        }
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, builder.build().toParameters());
 
         var headers = validHeadersWithSessionId(sessionId);
 
@@ -201,12 +182,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             PriorityIdentifier.DEFAULT,
                             "some-mfa-id"));
         }
-
-        AuthenticationRequest.Builder builder = basicAuthRequestBuilder;
-        if (level != null) {
-            builder.customParameter("vtr", jsonArrayOf(level.getValue()));
-        }
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, builder.build().toParameters());
 
         var headers = validHeadersWithSessionId(sessionId);
 
@@ -295,9 +270,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
         userStore.setPhoneNumberAndVerificationStatus(email, "01234567890", true, true);
 
-        redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
-
         var response =
                 makeRequest(
                         Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
@@ -321,8 +293,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-        redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
         var headers = validHeadersWithSessionId(sessionId);
 
         var response =
@@ -345,9 +315,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
         var headers = validHeadersWithSessionId(sessionId);
-
-        redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
 
         var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
 
@@ -383,9 +350,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
         var headers = validHeadersWithSessionId(sessionId);
-
-        redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
 
         var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
 
