@@ -27,7 +27,8 @@ class AuthUserInfoClaimsTest {
                 "phone_number",
                 "verified_mfa_method_type",
                 "email",
-                "new_account");
+                "new_account",
+                "achieved_credential_strength");
     }
 
     static Stream<String> unsupportedClaims() {
@@ -36,7 +37,7 @@ class AuthUserInfoClaimsTest {
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        assertThat(AuthUserInfoClaims.getAllValidClaims().size(), equalTo(13));
+        assertThat(AuthUserInfoClaims.getAllValidClaims().size(), equalTo(14));
     }
 
     @ParameterizedTest
