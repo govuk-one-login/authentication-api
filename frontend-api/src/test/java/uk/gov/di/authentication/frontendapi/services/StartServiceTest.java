@@ -11,8 +11,6 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +21,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -45,7 +42,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.net.URI;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
@@ -84,15 +80,7 @@ class StartServiceTest {
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
     private final UserContext basicUserContext =
-            buildUserContext(
-                    jsonArrayOf("P2.Cl.Cm"),
-                    true,
-                    ClientType.WEB,
-                    null,
-                    true,
-                    Optional.empty(),
-                    Optional.empty(),
-                    false);
+            buildUserContext(true, ClientType.WEB, true, Optional.empty(), Optional.empty(), false);
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
@@ -150,10 +138,8 @@ class StartServiceTest {
             boolean isAuthenticated) {
         var userContext =
                 buildUserContext(
-                        vtr,
                         true,
                         ClientType.WEB,
-                        null,
                         rpSupportsIdentity,
                         Optional.of(
                                 new UserProfile()
@@ -201,10 +187,8 @@ class StartServiceTest {
             boolean identityEnabled) {
         var userContext =
                 buildUserContext(
-                        vtr,
                         true,
                         ClientType.WEB,
-                        null,
                         rpSupportsIdentity,
                         Optional.empty(),
                         Optional.empty(),
@@ -393,10 +377,8 @@ class StartServiceTest {
             MFAMethodType expectedMfaMethodType) {
         var userContext =
                 buildUserContext(
-                        vtrString,
                         true,
                         ClientType.WEB,
-                        null,
                         true,
                         Optional.of(userProfile),
                         Optional.of(userCredentials),
@@ -480,10 +462,8 @@ class StartServiceTest {
         var userCredentials = new UserCredentials().withEmail(EMAIL).withMfaMethods(mfaMethods);
         var userContext =
                 buildUserContext(
-                        jsonArrayOf("Cl.Cm"),
                         true,
                         ClientType.WEB,
-                        null,
                         true,
                         Optional.of(userProfile),
                         Optional.of(userCredentials),
@@ -506,10 +486,8 @@ class StartServiceTest {
         var userCredentials = Optional.<UserCredentials>empty();
         var userContext =
                 buildUserContext(
-                        jsonArrayOf("Cl.Cm"),
                         true,
                         ClientType.WEB,
-                        null,
                         true,
                         Optional.of(userProfile),
                         userCredentials,
@@ -531,10 +509,8 @@ class StartServiceTest {
             boolean oneLoginService) {
         var userContext =
                 buildUserContext(
-                        jsonArrayOf("Cl.Cm"),
                         cookieConsentShared,
                         clientType,
-                        signedJWT,
                         false,
                         Optional.empty(),
                         Optional.empty(),
@@ -614,48 +590,12 @@ class StartServiceTest {
     }
 
     private UserContext buildUserContext(
-            String vtrValue,
             boolean cookieConsentShared,
             ClientType clientType,
-            SignedJWT requestObject,
             boolean identityVerificationSupport,
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
             boolean oneLoginService) {
-        AuthenticationRequest authRequest;
-        var clientSessionVTR = VectorOfTrust.getDefaults();
-        if (Objects.nonNull(requestObject)) {
-            authRequest =
-                    new AuthenticationRequest.Builder(
-                                    new ResponseType(ResponseType.Value.CODE),
-                                    DOC_APP_SCOPES,
-                                    CLIENT_ID,
-                                    REDIRECT_URI)
-                            .state(STATE)
-                            .nonce(new Nonce())
-                            .requestObject(requestObject)
-                            .build();
-        } else {
-            clientSessionVTR =
-                    VectorOfTrust.parseFromAuthRequestAttribute(
-                            Collections.singletonList(vtrValue));
-            authRequest =
-                    new AuthenticationRequest.Builder(
-                                    new ResponseType(ResponseType.Value.CODE),
-                                    SCOPES,
-                                    CLIENT_ID,
-                                    REDIRECT_URI)
-                            .state(STATE)
-                            .nonce(new Nonce())
-                            .customParameter("vtr", vtrValue)
-                            .build();
-        }
-        var clientSession =
-                new ClientSession(
-                        authRequest.toParameters(),
-                        LocalDateTime.now(),
-                        clientSessionVTR,
-                        CLIENT_NAME);
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())
@@ -665,7 +605,6 @@ class StartServiceTest {
                         .withIdentityVerificationSupported(identityVerificationSupport)
                         .withOneLoginService(oneLoginService);
         return UserContext.builder(SESSION)
-                .withClientSession(clientSession)
                 .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)
                 .withUserProfile(userProfile)
