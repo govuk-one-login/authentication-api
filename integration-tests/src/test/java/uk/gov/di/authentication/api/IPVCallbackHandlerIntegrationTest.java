@@ -736,7 +736,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
 
         assertThat(redisSession.isNewAccount(), equalTo(Session.AccountState.EXISTING));
-        assertTrue(redisSession.isAuthenticated());
+        assertTrue(orchSession.getAuthenticated());
 
         assertThat(orchSession.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.EXISTING));
     }

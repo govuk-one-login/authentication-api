@@ -74,14 +74,6 @@ class AuthCodeResponseGenerationServiceTest {
         authCodeResponseGenerationService.saveSession(
                 false, sessionService, session, SESSION_ID, orchSessionService, orchSession);
 
-        verify(sessionService)
-                .storeOrUpdateSession(
-                        argThat(
-                                s ->
-                                        s.isAuthenticated()
-                                                && s.isNewAccount()
-                                                        == Session.AccountState.EXISTING),
-                        eq(SESSION_ID));
         verify(orchSessionService)
                 .updateSession(
                         argThat(
