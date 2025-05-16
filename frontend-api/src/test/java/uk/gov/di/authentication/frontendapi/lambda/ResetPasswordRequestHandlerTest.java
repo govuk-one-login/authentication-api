@@ -3,14 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -24,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -35,7 +27,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -46,7 +37,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -54,7 +44,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -114,16 +103,13 @@ class ResetPasswordRequestHandlerTest {
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
     private static final String CLIENT_ID = "test-client-id";
-    private static final String CLIENT_NAME = "test-client-name";
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -147,7 +133,6 @@ class ResetPasswordRequestHandlerTest {
             new ResetPasswordRequestHandler(
                     configurationService,
                     sessionService,
-                    clientSessionService,
                     clientService,
                     authenticationService,
                     awsSqsClient,
@@ -222,8 +207,6 @@ class ResetPasswordRequestHandlerTest {
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfileWithPhoneNumber()));
-            when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                    .thenReturn(Optional.of(getClientSession()));
             var disabledMfaMethod =
                     new MFAMethod(
                             MFAMethodType.AUTH_APP.getValue(),
@@ -362,7 +345,6 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldSubmitCorrectAuditEventForAValidRequest() {
             usingValidSession();
-            usingValidClientSession();
 
             handler.handleRequest(validEvent, context);
 
@@ -425,7 +407,6 @@ class ResetPasswordRequestHandlerTest {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
             usingValidSession();
-            usingValidClientSession();
             var result = handler.handleRequest(validEvent, context);
 
             assertEquals(200, result.getStatusCode());
@@ -458,7 +439,6 @@ class ResetPasswordRequestHandlerTest {
                 checkPasswordResetRequestedForTestClientAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
             usingValidSession();
-            usingValidClientSession();
             var headers = validEvent.getHeaders();
             var headersWithoutTICF =
                     headers.entrySet().stream()
@@ -483,7 +463,6 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldRecordPasswordResetAttemptInSession() {
             usingValidSession();
-            usingValidClientSession();
 
             handler.handleRequest(validEvent, context);
 
@@ -662,21 +641,6 @@ class ResetPasswordRequestHandlerTest {
                 .thenReturn(Optional.of(authSession));
     }
 
-    private void usingValidClientSession() {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(TEST_CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
-    }
-
     private void usingSessionWithPasswordResetCount(int passwordResetCount) {
         authSession.resetPasswordResetCount();
         IntStream.range(0, passwordResetCount)
@@ -695,21 +659,5 @@ class ResetPasswordRequestHandlerTest {
         return new UserProfile()
                 .withEmail(CommonTestVariables.EMAIL)
                 .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
-    }
-
-    private ClientSession getClientSession() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                responseType,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .build();
-
-        return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 }
