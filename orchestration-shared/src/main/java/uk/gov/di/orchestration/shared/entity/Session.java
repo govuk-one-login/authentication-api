@@ -89,11 +89,6 @@ public class Session {
         return authenticated;
     }
 
-    public Session setAuthenticated(boolean authenticated) {
-        this.authenticated = authenticated;
-        return this;
-    }
-
     private void initializeCodeRequestMap() {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
