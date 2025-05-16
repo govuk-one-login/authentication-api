@@ -1,23 +1,17 @@
 package uk.gov.di.authentication.shared.state;
 
 import org.jetbrains.annotations.Nullable;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 
 public class OrchestrationUserSession {
     private final Session session;
     @Nullable private final String clientId;
-    @Nullable private final ClientSession clientSession;
     private final String clientSessionId;
 
     protected OrchestrationUserSession(
-            Session session,
-            @Nullable String clientId,
-            @Nullable ClientSession clientSession,
-            String clientSessionId) {
+            Session session, @Nullable String clientId, String clientSessionId) {
         this.session = session;
         this.clientId = clientId;
-        this.clientSession = clientSession;
         this.clientSessionId = clientSessionId;
     }
 
@@ -27,10 +21,6 @@ public class OrchestrationUserSession {
 
     public @Nullable String getClientId() {
         return clientId;
-    }
-
-    public @Nullable ClientSession getClientSession() {
-        return clientSession;
     }
 
     public String getClientSessionId() {
@@ -44,7 +34,6 @@ public class OrchestrationUserSession {
     public static class Builder {
         private Session session;
         private String clientId;
-        private ClientSession clientSession;
         private String clientSessionId;
 
         protected Builder(Session session) {
@@ -56,18 +45,13 @@ public class OrchestrationUserSession {
             return this;
         }
 
-        public Builder withClientSession(ClientSession clientSession) {
-            this.clientSession = clientSession;
-            return this;
-        }
-
         public Builder withClientSessionId(String clientSessionId) {
             this.clientSessionId = clientSessionId;
             return this;
         }
 
         public OrchestrationUserSession build() {
-            return new OrchestrationUserSession(session, clientId, clientSession, clientSessionId);
+            return new OrchestrationUserSession(session, clientId, clientSessionId);
         }
     }
 }
