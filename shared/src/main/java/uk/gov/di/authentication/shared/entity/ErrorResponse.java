@@ -93,7 +93,9 @@ public enum ErrorResponse {
     ERROR_1079(1079, "Invalid principal in request"),
     ERROR_1080(1080, "Default method already exists, new one cannot be created."),
     ERROR_1081(1081, "Attempting to validate auth app code for user without auth app method"),
-    ERROR_1082(1082, "Cannot add a second auth app.");
+    ERROR_1082(1082, "Cannot add a second auth app."),
+    ERROR_1083(1083, "User's account is suspended"),
+    ERROR_1084(1084, "User's account is blocked");
 
     private int code;
 

@@ -8,12 +8,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -26,8 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -57,6 +57,8 @@ class AuthenticateHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AccountInterventionsService accountInterventionsService =
+            mock(AccountInterventionsService.class);
     private final AuditContext auditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
@@ -71,13 +73,19 @@ class AuthenticateHandlerTest {
     private String clientSubjectId;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
+                .thenReturn(false);
         when(authenticationService.getOrGenerateSalt(USER_PROFILE))
                 .thenReturn(SaltHelper.generateNewSalt());
 
         handler =
-                new AuthenticateHandler(authenticationService, auditService, configurationService);
+                new AuthenticateHandler(
+                        authenticationService,
+                        auditService,
+                        configurationService,
+                        accountInterventionsService);
         event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
@@ -89,6 +97,11 @@ class AuthenticateHandlerTest {
                                 configurationService.getInternalSectorUri(),
                                 authenticationService)
                         .getValue();
+
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
+                .thenReturn(
+                        new AccountInterventionsInboundResponse(
+                                new Intervention(1L), new State(false, false, false, false)));
     }
 
     @Test
@@ -172,5 +185,83 @@ class AuthenticateHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+    }
+
+    @Test
+    public void shouldReturn403IfAisCallEnabledAndUserIsBlocked()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
+                .thenReturn(
+                        new AccountInterventionsInboundResponse(
+                                new Intervention(1L), new State(true, false, false, false)));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(403));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1084));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
+                        auditContext.withSubjectId(clientSubjectId));
+    }
+
+    @Test
+    public void shouldReturn403IfIfAisCallEnabledAndUserIsSuspended()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
+                .thenReturn(
+                        new AccountInterventionsInboundResponse(
+                                new Intervention(1L), new State(false, true, false, false)));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(403));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1083));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
+                        auditContext.withSubjectId(clientSubjectId));
+    }
+
+    @Test
+    public void shouldReturn500IfIfAisCallEnabledTheCallFails()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Internal Server Error", 500));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1055));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext.withSubjectId(clientSubjectId));
     }
 }

@@ -1,26 +1,42 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.nimbusds.oauth2.sdk.id.Subject;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.lambda.AuthenticateHandler;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
+    @RegisterExtension
+    public static final AccountInterventionsStubExtension accountInterventionsStubExtension =
+            new AccountInterventionsStubExtension();
+
+    protected static final ConfigurationService
+            ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE =
+                    new AccountInterventionsTestConfigurationService(
+                            accountInterventionsStubExtension);
+
     @BeforeEach
     void setup() {
-        handler = new AuthenticateHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new AuthenticateHandler(ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
@@ -28,7 +44,9 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() throws Exception {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
-        userStore.signUp(email, password);
+        String publicSubjectId = setupUserAndRetrieveUserId(email, password);
+        accountInterventionsStubExtension.initWithAccountStatus(
+                publicSubjectId, false, false, false, false);
 
         var response =
                 makeRequest(
@@ -54,5 +72,71 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE));
+    }
+
+    @Test
+    public void shouldCallLoginEndpointAndReturn403henUserIsBlockedInAis() {
+        String email = "joe.bloggs+5@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        String publicSubjectId = setupUserAndRetrieveUserId(email, password);
+        accountInterventionsStubExtension.initWithAccountStatus(
+                publicSubjectId, true, false, false, false);
+
+        var response =
+                makeRequest(
+                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(403));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE));
+    }
+
+    private static class AccountInterventionsTestConfigurationService
+            extends IntegrationTestConfigurationService {
+
+        private final AccountInterventionsStubExtension accountInterventionsStubExtension;
+
+        public AccountInterventionsTestConfigurationService(
+                AccountInterventionsStubExtension accountInterventionsStubExtension) {
+            super(
+                    notificationsQueue,
+                    tokenSigner,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
+            this.accountInterventionsStubExtension = accountInterventionsStubExtension;
+        }
+
+        @Override
+        public URI getAccountInterventionServiceURI() {
+            try {
+                return new URIBuilder()
+                        .setHost("localhost")
+                        .setPort(accountInterventionsStubExtension.getHttpPort())
+                        .setScheme("http")
+                        .build();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public boolean isAccountInterventionServiceCallInAuthenticateEnabled() {
+            return true;
+        }
+        ;
+    }
+
+    private String setupUserAndRetrieveUserId(String emailAddress, String password) {
+        Subject subject = new Subject();
+        userStore.signUp(emailAddress, password, subject);
+        byte[] salt = userStore.addSalt(emailAddress);
+        return ClientSubjectHelper.calculatePairwiseIdentifier(
+                subject.getValue(), "test.account.gov.uk", salt);
     }
 }

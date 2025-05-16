@@ -491,6 +491,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP"));
     }
 
+    public boolean isAccountInterventionServiceCallInAuthenticateEnabled() {
+        return System.getenv()
+                .getOrDefault(
+                        "ACCOUNT_INTERVENTION_SERVICE_CALL_IN_AUTHENTICATE_ENABLED",
+                        FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     public boolean isTestClientsEnabled() {
         return System.getenv()
                 .getOrDefault("TEST_CLIENTS_ENABLED", FEATURE_SWITCH_OFF)

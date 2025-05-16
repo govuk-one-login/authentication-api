@@ -4,6 +4,7 @@ test_clients_enabled = true
 
 # Feature flags
 mfa_method_management_api_enabled = true
+ais_call_in_authenticate_enabled  = true
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
