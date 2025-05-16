@@ -23,12 +23,14 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.InvokeResponse;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -37,6 +39,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -53,25 +56,32 @@ class ClientSignatureValidationServiceTest {
     private static final URI AUTHORIZE_URI = URI.create("https://localhost/authorize");
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final OidcAPI oidcAPI = mock(OidcAPI.class);
     private final RpPublicKeyCacheService rpPublicKeyCacheService =
             mock(RpPublicKeyCacheService.class);
     private final LambdaClient lambdaClient = mock(LambdaClient.class);
     private ClientSignatureValidationService clientSignatureValidationService;
 
+    private ClientRegistry client;
+    private KeyPair keyPair;
+
+    @BeforeEach
+    void setup() {
+        when(oidcAPI.tokenURI()).thenReturn(TOKEN_URI);
+        when(oidcAPI.getIssuerURI()).thenReturn(OIDC_BASE_URI);
+        when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
+        keyPair = generateKeyPair();
+    }
+
     @Nested
     class StaticPublicKeySource {
-        ClientRegistry client;
-        KeyPair keyPair;
 
         @BeforeEach
         void setup() {
-            when(configurationService.getOidcApiBaseURL()).thenReturn(OIDC_BASE_URI);
-            when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
-            keyPair = generateKeyPair();
             client = generateClientWithStaticPublicKeySource(keyPair.getPublic());
             clientSignatureValidationService =
                     new ClientSignatureValidationService(
-                            configurationService, rpPublicKeyCacheService, lambdaClient);
+                            configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
         @Test
@@ -86,6 +96,31 @@ class ClientSignatureValidationServiceTest {
             var privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
 
             assertDoesNotThrow(
+                    () ->
+                            clientSignatureValidationService.validateTokenClientAssertion(
+                                    privateKeyJWT, client));
+        }
+
+        @Test
+        void shouldSuccessfullyReturnWhenValidatingPrivateKeyJWTWithIssuerAud() {
+            var privateKeyJWT =
+                    generatePrivateKeyJWT(keyPair.getPrivate(), Optional.of(OIDC_BASE_URI));
+
+            assertDoesNotThrow(
+                    () ->
+                            clientSignatureValidationService.validateTokenClientAssertion(
+                                    privateKeyJWT, client));
+        }
+
+        @Test
+        void shouldThrowWhenInvalidAudProvided() throws URISyntaxException {
+            var privateKeyJWT =
+                    generatePrivateKeyJWT(
+                            keyPair.getPrivate(),
+                            Optional.of(new URI("https://example.com/token")));
+
+            assertThrows(
+                    ClientSignatureValidationException.class,
                     () ->
                             clientSignatureValidationService.validateTokenClientAssertion(
                                     privateKeyJWT, client));
@@ -126,18 +161,13 @@ class ClientSignatureValidationServiceTest {
 
     @Nested
     class JwksPublicKeySource {
-        ClientRegistry client;
-        KeyPair keyPair;
 
         @BeforeEach
         void setup() {
-            when(configurationService.getOidcApiBaseURL()).thenReturn(OIDC_BASE_URI);
-            when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
-            keyPair = generateKeyPair();
             client = generateClientWithJwksPublicKeySource();
             clientSignatureValidationService =
                     new ClientSignatureValidationService(
-                            configurationService, rpPublicKeyCacheService, lambdaClient);
+                            configurationService, rpPublicKeyCacheService, lambdaClient, oidcAPI);
         }
 
         @Test
@@ -224,10 +254,15 @@ class ClientSignatureValidationServiceTest {
     }
 
     private static PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) {
+        return generatePrivateKeyJWT(privateKey, Optional.empty());
+    }
+
+    private static PrivateKeyJWT generatePrivateKeyJWT(
+            PrivateKey privateKey, Optional<URI> audience) {
         try {
             return new PrivateKeyJWT(
                     new ClientID(CLIENT_ID),
-                    TOKEN_URI,
+                    audience.orElse(TOKEN_URI),
                     JWSAlgorithm.RS256,
                     privateKey,
                     "12345",

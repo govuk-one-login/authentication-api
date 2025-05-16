@@ -34,6 +34,10 @@ public class ConstructUriHelper {
         return buildURI(baseUri, Optional.ofNullable(path), Optional.empty());
     }
 
+    public static URI buildURI(URI baseUrl) {
+        return buildURI(baseUrl.toString(), Optional.empty(), Optional.empty());
+    }
+
     private static URI buildURI(
             String baseUri, Optional<String> path, Optional<Map<String, String>> queryParams) {
         try {
