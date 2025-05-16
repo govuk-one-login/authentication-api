@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
@@ -71,8 +70,6 @@ class MfaResetAuthorizeHandlerTest {
             mock(IPVReverificationService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
-    private static final ClientSessionService clientSessionService =
-            mock(ClientSessionService.class);
     private static final ClientService clientService = mock(ClientService.class);
     private static final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final Context context = mock(Context.class);
@@ -140,7 +137,6 @@ class MfaResetAuthorizeHandlerTest {
                 new MfaResetAuthorizeHandler(
                         configurationService,
                         sessionService,
-                        clientSessionService,
                         clientService,
                         authenticationService,
                         ipvReverificationService,

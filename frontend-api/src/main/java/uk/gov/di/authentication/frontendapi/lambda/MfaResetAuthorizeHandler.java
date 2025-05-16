@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
@@ -54,7 +53,6 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
     public MfaResetAuthorizeHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             IPVReverificationService ipvReverificationService,
@@ -66,7 +64,6 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                 MfaResetRequest.class,
                 configurationService,
                 sessionService,
-                clientSessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
