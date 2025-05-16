@@ -154,8 +154,7 @@ class AuthenticationCallbackHandlerTest {
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
 
-    private static final Session session =
-            new Session().setAuthenticated(false).setCurrentCredentialStrength(null);
+    private static final Session session = new Session().setCurrentCredentialStrength(null);
     public static final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAuthenticated(false)
