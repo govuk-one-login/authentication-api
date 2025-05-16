@@ -95,6 +95,36 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             ConfigurationService configurationService,
             SessionService sessionService,
             AuthenticationService authenticationService,
+            ClientService clientService,
+            CodeStorageService codeStorageService,
+            UserMigrationService userMigrationService,
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            CommonPasswordsService commonPasswordsService,
+            AuthenticationAttemptsService authenticationAttemptsService,
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService) {
+        super(
+                LoginRequest.class,
+                configurationService,
+                sessionService,
+                clientService,
+                authenticationService,
+                true,
+                authSessionService);
+        this.codeStorageService = codeStorageService;
+        this.userMigrationService = userMigrationService;
+        this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.commonPasswordsService = commonPasswordsService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
+        this.mfaMethodsService = mfaMethodsService;
+    }
+
+    public LoginHandler(
+            ConfigurationService configurationService,
+            SessionService sessionService,
+            AuthenticationService authenticationService,
             ClientSessionService clientSessionService,
             ClientService clientService,
             CodeStorageService codeStorageService,
