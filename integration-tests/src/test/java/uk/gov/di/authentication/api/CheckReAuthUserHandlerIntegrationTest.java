@@ -1,23 +1,17 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -30,7 +24,6 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import java.net.URI;
 import java.security.KeyPair;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
@@ -103,7 +96,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID.getValue());
         requestHeaders = createHeaders(sessionId);
-        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
         handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
@@ -324,22 +316,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1057));
-    }
-
-    private ClientSession createClientSession() {
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce());
-        return new ClientSession(
-                authRequestBuilder.build().toParameters(),
-                LocalDateTime.now(),
-                VectorOfTrust.getDefaults(),
-                CLIENT_NAME);
     }
 
     private void registerClient(String sectorIdentifierUri) {
