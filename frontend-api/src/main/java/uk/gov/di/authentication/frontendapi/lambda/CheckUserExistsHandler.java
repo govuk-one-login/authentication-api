@@ -179,7 +179,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSession.setInternalCommonSubjectId(internalCommonSubjectId);
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
-                userMfaDetail = getUserMFADetail(userContext, userCredentials, userProfile.get());
+                userMfaDetail =
+                        getUserMFADetail(
+                                authSession.getRequestedCredentialStrength(),
+                                userCredentials,
+                                userProfile.get());
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
             } else {
                 authSession.setInternalCommonSubjectId(null);
