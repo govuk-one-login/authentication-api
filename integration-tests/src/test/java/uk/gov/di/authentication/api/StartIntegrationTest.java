@@ -310,6 +310,45 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldReturn400WhenRedirectURIIsInvalid() throws Exception {
+        String sessionId = redis.createSession();
+        userStore.signUp(EMAIL, "password");
+        authSessionExtension.addSession(sessionId);
+        var state = new State();
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        var builder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .nonce(new Nonce())
+                        .state(state)
+                        .customParameter("client_id", CLIENT_ID)
+                        .customParameter("redirect_uri", "invalid-redirect-uri/@'[]l.#,;][")
+                        .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
+        var authRequest = builder.build();
+
+        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+
+        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+
+        var headers = standardHeadersWithSessionId(sessionId);
+        headers.put("Reauthenticate", "true");
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                makeRequestBody(
+                                        true,
+                                        authRequest,
+                                        Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                        "Cl.Cm")),
+                        headers,
+                        Map.of());
+        assertThat(response, hasStatus(400));
+        assertThat(response.getBody(), equalTo("Unable to parse redirect URI"));
+    }
+
+    @Test
     void userShouldNotComeBackAsAuthenticatedWhenSessionIsAuthenticatedButNoUserProfileExists()
             throws Json.JsonException {
         var scope = new Scope(OIDCScopeValue.OPENID);
@@ -469,16 +508,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             AuthenticationRequest authRequest,
             Optional<LevelOfConfidence> levelOfConfidenceOpt,
             String credentialStrength) {
-        return makeRequestBody(
-                isAuthenticated, authRequest, levelOfConfidenceOpt, credentialStrength, Map.of());
-    }
-
-    private String makeRequestBody(
-            boolean isAuthenticated,
-            AuthenticationRequest authRequest,
-            Optional<LevelOfConfidence> levelOfConfidenceOpt,
-            String credentialStrength,
-            Map<String, Object> paramOverrides) {
         Map<String, Object> requestBodyMap =
                 new HashMap<>(
                         Map.of(
@@ -502,7 +531,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 levelOfConfidence ->
                         requestBodyMap.put(
                                 "requested_level_of_confidence", levelOfConfidence.getValue()));
-        requestBodyMap.putAll(paramOverrides);
         return SerializationService.getInstance().writeValueAsString(requestBodyMap);
     }
 

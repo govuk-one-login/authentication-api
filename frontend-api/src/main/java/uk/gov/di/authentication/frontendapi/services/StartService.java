@@ -1,9 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services;
 
-import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -28,14 +25,11 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.function.Predicate.not;
-import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
-import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
 
 public class StartService {
 
@@ -86,30 +80,8 @@ public class StartService {
         return userContext;
     }
 
-    public ClientStartInfo buildClientStartInfo(UserContext userContext) throws ParseException {
-        List<String> scopes;
-        URI redirectURI;
-        State state;
-        try {
-            var authenticationRequest =
-                    AuthenticationRequest.parse(
-                            userContext.getClientSession().getAuthRequestParams());
-            if (Objects.nonNull(authenticationRequest.getRequestObject())) {
-                var claimSet = authenticationRequest.getRequestObject().getJWTClaimsSet();
-                scopes = Scope.parse((String) claimSet.getClaim("scope")).toStringList();
-                redirectURI = URI.create((String) claimSet.getClaim("redirect_uri"));
-                state = State.parse((String) claimSet.getClaim("state"));
-            } else {
-                scopes = authenticationRequest.getScope().toStringList();
-                redirectURI = authenticationRequest.getRedirectionURI();
-                state = authenticationRequest.getState();
-            }
-        } catch (ParseException e) {
-            throw new ParseException("Unable to parse authentication request");
-        } catch (java.text.ParseException e) {
-            throw new RuntimeException("Unable to parse claims in request object");
-        }
-        var clientRegistry = userContext.getClient().orElseThrow();
+    public ClientStartInfo buildClientStartInfo(
+            ClientRegistry clientRegistry, List<String> scopes, URI redirectURI, State state) {
         var clientInfo =
                 new ClientStartInfo(
                         clientRegistry.getClientName(),
@@ -177,22 +149,12 @@ public class StartService {
                 .anyMatch(MFAMethodType.AUTH_APP.getValue()::equals);
     }
 
-    public String getGATrackingId(Map<String, List<String>> authRequestParameters) {
-        if (authRequestParameters.containsKey(GA)) {
-            String gaId = authRequestParameters.get(GA).get(0);
-            LOG.info("GA value present in request {}", gaId);
-            return gaId;
-        }
-        return null;
-    }
-
-    public String getCookieConsentValue(
-            Map<String, List<String>> authRequestParameters, String clientID) {
+    public String getCookieConsentValue(String cookieConsentValue, String clientID) {
         try {
-            if (validCookieConsentValueIsPresent(authRequestParameters)
+            if (validCookieConsentValueIsPresent(cookieConsentValue)
                     && isClientCookieConsentShared(clientID)) {
                 LOG.info("Sharing cookie_consent");
-                return authRequestParameters.get(COOKIE_CONSENT).get(0);
+                return cookieConsentValue;
             }
             return null;
         } catch (ClientNotFoundException e) {
@@ -271,12 +233,9 @@ public class StartService {
                                                 clientID)));
     }
 
-    private boolean validCookieConsentValueIsPresent(
-            Map<String, List<String>> authRequestParameters) {
-        return authRequestParameters.containsKey(COOKIE_CONSENT)
-                && !authRequestParameters.get(COOKIE_CONSENT).isEmpty()
-                && authRequestParameters.get(COOKIE_CONSENT).get(0) != null
+    private boolean validCookieConsentValueIsPresent(String cookieConsent) {
+        return cookieConsent != null
                 && List.of(COOKIE_CONSENT_ACCEPT, COOKIE_CONSENT_REJECT, COOKIE_CONSENT_NOT_ENGAGED)
-                        .contains(authRequestParameters.get(COOKIE_CONSENT).get(0));
+                        .contains(cookieConsent);
     }
 }

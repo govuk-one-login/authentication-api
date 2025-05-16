@@ -6,7 +6,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -35,7 +34,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -531,8 +529,7 @@ class StartServiceTest {
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT signedJWT,
-            boolean oneLoginService)
-            throws ParseException {
+            boolean oneLoginService) {
         var userContext =
                 buildUserContext(
                         jsonArrayOf("Cl.Cm"),
@@ -543,8 +540,14 @@ class StartServiceTest {
                         Optional.empty(),
                         Optional.empty(),
                         oneLoginService);
+        var scopes = Objects.nonNull(signedJWT) ? DOC_APP_SCOPES : SCOPES;
 
-        var clientStartInfo = startService.buildClientStartInfo(userContext);
+        var clientStartInfo =
+                startService.buildClientStartInfo(
+                        userContext.getClient().orElseThrow(),
+                        scopes.toStringList(),
+                        REDIRECT_URI,
+                        STATE);
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
@@ -559,38 +562,6 @@ class StartServiceTest {
         assertThat(clientStartInfo.scopes(), equalTo(expectedScopes.toStringList()));
     }
 
-    @Test
-    void shouldReturnGaTrackingIdWhenPresentInAuthRequest() {
-        var gaTrackingId = IdGenerator.generate();
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .customParameter("_ga", gaTrackingId)
-                        .build();
-
-        assertThat(startService.getGATrackingId(authRequest.toParameters()), equalTo(gaTrackingId));
-    }
-
-    @Test
-    void shouldReturnNullWhenGaTrackingIdIsNotPresentInAuthRequest() {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-
-        assertThat(startService.getGATrackingId(authRequest.toParameters()), equalTo(null));
-    }
-
     @ParameterizedTest
     @MethodSource("cookieConsentValues")
     void shouldReturnCookieConsentValueWhenPresentAndValid(
@@ -602,20 +573,9 @@ class StartServiceTest {
                                         REDIRECT_URI.toString(),
                                         CLIENT_ID.getValue(),
                                         cookieConsentShared)));
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .customParameter("cookie_consent", cookieConsentValue)
-                        .build();
 
         assertThat(
-                startService.getCookieConsentValue(
-                        authRequest.toParameters(), CLIENT_ID.getValue()),
+                startService.getCookieConsentValue(cookieConsentValue, CLIENT_ID.getValue()),
                 equalTo(expectedValue));
     }
 
