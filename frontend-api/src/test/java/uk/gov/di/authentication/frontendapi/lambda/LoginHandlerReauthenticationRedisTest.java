@@ -295,7 +295,8 @@ class LoginHandlerReauthenticationRedisTest {
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withClientId(CLIENT_ID.getValue())));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {

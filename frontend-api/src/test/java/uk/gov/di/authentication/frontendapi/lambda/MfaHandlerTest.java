@@ -161,7 +161,8 @@ class MfaHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withClientId(TEST_CLIENT_ID);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)

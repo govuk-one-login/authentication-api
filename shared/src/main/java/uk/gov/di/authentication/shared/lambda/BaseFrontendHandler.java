@@ -49,7 +49,6 @@ public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
-    private static final String CLIENT_ID = "client_id";
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
@@ -213,11 +212,7 @@ public abstract class BaseFrontendHandler<T>
 
         userContextBuilder.withClientSessionId(clientSessionId);
 
-        var clientID =
-                clientSession
-                        .map(ClientSession::getAuthRequestParams)
-                        .map(t -> t.get(CLIENT_ID))
-                        .flatMap(v -> v.stream().findFirst());
+        var clientID = Optional.ofNullable(authSession.get().getClientId());
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 

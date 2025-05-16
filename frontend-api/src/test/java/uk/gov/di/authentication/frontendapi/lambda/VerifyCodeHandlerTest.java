@@ -137,7 +137,8 @@ class VerifyCodeHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withClientId(CLIENT_ID);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -385,6 +386,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         authSession.setEmailAddress(email);
+        authSession.setClientId(TEST_CLIENT_ID);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
@@ -420,6 +422,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         authSession.setEmailAddress(email);
+        authSession.setClientId(TEST_CLIENT_ID);
         String body =
                 format("{ \"code\": \"%s\", \"notificationType\": \"%s\"  }", CODE, VERIFY_EMAIL);
         var result = makeCallWithCode(body, Optional.of(session), TEST_CLIENT_ID);
@@ -754,6 +757,7 @@ class VerifyCodeHandlerTest {
         when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE))
                 .thenReturn(Optional.of(CODE));
         authSession.setEmailAddress(TEST_CLIENT_EMAIL);
+        authSession.setClientId(TEST_CLIENT_ID);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",

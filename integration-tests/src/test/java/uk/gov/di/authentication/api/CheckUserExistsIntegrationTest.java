@@ -65,6 +65,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
+        authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
         var salt = userStore.addSalt(emailAddress);
@@ -121,6 +122,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
+        authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 

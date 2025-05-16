@@ -142,7 +142,8 @@ class SendNotificationHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
-                    .withEmailAddress(EMAIL);
+                    .withEmailAddress(EMAIL)
+                    .withClientId(CLIENT_ID);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -464,7 +465,7 @@ class SendNotificationHandlerTest {
     @MethodSource("notificationTypeAndJourneyTypeArgs")
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail(
             NotificationType notificationType, JourneyType journeyType) {
-        usingValidSession();
+        usingValidSession(TEST_CLIENT_ID);
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
@@ -1077,7 +1078,7 @@ class SendNotificationHandlerTest {
             names = {"ACCOUNT_CREATED_CONFIRMATION", "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION"})
     void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser(
             NotificationType notificationType) {
-        usingValidSession();
+        usingValidSession(TEST_CLIENT_ID);
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
@@ -1105,10 +1106,14 @@ class SendNotificationHandlerTest {
     }
 
     private void usingValidSession() {
+        usingValidSession(CLIENT_ID);
+    }
+
+    private void usingValidSession(String clientId) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(authSession));
+                .thenReturn(Optional.of(authSession.withClientId(clientId)));
     }
 
     private void usingValidClientSession(String clientId) {

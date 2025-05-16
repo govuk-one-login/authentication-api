@@ -112,6 +112,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(this.sessionId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
+        authSessionExtension.addClientIdToSession(this.sessionId, CLIENT_ID);
         setupUser(sessionId, withScope(), EMAIL_ADDRESS, false);
     }
 
