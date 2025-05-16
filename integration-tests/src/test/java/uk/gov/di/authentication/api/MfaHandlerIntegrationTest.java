@@ -60,7 +60,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void
                 shouldReturn204WithExistingRedisCachedCodeAndTriggerVerifyPhoneNotificationTypeWhenResendingVerifyPhoneCode() {
             String previouslyIssuedPhoneCode =
-                    redis.generateAndSavePhoneNumberCode(USER_EMAIL, 900L);
+                    redis.generateAndSavePhoneNumberCode(
+                            USER_EMAIL.concat(USER_PHONE_NUMBER), 900L);
 
             var response =
                     makeRequest(
@@ -218,7 +219,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void
                 shouldReturn204WithExistingRedisCachedCodeAndTriggerVerifyPhoneNotificationTypeWhenResendingVerifyPhoneCode() {
             String previouslyIssuedPhoneCode =
-                    redis.generateAndSavePhoneNumberCode(USER_EMAIL, 900L);
+                    redis.generateAndSavePhoneNumberCode(
+                            USER_EMAIL.concat(MIGRATED_PHONE_NUMBER_1), 900L);
 
             var response =
                     makeRequest(

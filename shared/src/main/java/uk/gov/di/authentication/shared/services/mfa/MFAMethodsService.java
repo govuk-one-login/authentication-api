@@ -28,6 +28,7 @@ import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFA
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
 public class MFAMethodsService {
     private static final Logger LOG = LogManager.getLogger(MFAMethodsService.class);
@@ -41,6 +42,9 @@ public class MFAMethodsService {
     public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
+        if (userProfile == null || userCredentials == null) {
+            return Result.failure(USER_DOES_NOT_HAVE_ACCOUNT);
+        }
         if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
             return Result.success(getMfaMethodsForMigratedUser(userCredentials));
         } else {
