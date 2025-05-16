@@ -84,12 +84,8 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, "credential");
         }
 
-        setUpClientSession(
-                "joe.bloggs+1@digital.cabinet-office.gov.uk",
-                clientSessionId,
-                CLIENT_ID,
-                CLIENT_NAME,
-                REDIRECT_URI);
+        registerClient(
+                "joe.bloggs+1@digital.cabinet-office.gov.uk", CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
 
         var request = new CheckUserExistsRequest(emailAddress);
         var response =
@@ -134,12 +130,8 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         redis.blockMfaCodesForEmail(emailAddress, codeBlockedKeyPrefix);
 
-        setUpClientSession(
-                "joe.bloggs+1@digital.cabinet-office.gov.uk",
-                clientSessionId,
-                CLIENT_ID,
-                CLIENT_NAME,
-                REDIRECT_URI);
+        registerClient(
+                "joe.bloggs+1@digital.cabinet-office.gov.uk", CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
 
         var request = new CheckUserExistsRequest(emailAddress);
         var response =
@@ -170,7 +162,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         var clientSessionId = IdGenerator.generate();
-        setUpClientSession(emailAddress, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
+        registerClient(emailAddress, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 
         var response =

@@ -20,7 +20,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasLength;
 import static org.hamcrest.Matchers.hasSize;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -52,7 +52,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
         var clientSessionId = IdGenerator.generate();
-        setUpClientSession(email, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
+        registerClient(email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
 
         var response =
                 makeRequest(
