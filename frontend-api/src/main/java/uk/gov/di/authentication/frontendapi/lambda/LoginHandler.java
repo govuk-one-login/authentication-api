@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -49,6 +50,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -300,11 +302,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditContext auditContext,
             AuthSessionItem authSessionItem) {
 
-        authSessionService.updateSession(
-                authSessionItem
-                        .withAccountState(AuthSessionItem.AccountState.EXISTING)
-                        .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
-
         var userMfaDetail = getUserMFADetail(userContext, userCredentials, userProfile);
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
@@ -333,7 +330,19 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     "P0",
                     clientService.isTestJourney(userContext.getClientId(), userProfile.getEmail()),
                     false);
+
+            if (Objects.isNull(authSessionItem.getAchievedCredentialStrength())
+                    || !authSessionItem
+                            .getAchievedCredentialStrength()
+                            .isHigherThan(CredentialTrustLevel.LOW_LEVEL)) {
+                authSessionItem.setAchievedCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
+            }
         }
+
+        authSessionService.updateSession(
+                authSessionItem
+                        .withAccountState(AuthSessionItem.AccountState.EXISTING)
+                        .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
 
         String redactedPhoneNumber =
                 userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()

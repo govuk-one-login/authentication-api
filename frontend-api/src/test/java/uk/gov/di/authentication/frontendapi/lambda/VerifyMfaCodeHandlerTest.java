@@ -74,6 +74,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -102,6 +103,7 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CO
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -227,7 +229,7 @@ class VerifyMfaCodeHandlerTest {
     }
 
     private static Stream<CredentialTrustLevel> credentialTrustLevels() {
-        return Stream.of(CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL);
+        return Stream.of(CredentialTrustLevel.LOW_LEVEL, MEDIUM_LEVEL);
     }
 
     @ParameterizedTest
@@ -250,9 +252,8 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(
-                authSession.getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+        assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -334,9 +335,8 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(
-                authSession.getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+        assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -378,9 +378,8 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        assertThat(
-                authSession.getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+        assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(phoneNumberCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -422,9 +421,7 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(
-                authSession.getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -472,9 +469,8 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        assertThat(
-                authSession.getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+        assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -829,7 +825,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1041));
-        session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        session.setCurrentCredentialStrength(MEDIUM_LEVEL);
         if (!CodeRequestType.isValidCodeRequestType(MFAMethodType.AUTH_APP, journeyType)) {
             return;
         }

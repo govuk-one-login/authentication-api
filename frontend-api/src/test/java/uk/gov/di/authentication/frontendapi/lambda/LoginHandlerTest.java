@@ -99,6 +99,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.V
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
@@ -282,6 +283,182 @@ class LoginHandlerTest {
                         false,
                         false);
 
+        verifyInternalCommonSubjectIdentifierSaved();
+    }
+
+    @Test
+    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue()
+            throws Json.JsonException {
+        // Arrange
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSession();
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
+        assertThat(
+                response.redactedPhoneNumber(),
+                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID.getValue(),
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        false);
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getAchievedCredentialStrength() == LOW_LEVEL
+                                                && as.getIsNewAccount()
+                                                        == AuthSessionItem.AccountState.EXISTING));
+        verifyInternalCommonSubjectIdentifierSaved();
+    }
+
+    @Test
+    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney()
+            throws Json.JsonException {
+        // Arrange
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithAchievedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
+        assertThat(
+                response.redactedPhoneNumber(),
+                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID.getValue(),
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        false);
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getAchievedCredentialStrength() == MEDIUM_LEVEL
+                                                && as.getIsNewAccount()
+                                                        == AuthSessionItem.AccountState.EXISTING));
+        verifyInternalCommonSubjectIdentifierSaved();
+    }
+
+    @Test
+    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() throws Json.JsonException {
+        // Arrange
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithAchievedCredentialStrength(LOW_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
+        assertThat(
+                response.redactedPhoneNumber(),
+                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID.getValue(),
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        false);
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getAchievedCredentialStrength() == LOW_LEVEL
+                                                && as.getIsNewAccount()
+                                                        == AuthSessionItem.AccountState.EXISTING));
         verifyInternalCommonSubjectIdentifierSaved();
     }
 
@@ -1107,14 +1284,20 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(session));
     }
 
-    private void usingValidAuthSession() {
+    private void usingValidAuthSessionWithAchievedCredentialStrength(
+            CredentialTrustLevel credentialTrustLevel) {
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
                                 new AuthSessionItem()
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withAchievedCredentialStrength(credentialTrustLevel)));
+    }
+
+    private void usingValidAuthSession() {
+        usingValidAuthSessionWithAchievedCredentialStrength(null);
     }
 
     private void usingInvalidAuthSession() {

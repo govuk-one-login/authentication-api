@@ -10,7 +10,9 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.lessThan;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 
@@ -43,5 +45,25 @@ class CredentialTrustLevelTest {
 
     private static Stream<String> invalidCredentialTrustLevelValues() {
         return Stream.of("Cm", "Cm.Cl", "Cl.Cm.Cl.Cm", "P2.Cl.Cm");
+    }
+
+    @Test
+    void mediumIsHigherThanLow() {
+        assertTrue(MEDIUM_LEVEL.isHigherThan(LOW_LEVEL));
+    }
+
+    @Test
+    void lowIsLowerThanMedium() {
+        assertTrue(LOW_LEVEL.isLowerThan(MEDIUM_LEVEL));
+    }
+
+    @Test
+    void mediumIsNotLowerThanLow() {
+        assertFalse(MEDIUM_LEVEL.isLowerThan(LOW_LEVEL));
+    }
+
+    @Test
+    void lowIsNotHigherThanMedium() {
+        assertFalse(LOW_LEVEL.isHigherThan(MEDIUM_LEVEL));
     }
 }

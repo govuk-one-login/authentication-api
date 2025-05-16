@@ -55,6 +55,7 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -395,7 +396,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     MFAMethodType.SMS.getValue(),
                     false);
             authSessionService.updateSession(
-                    authSession.withVerifiedMfaMethodType(MFAMethodType.SMS));
+                    authSession
+                            .withVerifiedMfaMethodType(MFAMethodType.SMS)
+                            .withAchievedCredentialStrength(MEDIUM_LEVEL));
             clearAccountRecoveryBlockIfPresent(authSession, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     authSession.getIsNewAccount(),
