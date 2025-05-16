@@ -322,6 +322,7 @@ class StartHandlerTest {
                         any(),
                         any(),
                         any(),
+                        any(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
@@ -345,6 +346,7 @@ class StartHandlerTest {
 
         verify(startService)
                 .buildUserStartInfo(
+                        any(),
                         any(),
                         any(),
                         any(),
@@ -567,6 +569,7 @@ class StartHandlerTest {
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(
                         eq(userContext),
+                        any(),
                         any(),
                         any(),
                         anyBoolean(),

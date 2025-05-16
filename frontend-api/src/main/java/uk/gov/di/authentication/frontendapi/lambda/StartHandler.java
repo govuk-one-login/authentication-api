@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -170,6 +171,10 @@ public class StartHandler
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+        var requestedLevelOfConfidence =
+                Optional.ofNullable(startRequest.requestedLevelOfConfidence())
+                        .map(LevelOfConfidence::retrieveLevelOfConfidence)
+                        .orElse(LevelOfConfidence.NONE);
 
         boolean isUserAuthenticatedWithValidProfile;
         try {
@@ -266,6 +271,7 @@ public class StartHandler
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
+                            requestedLevelOfConfidence,
                             cookieConsent,
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),

@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -102,6 +103,7 @@ public class StartService {
 
     public UserStartInfo buildUserStartInfo(
             UserContext userContext,
+            LevelOfConfidence levelOfConfidence,
             String cookieConsent,
             String gaTrackingId,
             boolean identityEnabled,
@@ -113,7 +115,7 @@ public class StartService {
         var clientRegistry = userContext.getClient().orElseThrow();
         identityRequired =
                 IdentityHelper.identityRequired(
-                        userContext.getClientSession().getAuthRequestParams(),
+                        levelOfConfidence,
                         clientRegistry.isIdentityVerificationSupported(),
                         identityEnabled);
 

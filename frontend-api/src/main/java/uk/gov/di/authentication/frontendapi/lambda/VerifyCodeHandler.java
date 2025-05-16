@@ -383,12 +383,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
-        var clientSession = userContext.getClientSession();
         var clientId = client.getClientID();
         var levelOfConfidence =
-                clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
-                        ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
-                        : NONE;
+                Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
         if (notificationType.equals(MFA_SMS)) {
             LOG.info(
