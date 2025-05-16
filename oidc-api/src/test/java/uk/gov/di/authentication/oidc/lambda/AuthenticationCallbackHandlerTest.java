@@ -1013,8 +1013,6 @@ class AuthenticationCallbackHandlerTest {
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
-                verify(sessionService)
-                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
 
@@ -1038,8 +1036,6 @@ class AuthenticationCallbackHandlerTest {
                                 CLIENT_ID.getValue(),
                                 intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
-                verify(sessionService)
-                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
 
@@ -1069,8 +1065,6 @@ class AuthenticationCallbackHandlerTest {
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
-                verify(sessionService)
-                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
 
@@ -1094,8 +1088,8 @@ class AuthenticationCallbackHandlerTest {
                                 CLIENT_ID.toString(),
                                 intervention);
                 verifyNoInteractions(initiateIPVAuthorisationService);
-                verify(sessionService)
-                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
+                verify(orchSessionService, times(2))
+                        .updateSession(argThat(OrchSessionItem::getAuthenticated));
 
                 assertNoAuthorisationCodeGeneratedAndSaved();
             }
@@ -1123,8 +1117,6 @@ class AuthenticationCallbackHandlerTest {
                                 eq(reproveIdentity),
                                 any());
                 verifyNoInteractions(logoutService);
-                verify(sessionService)
-                        .storeOrUpdateSession(argThat(Session::isAuthenticated), anyString());
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
 
@@ -1517,7 +1509,6 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 Session.AccountState.NEW,
                 equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
-        assertTrue(sessionSaveCaptor.getAllValues().get(0).isAuthenticated());
     }
 
     private void assertOrchSessionUpdated() {

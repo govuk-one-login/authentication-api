@@ -308,7 +308,7 @@ class AuthCodeHandlerTest {
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        assertTrue(session.isAuthenticated());
+        assertTrue(orchSession.getAuthenticated());
 
         verify(authCodeResponseService, times(1))
                 .saveSession(
@@ -431,7 +431,7 @@ class AuthCodeHandlerTest {
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertThat(orchSession.getCurrentCredentialStrength(), equalTo(requestedLevel));
-        assertFalse(session.isAuthenticated());
+        assertFalse(orchSession.getAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(
                         anyBoolean(),
