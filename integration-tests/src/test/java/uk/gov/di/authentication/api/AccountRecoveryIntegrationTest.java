@@ -1,27 +1,16 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountRecoveryHandler;
-import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
-import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +57,6 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
         var sessionId = redis.createSession();
         authSessionServiceExtension.addSession(sessionId);
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
@@ -87,7 +75,6 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
         var sessionId = redis.createSession();
         authSessionServiceExtension.addSession(sessionId);
         userStore.signUp(EMAIL, "password-1", SUBJECT);
-        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
@@ -100,22 +87,6 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
         assertThat(response, hasStatus(200));
         assertThat(response, hasJsonBody(new AccountRecoveryResponse(true)));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_ACCOUNT_RECOVERY_PERMITTED));
-    }
-
-    private ClientSession createClientSession() {
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID("test-client-id"),
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce());
-        return new ClientSession(
-                authRequestBuilder.build().toParameters(),
-                LocalDateTime.now(),
-                VectorOfTrust.getDefaults(),
-                "test-client-name");
     }
 
     private static class AccountRecoveryTestConfigurationService
