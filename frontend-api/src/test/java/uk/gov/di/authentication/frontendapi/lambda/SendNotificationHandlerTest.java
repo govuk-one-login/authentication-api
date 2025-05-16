@@ -2,13 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +17,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -41,7 +33,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -50,7 +41,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +102,6 @@ class SendNotificationHandlerTest {
     private static final long LOCKOUT_DURATION = 799;
     private static final String CLIENT_ID = "client-id";
     private static final String TEST_CLIENT_ID = "test-client-id";
-    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
     private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
@@ -120,13 +109,11 @@ class SendNotificationHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
             mock(DynamoEmailCheckResultService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientRegistry clientRegistry =
             new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
     private final ClientRegistry testClientRegistry =
@@ -162,7 +149,6 @@ class SendNotificationHandlerTest {
             new SendNotificationHandler(
                     configurationService,
                     sessionService,
-                    clientSessionService,
                     clientService,
                     authenticationService,
                     emailSqsClient,
@@ -203,8 +189,6 @@ class SendNotificationHandlerTest {
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
     }
 
     private static Stream<Arguments> notificationTypeAndJourneyTypeArgs() {
@@ -223,7 +207,6 @@ class SendNotificationHandlerTest {
             NotificationType notificationType, JourneyType journeyType, boolean ticfHeaderPresent)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         Date mockedDate = new Date();
         UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
@@ -310,7 +293,6 @@ class SendNotificationHandlerTest {
     void shouldCorrectlyRequestEmailCheck(
             boolean cachedResultAlreadyExists, boolean expectedCheckRequested) {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         if (cachedResultAlreadyExists) {
             when(dynamoEmailCheckResultService.getEmailCheckStore(EMAIL))
@@ -359,7 +341,6 @@ class SendNotificationHandlerTest {
             NotificationType notificationType, JourneyType journeyType) throws Json.JsonException {
         when(configurationService.isEmailCheckEnabled()).thenReturn(false);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -380,7 +361,6 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndGenerateNewOtpCodeIfOneExistsWhenNewCodeRequested(
             NotificationType notificationType) throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -420,7 +400,6 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndUseExistingOtpCodeIfOneExistsForVerifyPhoneRequest()
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
 
@@ -467,7 +446,6 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail(
             NotificationType notificationType, JourneyType journeyType) {
         usingValidSession(TEST_CLIENT_ID);
-        usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
         var body =
@@ -539,7 +517,6 @@ class SendNotificationHandlerTest {
     void shouldReturn400WhenPhoneNumberFailsValidation(
             String phoneNumber, String environment, boolean isSmokeTest) {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
         clientRegistry.withSmokeTest(isSmokeTest);
         when(configurationService.getEnvironment()).thenReturn(environment);
 
@@ -560,7 +537,6 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{ }");
 
@@ -580,7 +556,6 @@ class SendNotificationHandlerTest {
     void shouldReturn500IfMessageCannotBeSentToQueue(NotificationType notificationType)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
         Mockito.doThrow(SdkClientException.class)
                 .when(emailSqsClient)
                 .send(
@@ -612,7 +587,6 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400WhenInvalidNotificationType() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -648,7 +622,6 @@ class SendNotificationHandlerTest {
     void shouldReturn204ForValidVerifyPhoneNumberRequest(String phoneNumber)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         var body =
@@ -689,7 +662,6 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400ForVerifyPhoneNumberRequestWhenPhoneNumberIsMissing() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -740,7 +712,6 @@ class SendNotificationHandlerTest {
                     JourneyType journeyTypeTwo) {
         maxOutCodeRequestCount(notificationTypeOne, journeyTypeOne);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -771,7 +742,6 @@ class SendNotificationHandlerTest {
                 .thenReturn(true);
 
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -791,7 +761,6 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
         maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -818,7 +787,6 @@ class SendNotificationHandlerTest {
     void checkEmailInvalidCodeRequestAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -839,7 +807,6 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedTheAccountRecoveryEmailOtpRequestLimit() {
         maxOutCodeRequestCount(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -871,7 +838,6 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
         maxOutCodeRequestCount(VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -907,7 +873,6 @@ class SendNotificationHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -930,7 +895,6 @@ class SendNotificationHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -953,7 +917,6 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -979,7 +942,6 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
@@ -1001,7 +963,6 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringAccountRecoveryEmailOtpCodes() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
@@ -1027,7 +988,6 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
 
         var body =
                 format(
@@ -1050,7 +1010,6 @@ class SendNotificationHandlerTest {
     void shouldReturn204WhenSendingAccountCreationEmail(NotificationType notificationType)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(SESSION_ID_HEADER, SESSION_ID, CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
@@ -1086,7 +1045,6 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser(
             NotificationType notificationType) {
         usingValidSession(TEST_CLIENT_ID);
-        usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
         var body =
@@ -1121,20 +1079,5 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession.withClientId(clientId)));
-    }
-
-    private void usingValidClientSession(String clientId) {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(clientId),
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 }
