@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Ensure we're in the root directory of the repo
-cd "$(git rev-parse --show-toplevel)" > /dev/null 2>&1 || exit
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
 environments=("authdev1" "authdev2" "dev")
 
@@ -40,8 +40,8 @@ O_CLEAN="" # -c, --clean
 O_DEPLOY=0 # -x, --auth-external
 
 POSITIONAL=()
-TEMPLATE_FILE="${TEMPLATE_FILE:-backend-template.yaml}"
-SAMCONFIG_FILE=${SAMCONFIG_FILE:-scripts/dev-samconfig.toml}
+TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/backend-template.yaml}"
+SAMCONFIG_FILE=${SAMCONFIG_FILE:-${DIR}/scripts/dev-samconfig.toml}
 CONFIRM_CHANGESET_OPTION="--no-confirm-changeset"
 
 while [[ $# -gt 0 ]]; do
