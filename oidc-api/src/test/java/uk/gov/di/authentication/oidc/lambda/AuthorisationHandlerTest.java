@@ -480,8 +480,20 @@ class AuthorisationHandlerTest {
                     expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
         }
 
-        @Test
-        void shouldPassTheChannelClaimToAuth() {
+        private static Stream<Arguments> clientChannelsAndExpectedChannels() {
+            return Stream.of(
+                    arguments(null, Channel.WEB.getValue()),
+                    arguments(Channel.WEB.getValue(), Channel.WEB.getValue()),
+                    arguments(Channel.STRATEGIC_APP.getValue(), Channel.STRATEGIC_APP.getValue()),
+                    arguments(Channel.MOBILE.getValue(), Channel.MOBILE.getValue()));
+        }
+
+        @ParameterizedTest
+        @MethodSource("clientChannelsAndExpectedChannels")
+        void shouldPassTheCorrectChannelClaimToAuth(
+                String clientChannel, String expectedChannelClaim) {
+            when(clientService.getClient(anyString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withChannel(clientChannel)));
             var requestParams =
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
@@ -492,7 +504,7 @@ class AuthorisationHandlerTest {
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var actualChannelClaim = captor.getValue().getClaim("channel");
-            assertEquals(Channel.WEB.getValue(), actualChannelClaim);
+            assertEquals(expectedChannelClaim, actualChannelClaim);
         }
 
         @ParameterizedTest
