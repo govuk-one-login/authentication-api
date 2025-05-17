@@ -480,8 +480,19 @@ class AuthorisationHandlerTest {
                     expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
         }
 
-        @Test
-        void shouldPassTheChannelClaimToAuth() {
+        private static Stream<Arguments> clientChannelsAndExpectedChannel() {
+            return Stream.of(
+                    arguments(null, Channel.WEB.getValue()),
+                    arguments(Channel.WEB.getValue(), Channel.WEB.getValue()),
+                    arguments(Channel.STRATEGIC_APP.getValue(), Channel.STRATEGIC_APP.getValue()),
+                    arguments(Channel.MOBILE.getValue(), Channel.MOBILE.getValue()));
+        }
+
+        @ParameterizedTest
+        @MethodSource("clientChannelsAndExpectedChannel")
+        void shouldPassTheChannelClaimToAuth(String clientChannel, String expectedReturnChannel) {
+            when(clientService.getClient(anyString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withChannel(clientChannel)));
             var requestParams =
                     buildRequestParams(
                             Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
@@ -492,7 +503,7 @@ class AuthorisationHandlerTest {
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var actualChannelClaim = captor.getValue().getClaim("channel");
-            assertEquals(Channel.WEB.getValue(), actualChannelClaim);
+            assertEquals(expectedReturnChannel, actualChannelClaim);
         }
 
         @ParameterizedTest
@@ -3071,7 +3082,8 @@ class AuthorisationHandlerTest {
                 .withServiceType(RP_SERVICE_TYPE)
                 .withSubjectType("pairwise")
                 .withIdentityVerificationSupported(true)
-                .withMaxAgeEnabled(false);
+                .withMaxAgeEnabled(false)
+                .withChannel(Channel.WEB.getValue());
     }
 
     private static EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
