@@ -85,10 +85,6 @@ public class Session {
         return this;
     }
 
-    public boolean isAuthenticated() {
-        return authenticated;
-    }
-
     public Session setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
         return this;

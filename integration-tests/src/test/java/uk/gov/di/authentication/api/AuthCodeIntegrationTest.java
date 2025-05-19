@@ -132,7 +132,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var redisSession = redis.getSession(sessionID);
         var orchSession = orchSessionExtension.getSession(sessionID).get();
 
-        assertTrue(redisSession.isAuthenticated());
+        assertTrue(orchSession.getAuthenticated());
         assertThat(redisSession.isNewAccount(), equalTo(Session.AccountState.EXISTING));
         assertThat(orchSession.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.EXISTING));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
@@ -179,7 +179,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var redisSession = redis.getSession(sessionID);
         var orchSession = orchSessionExtension.getSession(sessionID).get();
 
-        assertFalse(redisSession.isAuthenticated());
+        assertFalse(orchSession.getAuthenticated());
         assertThat(
                 redisSession.isNewAccount(),
                 equalTo(Session.AccountState.EXISTING_DOC_APP_JOURNEY));
