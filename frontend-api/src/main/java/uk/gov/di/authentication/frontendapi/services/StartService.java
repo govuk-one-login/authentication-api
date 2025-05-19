@@ -170,13 +170,12 @@ public class StartService {
     }
 
     public boolean isUpliftRequired(
-            ClientSession clientSession, CredentialTrustLevel currentCredentialStrength) {
+            CredentialTrustLevel requestedCredentialStrength,
+            CredentialTrustLevel currentCredentialStrength) {
         if (Objects.isNull(currentCredentialStrength)) {
             return false;
         }
-        return (currentCredentialStrength.compareTo(
-                        clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel())
-                < 0);
+        return currentCredentialStrength.compareTo(requestedCredentialStrength) < 0;
     }
 
     public ClientRegistry getClient(String clientId) throws ClientNotFoundException {
