@@ -76,10 +76,6 @@ public class Session {
         return this;
     }
 
-    public AccountState isNewAccount() {
-        return isNewAccount;
-    }
-
     public Session setNewAccount(AccountState isNewAccount) {
         this.isNewAccount = isNewAccount;
         return this;
