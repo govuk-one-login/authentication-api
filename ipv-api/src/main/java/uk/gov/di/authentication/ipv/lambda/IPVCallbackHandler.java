@@ -472,7 +472,8 @@ public class IPVCallbackHandler
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
-            return RedirectService.redirectToFrontendErrorPage(frontend.errorIpvCallbackURI(), e);
+            return RedirectService.redirectToFrontendErrorPageForNoSessionCookies(
+                    frontend.errorIpvCallbackURI(), e);
         } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
             return RedirectService.redirectToFrontendErrorPage(frontend.errorURI(), e);
         } catch (ParseException e) {
