@@ -17,7 +17,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.AccountState;
@@ -31,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountInterventionsService;
@@ -74,9 +74,9 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_TEMP_SUSPENDED_INTERVENTION;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.LoginHandler.INTERNAL_SUBJECT_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -654,10 +654,7 @@ class AccountInterventionsHandlerTest {
     private APIGatewayProxyRequestEvent apiRequestEventWithEmail() {
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\" }",
-                        uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL));
+        event.setBody(format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL));
         return event;
     }
 
