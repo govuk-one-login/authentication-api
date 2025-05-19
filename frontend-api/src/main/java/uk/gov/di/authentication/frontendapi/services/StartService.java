@@ -175,7 +175,7 @@ public class StartService {
         if (Objects.isNull(currentCredentialStrength)) {
             return false;
         }
-        return currentCredentialStrength.compareTo(requestedCredentialStrength) < 0;
+        return currentCredentialStrength.isLowerThan(requestedCredentialStrength);
     }
 
     public ClientRegistry getClient(String clientId) throws ClientNotFoundException {
