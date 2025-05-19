@@ -1982,7 +1982,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldRedirectToFrontendWithoutLoginHintWhenValidLoginHintProvided() throws Exception {
+        void shouldRedirectToFrontendWithoutLoginHintWhenValidLoginHintProvidedInQueryParams() {
             registerClient(
                     CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
             var previousClientSessionId = "a-previous-client-session";

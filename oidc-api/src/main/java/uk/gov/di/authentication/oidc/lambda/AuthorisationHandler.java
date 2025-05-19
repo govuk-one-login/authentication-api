@@ -938,7 +938,8 @@ public class AuthorisationHandler
                         .claim(
                                 "current_credential_strength",
                                 orchSession.getCurrentCredentialStrength())
-                        .claim("scope", authenticationRequest.getScope().toString());
+                        .claim("scope", authenticationRequest.getScope().toString())
+                        .claim("login_hint", authenticationRequest.getLoginHint());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
         gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
