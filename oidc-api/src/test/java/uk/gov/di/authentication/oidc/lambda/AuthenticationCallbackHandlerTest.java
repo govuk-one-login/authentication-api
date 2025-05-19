@@ -599,9 +599,6 @@ class AuthenticationCallbackHandlerTest {
                 .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
-                Session.AccountState.UNKNOWN,
-                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
-        assertThat(
                 OrchSessionItem.AccountState.UNKNOWN,
                 equalTo(orchSessionCaptor.getAllValues().get(0).getIsNewAccount()));
     }
@@ -1506,9 +1503,6 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
                 equalTo(lowestCredentialTrustLevel));
-        assertThat(
-                Session.AccountState.NEW,
-                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
     }
 
     private void assertOrchSessionUpdated() {
@@ -1518,6 +1512,9 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 orchSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
                 equalTo(lowestCredentialTrustLevel));
+        assertThat(
+                orchSessionCaptor.getAllValues().get(0).getIsNewAccount(),
+                equalTo(OrchSessionItem.AccountState.NEW));
     }
 
     private void assertClientSessionUpdated() {

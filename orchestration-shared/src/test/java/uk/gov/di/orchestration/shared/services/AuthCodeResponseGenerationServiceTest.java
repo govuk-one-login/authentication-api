@@ -10,7 +10,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,14 +86,6 @@ class AuthCodeResponseGenerationServiceTest {
     void saveSessionUpdatesDocAppSessionWithDocAppState() {
         authCodeResponseGenerationService.saveSession(
                 true, sessionService, session, SESSION_ID, orchSessionService, orchSession);
-
-        verify(sessionService)
-                .storeOrUpdateSession(
-                        argThat(
-                                s ->
-                                        s.isNewAccount()
-                                                == Session.AccountState.EXISTING_DOC_APP_JOURNEY),
-                        eq(SESSION_ID));
         verify(orchSessionService)
                 .updateSession(
                         argThat(
