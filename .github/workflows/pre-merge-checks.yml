@@ -50,7 +50,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
@@ -85,7 +85,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -121,7 +121,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -216,7 +216,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -301,7 +301,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -373,7 +373,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
