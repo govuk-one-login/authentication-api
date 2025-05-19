@@ -10,25 +10,18 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
+import uk.gov.di.authentication.shared.helpers.*;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.*;
 
 import java.util.Optional;
 
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -44,14 +37,17 @@ public class AuthenticateHandler
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
     private final ConfigurationService configurationService;
+    private final AccountInterventionsService accountInterventionsService;
 
     public AuthenticateHandler(
             AuthenticationService authenticationService,
             AuditService auditService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AccountInterventionsService accountInterventionsService) {
         this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.configurationService = configurationService;
+        this.accountInterventionsService = accountInterventionsService;
     }
 
     public AuthenticateHandler() {
@@ -62,6 +58,7 @@ public class AuthenticateHandler
         this.configurationService = configurationService;
         this.authenticationService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.accountInterventionsService = new AccountInterventionsService(configurationService);
     }
 
     @Override
@@ -116,6 +113,35 @@ public class AuthenticateHandler
                 auditService.submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+            }
+
+            if (configurationService.isAccountInterventionServiceCallInAuthenticateEnabled()) {
+                try {
+                    AccountInterventionsInboundResponse interventions =
+                            accountInterventionsService.sendAccountInterventionsOutboundRequest(
+                                    internalCommonSubjectIdentifier.getValue());
+
+                    if (interventions.state().suspended()) {
+                        auditService.submitAuditEvent(
+                                AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
+                                auditContext);
+                        LOG.info("Users account is suspended.");
+                        return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1083);
+                    }
+
+                    if (interventions.state().blocked()) {
+                        auditService.submitAuditEvent(
+                                AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
+                                auditContext);
+                        LOG.info("Users account is blocked.");
+                        return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1084);
+                    }
+                } catch (UnsuccessfulAccountInterventionsResponseException e) {
+                    auditService.submitAuditEvent(
+                            AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                    LOG.info("Request to Account Intervention Service failed.");
+                    return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1055);
+                }
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
 

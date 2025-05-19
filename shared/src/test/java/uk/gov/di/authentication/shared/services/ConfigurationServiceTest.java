@@ -652,6 +652,11 @@ class ConfigurationServiceTest {
         assertNull(configurationService.getAccountManagementNotifyBucketDestination());
     }
 
+    @Test
+    void isAccountInterventionServiceCallInAuthenticateEnabledShouldDefaultFalse() {
+        assertFalse(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled());
+    }
+
     private static Stream<Arguments> commaSeparatedStringContains() {
         return Stream.of(
                 Arguments.of("1234", null, false),
