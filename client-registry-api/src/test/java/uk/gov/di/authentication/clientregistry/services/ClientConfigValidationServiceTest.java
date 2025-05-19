@@ -73,6 +73,18 @@ class ClientConfigValidationServiceTest {
                         null,
                         Channel.STRATEGIC_APP.getValue()),
                 Arguments.of(
+                        null,
+                        null,
+                        PublicKeySource.JWKS.getValue(),
+                        null,
+                        "https://valid.jwks.url.gov.uk",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        Channel.MOBILE.getValue()),
+                Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
                         PublicKeySource.STATIC.getValue(),
