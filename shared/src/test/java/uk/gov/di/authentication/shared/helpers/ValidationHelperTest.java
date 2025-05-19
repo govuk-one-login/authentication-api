@@ -57,7 +57,7 @@ class ValidationHelperTest {
     @MethodSource("invalidPhoneNumbers")
     void shouldReturnErrorIfMobileNumberIsInvalid(String phoneNumber) {
         assertEquals(
-                Optional.of(ErrorResponse.ERROR_1012),
+                Optional.of(ErrorResponse.INVALID_PHONE_NUMBER),
                 ValidationHelper.validatePhoneNumber(phoneNumber, PRODUCTION, false));
     }
 
@@ -101,7 +101,7 @@ class ValidationHelperTest {
     void shouldRejectTestNumberWhenNotSmokeTest(String testPhoneNumber) {
         assertThat(
                 ValidationHelper.validatePhoneNumber(testPhoneNumber, PRODUCTION, false),
-                equalTo(Optional.of(ErrorResponse.ERROR_1012)));
+                equalTo(Optional.of(ErrorResponse.INVALID_PHONE_NUMBER)));
     }
 
     private static Stream<String> blankEmailAddresses() {
@@ -339,14 +339,6 @@ class ValidationHelperTest {
                         STORED_VALID_CODE));
     }
 
-    @Test
-    void shouldSuccessfullyValidatePhoneNumberWhenNewNumberIsDifferentToCurrentNumber() {
-
-        assertThat(
-                ValidationHelper.validatePhoneNumber("+447911123456", "07700900222", INTEGRATION),
-                equalTo(Optional.empty()));
-    }
-
     private static Stream<String> testPhoneNumbers() {
         return Stream.of(
                 "07700900222",
@@ -355,46 +347,6 @@ class ValidationHelperTest {
                 "+447700900000",
                 "+447700900111",
                 "+447700900222");
-    }
-
-    @ParameterizedTest
-    @MethodSource("testPhoneNumbers")
-    void shouldSuccessfullyValidatePhoneNumberWhenNewNumberIsTestNumberAndEnvironmentIsNonProd(
-            String testPhoneNumber) {
-
-        assertThat(
-                ValidationHelper.validatePhoneNumber("+447911123456", testPhoneNumber, INTEGRATION),
-                equalTo(Optional.empty()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("testPhoneNumbers")
-    void shouldReturnErrorWhenNewNumberIsTestNumberAndEnvironmentIsProd(String testPhoneNumber) {
-
-        assertThat(
-                ValidationHelper.validatePhoneNumber("+447911123456", testPhoneNumber, PRODUCTION),
-                equalTo(Optional.of(ErrorResponse.ERROR_1012)));
-    }
-
-    @Test
-    void shouldSuccessfullyValidatePhoneNumberWhenCurrentNumberIsNotPresent() {
-        assertThat(
-                ValidationHelper.validatePhoneNumber(null, "07700900222", INTEGRATION),
-                equalTo(Optional.empty()));
-    }
-
-    @Test
-    void shouldReturnErrorWhenNewInternationPhoneNumberIsSameToCurrentNumber() {
-        assertThat(
-                ValidationHelper.validatePhoneNumber("+33645453322", "+33645453322", PRODUCTION),
-                equalTo(Optional.of(ErrorResponse.ERROR_1044)));
-    }
-
-    @Test
-    void shouldReturnErrorWhenNewNumberIsTheSameAsCurrentNumber() {
-        assertThat(
-                ValidationHelper.validatePhoneNumber("+447911123456", "07911123456", PRODUCTION),
-                equalTo(Optional.of(ErrorResponse.ERROR_1044)));
     }
 
     @Test

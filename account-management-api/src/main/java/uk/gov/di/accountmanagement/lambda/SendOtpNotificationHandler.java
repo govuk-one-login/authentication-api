@@ -20,12 +20,13 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -50,6 +51,10 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSI
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.NO_USER_CREDENTIALS_FOR_EMAIL;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.NO_USER_PROFILE_FOR_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -58,6 +63,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.ValidationHelper.validatePhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class SendOtpNotificationHandler
@@ -246,20 +252,68 @@ public class SendOtpNotificationHandler
                             userLanguage);
                 case VERIFY_PHONE_NUMBER:
                     LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
-                    var existingPhoneNumber =
-                            dynamoService
-                                    .getUserProfileByEmailMaybe(email)
-                                    .map(UserProfile::getPhoneNumber)
-                                    .orElse(null);
-                    var phoneNumberValidationError =
-                            ValidationHelper.validatePhoneNumber(
-                                    existingPhoneNumber,
-                                    sendNotificationRequest.getPhoneNumber(),
-                                    configurationService.getEnvironment());
-                    if (phoneNumberValidationError.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(
-                                400, phoneNumberValidationError.get());
+
+                    var userProfile = dynamoService.getUserProfileByEmailMaybe(email);
+
+                    if (userProfile.isEmpty()) {
+                        LOG.error(NO_USER_PROFILE_FOR_EMAIL.getMessage());
+                        return generateApiGatewayProxyErrorResponse(400, NO_USER_PROFILE_FOR_EMAIL);
                     }
+
+                    String newPhoneNumber;
+                    try {
+                        newPhoneNumber =
+                                PhoneNumberHelper.formatPhoneNumber(
+                                        sendNotificationRequest.getPhoneNumber());
+                    } catch (Exception e) {
+                        return generateApiGatewayProxyErrorResponse(400, INVALID_PHONE_NUMBER);
+                    }
+
+                    if (!userProfile.get().getMfaMethodsMigrated()) {
+                        if (newPhoneNumber.equalsIgnoreCase(userProfile.get().getPhoneNumber())) {
+                            LOG.error(NEW_PHONE_NUMBER_ALREADY_IN_USE.getMessage());
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, NEW_PHONE_NUMBER_ALREADY_IN_USE);
+                        }
+                    } else {
+                        var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
+                        if (userCredentials == null) {
+                            LOG.error("no user credentials");
+                            return generateApiGatewayProxyErrorResponse(
+                                    400, NO_USER_CREDENTIALS_FOR_EMAIL);
+                        } else {
+                            var numberOfTimesUsed =
+                                    userCredentials.getMfaMethods().stream()
+                                            .filter(
+                                                    mfaMethod ->
+                                                            mfaMethod
+                                                                    .getMfaMethodType()
+                                                                    .equalsIgnoreCase(
+                                                                            MFAMethodType.SMS
+                                                                                    .name()))
+                                            .filter(
+                                                    mfaMethod ->
+                                                            mfaMethod
+                                                                    .getDestination()
+                                                                    .equalsIgnoreCase(
+                                                                            newPhoneNumber))
+                                            .count();
+                            if (numberOfTimesUsed != 0) {
+                                LOG.error("number already in use");
+                                return generateApiGatewayProxyErrorResponse(
+                                        400, NEW_PHONE_NUMBER_ALREADY_IN_USE);
+                            }
+                        }
+                    }
+
+                    var response =
+                            validatePhoneNumber(
+                                    newPhoneNumber, configurationService.getEnvironment(), false);
+
+                    if (response.isPresent()) {
+                        return generateApiGatewayProxyErrorResponse(400, response.get());
+                    }
+
                     return handleNotificationRequest(
                             isTestUserRequest,
                             sendNotificationRequest.getPhoneNumber(),
