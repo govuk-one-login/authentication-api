@@ -349,8 +349,11 @@ public class DocAppCallbackHandler
                                             e.getMessage())));
                 }
             }
-        } catch (DocAppCallbackException | NoSessionException | OrchAuthCodeException e) {
+        } catch (DocAppCallbackException | OrchAuthCodeException e) {
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
+        } catch (NoSessionException e) {
+            return RedirectService.redirectToFrontendErrorPageForNoSessionCookies(
+                    authFrontend.errorURI(), e);
         } catch (ParseException e) {
             return RedirectService.redirectToFrontendErrorPage(
                     authFrontend.errorURI(),
