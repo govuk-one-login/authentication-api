@@ -73,7 +73,10 @@ class StartServiceTest {
     private static final String SESSION_ID = "a-session-id";
     private static final Session SESSION = new Session();
     private static final AuthSessionItem AUTH_SESSION =
-            new AuthSessionItem().withEmailAddress(EMAIL).withSessionId(SESSION_ID);
+            new AuthSessionItem()
+                    .withEmailAddress(EMAIL)
+                    .withSessionId(SESSION_ID)
+                    .withClientId(CLIENT_ID.getValue());
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String AUDIENCE = "oidc-audience";

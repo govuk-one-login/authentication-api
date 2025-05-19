@@ -37,7 +37,6 @@ public class StartService {
     private final ClientService clientService;
     private final DynamoService dynamoService;
     private final SessionService sessionService;
-    private static final String CLIENT_ID_PARAM = "client_id";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
     public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
@@ -60,7 +59,7 @@ public class StartService {
                         .withAuthSession(authSession);
         UserContext userContext;
         try {
-            var clientRegistry = getClient(clientSession);
+            var clientRegistry = getClient(authSession.getClientId());
             Optional.of(authSession)
                     .map(AuthSessionItem::getEmailAddress)
                     .flatMap(dynamoService::getUserProfileByEmailMaybe)
@@ -180,10 +179,9 @@ public class StartService {
                 < 0);
     }
 
-    public ClientRegistry getClient(ClientSession clientSession) throws ClientNotFoundException {
-        return clientSession.getAuthRequestParams().get(CLIENT_ID_PARAM).stream()
-                .findFirst()
-                .flatMap(clientService::getClient)
+    public ClientRegistry getClient(String clientId) throws ClientNotFoundException {
+        return clientService
+                .getClient(clientId)
                 .orElseThrow(
                         () ->
                                 new ClientNotFoundException(
