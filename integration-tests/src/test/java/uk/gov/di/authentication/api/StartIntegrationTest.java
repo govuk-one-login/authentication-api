@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
@@ -48,9 +49,12 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_START_INFO_FOUND;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -229,9 +233,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
         var actualAuthSession = authSessionExtension.getSession(sessionId).orElseThrow();
-        assertThat(
-                actualAuthSession.getRequestedCredentialStrength(),
-                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(actualAuthSession.getRequestedCredentialStrength(), equalTo(MEDIUM_LEVEL));
         assertThat(
                 actualAuthSession.getRequestedLevelOfConfidence(),
                 equalTo(LevelOfConfidence.LOW_LEVEL));
@@ -496,6 +498,108 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
                     equalTo(false));
             assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
+        }
+    }
+
+    @Nested
+    class Uplift {
+        String sessionId;
+        State state = new State();
+        Scope scope = new Scope();
+
+        @BeforeEach
+        void setup() throws Json.JsonException {
+            handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+            txmaAuditQueue.clear();
+            sessionId = IdGenerator.generate();
+            redis.createSession(sessionId);
+            userStore.signUp(EMAIL, "password");
+            registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+            scope.add(OIDCScopeValue.OPENID);
+            var builder =
+                    new AuthenticationRequest.Builder(
+                                    ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                            .nonce(new Nonce())
+                            .state(state)
+                            .customParameter("client_id", CLIENT_ID)
+                            .customParameter("redirect_uri", REDIRECT_URI.toString())
+                            .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
+            var authRequest = builder.build();
+            redis.createClientSession(
+                    CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        }
+
+        @Test
+        void upliftNotRequiredWhenNoPreviousAuthSession() throws Json.JsonException {
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    makeRequestBody(
+                                            false,
+                                            Map.of(
+                                                    "state",
+                                                    state.getValue(),
+                                                    "redirect_uri",
+                                                    REDIRECT_URI.toString(),
+                                                    "scope",
+                                                    scope.toString(),
+                                                    "client_id",
+                                                    CLIENT_ID,
+                                                    "requested_level_of_confidence",
+                                                    "P1",
+                                                    "requested_credential_strength",
+                                                    MEDIUM_LEVEL.getValue()))),
+                            standardHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+            assertFalse(startResponse.user().isUpliftRequired());
+        }
+
+        @ParameterizedTest
+        @MethodSource("achievedAndRequestedStrengthValues")
+        void upliftRequiredTestsWhenAuthSessionHasAchievedStrengthAndRpRequested(
+                CredentialTrustLevel achievedCredentialStrength,
+                CredentialTrustLevel requestedCredentialStrength,
+                boolean isUpliftRequired)
+                throws Json.JsonException {
+            authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+            authSessionExtension.addAchievedCredentialTrustToSession(
+                    PREVIOUS_SESSION_ID, achievedCredentialStrength);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    makeRequestBody(
+                                            false,
+                                            Map.of(
+                                                    "state",
+                                                    state.getValue(),
+                                                    "redirect_uri",
+                                                    REDIRECT_URI.toString(),
+                                                    "scope",
+                                                    scope.toString(),
+                                                    "client_id",
+                                                    CLIENT_ID,
+                                                    "requested_level_of_confidence",
+                                                    "P1",
+                                                    "requested_credential_strength",
+                                                    requestedCredentialStrength.getValue()))),
+                            standardHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+            assertEquals(isUpliftRequired, startResponse.user().isUpliftRequired());
+        }
+
+        private static Stream<Arguments> achievedAndRequestedStrengthValues() {
+            return Stream.of(
+                    Arguments.of(null, MEDIUM_LEVEL, false),
+                    Arguments.of(null, LOW_LEVEL, false),
+                    Arguments.of(MEDIUM_LEVEL, LOW_LEVEL, false),
+                    Arguments.of(LOW_LEVEL, LOW_LEVEL, false),
+                    Arguments.of(LOW_LEVEL, MEDIUM_LEVEL, true));
         }
     }
 
