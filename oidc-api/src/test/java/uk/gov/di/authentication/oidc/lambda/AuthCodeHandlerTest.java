@@ -201,7 +201,7 @@ class AuthCodeHandlerTest {
                         true, sessionService, session, SESSION_ID, orchSessionService, orchSession);
         doAnswer(
                         (i) -> {
-                            session.setAuthenticated(true).setNewAccount(EXISTING);
+                            session.setNewAccount(EXISTING);
                             orchSession
                                     .withAuthenticated(true)
                                     .setIsNewAccount(OrchSessionItem.AccountState.EXISTING);
