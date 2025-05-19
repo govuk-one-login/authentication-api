@@ -45,22 +45,13 @@ public class ValidationHelper {
     private ValidationHelper() {}
 
     public static Optional<ErrorResponse> validatePhoneNumber(
-            String currentPhoneNumber, String newPhoneNumber, String environment) {
-        if (Objects.nonNull(currentPhoneNumber)
-                && currentPhoneNumber.equals(PhoneNumberHelper.formatPhoneNumber(newPhoneNumber))) {
-            return Optional.of(ErrorResponse.ERROR_1044);
-        }
-        return validatePhoneNumber(newPhoneNumber, environment, false);
-    }
-
-    public static Optional<ErrorResponse> validatePhoneNumber(
             String phoneNumberInput, String environment, boolean isSmokeTest) {
         if (isValidTestNumberForEnvironment(phoneNumberInput, environment, isSmokeTest)) {
             return Optional.empty();
         }
         if ((phoneNumberInput.length() < 5) || (phoneNumberInput.length() > 25)) {
             LOG.warn("Invalid phone number: length check");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
@@ -70,17 +61,17 @@ public class ValidationHelper {
                 LOG.warn(
                         "Invalid phone number: not a mobile number.  NumberType {}",
                         phoneNumberType);
-                return Optional.of(ErrorResponse.ERROR_1012);
+                return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
             }
             LOG.info("Accepted phone NumberType {}", phoneNumberType);
             if (phoneUtil.isValidNumber(phoneNumber)) {
                 return Optional.empty();
             }
             LOG.warn("Invalid phone number: failed isValidNumber check");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         } catch (NumberParseException e) {
             LOG.warn("Invalid phone number: parsing failure");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }
     }
 

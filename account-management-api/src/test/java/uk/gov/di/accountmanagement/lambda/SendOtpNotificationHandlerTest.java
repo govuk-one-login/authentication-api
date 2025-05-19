@@ -306,6 +306,14 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws Json.JsonException {
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(TEST_EMAIL_ADDRESS)
+                                        .withPhoneNumber("+447755551085")
+                                        .withPhoneNumberVerified(true)));
+
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         TEST_PHONE_NUMBER,
@@ -453,6 +461,14 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfPhoneNumberIsInvalid() {
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(TEST_EMAIL_ADDRESS)
+                                        .withPhoneNumber("+447755551084")
+                                        .withPhoneNumberVerified(true)));
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setRequestContext(eventContext);
@@ -464,7 +480,7 @@ class SendOtpNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
 
         verifyNoInteractions(auditService);
     }
@@ -489,7 +505,7 @@ class SendOtpNotificationHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1044));
+        assertThat(result, hasJsonBody(ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE));
         verifyNoInteractions(auditService);
     }
 

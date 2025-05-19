@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
-import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +25,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_SEND_OTP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -89,13 +90,16 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
 
-        NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
+        assertNoNotificationsReceived(notificationsQueue);
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
     void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
+        String password = "password-1";
+        userStore.signUp(TEST_EMAIL, password);
+
         var response =
                 makeRequest(
                         Optional.of(
@@ -118,7 +122,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    void shouldReturn204ForVerifyPhoneNumberRequestWhenUserDoesNotExist() {
+    void smsNotSentForUnknownUsers() {
         var nonExistentUserEmail = "i.do.not.exist@digital.cabinet-office.gov.uk";
 
         var response =
@@ -133,19 +137,15 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
-        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
-
-        NotificationAssertionHelper.assertNotificationsReceived(
-                notificationsQueue,
-                List.of(
-                        new NotifyRequest(
-                                TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
-
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_SEND_OTP));
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+        assertNoNotificationsReceived(notificationsQueue);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
     void shouldReturn400WhenPhoneNumberIsInvalid() throws Json.JsonException {
+        String password = "password-1";
+        userStore.signUp(TEST_EMAIL, password);
         String badPhoneNumber = "This is not a valid phone number";
 
         var response =
@@ -159,11 +159,13 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1012)));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.INVALID_PHONE_NUMBER)));
 
-        NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
+        assertNoNotificationsReceived(notificationsQueue);
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -171,21 +173,26 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
             throws Json.JsonException {
         userStore.signUp(TEST_EMAIL, "password");
         userStore.addVerifiedPhoneNumber(TEST_EMAIL, "+447755551084");
+
         var response =
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, "07755551084")),
+                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, "+447755551084")),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1044)));
+        assertThat(
+                response,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE)));
 
-        NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
+        assertNoNotificationsReceived(notificationsQueue);
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 }
