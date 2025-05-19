@@ -34,4 +34,12 @@ public enum CredentialTrustLevel {
         }
         return b;
     }
+
+    public boolean isHigherThan(CredentialTrustLevel otherCredentialTrustLevel) {
+        return this.compareTo(otherCredentialTrustLevel) > 0;
+    }
+
+    public boolean isLowerThan(CredentialTrustLevel otherCredentialTrustLevel) {
+        return this.compareTo(otherCredentialTrustLevel) < 0;
+    }
 }
