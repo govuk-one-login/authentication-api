@@ -11,7 +11,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 
@@ -59,5 +61,25 @@ class CredentialTrustLevelTest {
                 Arguments.of(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL),
                 Arguments.of(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL),
                 Arguments.of(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL));
+    }
+
+    @Test
+    void mediumIsHigherThanLow() {
+        assertTrue(MEDIUM_LEVEL.isHigherThan(LOW_LEVEL));
+    }
+
+    @Test
+    void lowIsLowerThanMedium() {
+        assertTrue(LOW_LEVEL.isLowerThan(MEDIUM_LEVEL));
+    }
+
+    @Test
+    void mediumIsNotLowerThanLow() {
+        assertFalse(MEDIUM_LEVEL.isLowerThan(LOW_LEVEL));
+    }
+
+    @Test
+    void lowIsNotHigherThanMedium() {
+        assertFalse(LOW_LEVEL.isHigherThan(MEDIUM_LEVEL));
     }
 }
