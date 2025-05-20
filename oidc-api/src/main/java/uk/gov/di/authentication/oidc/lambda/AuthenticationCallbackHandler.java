@@ -36,7 +36,6 @@ import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -448,9 +447,10 @@ public class AuthenticationCallbackHandler
                         buildDimensions(
                                 accountState,
                                 clientId,
+                                orchClientSession.getClientName(),
+                                orchClientSession.getVtrList(),
                                 isTestJourney,
                                 docAppJourney,
-                                clientSession,
                                 userInfo.getClaim(
                                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                                         String.class));
@@ -720,23 +720,6 @@ public class AuthenticationCallbackHandler
                             : OrchSessionItem.AccountState.EXISTING;
         }
         return accountState;
-    }
-
-    private Map<String, String> buildDimensions(
-            AccountState accountState,
-            String clientId,
-            boolean isTestJourney,
-            boolean docAppJourney,
-            ClientSession clientSession,
-            String verifiedMfaMethodType) {
-        return buildDimensions(
-                accountState,
-                clientId,
-                clientSession.getClientName(),
-                clientSession.getVtrList(),
-                isTestJourney,
-                docAppJourney,
-                verifiedMfaMethodType);
     }
 
     private Map<String, String> buildDimensions(
