@@ -35,7 +35,6 @@ import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -731,13 +730,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 internalCommonSubjectId, CLIENT_SESSION_ID, userInfo);
     }
 
-    private void assertSessionUpdatedWhenReturnCodeRequestedAndPresent() throws Json.JsonException {
-        var redisSession = redis.getSession(SESSION_ID);
+    private void assertSessionUpdatedWhenReturnCodeRequestedAndPresent() {
         var orchSession = orchSessionExtension.getSession(SESSION_ID).get();
 
-        assertThat(redisSession.isNewAccount(), equalTo(Session.AccountState.EXISTING));
         assertTrue(orchSession.getAuthenticated());
-
         assertThat(orchSession.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.EXISTING));
     }
 

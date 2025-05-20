@@ -27,7 +27,6 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -129,11 +128,9 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authCodeResponse.getLocation(),
                 startsWith("https://rp-build.build.stubs.account.gov.uk/?code="));
 
-        var redisSession = redis.getSession(sessionID);
         var orchSession = orchSessionExtension.getSession(sessionID).get();
 
         assertTrue(orchSession.getAuthenticated());
-        assertThat(redisSession.isNewAccount(), equalTo(Session.AccountState.EXISTING));
         assertThat(orchSession.getIsNewAccount(), equalTo(OrchSessionItem.AccountState.EXISTING));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
 
@@ -176,13 +173,9 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authCodeResponse.getLocation(),
                 startsWith("https://rp-build.build.stubs.account.gov.uk/?code="));
 
-        var redisSession = redis.getSession(sessionID);
         var orchSession = orchSessionExtension.getSession(sessionID).get();
 
         assertFalse(orchSession.getAuthenticated());
-        assertThat(
-                redisSession.isNewAccount(),
-                equalTo(Session.AccountState.EXISTING_DOC_APP_JOURNEY));
         assertThat(
                 orchSession.getIsNewAccount(),
                 equalTo(OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
