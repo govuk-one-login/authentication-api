@@ -12,15 +12,10 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
@@ -89,23 +84,6 @@ public class RedisExtension
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection.sync().flushall();
         }
-    }
-
-    public void createClientSession(
-            String clientSessionId,
-            String clientName,
-            Map<String, List<String>> authRequest,
-            LocalDateTime localDateTime)
-            throws Json.JsonException {
-        redis.saveWithExpiry(
-                CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(
-                        new ClientSession(
-                                authRequest,
-                                localDateTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                clientName)),
-                300);
     }
 
     public void createClientSession(String clientSessionId, ClientSession clientSession)

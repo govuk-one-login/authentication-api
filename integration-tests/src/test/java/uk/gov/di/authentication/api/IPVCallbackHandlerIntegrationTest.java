@@ -171,11 +171,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .state(RP_STATE);
         redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
-        redis.createClientSession(
-                CLIENT_SESSION_ID,
-                CLIENT_NAME,
-                authRequestBuilder.build().toParameters(),
-                clientCreationTime);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 CLIENT_SESSION_ID,
@@ -308,11 +303,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .state(RP_STATE);
         redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
-        redis.createClientSession(
-                CLIENT_SESSION_ID,
-                CLIENT_NAME,
-                authRequestBuilder.build().toParameters(),
-                clientCreationTime);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 CLIENT_SESSION_ID,
@@ -361,8 +351,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @Test
     void
-            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
-                    throws Json.JsonException {
+            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity() {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
@@ -373,11 +362,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .nonce(new Nonce())
                         .state(RP_STATE);
         var clientCreationTime = LocalDateTime.now();
-        redis.createClientSession(
-                CLIENT_SESSION_ID,
-                CLIENT_NAME,
-                authRequestBuilder.build().toParameters(),
-                clientCreationTime);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 CLIENT_SESSION_ID,
@@ -416,8 +400,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @Test
     void
-            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButClientSessionNotFoundWithGivenState()
-                    throws Json.JsonException {
+            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButClientSessionNotFoundWithGivenState() {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
@@ -428,11 +411,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .nonce(new Nonce())
                         .state(RP_STATE);
         var clientCreationTime = LocalDateTime.now();
-        redis.createClientSession(
-                CLIENT_SESSION_ID,
-                CLIENT_NAME,
-                authRequestBuilder.build().toParameters(),
-                clientCreationTime);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 CLIENT_SESSION_ID,
@@ -485,11 +463,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .claims(oidcValidClaimsRequest);
         redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
-        redis.createClientSession(
-                CLIENT_SESSION_ID,
-                CLIENT_NAME,
-                authRequestBuilder.build().toParameters(),
-                clientCreationTime);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 CLIENT_SESSION_ID,
@@ -582,11 +555,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
-        redis.createClientSession(
-                CLIENT_SESSION_ID,
-                CLIENT_NAME,
-                authRequestBuilder.build().toParameters(),
-                clientCreationTime);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 CLIENT_SESSION_ID,
@@ -643,11 +611,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         redis.createSession(sessionId);
         var clientCreationTime = LocalDateTime.now();
-        redis.createClientSession(
-                CLIENT_SESSION_ID,
-                CLIENT_NAME,
-                authRequestBuilder.build().toParameters(),
-                clientCreationTime);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 CLIENT_SESSION_ID,
