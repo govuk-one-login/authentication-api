@@ -58,6 +58,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL_ADDRESS = "test@test.com";
+    private static final String PHONE_NUMBER = "+447712345432";
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
@@ -302,7 +303,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             names = {"SIGN_IN", "PASSWORD_RESET_MFA"})
     void shouldReturnMaxReachedAndSetBlockWhenSignInSmsCodeAttemptsExceedMaxRetryCount(
             JourneyType journeyType) throws Json.JsonException {
-        setUpTestWithoutSignUp(sessionId, withScope());
+        setUpTestWithSignUp(sessionId, withScope());
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         for (int i = 0; i < 6; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
@@ -329,6 +331,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedAndSingalLogoutWhenReauthSmsCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         setUpTestWithSignUp(sessionId, withScope());
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
@@ -357,9 +360,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
 
-        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
 
         var response =
@@ -389,9 +393,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
 
-        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
 
         var response =
@@ -414,9 +419,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             throws Exception {
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
 
-        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         var codeRequest =
                 new VerifyCodeRequest(
                         NotificationType.MFA_SMS, code, JourneyType.PASSWORD_RESET_MFA);
@@ -447,9 +453,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         setUpTestWithSignUp(sessionId, withScope());
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
 
-        redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        redis.generateAndSaveMfaCode(EMAIL_ADDRESS.concat(PHONE_NUMBER).concat("123123"), 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, "123456", journeyType);
 
         var response =

@@ -732,7 +732,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String invalidCode = "999999";
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, invalidCode, JourneyType.REGISTRATION);
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, invalidCode, JourneyType.REGISTRATION, PHONE_NUMBER);
 
         var response =
                 makeRequest(
@@ -752,7 +753,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void whenValidPhoneNumberOtpCodeForRegistrationReturn204AndSetPhoneNumber() {
-        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, code, JourneyType.REGISTRATION, PHONE_NUMBER);
@@ -782,7 +783,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void whenValidPhoneNumberOtpCodeForAccountRecoveryReturn204AndUpdatePhoneNumber() {
-        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, ALTERNATIVE_PHONE_NUMBER);
         userStore.setAccountVerified(EMAIL_ADDRESS);
         var codeRequest =
@@ -813,7 +814,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void
             whenValidPhoneNumberOtpCodeForAccountRecoveryReturn204UpdatePhoneNumberAndRemoveAuthAppWhenPresent() {
-        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         setUpAuthAppRequest(JourneyType.ACCOUNT_RECOVERY);
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -843,7 +844,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn204WhenSuccessfulSMSRegistrationRequestAndOverwriteExistingPhoneNumber() {
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, "+447700900111");
-        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, code, JourneyType.REGISTRATION, PHONE_NUMBER);
@@ -868,7 +869,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void whenValidPhoneNumberCodeForRegistrationReturn204AndInvalidateAuthApp() {
         userStore.addMfaMethod(
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false, true, AUTH_APP_SECRET_BASE_32);
-        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, code, JourneyType.REGISTRATION, PHONE_NUMBER);
@@ -896,7 +897,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
     void whenInvalidPhoneNumberCodeHasExpiredReturn400(JourneyType journeyType) {
         setUpSmsRequest(journeyType, PHONE_NUMBER);
-        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 1);
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 1);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, code, journeyType, ALTERNATIVE_PHONE_NUMBER);

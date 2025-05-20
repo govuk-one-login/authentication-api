@@ -19,7 +19,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -78,6 +77,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -152,7 +152,7 @@ class MfaHandlerTest {
                     INTERNAL_COMMON_SUBJECT_ID,
                     EMAIL,
                     IP_ADDRESS,
-                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
@@ -175,7 +175,7 @@ class MfaHandlerTest {
 
     private static final NotifyRequest notifyRequest =
             new NotifyRequest(
-                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    UK_MOBILE_NUMBER,
                     MFA_SMS,
                     CODE,
                     SupportedLanguage.EN,
@@ -198,8 +198,7 @@ class MfaHandlerTest {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_CODE_RETRIES);
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(UK_MOBILE_NUMBER));
         usingValidClientSession(TEST_CLIENT_ID);
         when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
         when(authenticationService.getUserProfileFromEmail(EMAIL))
@@ -235,7 +234,8 @@ class MfaHandlerTest {
                                 partiallyContainsJsonString(
                                         objectMapper.writeValueAsString(notifyRequest),
                                         "unique_notification_reference")));
-        verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
+        verify(codeStorageService)
+                .saveOtpCode(EMAIL.concat(UK_MOBILE_NUMBER), CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(204));
 
         verify(auditService)
@@ -280,7 +280,13 @@ class MfaHandlerTest {
                                         objectMapper.writeValueAsString(
                                                 notifyRequestWithNumberFromMigratedMethod),
                                         "unique_notification_reference")));
-        verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
+        verify(codeStorageService)
+                .saveOtpCode(
+                        EMAIL.concat(PHONE_NUMBER_FOR_DEFAULT_SMS_METHOD),
+                        CODE,
+                        CODE_EXPIRY_TIME,
+                        MFA_SMS);
+
         assertThat(result, hasStatus(204));
 
         verify(auditService)
@@ -352,11 +358,11 @@ class MfaHandlerTest {
     void shouldReturn204ForSuccessfulMfaRequestWhenResendingCode() throws Json.JsonException {
         usingValidSession();
 
-        when(codeStorageService.getOtpCode(EMAIL, VERIFY_PHONE_NUMBER))
+        when(codeStorageService.getOtpCode(EMAIL.concat(UK_MOBILE_NUMBER), VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
         NotifyRequest verifyPhoneNumberNotifyRequest =
                 new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        UK_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         CODE,
                         SupportedLanguage.EN,
@@ -671,7 +677,8 @@ class MfaHandlerTest {
                                 partiallyContainsJsonString(
                                         objectMapper.writeValueAsString(notifyRequest),
                                         "unique_notification_reference")));
-        verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
+        verify(codeStorageService)
+                .saveOtpCode(EMAIL.concat(UK_MOBILE_NUMBER), CODE, CODE_EXPIRY_TIME, MFA_SMS);
         assertThat(result, hasStatus(204));
 
         verify(auditService)

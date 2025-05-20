@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -649,6 +650,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
+        var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         var body =
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
@@ -659,9 +661,14 @@ class SendNotificationHandlerTest {
 
         assertEquals(204, result.getStatusCode());
         verify(codeGeneratorService).sixDigitCode();
-        verify(codeStorageService).getOtpCode(EMAIL, VERIFY_PHONE_NUMBER);
         verify(codeStorageService)
-                .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_PHONE_NUMBER);
+                .getOtpCode(EMAIL.concat(formattedPhoneNumber), VERIFY_PHONE_NUMBER);
+        verify(codeStorageService)
+                .saveOtpCode(
+                        EMAIL.concat(formattedPhoneNumber),
+                        TEST_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        VERIFY_PHONE_NUMBER);
         verify(emailSqsClient)
                 .send(
                         argThat(

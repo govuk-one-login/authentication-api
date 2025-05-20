@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -226,20 +227,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
 
+            String codeIdentifier = email.concat(PhoneNumberHelper.formatPhoneNumber(phoneNumber));
             String code =
                     codeStorageService
-                            .getOtpCode(email, notificationType)
+                            .getOtpCode(codeIdentifier, notificationType)
+                            .or( // Temporary fallback for old phone number key with just email
+                                    () -> codeStorageService.getOtpCode(email, notificationType))
                             .orElseGet(
-                                    () -> {
-                                        LOG.info("No existing OTP found; generating new code");
-                                        String newCode = codeGeneratorService.sixDigitCode();
-                                        codeStorageService.saveOtpCode(
-                                                email,
-                                                newCode,
-                                                configurationService.getDefaultOtpCodeExpiry(),
-                                                notificationType);
-                                        return newCode;
-                                    });
+                                    () -> generateAndSaveNewCode(codeIdentifier, notificationType));
 
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
@@ -275,6 +270,17 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+    }
+
+    private String generateAndSaveNewCode(String identifier, NotificationType notificationType) {
+        LOG.info("No existing OTP found; generating new code");
+        String newCode = codeGeneratorService.sixDigitCode();
+        codeStorageService.saveOtpCode(
+                identifier,
+                newCode,
+                configurationService.getDefaultOtpCodeExpiry(),
+                notificationType);
+        return newCode;
     }
 
     private Optional<ErrorResponse> validateCodeRequestAttempts(
