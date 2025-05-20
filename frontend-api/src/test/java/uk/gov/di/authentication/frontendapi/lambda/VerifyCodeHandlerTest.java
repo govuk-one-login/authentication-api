@@ -83,6 +83,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -595,6 +596,35 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
+    void shouldReturn204ForValidIdentifiedSmsMfaMethod() {
+        when(codeStorageService.getOtpCode(
+                        EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS))
+                .thenReturn(Optional.of(CODE));
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD, BACKUP_SMS_METHOD)));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
+                .thenReturn(MAX_RETRIES - 1);
+        when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+
+        when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+
+        var result =
+                makeCallWithCode(
+                        CODE,
+                        MFA_SMS.toString(),
+                        JourneyType.SIGN_IN,
+                        BACKUP_SMS_METHOD.getMfaIdentifier());
+
+        assertThat(result, hasStatus(204));
+        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        verify(codeStorageService)
+                .deleteOtpCode(EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS);
+        verifyNoInteractions(authenticationAttemptsService);
+    }
+
+    @Test
     void shouldReturn204ForValidMfaSmsRequestAndNotRemoveAccountRecoveryBlockWhenNotPresent() {
         when(codeStorageService.getOtpCode(
                         EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
@@ -962,6 +992,18 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\" }",
                         code, notificationType, journeyType.getValue());
+        return makeCallWithCode(body, Optional.of(session));
+    }
+
+    private APIGatewayProxyResponseEvent makeCallWithCode(
+            String code, String notificationType, JourneyType journeyType, String mfaMethodId) {
+        if (mfaMethodId == null) {
+            return makeCallWithCode(code, notificationType, journeyType);
+        }
+        String body =
+                format(
+                        "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\", \"mfaMethodId\":\"%s\" }",
+                        code, notificationType, journeyType.getValue(), mfaMethodId);
         return makeCallWithCode(body, Optional.of(session));
     }
 
