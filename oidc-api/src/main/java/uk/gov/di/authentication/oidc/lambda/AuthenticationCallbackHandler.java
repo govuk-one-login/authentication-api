@@ -378,7 +378,7 @@ public class AuthenticationCallbackHandler
 
                 boolean identityRequired =
                         identityRequired(
-                                clientSession.getAuthRequestParams(),
+                                orchClientSession.getAuthRequestParams(),
                                 client.isIdentityVerificationSupported(),
                                 configurationService.isIdentityEnabled());
 
