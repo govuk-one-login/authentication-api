@@ -291,8 +291,6 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             String idTokenHint,
             LocalDateTime creationDate)
             throws Json.JsonException {
-        redis.addAuthRequestToSession(
-                clientSessionId, sessionId, authRequestParams, "client-name", creationDate);
         redis.addIDTokenToSession(clientSessionId, idTokenHint);
     }
 

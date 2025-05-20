@@ -101,8 +101,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupAuthUserInfo(clientSessionId);
         var creationDate = LocalDateTime.now();
         var authRequestParams = generateAuthRequest().toParameters();
-        redis.addAuthRequestToSession(
-                clientSessionId, sessionID, authRequestParams, CLIENT_NAME, creationDate);
         var orchClientSession =
                 new OrchClientSessionItem(
                         clientSessionId,
@@ -149,7 +147,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSession =
                 new ClientSession(authRequestParams, creationDate, vtrList, CLIENT_NAME);
         clientSession.setDocAppSubjectId(docAppSubjectId);
-        redis.addAuthRequestToSession(clientSessionId, sessionID, authRequestParams, CLIENT_NAME);
         redis.createClientSession(clientSessionId, clientSession);
         var orchClientSession =
                 new OrchClientSessionItem(
