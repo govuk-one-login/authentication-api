@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -28,6 +29,7 @@ import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFA
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
 public class MFAMethodsService {
@@ -296,34 +298,54 @@ public class MFAMethodsService {
             }
 
             var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
+
             var isExistingDefaultPhoneNumber =
                     phoneNumberWithCountryCode.equals(defaultMethod.getDestination());
+
+            if (isExistingDefaultPhoneNumber) {
+                return Result.failure(
+                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+            }
+
             var otherMethods =
                     allMethodsForUser.stream()
                             .filter(
                                     mfaMethod ->
                                             !mfaMethod.getMfaIdentifier().equals(mfaIdentifier))
                             .toList();
+
             var isExistingBackupPhoneNumber =
                     otherMethods.stream()
                             .anyMatch(
                                     mfaMethod ->
                                             phoneNumberWithCountryCode.equals(
                                                     mfaMethod.getDestination()));
-            if (isExistingDefaultPhoneNumber) {
-                return Result.failure(
-                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
-            } else if (isExistingBackupPhoneNumber) {
+
+            if (isExistingBackupPhoneNumber) {
                 return Result.failure(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER);
-            } else {
-                databaseUpdateResult =
-                        persistentService.updateMigratedDefaultMfaMethod(
-                                email,
-                                MFAMethodType.SMS,
-                                phoneNumberWithCountryCode,
-                                mfaIdentifier);
             }
+
+            MFAMethod updMethod = new MFAMethod();
+            updMethod.setMfaMethodType(SMS.name());
+            updMethod.setDestination(phoneNumberWithCountryCode);
+            updMethod.setEnabled(true);
+            updMethod.setMethodVerified(true);
+            updMethod.setPriority(DEFAULT.name());
+            updMethod.setUpdated(NowHelper.toTimestampString(NowHelper.now()));
+            updMethod.setMfaIdentifier(mfaIdentifier);
+
+            var updatedMethods =
+                    allMethodsForUser.stream()
+                            .map(
+                                    method ->
+                                            method.getMfaIdentifier().equals(mfaIdentifier)
+                                                    ? updMethod
+                                                    : method)
+                            .toList();
+
+            databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
+
         } else {
             var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
 
@@ -339,11 +361,27 @@ public class MFAMethodsService {
             if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
                 return Result.failure(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
-            } else {
-                databaseUpdateResult =
-                        persistentService.updateMigratedDefaultMfaMethod(
-                                email, AUTH_APP, authAppDetail.credential(), mfaIdentifier);
             }
+
+            MFAMethod updMethod = new MFAMethod();
+            updMethod.setMfaMethodType(AUTH_APP.name());
+            updMethod.setCredentialValue(authAppDetail.credential());
+            updMethod.setEnabled(true);
+            updMethod.setMethodVerified(true);
+            updMethod.setPriority(DEFAULT.name());
+            updMethod.setUpdated(NowHelper.toTimestampString(NowHelper.now()));
+            updMethod.setMfaIdentifier(mfaIdentifier);
+
+            var updatedMethods =
+                    allMethodsForUser.stream()
+                            .map(
+                                    method ->
+                                            method.getMfaIdentifier().equals(mfaIdentifier)
+                                                    ? updMethod
+                                                    : method)
+                            .toList();
+
+            databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
         }
 
         return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);

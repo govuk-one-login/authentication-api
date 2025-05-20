@@ -96,9 +96,6 @@ public interface AuthenticationService {
     Result<String, List<MFAMethod>> updateMfaMethods(
             List<MFAMethod> updatedMfaMethods, String email);
 
-    Result<String, List<MFAMethod>> updateMigratedDefaultMfaMethod(
-            String email, MFAMethodType type, String destination, String mfaMethodIdentifier);
-
     Result<String, List<MFAMethod>> updateAllMfaMethodsForUser(
             String email, List<MFAMethod> updatedMfaMethods);
 

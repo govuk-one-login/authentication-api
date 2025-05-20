@@ -777,82 +777,6 @@ public class DynamoService implements AuthenticationService {
                         .withUpdated(dateTime));
     }
 
-    private List<MFAMethod> updateMigratedMfaMethod(
-            MFAMethod updatedMFAMethod,
-            String mfaMethodIdentifier,
-            UserCredentials userCredentials) {
-        var dateTime = NowHelper.toTimestampString(NowHelper.now());
-        var updatedUserCredentials =
-                dynamoUserCredentialsTable.updateItem(
-                        userCredentials
-                                .withUpdated(dateTime)
-                                .withUpdatedMfaMethod(mfaMethodIdentifier, updatedMFAMethod));
-
-        return updatedUserCredentials.getMfaMethods();
-    }
-
-    private Result<String, MFAMethod> getMfaMethodByIdentifier(
-            UserCredentials userCredentials, String mfaMethodIdentifier) {
-        var maybeExistingMethod =
-                userCredentials.getMfaMethods().stream()
-                        .filter(
-                                mfaMethod ->
-                                        mfaMethod.getMfaIdentifier().equals(mfaMethodIdentifier))
-                        .findFirst();
-        return maybeExistingMethod
-                .<Result<String, MFAMethod>>map(Result::success)
-                .orElseGet(
-                        () ->
-                                Result.failure(
-                                        format(
-                                                "Mfa method with identifier %s does not exist",
-                                                mfaMethodIdentifier)));
-    }
-
-    public Result<String, List<MFAMethod>> updateMfaMethods(
-            List<MFAMethod> updatedMfaMethods, String email) {
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-
-        var updatedUserCredentials =
-                dynamoUserCredentialsTable.updateItem(
-                        userCredentials
-                                .withUpdated(NowHelper.toTimestampString(NowHelper.now()))
-                                .withMfaMethods(updatedMfaMethods));
-
-        return Result.success(updatedUserCredentials.getMfaMethods());
-    }
-
-    public Result<String, List<MFAMethod>> updateMigratedDefaultMfaMethod(
-            String email, MFAMethodType type, String target, String mfaMethodIdentifier) {
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-
-        var maybeExistingMethod = getMfaMethodByIdentifier(userCredentials, mfaMethodIdentifier);
-
-        if (maybeExistingMethod.isFailure()) {
-            return Result.failure(
-                    "Mfa method with identifier %s does not exist".formatted(mfaMethodIdentifier));
-        }
-
-        return maybeExistingMethod.flatMap(
-                existingMethod -> {
-                    existingMethod.setMfaMethodType(type.getValue());
-                    if (type.equals(MFAMethodType.AUTH_APP)) {
-                        existingMethod.setCredentialValue(target);
-                        existingMethod.setDestination(null);
-                    } else {
-                        existingMethod.setDestination(target);
-                        existingMethod.setCredentialValue(null);
-                    }
-                    return Result.success(
-                            updateMigratedMfaMethod(
-                                    existingMethod, mfaMethodIdentifier, userCredentials));
-                });
-    }
-
     private Result<String, Void> validateMfaMethods(List<MFAMethod> methods) {
         if (methods.isEmpty()) {
             return Result.failure("Mfa methods cannot be empty");
@@ -886,6 +810,21 @@ public class DynamoService implements AuthenticationService {
         }
 
         return Result.success(null);
+    }
+
+    public Result<String, List<MFAMethod>> updateMfaMethods(
+            List<MFAMethod> updatedMfaMethods, String email) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+
+        var updatedUserCredentials =
+                dynamoUserCredentialsTable.updateItem(
+                        userCredentials
+                                .withUpdated(NowHelper.toTimestampString(NowHelper.now()))
+                                .withMfaMethods(updatedMfaMethods));
+
+        return Result.success(updatedUserCredentials.getMfaMethods());
     }
 
     @Override
