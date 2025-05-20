@@ -468,7 +468,7 @@ public class AuthenticationCallbackHandler
                                 .withIpAddress(IpAddressHelper.extractIpAddress(input));
 
                 CredentialTrustLevel requestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                        VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
                 CredentialTrustLevel credentialTrustLevel =
                         Optional.ofNullable(session.getCurrentCredentialStrength())
                                 .map(
@@ -554,7 +554,7 @@ public class AuthenticationCallbackHandler
                             persistentSessionId,
                             reproveIdentity,
                             VectorOfTrust.getRequestedLevelsOfConfidence(
-                                    clientSession.getVtrList()));
+                                    orchClientSession.getVtrList()));
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
@@ -568,7 +568,7 @@ public class AuthenticationCallbackHandler
                         stateHash);
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                        VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
                 if (isNull(session.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
                                         session.getCurrentCredentialStrength())
