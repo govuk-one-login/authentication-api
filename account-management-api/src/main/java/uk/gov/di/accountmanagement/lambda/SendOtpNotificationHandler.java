@@ -322,11 +322,13 @@ public class SendOtpNotificationHandler
                             context,
                             userLanguage);
             }
+            // Unreachable code.
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonException e) {
+            // Unreachable code.
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         }
     }
@@ -365,6 +367,7 @@ public class SendOtpNotificationHandler
                 "Sending message to SQS queue for notificationType: {} for client type: {}",
                 sendNotificationRequest.getNotificationType(),
                 isTestUserRequest);
+
         emailSqsClient.send(serialiseRequest(notifyRequest));
 
         var auditContext =
@@ -406,6 +409,7 @@ public class SendOtpNotificationHandler
             case VERIFY_PHONE_NUMBER:
                 return configurationService.getTestClientVerifyPhoneNumberOTP().orElse("");
             default:
+                // Unreachable code.
                 LOG.error(
                         "Invalid NotificationType: {} configured for TestClient", notificationType);
                 throw new MissingConfigurationParameterException(

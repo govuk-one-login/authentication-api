@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -24,7 +25,11 @@ import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -56,6 +61,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -402,178 +408,398 @@ class SendOtpNotificationHandlerTest {
                         pair("test-user", true));
     }
 
-    @Test
-    void shouldReturn500OnRequestFromTestUserIfTestClientsNotEnabled() {
-        when(configurationService.isTestClientsEnabled()).thenReturn(false);
-        String persistentIdValue = "some-persistent-session-id";
+    @Nested
+    class ServerErrors {
+        @Test
+        void shouldReturn500WhenClientIdNotAvailable() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(false);
+            String persistentIdValue = "some-persistent-session-id";
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        persistentIdValue,
-                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
-                        TXMA_ENCODED_HEADER_VALUE));
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(
+                    Map.of(
+                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                            persistentIdValue,
+                            AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                            TXMA_ENCODED_HEADER_VALUE));
+            event.setRequestContext(eventContext);
+            event.setBody(
+                    format(
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                            TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
+            event.setRequestContext(null);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(500, result.getStatusCode());
+            assertEquals(500, result.getStatusCode());
 
-        verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
+            verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
+        }
+
+        @Test
+        void shouldReturn500WhenUnexpectedException() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(false);
+
+            Mockito.reset(clientService);
+
+            when(clientService.isTestJourney(TEST_CLIENT_ID, TEST_TEST_USER_EMAIL_ADDRESS))
+                    .thenThrow(new RuntimeException("unexpected"));
+
+            String persistentIdValue = "some-persistent-session-id";
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(
+                    Map.of(
+                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                            persistentIdValue,
+                            AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                            TXMA_ENCODED_HEADER_VALUE));
+            event.setRequestContext(eventContext);
+            event.setBody(
+                    format(
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                            TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertEquals(500, result.getStatusCode());
+
+            verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
+        }
+
+        @Test
+        void shouldReturn500OnRequestFromTestUserIfTestClientsNotEnabled() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(false);
+            String persistentIdValue = "some-persistent-session-id";
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(
+                    Map.of(
+                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                            persistentIdValue,
+                            AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                            TXMA_ENCODED_HEADER_VALUE));
+            event.setRequestContext(eventContext);
+            event.setBody(
+                    format(
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                            TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertEquals(500, result.getStatusCode());
+
+            verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
+        }
+
+        @Test
+        void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            TEST_EMAIL_ADDRESS,
+                            VERIFY_EMAIL,
+                            TEST_SIX_DIGIT_CODE,
+                            SupportedLanguage.EN,
+                            false,
+                            TEST_EMAIL_ADDRESS);
+            String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+            doThrow(SdkClientException.class).when(emailSqsClient).send(eq(serialisedRequest));
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(Map.of());
+            event.setRequestContext(eventContext);
+            event.setBody(
+                    format(
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                            TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertEquals(500, result.getStatusCode());
+            assertTrue(result.getBody().contains("Error sending message to queue"));
+
+            verifyNoInteractions(auditService);
+        }
     }
 
-    @Test
-    void shouldReturn400IfRequestIsMissingEmail() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
-        event.setBody("{ }");
-        event.setRequestContext(eventContext);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+    @Nested
+    class ClientErrors {
 
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        @Nested
+        class MigratedUsers {
+            @Test
+            void shouldReturn400IfRequestIsMissingEmail() {
+                APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setBody("{ }");
+                event.setRequestContext(eventContext);
+                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verifyNoInteractions(auditService);
-    }
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-    @Test
-    void shouldReturn400IfEmailAddressIsInvalid() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        "joe.bloggs", VERIFY_EMAIL));
+                verifyNoInteractions(auditService);
+            }
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+            @Test
+            void shouldReturn400IfEmailAddressIsInvalid() {
+                APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                "joe.bloggs", VERIFY_EMAIL));
 
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
+                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verifyNoInteractions(auditService);
-    }
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
 
-    @Test
-    void shouldReturn400IfPhoneNumberIsInvalid() {
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(
-                        Optional.of(
-                                new UserProfile()
-                                        .withEmail(TEST_EMAIL_ADDRESS)
-                                        .withPhoneNumber("+447755551084")
-                                        .withPhoneNumberVerified(true)));
+                verifyNoInteractions(auditService);
+            }
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "12345"));
+            @Test
+            void shouldReturn400IfPhoneNumberIsInvalid() {
+                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withEmail(TEST_EMAIL_ADDRESS)
+                                                .withPhoneNumber("+447755551084")
+                                                .withPhoneNumberVerified(true)));
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+                APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "12345"));
 
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verifyNoInteractions(auditService);
-    }
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
 
-    @Test
-    void shouldReturn400IfNewPhoneNumberIsTheSameAsCurrentPhoneNumber() {
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(
-                        Optional.of(
-                                new UserProfile()
-                                        .withEmail(TEST_EMAIL_ADDRESS)
-                                        .withPhoneNumber("+447755551084")
-                                        .withPhoneNumberVerified(true)));
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+                verifyNoInteractions(auditService);
+            }
 
-        var result = handler.handleRequest(event, context);
+            @Test
+            void shouldReturn400IfNewPhoneNumberIsTheSameAsCurrentPhoneNumber() {
+                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withEmail(TEST_EMAIL_ADDRESS)
+                                                .withPhoneNumber("+447755551084")
+                                                .withPhoneNumberVerified(true)));
+                var event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE));
-        verifyNoInteractions(auditService);
-    }
+                var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        VERIFY_EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN,
-                        false,
-                        TEST_EMAIL_ADDRESS);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-        Mockito.doThrow(SdkClientException.class).when(emailSqsClient).send(eq(serialisedRequest));
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE));
+                verifyNoInteractions(auditService);
+            }
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+            @Test
+            void shouldReturn400WhenUserProfileMissing() {
+                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                        .thenReturn(Optional.empty());
 
-        assertEquals(500, result.getStatusCode());
-        assertTrue(result.getBody().contains("Error sending message to queue"));
+                var event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
-        verifyNoInteractions(auditService);
-    }
+                var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn400WhenInvalidNotificationType() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, "VERIFY_PASSWORD"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.NO_USER_PROFILE_FOR_EMAIL));
+                verifyNoInteractions(auditService);
+            }
 
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+            @Test
+            void shouldReturn400WhenPhoneNumberInvalid() {
+                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withEmail(TEST_EMAIL_ADDRESS)
+                                                .withPhoneNumber("+447755551084")
+                                                .withPhoneNumberVerified(true)));
 
-        verify(emailSqsClient, never()).send(anyString());
-        verify(codeStorageService, never())
-                .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
+                var event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "not-a phone number"));
 
-        verifyNoInteractions(auditService);
-    }
+                var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
-        when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+                verifyNoInteractions(auditService);
+            }
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+            @Test
+            void shouldReturn400WhenInvalidNotificationType() {
+                APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, "VERIFY_PASSWORD"));
+                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-        verifyNoInteractions(auditService);
+                verify(emailSqsClient, never()).send(anyString());
+                verify(codeStorageService, never())
+                        .saveOtpCode(
+                                anyString(), anyString(), anyLong(), any(NotificationType.class));
+
+                verifyNoInteractions(auditService);
+            }
+
+            @Test
+            void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
+                when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+
+                APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+
+                verifyNoInteractions(auditService);
+            }
+        }
+
+        @Nested
+        class UnMigratedUsers {
+
+            @Test
+            void shouldReturn400WhenNoUserCredentialsForEmail() {
+                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withEmail(TEST_EMAIL_ADDRESS)
+                                                .withPhoneNumber("+447755551084")
+                                                .withPhoneNumberVerified(true)
+                                                .withMfaMethodsMigrated(true)));
+
+                when(dynamoService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
+                        .thenReturn(null);
+
+                var event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.NO_USER_CREDENTIALS_FOR_EMAIL));
+                verifyNoInteractions(auditService);
+            }
+
+            @Test
+            void shouldReturn400WhenPhoneNumberAlreadyInUse() {
+                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withEmail(TEST_EMAIL_ADDRESS)
+                                                .withPhoneNumber("+447755551084")
+                                                .withPhoneNumberVerified(true)
+                                                .withMfaMethodsMigrated(true)));
+
+                var defaultMfaMethod = new MFAMethod();
+                defaultMfaMethod.setPriority(PriorityIdentifier.DEFAULT.name());
+                defaultMfaMethod.setMfaMethodType(MFAMethodType.SMS.name());
+                defaultMfaMethod.setDestination("+447755551084");
+
+                var userCredentials = new UserCredentials();
+                userCredentials.setMfaMethod(defaultMfaMethod);
+
+                when(dynamoService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
+                        .thenReturn(userCredentials);
+
+                var event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE));
+                verifyNoInteractions(auditService);
+            }
+
+            @Test
+            void shouldReturn400WhenPhoneNumberInvalid() {
+                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                        .thenReturn(
+                                Optional.of(
+                                        new UserProfile()
+                                                .withEmail(TEST_EMAIL_ADDRESS)
+                                                .withPhoneNumber("+447755551084")
+                                                .withPhoneNumberVerified(true)
+                                                .withMfaMethodsMigrated(true)));
+
+                var defaultMfaMethod = new MFAMethod();
+                defaultMfaMethod.setPriority(PriorityIdentifier.DEFAULT.name());
+                defaultMfaMethod.setMfaMethodType(MFAMethodType.SMS.name());
+                defaultMfaMethod.setDestination("+447755551084");
+
+                var userCredentials = new UserCredentials();
+                userCredentials.setMfaMethod(defaultMfaMethod);
+
+                when(dynamoService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
+                        .thenReturn(userCredentials);
+
+                var event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "not a phone-num"));
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+                verifyNoInteractions(auditService);
+            }
+        }
     }
 }
