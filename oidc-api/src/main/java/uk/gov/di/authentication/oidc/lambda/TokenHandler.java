@@ -73,7 +73,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -261,7 +260,6 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         var orchClientSession = orchClientSessionOpt.get();
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());

@@ -118,7 +118,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttache
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -443,8 +442,6 @@ public class AuthorisationHandler
                         creationDate,
                         vtrList,
                         client.getClientName());
-
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
 
         if (DocAppUserHelper.isDocCheckingAppUser(
                 authRequest.toParameters(), Optional.of(client))) {
