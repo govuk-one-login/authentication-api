@@ -147,7 +147,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSession =
                 new ClientSession(authRequestParams, creationDate, vtrList, CLIENT_NAME);
         clientSession.setDocAppSubjectId(docAppSubjectId);
-        redis.createClientSession(clientSessionId, clientSession);
         var orchClientSession =
                 new OrchClientSessionItem(
                         clientSessionId, authRequestParams, creationDate, vtrList, CLIENT_NAME);

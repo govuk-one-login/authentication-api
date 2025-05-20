@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -209,13 +208,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 new OrchSessionItem(SESSION_ID)
                         .withInternalCommonSubjectId(INTERNAL_SUBJECT.getValue()));
         var creationDate = LocalDateTime.now();
-        var clientSession =
-                new ClientSession(
-                        authRequestBuilder.build().toParameters(),
-                        creationDate,
-                        List.of(VectorOfTrust.getDefaults()),
-                        CLIENT_NAME);
-        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         var orchClientSession =
                 new OrchClientSessionItem(
                         CLIENT_SESSION_ID,

@@ -9,15 +9,12 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-
-import static uk.gov.di.orchestration.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisExtension
         implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
@@ -84,14 +81,6 @@ public class RedisExtension
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection.sync().flushall();
         }
-    }
-
-    public void createClientSession(String clientSessionId, ClientSession clientSession)
-            throws Json.JsonException {
-        redis.saveWithExpiry(
-                CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(clientSession),
-                300);
     }
 
     @Override
