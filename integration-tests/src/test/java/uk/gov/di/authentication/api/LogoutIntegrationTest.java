@@ -265,8 +265,6 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var authRequestParams = generateAuthRequest(nonce).toParameters();
         var creationDate = LocalDateTime.now();
         var idTokenHint = signedJWT.serialize();
-        setupClientSession(
-                sessionId, clientSessionId, authRequestParams, idTokenHint, creationDate);
         setupOrchClientSession(clientSessionId, authRequestParams, idTokenHint, creationDate);
         clientStore.registerClient(
                 "client-id",
@@ -282,16 +280,6 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "public");
 
         return signedJWT;
-    }
-
-    private void setupClientSession(
-            String sessionId,
-            String clientSessionId,
-            Map<String, List<String>> authRequestParams,
-            String idTokenHint,
-            LocalDateTime creationDate)
-            throws Json.JsonException {
-        redis.addIDTokenToSession(clientSessionId, idTokenHint);
     }
 
     private void setupOrchClientSession(
