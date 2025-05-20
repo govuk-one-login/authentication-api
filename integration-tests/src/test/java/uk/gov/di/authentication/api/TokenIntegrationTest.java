@@ -188,8 +188,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
 
-        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
-        assertEquals(idToken.serialize(), clientSession.getIdTokenHint());
         var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
         assertTrue(orchClientSession.isPresent());
         assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());

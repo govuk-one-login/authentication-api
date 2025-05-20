@@ -897,8 +897,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
 
             var clientSessionID = getClientSessionId(response);
-            var clientSession = redis.getClientSession(clientSessionID);
-            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            var orchClientSession = orchClientSessionExtention.getClientSession(clientSessionID);
+            var authRequest =
+                    AuthenticationRequest.parse(orchClientSession.get().getAuthRequestParams());
 
             assertTxmaAuditEventsReceived(
                     txmaAuditQueue,
@@ -1099,14 +1100,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 assertThat(languageCookie.isPresent(), equalTo(false));
             }
             var clientSessionID = sessionCookie.get().getValue().split("\\.")[1];
-            var clientSession = redis.getClientSession(clientSessionID);
-            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            var orchClientSession =
+                    orchClientSessionExtention.getClientSession(clientSessionID).get();
+            var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
             assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
             assertThat(
                     authRequest.getCustomParameter("vtr"),
                     equalTo(List.of("[\"P2.Cl.Cm\",\"PCL200.Cl.Cm\"]")));
             assertThat(
-                    clientSession.getVtrList(),
+                    orchClientSession.getVtrList(),
                     equalTo(
                             List.of(
                                     VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),

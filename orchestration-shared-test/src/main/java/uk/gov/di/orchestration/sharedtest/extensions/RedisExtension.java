@@ -114,15 +114,6 @@ public class RedisExtension
                 300);
     }
 
-    public ClientSession getClientSession(String clientSessionId) {
-        try {
-            var result = redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
-            return objectMapper.readValue(result, ClientSession.class);
-        } catch (Json.JsonException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public void createClientSession(String clientSessionId, ClientSession clientSession)
             throws Json.JsonException {
         redis.saveWithExpiry(
