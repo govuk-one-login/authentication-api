@@ -222,7 +222,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
         var result =
                 makeCallWithCode(
@@ -264,7 +263,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        authSession.setCurrentCredentialStrength(credentialTrustLevel);
 
         var mfaCodeRequest =
                 new VerifyMfaCodeRequest(
@@ -298,7 +296,6 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
         var result =
@@ -342,7 +339,6 @@ class VerifyMfaCodeHandlerTest {
         when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
@@ -384,7 +380,6 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
@@ -431,7 +426,6 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        authSession.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
