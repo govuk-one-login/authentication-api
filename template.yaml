@@ -865,6 +865,14 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
+  FetchJwksSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref FetchJwksFunctionLogGroup
+
   FetchJwksFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -4440,6 +4448,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-storage-token-jwk-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
+
+  StorageTokenJwkFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref StorageTokenJwkFunctionLogGroup
 
   StorageTokenJwkFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
