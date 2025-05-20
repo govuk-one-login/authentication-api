@@ -520,7 +520,7 @@ class StartHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
-        when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any(), any()))
+        when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(new AuthSessionItem().withSessionId(SESSION_ID));
     }
 

@@ -111,11 +111,9 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
     }
 
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
-            Optional<String> previousSessionId,
-            String sessionId,
-            CredentialTrustLevel credentialTrustLevel) {
+            Optional<String> previousSessionId, String sessionId) {
         return authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                previousSessionId, sessionId, credentialTrustLevel);
+                previousSessionId, sessionId);
     }
 
     public void updateSession(AuthSessionItem sessionItem) {

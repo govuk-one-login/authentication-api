@@ -51,16 +51,11 @@ class AuthSessionServiceIntegrationTest {
 
         AuthSessionItem previousSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.of(PREVIOUS_SESSION_ID),
-                        SESSION_ID,
-                        CredentialTrustLevel.MEDIUM_LEVEL);
+                        Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         var previousSessionItem = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
 
         assertTrue(previousSessionItem.isEmpty());
         assertThat(previousSession.getSessionId(), is(SESSION_ID));
-        assertThat(
-                previousSession.getCurrentCredentialStrength(),
-                is(CredentialTrustLevel.MEDIUM_LEVEL));
     }
 
     @Test
@@ -71,12 +66,8 @@ class AuthSessionServiceIntegrationTest {
 
         AuthSessionItem previousSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.of(PREVIOUS_SESSION_ID),
-                        SESSION_ID,
-                        CredentialTrustLevel.MEDIUM_LEVEL);
+                        Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         assertThat(previousSession.getSessionId(), is(SESSION_ID));
-        assertEquals(
-                CredentialTrustLevel.MEDIUM_LEVEL, previousSession.getCurrentCredentialStrength());
     }
 
     @Test
@@ -109,19 +100,13 @@ class AuthSessionServiceIntegrationTest {
 
         AuthSessionItem retrievedSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.of(PREVIOUS_SESSION_ID),
-                        SESSION_ID,
-                        CredentialTrustLevel.MEDIUM_LEVEL);
+                        Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         var retrievedPreviousSession = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
 
         assertTrue(retrievedPreviousSession.isEmpty());
         assertThat(retrievedSession.getSessionId(), equalTo(SESSION_ID));
         assertThat(
                 retrievedSession.getIsNewAccount(), equalTo(AuthSessionItem.AccountState.EXISTING));
-
-        assertThat(
-                retrievedSession.getCurrentCredentialStrength(),
-                equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
     }
 
     @Test
