@@ -617,7 +617,10 @@ public class AuthenticationCallbackHandler
                                 orchSession.getCurrentCredentialStrength()));
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
-                        orchAccountState, clientId, clientSession.getClientName(), isTestJourney);
+                        orchAccountState,
+                        clientId,
+                        orchClientSession.getClientName(),
+                        isTestJourney);
 
                 LOG.info("Successfully processed request");
 
